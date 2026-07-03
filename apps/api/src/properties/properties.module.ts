@@ -4,7 +4,7 @@ import { CreatePropertyHandler } from "./application/commands/create-property.ha
 import { GetPropertyHandler } from "./application/queries/get-property.handler.js";
 import { ListPropertiesHandler } from "./application/queries/list-properties.handler.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
-import { InMemoryPropertyRepository } from "./infrastructure/in-memory-property.repository.js";
+import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
 
 const commandHandlers = [CreatePropertyHandler];
@@ -18,9 +18,8 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     ...queryHandlers,
     {
       provide: PROPERTY_REPOSITORY,
-      useClass: InMemoryPropertyRepository
+      useClass: PgPropertyRepository
     }
   ]
 })
 export class PropertiesModule {}
-

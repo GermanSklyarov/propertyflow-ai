@@ -63,6 +63,26 @@ docs/
   adr/       Architecture decision records
 ```
 
+## Local Development
+
+Create `.env` from `.env.example`, then start the local infrastructure and apply the first database migration.
+
+```sh
+npm install
+npm run infra:up
+npm run migrate
+npm run dev --workspace @propertyflow/api
+```
+
+The API starts with a tenant-aware property inventory slice:
+
+- `POST /properties`
+- `GET /properties`
+- `GET /properties/:propertyId`
+- `GET /health`
+
+All property routes require the `x-tenant-id` header.
+
 ## First Milestones
 
 1. Foundation: repository, architecture decisions, local infrastructure, domain vocabulary.
@@ -75,4 +95,3 @@ docs/
 8. Chat/RAG: document ingestion, embeddings, retrieval, grounded answers.
 9. Admin Automation: import jobs, AI description generation, OCR, translations, task monitoring.
 10. SaaS Hardening: RBAC, custom domains, analytics, public API, audit log, billing-ready tenancy.
-

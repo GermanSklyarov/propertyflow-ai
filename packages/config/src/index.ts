@@ -1,3 +1,7 @@
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import dotenv from "dotenv";
+
 export interface AppConfig {
   nodeEnv: string;
   apiPort: number;
@@ -8,6 +12,10 @@ export interface AppConfig {
 }
 
 export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
+  const envPath = findEnvFile(process.cwd());
+
+  dotenv.config(envPath ? { path: envPath } : undefined);
+
   return {
     nodeEnv: env.NODE_ENV ?? "development",
     apiPort: Number(env.API_PORT ?? 3001),
@@ -28,3 +36,22 @@ function requireEnv(env: NodeJS.ProcessEnv, key: string): string {
   return value;
 }
 
+function findEnvFile(startDir: string): string | undefined {
+  let currentDir = startDir;
+
+  while (true) {
+    const candidate = join(currentDir, ".env");
+
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+
+    const parentDir = dirname(currentDir);
+
+    if (parentDir === currentDir) {
+      return undefined;
+    }
+
+    currentDir = parentDir;
+  }
+}

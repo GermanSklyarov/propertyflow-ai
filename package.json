@@ -13,6 +13,9 @@
     "build": "tsc -b",
     "check": "tsc -b",
     "dev": "npm run dev --workspaces --if-present",
+    "infra:up": "docker compose up -d postgres redis opensearch minio",
+    "infra:down": "docker compose down",
+    "migrate": "npm run migrate --workspace @propertyflow/api",
     "format": "prettier --write .",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
