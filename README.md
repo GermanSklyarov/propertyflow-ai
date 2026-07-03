@@ -80,6 +80,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/ai-search`
 - `GET /properties`
 - `GET /properties/:propertyId/advisor`
+- `GET /properties/:propertyId/investment`
 - `GET /properties/:propertyId`
 - `GET /health`
 
@@ -115,6 +116,15 @@ All property routes require the `x-tenant-id` header.
 - risks;
 - questions to ask the agent;
 - confidence and source signals.
+
+`GET /properties/:propertyId/investment` returns a v1 investment calculation:
+
+- annual gross rent;
+- known annual and monthly costs;
+- gross yield;
+- net yield;
+- payback period;
+- assumptions and warnings.
 
 ## First Milestones
 

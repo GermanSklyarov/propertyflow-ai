@@ -91,3 +91,18 @@ export interface AiAdvisorSummary {
   confidence: "low" | "medium" | "high";
   generatedFrom: string[];
 }
+
+export interface InvestmentAnalysis {
+  propertyId: string;
+  purchasePrice: Money;
+  monthlyRentEstimate?: Money;
+  occupancyRate: number;
+  annualGrossRent?: Money;
+  annualKnownCosts: Money;
+  monthlyKnownCosts: Money;
+  grossYield?: number;
+  netYield?: number;
+  paybackYears?: number;
+  assumptions: string[];
+  warnings: string[];
+}

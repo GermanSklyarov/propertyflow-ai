@@ -1,12 +1,18 @@
 import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
-import type { AiAdvisorSummary, NaturalLanguagePropertySearchResponse, PropertySearchResponse } from "@propertyflow/contracts";
+import type {
+  AiAdvisorSummary,
+  InvestmentAnalysis,
+  NaturalLanguagePropertySearchResponse,
+  PropertySearchResponse
+} from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { CreatePropertyCommand } from "../../application/commands/create-property.command.js";
 import { GetPropertyQuery } from "../../application/queries/get-property.query.js";
 import { ListPropertiesQuery } from "../../application/queries/list-properties.query.js";
 import { AiPropertyAdvisorService } from "../../application/services/ai-property-advisor.service.js";
+import { InvestmentCalculatorService } from "../../application/services/investment-calculator.service.js";
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
@@ -21,6 +27,8 @@ export class PropertiesController {
     private readonly queryBus: QueryBus,
     @Inject(AiPropertyAdvisorService)
     private readonly advisor: AiPropertyAdvisorService,
+    @Inject(InvestmentCalculatorService)
+    private readonly investmentCalculator: InvestmentCalculatorService,
     @Inject(NaturalLanguagePropertySearchService)
     private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService
   ) {}
@@ -46,6 +54,11 @@ export class PropertiesController {
   @Get(":propertyId/advisor")
   advisorSummary(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<AiAdvisorSummary> {
     return this.advisor.summarize(tenantId, propertyId);
+  }
+
+  @Get(":propertyId/investment")
+  investment(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<InvestmentAnalysis> {
+    return this.investmentCalculator.analyze(tenantId, propertyId);
   }
 
   @Get(":propertyId")
