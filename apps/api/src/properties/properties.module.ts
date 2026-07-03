@@ -7,6 +7,7 @@ import { ListPropertiesHandler } from "./application/queries/list-properties.han
 import { AiPropertyAdvisorService } from "./application/services/ai-property-advisor.service.js";
 import { InvestmentCalculatorService } from "./application/services/investment-calculator.service.js";
 import { NaturalLanguagePropertySearchService } from "./application/services/natural-language-property-search.service.js";
+import { NeighborhoodIntelligenceService } from "./application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
@@ -23,6 +24,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     AiPropertyAdvisorService,
     InvestmentCalculatorService,
     NaturalLanguagePropertySearchService,
+    NeighborhoodIntelligenceService,
     {
       provide: PROPERTY_REPOSITORY,
       useClass: PgPropertyRepository

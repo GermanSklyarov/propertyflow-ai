@@ -106,3 +106,37 @@ export interface InvestmentAnalysis {
   assumptions: string[];
   warnings: string[];
 }
+
+export type NeighborhoodPoiCategory =
+  | "beach"
+  | "restaurant"
+  | "shopping"
+  | "transport"
+  | "hospital"
+  | "school"
+  | "coworking"
+  | "nightlife";
+
+export interface NeighborhoodPoi {
+  name: string;
+  category: NeighborhoodPoiCategory;
+  location: GeoPoint;
+  distanceMeters: number;
+}
+
+export interface NeighborhoodScore {
+  category: NeighborhoodPoiCategory;
+  label: string;
+  score: number;
+  nearestDistanceMeters?: number;
+}
+
+export interface NeighborhoodIntelligence {
+  propertyId: string;
+  market: ThailandMarket;
+  summary: string;
+  walkabilityScore: number;
+  scores: NeighborhoodScore[];
+  nearestPois: NeighborhoodPoi[];
+  signals: string[];
+}

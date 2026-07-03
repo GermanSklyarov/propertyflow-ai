@@ -81,6 +81,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
+- `GET /properties/:propertyId/neighborhood`
 - `GET /properties/:propertyId`
 - `GET /health`
 
@@ -125,6 +126,13 @@ All property routes require the `x-tenant-id` header.
 - net yield;
 - payback period;
 - assumptions and warnings.
+
+`GET /properties/:propertyId/neighborhood` returns a v1 neighborhood intelligence summary:
+
+- walkability score;
+- beach, restaurants, shopping, transport, hospitals, schools, coworking, and nightlife scores;
+- nearest seed POIs;
+- lifestyle signals.
 
 ## First Milestones
 

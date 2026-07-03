@@ -4,6 +4,7 @@ import type {
   AiAdvisorSummary,
   InvestmentAnalysis,
   NaturalLanguagePropertySearchResponse,
+  NeighborhoodIntelligence,
   PropertySearchResponse
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -14,6 +15,7 @@ import { ListPropertiesQuery } from "../../application/queries/list-properties.q
 import { AiPropertyAdvisorService } from "../../application/services/ai-property-advisor.service.js";
 import { InvestmentCalculatorService } from "../../application/services/investment-calculator.service.js";
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
+import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { SearchPropertiesDto } from "./search-properties.dto.js";
@@ -30,7 +32,9 @@ export class PropertiesController {
     @Inject(InvestmentCalculatorService)
     private readonly investmentCalculator: InvestmentCalculatorService,
     @Inject(NaturalLanguagePropertySearchService)
-    private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService
+    private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService,
+    @Inject(NeighborhoodIntelligenceService)
+    private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService
   ) {}
 
   @Post()
@@ -59,6 +63,14 @@ export class PropertiesController {
   @Get(":propertyId/investment")
   investment(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<InvestmentAnalysis> {
     return this.investmentCalculator.analyze(tenantId, propertyId);
+  }
+
+  @Get(":propertyId/neighborhood")
+  neighborhood(
+    @TenantId() tenantId: string,
+    @Param("propertyId") propertyId: string
+  ): Promise<NeighborhoodIntelligence> {
+    return this.neighborhoodIntelligence.analyze(tenantId, propertyId);
   }
 
   @Get(":propertyId")
