@@ -77,6 +77,7 @@ npm run dev --workspace @propertyflow/api
 The API starts with a tenant-aware property inventory slice:
 
 - `POST /properties`
+- `POST /properties/ai-search`
 - `GET /properties`
 - `GET /properties/:propertyId`
 - `GET /health`
@@ -94,6 +95,16 @@ All property routes require the `x-tenant-id` header.
 - `maxBeachDistanceMeters`
 - `requiredAmenities=pool,gym,sea-view`
 - `nearLatitude`, `nearLongitude`, `radiusMeters`
+
+`POST /properties/ai-search` accepts natural-language intent and maps it to the structured filters above.
+
+```json
+{
+  "locale": "ru",
+  "query": "Ищу квартиру в Паттайе до 3 млн бат рядом с пляжем, бассейном и хорошим интернетом",
+  "purpose": "living"
+}
+```
 
 ## First Milestones
 

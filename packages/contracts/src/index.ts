@@ -49,7 +49,6 @@ export interface PropertySearchResponse {
 }
 
 export interface NaturalLanguageSearchRequest {
-  tenantId: string;
   locale: "en" | "ru" | "th" | "zh";
   query: string;
   market?: ThailandMarket;
@@ -75,6 +74,11 @@ export interface NaturalLanguageSearchResponse {
   interpretedIntent: string;
   filters: PropertySearchFilters;
   rankingExplanation: string;
+}
+
+export interface NaturalLanguagePropertySearchResponse extends NaturalLanguageSearchResponse {
+  items: PropertySnapshot[];
+  total: number;
 }
 
 export interface AiAdvisorSummary {

@@ -4,6 +4,7 @@ import { DatabaseModule } from "../database/database.module.js";
 import { CreatePropertyHandler } from "./application/commands/create-property.handler.js";
 import { GetPropertyHandler } from "./application/queries/get-property.handler.js";
 import { ListPropertiesHandler } from "./application/queries/list-properties.handler.js";
+import { NaturalLanguagePropertySearchService } from "./application/services/natural-language-property-search.service.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
@@ -17,6 +18,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
   providers: [
     ...commandHandlers,
     ...queryHandlers,
+    NaturalLanguagePropertySearchService,
     {
       provide: PROPERTY_REPOSITORY,
       useClass: PgPropertyRepository
