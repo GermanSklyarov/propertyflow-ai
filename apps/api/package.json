@@ -9,12 +9,19 @@
     "dev": "tsx src/main.ts"
   },
   "dependencies": {
+    "@nestjs/common": "^11.1.27",
+    "@nestjs/core": "^11.1.27",
+    "@nestjs/cqrs": "^11.0.3",
+    "@nestjs/platform-express": "^11.1.27",
     "@propertyflow/config": "0.1.0",
     "@propertyflow/contracts": "0.1.0",
-    "@propertyflow/domain": "0.1.0"
+    "@propertyflow/domain": "0.1.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.15.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "tsx": "^4.16.2"
   }
 }
-
