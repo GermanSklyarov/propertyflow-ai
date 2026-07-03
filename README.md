@@ -79,6 +79,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties`
 - `POST /properties/ai-search`
 - `GET /properties`
+- `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId`
 - `GET /health`
 
@@ -105,6 +106,15 @@ All property routes require the `x-tenant-id` header.
   "purpose": "living"
 }
 ```
+
+`GET /properties/:propertyId/advisor` returns a rule-based AI advisor summary:
+
+- best fit: living, investment, relocation, family;
+- pros;
+- cons;
+- risks;
+- questions to ask the agent;
+- confidence and source signals.
 
 ## First Milestones
 

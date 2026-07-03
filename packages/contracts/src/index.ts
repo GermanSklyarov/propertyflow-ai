@@ -88,4 +88,6 @@ export interface AiAdvisorSummary {
   cons: string[];
   risks: string[];
   questionsToAskAgent: string[];
+  confidence: "low" | "medium" | "high";
+  generatedFrom: string[];
 }
