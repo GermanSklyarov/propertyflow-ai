@@ -140,3 +140,30 @@ export interface NeighborhoodIntelligence {
   nearestPois: NeighborhoodPoi[];
   signals: string[];
 }
+
+export interface ComparePropertiesRequest {
+  propertyIds: string[];
+}
+
+export interface PropertyComparisonScore {
+  propertyId: string;
+  title: string;
+  purpose: PropertyPurpose;
+  score: number;
+  reasons: string[];
+}
+
+export interface PropertyComparisonWinner {
+  purpose: PropertyPurpose;
+  propertyId: string;
+  title: string;
+  score: number;
+  explanation: string;
+}
+
+export interface PropertyComparisonResponse {
+  comparedPropertyIds: string[];
+  scores: PropertyComparisonScore[];
+  winners: PropertyComparisonWinner[];
+  summary: string;
+}

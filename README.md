@@ -78,6 +78,7 @@ The API starts with a tenant-aware property inventory slice:
 
 - `POST /properties`
 - `POST /properties/ai-search`
+- `POST /properties/compare`
 - `GET /properties`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
@@ -106,6 +107,18 @@ All property routes require the `x-tenant-id` header.
   "locale": "ru",
   "query": "Ищу квартиру в Паттайе до 3 млн бат рядом с пляжем, бассейном и хорошим интернетом",
   "purpose": "living"
+}
+```
+
+`POST /properties/compare` compares 2-3 properties for investment, living, family, and relocation.
+
+```json
+{
+  "propertyIds": [
+    "property-id-1",
+    "property-id-2",
+    "property-id-3"
+  ]
 }
 ```
 

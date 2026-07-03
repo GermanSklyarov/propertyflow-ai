@@ -5,6 +5,7 @@ import type {
   InvestmentAnalysis,
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
+  PropertyComparisonResponse,
   PropertySearchResponse
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -16,6 +17,8 @@ import { AiPropertyAdvisorService } from "../../application/services/ai-property
 import { InvestmentCalculatorService } from "../../application/services/investment-calculator.service.js";
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
+import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
+import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { SearchPropertiesDto } from "./search-properties.dto.js";
@@ -34,7 +37,9 @@ export class PropertiesController {
     @Inject(NaturalLanguagePropertySearchService)
     private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService,
     @Inject(NeighborhoodIntelligenceService)
-    private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService
+    private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService,
+    @Inject(PropertyComparisonService)
+    private readonly propertyComparison: PropertyComparisonService
   ) {}
 
   @Post()
@@ -53,6 +58,14 @@ export class PropertiesController {
     @Body() payload: NaturalLanguageSearchDto
   ): Promise<NaturalLanguagePropertySearchResponse> {
     return this.naturalLanguageSearch.search(tenantId, payload);
+  }
+
+  @Post("compare")
+  compare(
+    @TenantId() tenantId: string,
+    @Body() payload: ComparePropertiesDto
+  ): Promise<PropertyComparisonResponse> {
+    return this.propertyComparison.compare(tenantId, payload);
   }
 
   @Get(":propertyId/advisor")
