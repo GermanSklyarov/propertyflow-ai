@@ -1,5 +1,5 @@
-import type { PropertySnapshot } from "@propertyflow/domain";
-import type { PropertySearchRequest } from "@propertyflow/contracts";
+import type { Money, PropertySnapshot } from "@propertyflow/domain";
+import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
 
 export const PROPERTY_REPOSITORY = Symbol("PROPERTY_REPOSITORY");
 
@@ -8,4 +8,12 @@ export interface PropertyRepository {
   findById(tenantId: string, propertyId: string): Promise<PropertySnapshot | null>;
   list(tenantId: string): Promise<PropertySnapshot[]>;
   search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]>;
+  addPriceHistoryPoint(
+    tenantId: string,
+    propertyId: string,
+    price: Money,
+    source: PropertyPriceHistoryPoint["source"],
+    effectiveDate: string
+  ): Promise<PropertyPriceHistoryPoint>;
+  listPriceHistory(tenantId: string, propertyId: string): Promise<PropertyPriceHistoryPoint[]>;
 }

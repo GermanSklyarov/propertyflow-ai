@@ -1,11 +1,12 @@
 import { Injectable } from "@nestjs/common";
-import type { PropertySearchRequest } from "@propertyflow/contracts";
-import type { PropertySnapshot } from "@propertyflow/domain";
+import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
+import type { Money, PropertySnapshot } from "@propertyflow/domain";
 import type { PropertyRepository } from "../domain/property.repository.js";
 
 @Injectable()
 export class InMemoryPropertyRepository implements PropertyRepository {
   private readonly properties = new Map<string, PropertySnapshot>();
+  private readonly priceHistory = new Map<string, PropertyPriceHistoryPoint[]>();
 
   async save(property: PropertySnapshot): Promise<PropertySnapshot> {
     this.properties.set(this.key(property.tenantId, property.id), property);
@@ -61,6 +62,30 @@ export class InMemoryPropertyRepository implements PropertyRepository {
 
       return true;
     });
+  }
+
+  async addPriceHistoryPoint(
+    tenantId: string,
+    propertyId: string,
+    price: Money,
+    source: PropertyPriceHistoryPoint["source"],
+    effectiveDate: string
+  ): Promise<PropertyPriceHistoryPoint> {
+    const point: PropertyPriceHistoryPoint = {
+      effectiveDate,
+      price,
+      source
+    };
+    const key = this.key(tenantId, propertyId);
+    const existing = this.priceHistory.get(key) ?? [];
+
+    this.priceHistory.set(key, [...existing, point]);
+
+    return point;
+  }
+
+  async listPriceHistory(tenantId: string, propertyId: string): Promise<PropertyPriceHistoryPoint[]> {
+    return this.priceHistory.get(this.key(tenantId, propertyId)) ?? [];
   }
 
   private key(tenantId: string, propertyId: string): string {

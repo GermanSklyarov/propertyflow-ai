@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
-import type { PropertySearchRequest } from "@propertyflow/contracts";
+import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
 import type { Currency, Money, PropertyKind, PropertySnapshot, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { PropertyRepository } from "../../domain/property.repository.js";
@@ -30,6 +30,13 @@ interface PropertyRow {
   amenities: string[];
   created_at: Date;
   updated_at: Date;
+}
+
+interface PropertyPriceHistoryRow {
+  price_amount: string;
+  price_currency: Currency;
+  source: PropertyPriceHistoryPoint["source"];
+  effective_date: Date;
 }
 
 @Injectable()
@@ -204,6 +211,54 @@ export class PgPropertyRepository implements PropertyRepository {
     return result.rows.map((row) => this.toSnapshot(row));
   }
 
+  async addPriceHistoryPoint(
+    tenantId: string,
+    propertyId: string,
+    price: Money,
+    source: PropertyPriceHistoryPoint["source"],
+    effectiveDate: string
+  ): Promise<PropertyPriceHistoryPoint> {
+    const result = await this.pool.query<PropertyPriceHistoryRow>(
+      `
+        insert into property_price_history (
+          id,
+          tenant_id,
+          property_id,
+          price_amount,
+          price_currency,
+          source,
+          effective_date
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7
+        )
+        returning price_amount, price_currency, source, effective_date
+      `,
+      [crypto.randomUUID(), tenantId, propertyId, price.amount, price.currency, source, effectiveDate]
+    );
+
+    return this.toPriceHistoryPoint(result.rows[0]);
+  }
+
+  async listPriceHistory(tenantId: string, propertyId: string): Promise<PropertyPriceHistoryPoint[]> {
+    const result = await this.pool.query<PropertyPriceHistoryRow>(
+      `
+        select price_amount, price_currency, source, effective_date
+        from property_price_history
+        where tenant_id = $1 and property_id = $2
+        order by effective_date asc
+      `,
+      [tenantId, propertyId]
+    );
+
+    return result.rows.map((row) => this.toPriceHistoryPoint(row));
+  }
+
   private toSnapshot(row: PropertyRow): PropertySnapshot {
     return {
       id: row.id,
@@ -243,6 +298,17 @@ export class PgPropertyRepository implements PropertyRepository {
     return {
       amount: Number(amount),
       currency
+    };
+  }
+
+  private toPriceHistoryPoint(row: PropertyPriceHistoryRow): PropertyPriceHistoryPoint {
+    return {
+      effectiveDate: row.effective_date.toISOString(),
+      price: {
+        amount: Number(row.price_amount),
+        currency: row.price_currency
+      },
+      source: row.source
     };
   }
 }

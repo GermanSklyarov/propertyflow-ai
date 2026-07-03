@@ -167,3 +167,19 @@ export interface PropertyComparisonResponse {
   winners: PropertyComparisonWinner[];
   summary: string;
 }
+
+export interface PropertyPriceHistoryPoint {
+  effectiveDate: string;
+  price: Money;
+  source: "initial-listing" | "agent-update" | "import" | "fallback-current-price";
+}
+
+export interface PropertyPriceHistory {
+  propertyId: string;
+  currentPrice: Money;
+  points: PropertyPriceHistoryPoint[];
+  changeAmount?: Money;
+  changePercent?: number;
+  trend: "up" | "down" | "flat" | "insufficient-data";
+  summary: string;
+}

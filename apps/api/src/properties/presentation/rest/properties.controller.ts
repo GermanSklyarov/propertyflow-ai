@@ -6,6 +6,7 @@ import type {
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
   PropertyComparisonResponse,
+  PropertyPriceHistory,
   PropertySearchResponse
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -17,6 +18,7 @@ import { AiPropertyAdvisorService } from "../../application/services/ai-property
 import { InvestmentCalculatorService } from "../../application/services/investment-calculator.service.js";
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
+import { PriceHistoryService } from "../../application/services/price-history.service.js";
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
@@ -38,6 +40,8 @@ export class PropertiesController {
     private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService,
     @Inject(NeighborhoodIntelligenceService)
     private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService,
+    @Inject(PriceHistoryService)
+    private readonly priceHistory: PriceHistoryService,
     @Inject(PropertyComparisonService)
     private readonly propertyComparison: PropertyComparisonService
   ) {}
@@ -84,6 +88,14 @@ export class PropertiesController {
     @Param("propertyId") propertyId: string
   ): Promise<NeighborhoodIntelligence> {
     return this.neighborhoodIntelligence.analyze(tenantId, propertyId);
+  }
+
+  @Get(":propertyId/price-history")
+  priceHistorySummary(
+    @TenantId() tenantId: string,
+    @Param("propertyId") propertyId: string
+  ): Promise<PropertyPriceHistory> {
+    return this.priceHistory.getHistory(tenantId, propertyId);
   }
 
   @Get(":propertyId")

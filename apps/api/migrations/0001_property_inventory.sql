@@ -33,3 +33,14 @@ create index if not exists idx_properties_tenant_market on properties (tenant_id
 create index if not exists idx_properties_location on properties using gist (location);
 create index if not exists idx_properties_price_amount on properties (price_amount);
 
+create table if not exists property_price_history (
+  id uuid primary key,
+  tenant_id text not null,
+  property_id uuid not null references properties(id) on delete cascade,
+  price_amount numeric(14, 2) not null,
+  price_currency text not null,
+  source text not null,
+  effective_date timestamptz not null
+);
+
+create index if not exists idx_property_price_history_property on property_price_history (tenant_id, property_id, effective_date);

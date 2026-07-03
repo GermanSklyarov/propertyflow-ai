@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { Pool } from "pg";
@@ -11,12 +11,15 @@ const pool = new Pool({
 
 try {
   const migrationsDir = join(dirname(fileURLToPath(import.meta.url)), "../../migrations");
-  const migration = await readFile(join(migrationsDir, "0001_property_inventory.sql"), "utf8");
+  const migrationFiles = (await readdir(migrationsDir)).filter((file) => file.endsWith(".sql")).sort();
 
-  await pool.query(migration);
+  for (const migrationFile of migrationFiles) {
+    const migration = await readFile(join(migrationsDir, migrationFile), "utf8");
 
-  console.log("Applied migration: 0001_property_inventory.sql");
+    await pool.query(migration);
+
+    console.log(`Applied migration: ${migrationFile}`);
+  }
 } finally {
   await pool.end();
 }
-

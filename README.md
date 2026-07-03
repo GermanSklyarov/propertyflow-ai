@@ -83,6 +83,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
 - `GET /properties/:propertyId/neighborhood`
+- `GET /properties/:propertyId/price-history`
 - `GET /properties/:propertyId`
 - `GET /health`
 
@@ -146,6 +147,8 @@ All property routes require the `x-tenant-id` header.
 - beach, restaurants, shopping, transport, hospitals, schools, coworking, and nightlife scores;
 - nearest seed POIs;
 - lifestyle signals.
+
+`GET /properties/:propertyId/price-history` returns recorded price points, current price, change amount, change percent, trend, and a short summary. New listings automatically create an initial price history point.
 
 ## First Milestones
 

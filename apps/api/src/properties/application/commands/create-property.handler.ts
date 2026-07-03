@@ -20,7 +20,16 @@ export class CreatePropertyHandler implements ICommandHandler<CreatePropertyComm
       ...command.payload
     };
 
-    return this.properties.save(property);
+    const savedProperty = await this.properties.save(property);
+
+    await this.properties.addPriceHistoryPoint(
+      savedProperty.tenantId,
+      savedProperty.id,
+      savedProperty.price,
+      "initial-listing",
+      savedProperty.createdAt
+    );
+
+    return savedProperty;
   }
 }
-
