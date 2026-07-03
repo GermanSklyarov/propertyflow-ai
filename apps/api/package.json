@@ -1,0 +1,20 @@
+{
+  "name": "@propertyflow/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "dev": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@propertyflow/config": "0.1.0",
+    "@propertyflow/contracts": "0.1.0",
+    "@propertyflow/domain": "0.1.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.16.2"
+  }
+}
+

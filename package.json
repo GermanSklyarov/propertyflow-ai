@@ -1,0 +1,25 @@
+{
+  "name": "propertyflow-ai",
+  "version": "0.1.0",
+  "private": true,
+  "description": "AI-first real estate SaaS for Thailand property search and agency automation.",
+  "license": "UNLICENSED",
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "check": "tsc -b",
+    "dev": "npm run dev --workspaces --if-present",
+    "format": "prettier --write .",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.5.4"
+  }
+}

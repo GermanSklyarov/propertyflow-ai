@@ -1,0 +1,47 @@
+export type Currency = "THB" | "USD" | "EUR";
+
+export type PropertyPurpose = "living" | "investment" | "relocation" | "family";
+
+export type PropertyStatus = "draft" | "available" | "reserved" | "sold" | "archived";
+
+export type ThailandMarket = "pattaya" | "phuket" | "bangkok" | "hua-hin" | "koh-samui";
+
+export interface Money {
+  amount: number;
+  currency: Currency;
+}
+
+export interface GeoPoint {
+  latitude: number;
+  longitude: number;
+}
+
+export interface PropertySnapshot {
+  id: string;
+  tenantId: string;
+  title: string;
+  market: ThailandMarket;
+  status: PropertyStatus;
+  price: Money;
+  location: GeoPoint;
+  bedrooms: number;
+  bathrooms: number;
+  areaSqm: number;
+  beachDistanceMeters?: number;
+  monthlyRentEstimate?: Money;
+  maintenanceFeeMonthly?: Money;
+}
+
+export interface InvestmentSnapshot {
+  propertyId: string;
+  purchasePrice: Money;
+  monthlyRent: Money;
+  occupancyRate: number;
+  annualCosts: Money;
+}
+
+export function calculateGrossYield(input: InvestmentSnapshot): number {
+  const annualRent = input.monthlyRent.amount * 12 * input.occupancyRate;
+  return annualRent / input.purchasePrice.amount;
+}
+
