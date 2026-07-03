@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CqrsModule } from "@nestjs/cqrs";
+import { DatabaseModule } from "../database/database.module.js";
 import { CreatePropertyHandler } from "./application/commands/create-property.handler.js";
 import { GetPropertyHandler } from "./application/queries/get-property.handler.js";
 import { ListPropertiesHandler } from "./application/queries/list-properties.handler.js";
@@ -11,7 +12,7 @@ const commandHandlers = [CreatePropertyHandler];
 const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
 
 @Module({
-  imports: [CqrsModule],
+  imports: [CqrsModule, DatabaseModule],
   controllers: [PropertiesController],
   providers: [
     ...commandHandlers,
