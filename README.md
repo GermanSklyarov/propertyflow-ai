@@ -84,6 +84,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/:propertyId/investment`
 - `GET /properties/:propertyId/neighborhood`
 - `GET /properties/:propertyId/price-history`
+- `GET /properties/:propertyId/rental-yield`
 - `GET /properties/:propertyId`
 - `GET /health`
 
@@ -149,6 +150,14 @@ All property routes require the `x-tenant-id` header.
 - lifestyle signals.
 
 `GET /properties/:propertyId/price-history` returns recorded price points, current price, change amount, change percent, trend, and a short summary. New listings automatically create an initial price history point.
+
+`GET /properties/:propertyId/rental-yield` returns a compact yield summary for listing cards and search results:
+
+- price;
+- monthly rent estimate;
+- annual gross rent;
+- gross and net yield;
+- confidence, label, summary, and warnings.
 
 ## First Milestones
 

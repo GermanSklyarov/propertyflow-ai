@@ -7,7 +7,8 @@ import type {
   NeighborhoodIntelligence,
   PropertyComparisonResponse,
   PropertyPriceHistory,
-  PropertySearchResponse
+  PropertySearchResponse,
+  RentalYieldSummary
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
@@ -20,6 +21,7 @@ import { NaturalLanguagePropertySearchService } from "../../application/services
 import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "../../application/services/price-history.service.js";
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
+import { RentalYieldService } from "../../application/services/rental-yield.service.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
@@ -43,7 +45,9 @@ export class PropertiesController {
     @Inject(PriceHistoryService)
     private readonly priceHistory: PriceHistoryService,
     @Inject(PropertyComparisonService)
-    private readonly propertyComparison: PropertyComparisonService
+    private readonly propertyComparison: PropertyComparisonService,
+    @Inject(RentalYieldService)
+    private readonly rentalYield: RentalYieldService
   ) {}
 
   @Post()
@@ -96,6 +100,14 @@ export class PropertiesController {
     @Param("propertyId") propertyId: string
   ): Promise<PropertyPriceHistory> {
     return this.priceHistory.getHistory(tenantId, propertyId);
+  }
+
+  @Get(":propertyId/rental-yield")
+  rentalYieldSummary(
+    @TenantId() tenantId: string,
+    @Param("propertyId") propertyId: string
+  ): Promise<RentalYieldSummary> {
+    return this.rentalYield.summarize(tenantId, propertyId);
   }
 
   @Get(":propertyId")

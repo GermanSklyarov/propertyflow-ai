@@ -183,3 +183,17 @@ export interface PropertyPriceHistory {
   trend: "up" | "down" | "flat" | "insufficient-data";
   summary: string;
 }
+
+export interface RentalYieldSummary {
+  propertyId: string;
+  price: Money;
+  monthlyRentEstimate?: Money;
+  annualGrossRent?: Money;
+  grossYield?: number;
+  netYield?: number;
+  occupancyRate: number;
+  confidence: "low" | "medium" | "high";
+  label: "strong" | "moderate" | "weak" | "unknown";
+  summary: string;
+  warnings: string[];
+}

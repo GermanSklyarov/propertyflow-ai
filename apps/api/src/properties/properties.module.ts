@@ -10,6 +10,7 @@ import { NaturalLanguagePropertySearchService } from "./application/services/nat
 import { NeighborhoodIntelligenceService } from "./application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "./application/services/price-history.service.js";
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
+import { RentalYieldService } from "./application/services/rental-yield.service.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
@@ -29,6 +30,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     NeighborhoodIntelligenceService,
     PriceHistoryService,
     PropertyComparisonService,
+    RentalYieldService,
     {
       provide: PROPERTY_REPOSITORY,
       useClass: PgPropertyRepository
