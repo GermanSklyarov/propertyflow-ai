@@ -1,12 +1,13 @@
-import { Body, Controller, Get, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
-import type { PropertyListResponse } from "@propertyflow/contracts";
+import type { PropertySearchResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { CreatePropertyCommand } from "../../application/commands/create-property.command.js";
 import { GetPropertyQuery } from "../../application/queries/get-property.query.js";
 import { ListPropertiesQuery } from "../../application/queries/list-properties.query.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
+import { SearchPropertiesDto } from "./search-properties.dto.js";
 
 @Controller("properties")
 export class PropertiesController {
@@ -23,8 +24,8 @@ export class PropertiesController {
   }
 
   @Get()
-  list(@TenantId() tenantId: string): Promise<PropertyListResponse> {
-    return this.queryBus.execute(new ListPropertiesQuery(tenantId));
+  list(@TenantId() tenantId: string, @Query() query: SearchPropertiesDto): Promise<PropertySearchResponse> {
+    return this.queryBus.execute(new ListPropertiesQuery(tenantId, query.toSearchRequest()));
   }
 
   @Get(":propertyId")

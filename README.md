@@ -83,6 +83,18 @@ The API starts with a tenant-aware property inventory slice:
 
 All property routes require the `x-tenant-id` header.
 
+`GET /properties` supports the first structured search filters:
+
+- `market`
+- `minPriceThb`
+- `maxPriceThb`
+- `minBedrooms`
+- `minBathrooms`
+- `minAreaSqm`
+- `maxBeachDistanceMeters`
+- `requiredAmenities=pool,gym,sea-view`
+- `nearLatitude`, `nearLongitude`, `radiusMeters`
+
 ## First Milestones
 
 1. Foundation: repository, architecture decisions, local infrastructure, domain vocabulary.

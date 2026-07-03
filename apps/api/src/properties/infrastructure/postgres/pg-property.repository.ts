@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
+import type { PropertySearchRequest } from "@propertyflow/contracts";
 import type { Currency, Money, PropertyKind, PropertySnapshot, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { PropertyRepository } from "../../domain/property.repository.js";
@@ -139,14 +140,65 @@ export class PgPropertyRepository implements PropertyRepository {
   }
 
   async list(tenantId: string): Promise<PropertySnapshot[]> {
+    return this.search(tenantId, {});
+  }
+
+  async search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]> {
+    const clauses = ["tenant_id = $1"];
+    const values: unknown[] = [tenantId];
+
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (filters.market) {
+      clauses.push(`market = ${addValue(filters.market)}`);
+    }
+
+    if (filters.minPriceThb !== undefined) {
+      clauses.push(`price_currency = 'THB' and price_amount >= ${addValue(filters.minPriceThb)}`);
+    }
+
+    if (filters.maxPriceThb !== undefined) {
+      clauses.push(`price_currency = 'THB' and price_amount <= ${addValue(filters.maxPriceThb)}`);
+    }
+
+    if (filters.minBedrooms !== undefined) {
+      clauses.push(`bedrooms >= ${addValue(filters.minBedrooms)}`);
+    }
+
+    if (filters.minBathrooms !== undefined) {
+      clauses.push(`bathrooms >= ${addValue(filters.minBathrooms)}`);
+    }
+
+    if (filters.minAreaSqm !== undefined) {
+      clauses.push(`area_sqm >= ${addValue(filters.minAreaSqm)}`);
+    }
+
+    if (filters.maxBeachDistanceMeters !== undefined) {
+      clauses.push(`beach_distance_meters <= ${addValue(filters.maxBeachDistanceMeters)}`);
+    }
+
+    if (filters.requiredAmenities?.length) {
+      clauses.push(`amenities @> ${addValue(filters.requiredAmenities)}::text[]`);
+    }
+
+    if (filters.near && filters.radiusMeters !== undefined) {
+      const longitude = addValue(filters.near.longitude);
+      const latitude = addValue(filters.near.latitude);
+      const radius = addValue(filters.radiusMeters);
+      clauses.push(`st_dwithin(location, st_setsrid(st_makepoint(${longitude}, ${latitude}), 4326)::geography, ${radius})`);
+    }
+
     const result = await this.pool.query<PropertyRow>(
       `
         select *
         from properties
-        where tenant_id = $1
+        where ${clauses.join(" and ")}
         order by created_at desc
       `,
-      [tenantId]
+      values
     );
 
     return result.rows.map((row) => this.toSnapshot(row));
@@ -194,4 +246,3 @@ export class PgPropertyRepository implements PropertyRepository {
     };
   }
 }
-

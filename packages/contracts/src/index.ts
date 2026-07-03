@@ -29,6 +29,25 @@ export interface PropertyListResponse {
   items: PropertySnapshot[];
 }
 
+export interface PropertySearchRequest {
+  market?: ThailandMarket;
+  minPriceThb?: number;
+  maxPriceThb?: number;
+  minBedrooms?: number;
+  minBathrooms?: number;
+  minAreaSqm?: number;
+  maxBeachDistanceMeters?: number;
+  requiredAmenities?: string[];
+  near?: GeoPoint;
+  radiusMeters?: number;
+}
+
+export interface PropertySearchResponse {
+  items: PropertySnapshot[];
+  total: number;
+  filters: PropertySearchRequest;
+}
+
 export interface NaturalLanguageSearchRequest {
   tenantId: string;
   locale: "en" | "ru" | "th" | "zh";
@@ -39,9 +58,14 @@ export interface NaturalLanguageSearchRequest {
 
 export interface PropertySearchFilters {
   market?: ThailandMarket;
+  minPriceThb?: number;
   maxPriceThb?: number;
   minBedrooms?: number;
+  minBathrooms?: number;
+  minAreaSqm?: number;
   maxBeachDistanceMeters?: number;
+  near?: GeoPoint;
+  radiusMeters?: number;
   requiredAmenities?: string[];
   lifestyleSignals?: string[];
   investmentSignals?: string[];
