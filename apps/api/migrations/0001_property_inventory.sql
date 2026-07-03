@@ -1,5 +1,42 @@
 create extension if not exists postgis;
 
+create table if not exists tenants (
+  id text primary key,
+  name text not null,
+  slug text not null unique,
+  status text not null,
+  primary_market text,
+  branding_display_name text not null,
+  branding_primary_color text,
+  branding_logo_url text,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+insert into tenants (
+  id,
+  name,
+  slug,
+  status,
+  primary_market,
+  branding_display_name,
+  branding_primary_color,
+  branding_logo_url,
+  created_at,
+  updated_at
+) values (
+  'demo-agency',
+  'Demo Agency',
+  'demo-agency',
+  'active',
+  'pattaya',
+  'Demo Agency',
+  '#0f766e',
+  null,
+  now(),
+  now()
+) on conflict (id) do nothing;
+
 create table if not exists properties (
   id uuid primary key,
   tenant_id text not null,

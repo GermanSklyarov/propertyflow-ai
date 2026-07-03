@@ -86,9 +86,10 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/:propertyId/price-history`
 - `GET /properties/:propertyId/rental-yield`
 - `GET /properties/:propertyId`
+- `GET /tenants/current`
 - `GET /health`
 
-All property routes require the `x-tenant-id` header.
+All tenant-aware routes require the `x-tenant-id` header. The API validates it against an active tenant record. Local development seeds `demo-agency`.
 
 `GET /properties` supports the first structured search filters:
 
@@ -158,6 +159,8 @@ All property routes require the `x-tenant-id` header.
 - annual gross rent;
 - gross and net yield;
 - confidence, label, summary, and warnings.
+
+`GET /tenants/current` returns the active tenant workspace, branding, status, and primary market for the supplied `x-tenant-id`.
 
 ## First Milestones
 

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import type {
   AiAdvisorSummary,
@@ -12,6 +12,7 @@ import type {
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
+import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { CreatePropertyCommand } from "../../application/commands/create-property.command.js";
 import { GetPropertyQuery } from "../../application/queries/get-property.query.js";
 import { ListPropertiesQuery } from "../../application/queries/list-properties.query.js";
@@ -28,6 +29,7 @@ import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { SearchPropertiesDto } from "./search-properties.dto.js";
 
 @Controller("properties")
+@UseGuards(TenantGuard)
 export class PropertiesController {
   constructor(
     @Inject(CommandBus)

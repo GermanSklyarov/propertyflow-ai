@@ -7,6 +7,21 @@ import type {
   ThailandMarket
 } from "@propertyflow/domain";
 
+export interface TenantSnapshot {
+  id: string;
+  name: string;
+  slug: string;
+  status: "active" | "suspended";
+  primaryMarket?: ThailandMarket;
+  branding: {
+    displayName: string;
+    primaryColor?: string;
+    logoUrl?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreatePropertyRequest {
   title: string;
   description?: string;
