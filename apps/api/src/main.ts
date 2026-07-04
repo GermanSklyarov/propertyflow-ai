@@ -31,6 +31,8 @@ const openApiConfig = new DocumentBuilder()
   .addTag("properties")
   .addTag("tenants")
   .addTag("public-properties")
+  .addTag("leads")
+  .addTag("public-leads")
   .build();
 const openApiDocument = () => SwaggerModule.createDocument(app, openApiConfig);
 

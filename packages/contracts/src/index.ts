@@ -34,7 +34,8 @@ export type AuditAction =
   | "property.created"
   | "property.ai_search"
   | "property.compared"
-  | "tenant.current_viewed";
+  | "tenant.current_viewed"
+  | "lead.created";
 
 export interface AuditEventSnapshot {
   id: string;
@@ -42,7 +43,7 @@ export interface AuditEventSnapshot {
   userId?: string;
   userRole?: UserRole;
   action: AuditAction;
-  resourceType: "property" | "tenant" | "search" | "comparison";
+  resourceType: "property" | "tenant" | "search" | "comparison" | "lead";
   resourceId?: string;
   metadata: Record<string, unknown>;
   createdAt: string;
@@ -248,4 +249,35 @@ export interface RentalYieldSummary {
   label: "strong" | "moderate" | "weak" | "unknown";
   summary: string;
   warnings: string[];
+}
+
+export type LeadStatus = "new" | "contacted" | "qualified" | "lost" | "won";
+
+export type LeadSource = "website" | "public-api" | "agent" | "ai-chat";
+
+export interface CreateLeadRequest {
+  propertyId?: string;
+  source: LeadSource;
+  contactName: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  message?: string;
+  preferredLocale?: "en" | "ru" | "th" | "zh";
+  assignedAgentId?: string;
+}
+
+export interface LeadSnapshot {
+  id: string;
+  tenantId: string;
+  propertyId?: string;
+  source: LeadSource;
+  status: LeadStatus;
+  contactName: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  message?: string;
+  preferredLocale?: "en" | "ru" | "th" | "zh";
+  assignedAgentId?: string;
+  createdAt: string;
+  updatedAt: string;
 }

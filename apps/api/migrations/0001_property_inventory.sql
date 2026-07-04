@@ -126,9 +126,29 @@ insert into api_keys (
   'pf_demo',
   '4dcc05bed1685cd17afcfdfb499497e980b89048c0c4a1219262fdb5043ce74b',
   'active',
-  array['properties:read'],
+  array['properties:read', 'leads:write'],
   now(),
   null
 ) on conflict (id) do nothing;
 
 create index if not exists idx_api_keys_tenant_status on api_keys (tenant_id, status);
+
+create table if not exists leads (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid references properties(id) on delete set null,
+  source text not null,
+  status text not null,
+  contact_name text not null,
+  contact_email text,
+  contact_phone text,
+  message text,
+  preferred_locale text,
+  assigned_agent_id text,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+create index if not exists idx_leads_tenant_status on leads (tenant_id, status);
+create index if not exists idx_leads_tenant_property on leads (tenant_id, property_id);
+create index if not exists idx_leads_tenant_created on leads (tenant_id, created_at desc);

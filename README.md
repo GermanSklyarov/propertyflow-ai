@@ -79,6 +79,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
+- `POST /leads`
 - `GET /properties`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
@@ -89,6 +90,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /tenants/current`
 - `GET /public/v1/properties`
 - `GET /public/v1/properties/:propertyId`
+- `POST /public/v1/leads`
 - `GET /health`
 
 Swagger UI is available at `/docs`; the OpenAPI JSON document is available at `/docs-json`.
@@ -105,6 +107,7 @@ Current protected routes:
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
+- `POST /leads`
 - `GET /tenants/current`
 
 Audit log v1 records these actions:
@@ -113,6 +116,7 @@ Audit log v1 records these actions:
 - `property.ai_search`
 - `property.compared`
 - `tenant.current_viewed`
+- `lead.created`
 
 `GET /properties` supports the first structured search filters:
 
@@ -185,7 +189,7 @@ Audit log v1 records these actions:
 
 `GET /tenants/current` returns the active tenant workspace, branding, status, and primary market for the supplied `x-tenant-id`.
 
-Public API v1 uses the `x-api-key` header and is read-only. Local development seeds this demo key:
+Public API v1 uses the `x-api-key` header. It is read-only for properties and supports lead intake. Local development seeds this demo key:
 
 ```txt
 pf_demo_public_key
@@ -195,6 +199,7 @@ Public API v1 endpoints:
 
 - `GET /public/v1/properties`
 - `GET /public/v1/properties/:propertyId`
+- `POST /public/v1/leads`
 
 ## First Milestones
 
