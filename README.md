@@ -129,6 +129,12 @@ Run the worker locally with:
 npm run dev --workspace @propertyflow/worker
 ```
 
+With API and worker running, verify the full indexing path with:
+
+```sh
+npm run smoke:indexing --workspace @propertyflow/api
+```
+
 All tenant-aware routes require the `x-tenant-id` header. The API validates it against an active tenant record. Local development seeds `demo-agency`.
 
 Routes with write or workspace-sensitive behavior also require dev RBAC headers:

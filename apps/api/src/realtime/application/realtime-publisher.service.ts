@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import type { RealtimeEvent, RealtimeEventType } from "@propertyflow/contracts";
 import { RealtimeGateway } from "../presentation/websocket/realtime.gateway.js";
 
 @Injectable()
 export class RealtimePublisherService {
-  constructor(private readonly gateway: RealtimeGateway) {}
+  constructor(@Inject(RealtimeGateway) private readonly gateway: RealtimeGateway) {}
 
   publish<TPayload extends Record<string, unknown>>(
     tenantId: string,
@@ -23,4 +23,3 @@ export class RealtimePublisherService {
     return event;
   }
 }
-
