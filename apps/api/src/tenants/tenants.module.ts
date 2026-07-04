@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { DatabaseModule } from "../database/database.module.js";
+import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantGuard } from "../shared/presentation/tenant.guard.js";
 import { TenantService } from "./application/tenant.service.js";
 import { TENANT_REPOSITORY } from "./domain/tenant.repository.js";
@@ -7,7 +8,7 @@ import { PgTenantRepository } from "./infrastructure/postgres/pg-tenant.reposito
 import { CurrentTenantController } from "./presentation/rest/current-tenant.controller.js";
 
 @Module({
-  imports: [DatabaseModule],
+  imports: [AuthModule, DatabaseModule],
   controllers: [CurrentTenantController],
   providers: [
     TenantService,

@@ -11,6 +11,9 @@ import type {
   RentalYieldSummary
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
+import { Roles } from "../../../shared/auth/roles.decorator.js";
+import { RolesGuard } from "../../../shared/auth/roles.guard.js";
+import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { CreatePropertyCommand } from "../../application/commands/create-property.command.js";
@@ -29,7 +32,7 @@ import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { SearchPropertiesDto } from "./search-properties.dto.js";
 
 @Controller("properties")
-@UseGuards(TenantGuard)
+@UseGuards(TenantGuard, UserContextGuard, RolesGuard)
 export class PropertiesController {
   constructor(
     @Inject(CommandBus)
@@ -53,6 +56,7 @@ export class PropertiesController {
   ) {}
 
   @Post()
+  @Roles("agent", "broker", "manager", "admin")
   create(@TenantId() tenantId: string, @Body() payload: CreatePropertyDto): Promise<PropertySnapshot> {
     return this.commandBus.execute(new CreatePropertyCommand(tenantId, payload));
   }
@@ -63,6 +67,7 @@ export class PropertiesController {
   }
 
   @Post("ai-search")
+  @Roles("agent", "broker", "manager", "admin")
   aiSearch(
     @TenantId() tenantId: string,
     @Body() payload: NaturalLanguageSearchDto
@@ -71,6 +76,7 @@ export class PropertiesController {
   }
 
   @Post("compare")
+  @Roles("agent", "broker", "manager", "admin")
   compare(
     @TenantId() tenantId: string,
     @Body() payload: ComparePropertiesDto

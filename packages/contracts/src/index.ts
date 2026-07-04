@@ -22,6 +22,14 @@ export interface TenantSnapshot {
   updatedAt: string;
 }
 
+export type UserRole = "agent" | "broker" | "manager" | "admin";
+
+export interface RequestUser {
+  id: string;
+  tenantId: string;
+  role: UserRole;
+}
+
 export interface CreatePropertyRequest {
   title: string;
   description?: string;

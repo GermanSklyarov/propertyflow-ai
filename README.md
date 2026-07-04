@@ -91,6 +91,18 @@ The API starts with a tenant-aware property inventory slice:
 
 All tenant-aware routes require the `x-tenant-id` header. The API validates it against an active tenant record. Local development seeds `demo-agency`.
 
+Routes with write or workspace-sensitive behavior also require dev RBAC headers:
+
+- `x-user-id`
+- `x-user-role`: `agent`, `broker`, `manager`, or `admin`
+
+Current protected routes:
+
+- `POST /properties`
+- `POST /properties/ai-search`
+- `POST /properties/compare`
+- `GET /tenants/current`
+
 `GET /properties` supports the first structured search filters:
 
 - `market`
