@@ -10,7 +10,10 @@ import type {
   PropertySearchResponse,
   RentalYieldSummary
 } from "@propertyflow/contracts";
+import type { RequestUser } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
+import { AuditService } from "../../../audit/application/audit.service.js";
+import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
 import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
@@ -52,13 +55,36 @@ export class PropertiesController {
     @Inject(PropertyComparisonService)
     private readonly propertyComparison: PropertyComparisonService,
     @Inject(RentalYieldService)
-    private readonly rentalYield: RentalYieldService
+    private readonly rentalYield: RentalYieldService,
+    @Inject(AuditService)
+    private readonly audit: AuditService
   ) {}
 
   @Post()
   @Roles("agent", "broker", "manager", "admin")
-  create(@TenantId() tenantId: string, @Body() payload: CreatePropertyDto): Promise<PropertySnapshot> {
-    return this.commandBus.execute(new CreatePropertyCommand(tenantId, payload));
+  async create(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: CreatePropertyDto
+  ): Promise<PropertySnapshot> {
+    const property = await this.commandBus.execute<CreatePropertyCommand, PropertySnapshot>(
+      new CreatePropertyCommand(tenantId, payload)
+    );
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.created",
+      resourceType: "property",
+      resourceId: property.id,
+      metadata: {
+        market: property.market,
+        price: property.price,
+        kind: property.kind
+      }
+    });
+
+    return property;
   }
 
   @Get()
@@ -68,20 +94,50 @@ export class PropertiesController {
 
   @Post("ai-search")
   @Roles("agent", "broker", "manager", "admin")
-  aiSearch(
+  async aiSearch(
     @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
     @Body() payload: NaturalLanguageSearchDto
   ): Promise<NaturalLanguagePropertySearchResponse> {
-    return this.naturalLanguageSearch.search(tenantId, payload);
+    const result = await this.naturalLanguageSearch.search(tenantId, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_search",
+      resourceType: "search",
+      metadata: {
+        query: payload.query,
+        locale: payload.locale,
+        filters: result.filters,
+        total: result.total
+      }
+    });
+
+    return result;
   }
 
   @Post("compare")
   @Roles("agent", "broker", "manager", "admin")
-  compare(
+  async compare(
     @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
     @Body() payload: ComparePropertiesDto
   ): Promise<PropertyComparisonResponse> {
-    return this.propertyComparison.compare(tenantId, payload);
+    const result = await this.propertyComparison.compare(tenantId, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.compared",
+      resourceType: "comparison",
+      metadata: {
+        propertyIds: payload.propertyIds,
+        winners: result.winners
+      }
+    });
+
+    return result;
   }
 
   @Get(":propertyId/advisor")

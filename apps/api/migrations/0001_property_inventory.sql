@@ -81,3 +81,18 @@ create table if not exists property_price_history (
 );
 
 create index if not exists idx_property_price_history_property on property_price_history (tenant_id, property_id, effective_date);
+
+create table if not exists audit_events (
+  id uuid primary key,
+  tenant_id text not null,
+  user_id text,
+  user_role text,
+  action text not null,
+  resource_type text not null,
+  resource_id text,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_audit_events_tenant_created on audit_events (tenant_id, created_at desc);
+create index if not exists idx_audit_events_action on audit_events (action);

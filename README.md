@@ -103,6 +103,13 @@ Current protected routes:
 - `POST /properties/compare`
 - `GET /tenants/current`
 
+Audit log v1 records these actions:
+
+- `property.created`
+- `property.ai_search`
+- `property.compared`
+- `tenant.current_viewed`
+
 `GET /properties` supports the first structured search filters:
 
 - `market`

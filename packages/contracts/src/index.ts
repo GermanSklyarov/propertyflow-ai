@@ -30,6 +30,24 @@ export interface RequestUser {
   role: UserRole;
 }
 
+export type AuditAction =
+  | "property.created"
+  | "property.ai_search"
+  | "property.compared"
+  | "tenant.current_viewed";
+
+export interface AuditEventSnapshot {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  userRole?: UserRole;
+  action: AuditAction;
+  resourceType: "property" | "tenant" | "search" | "comparison";
+  resourceId?: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface CreatePropertyRequest {
   title: string;
   description?: string;
