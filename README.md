@@ -83,6 +83,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /leads/unassigned`
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
+- `GET /analytics/dashboard`
 - `GET /properties`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
@@ -114,6 +115,7 @@ Current protected routes:
 - `GET /leads/unassigned`
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
+- `GET /analytics/dashboard`
 - `GET /tenants/current`
 
 Audit log v1 records these actions:
@@ -195,6 +197,8 @@ Audit log v1 records these actions:
 - confidence, label, summary, and warnings.
 
 `GET /tenants/current` returns the active tenant workspace, branding, status, and primary market for the supplied `x-tenant-id`.
+
+`GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, and basic conversion rate.
 
 Public API v1 uses the `x-api-key` header. It is read-only for properties and supports lead intake. Local development seeds this demo key:
 

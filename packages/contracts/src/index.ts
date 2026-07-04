@@ -301,3 +301,23 @@ export interface LeadListResponse {
   items: LeadSnapshot[];
   total: number;
 }
+
+export interface CountByBucket {
+  bucket: string;
+  count: number;
+}
+
+export interface TenantDashboardMetrics {
+  tenantId: string;
+  totalProperties: number;
+  availableProperties: number;
+  totalLeads: number;
+  newLeads: number;
+  unassignedLeads: number;
+  wonLeads: number;
+  lostLeads: number;
+  conversionRate: number;
+  leadsBySource: CountByBucket[];
+  leadsByStatus: CountByBucket[];
+  generatedAt: string;
+}
