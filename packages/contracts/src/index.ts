@@ -113,6 +113,41 @@ export interface PropertySearchResponse {
   filters: PropertySearchRequest;
 }
 
+export const PROPERTY_SEARCH_INDEX = "propertyflow-properties-v1";
+
+export interface IndexedPropertySearchRequest extends PropertySearchRequest {
+  query?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface IndexedPropertySearchHit {
+  propertyId: string;
+  score?: number;
+  title: string;
+  description?: string;
+  market: ThailandMarket;
+  kind: PropertyKind;
+  status: PropertySnapshot["status"];
+  price: Money;
+  location: GeoPoint;
+  address?: string;
+  bedrooms: number;
+  bathrooms: number;
+  areaSqm: number;
+  beachDistanceMeters?: number;
+  amenities: string[];
+  highlights: string[];
+}
+
+export interface IndexedPropertySearchResponse {
+  items: IndexedPropertySearchHit[];
+  total: number;
+  filters: IndexedPropertySearchRequest;
+  index: typeof PROPERTY_SEARCH_INDEX;
+  tookMs?: number;
+}
+
 export interface NaturalLanguageSearchRequest {
   locale: "en" | "ru" | "th" | "zh";
   query: string;

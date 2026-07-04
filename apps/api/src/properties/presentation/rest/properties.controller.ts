@@ -4,6 +4,7 @@ import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   AiAdvisorSummary,
   InvestmentAnalysis,
+  IndexedPropertySearchResponse,
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
   PropertyComparisonResponse,
@@ -26,6 +27,7 @@ import { CreatePropertyCommand } from "../../application/commands/create-propert
 import { GetPropertyQuery } from "../../application/queries/get-property.query.js";
 import { ListPropertiesQuery } from "../../application/queries/list-properties.query.js";
 import { AiPropertyAdvisorService } from "../../application/services/ai-property-advisor.service.js";
+import { IndexedPropertySearchService } from "../../application/services/indexed-property-search.service.js";
 import { InvestmentCalculatorService } from "../../application/services/investment-calculator.service.js";
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
@@ -34,8 +36,9 @@ import { PropertyComparisonService } from "../../application/services/property-c
 import { RentalYieldService } from "../../application/services/rental-yield.service.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
+import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
-import { SearchPropertiesDto } from "./search-properties.dto.js";
+import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 
 @Controller("properties")
 @ApiTags("properties")
@@ -51,6 +54,8 @@ export class PropertiesController {
     private readonly queryBus: QueryBus,
     @Inject(AiPropertyAdvisorService)
     private readonly advisor: AiPropertyAdvisorService,
+    @Inject(IndexedPropertySearchService)
+    private readonly indexedSearch: IndexedPropertySearchService,
     @Inject(InvestmentCalculatorService)
     private readonly investmentCalculator: InvestmentCalculatorService,
     @Inject(NaturalLanguagePropertySearchService)
@@ -114,7 +119,15 @@ export class PropertiesController {
 
   @Get()
   list(@TenantId() tenantId: string, @Query() query: SearchPropertiesDto): Promise<PropertySearchResponse> {
-    return this.queryBus.execute(new ListPropertiesQuery(tenantId, query.toSearchRequest()));
+    return this.queryBus.execute(new ListPropertiesQuery(tenantId, toPropertySearchRequest(query)));
+  }
+
+  @Get("search-index")
+  searchIndex(
+    @TenantId() tenantId: string,
+    @Query() query: IndexedSearchPropertiesDto
+  ): Promise<IndexedPropertySearchResponse> {
+    return this.indexedSearch.search(tenantId, toIndexedPropertySearchRequest(query));
   }
 
   @Post("ai-search")

@@ -1,8 +1,7 @@
 import { Client } from "@opensearch-project/opensearch";
 import type { Pool } from "pg";
+import { PROPERTY_SEARCH_INDEX } from "@propertyflow/contracts";
 import type { Currency, PropertyKind, PropertySnapshot, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
-
-const PROPERTY_INDEX_NAME = "propertyflow-properties-v1";
 
 interface PropertyRow {
   id: string;
@@ -76,7 +75,7 @@ export class PropertySearchIndexer {
 
     await this.ensureIndex();
     await this.client.index({
-      index: PROPERTY_INDEX_NAME,
+      index: PROPERTY_SEARCH_INDEX,
       id: `${tenantId}:${propertyId}`,
       body: document,
       refresh: true
@@ -146,7 +145,7 @@ export class PropertySearchIndexer {
 
   private async ensureIndex(): Promise<void> {
     const exists = await this.client.indices.exists({
-      index: PROPERTY_INDEX_NAME
+      index: PROPERTY_SEARCH_INDEX
     });
 
     if (exists.body === true) {
@@ -154,7 +153,7 @@ export class PropertySearchIndexer {
     }
 
     await this.client.indices.create({
-      index: PROPERTY_INDEX_NAME,
+      index: PROPERTY_SEARCH_INDEX,
       body: {
         settings: {
           index: {

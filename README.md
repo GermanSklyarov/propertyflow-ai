@@ -86,6 +86,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /analytics/dashboard`
 - `POST /jobs`
 - `GET /properties`
+- `GET /properties/search-index`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
 - `GET /properties/:propertyId/neighborhood`
@@ -158,7 +159,7 @@ Audit log v1 records these actions:
 - `lead.assigned`
 - `job.enqueued`
 
-`GET /properties` supports the first structured search filters:
+`GET /properties` supports the first PostgreSQL-backed structured search filters:
 
 - `market`
 - `minPriceThb`
@@ -169,6 +170,14 @@ Audit log v1 records these actions:
 - `maxBeachDistanceMeters`
 - `requiredAmenities=pool,gym,sea-view`
 - `nearLatitude`, `nearLongitude`, `radiusMeters`
+
+`GET /properties/search-index` searches OpenSearch index `propertyflow-properties-v1` with tenant isolation. It supports the same filters plus:
+
+- `query`
+- `limit`
+- `offset`
+
+Text search matches `title`, `address`, `description`, and `searchableText`, returns highlights, and keeps full listing details behind `GET /properties/:propertyId`.
 
 `POST /properties/ai-search` accepts natural-language intent and maps it to the structured filters above.
 

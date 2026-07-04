@@ -87,38 +87,64 @@ export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> 
   radiusMeters?: number;
 
   toSearchRequest(): PropertySearchRequest {
-    const hasAnyGeoFilter =
-      this.nearLatitude !== undefined || this.nearLongitude !== undefined || this.radiusMeters !== undefined;
-    const hasCompleteGeoFilter =
-      this.nearLatitude !== undefined && this.nearLongitude !== undefined && this.radiusMeters !== undefined;
-
-    if (hasAnyGeoFilter && !hasCompleteGeoFilter) {
-      throw new BadRequestException("nearLatitude, nearLongitude, and radiusMeters must be provided together");
-    }
-
-    const filters: PropertySearchRequest = {
-      market: this.market,
-      minPriceThb: this.minPriceThb,
-      maxPriceThb: this.maxPriceThb,
-      minBedrooms: this.minBedrooms,
-      minBathrooms: this.minBathrooms,
-      minAreaSqm: this.minAreaSqm,
-      maxBeachDistanceMeters: this.maxBeachDistanceMeters,
-      requiredAmenities: this.requiredAmenities,
-      radiusMeters: this.radiusMeters
-    };
-
-    if (
-      this.nearLatitude !== undefined &&
-      this.nearLongitude !== undefined &&
-      this.radiusMeters !== undefined
-    ) {
-      filters.near = {
-        latitude: this.nearLatitude,
-        longitude: this.nearLongitude
-      };
-    }
-
-    return filters;
+    return toPropertySearchRequest(this);
   }
+}
+
+export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySearchRequest {
+  const nearLatitude = toOptionalNumber(query.nearLatitude);
+  const nearLongitude = toOptionalNumber(query.nearLongitude);
+  const radiusMeters = toOptionalNumber(query.radiusMeters);
+  const hasAnyGeoFilter =
+    nearLatitude !== undefined || nearLongitude !== undefined || radiusMeters !== undefined;
+  const hasCompleteGeoFilter =
+    nearLatitude !== undefined && nearLongitude !== undefined && radiusMeters !== undefined;
+
+  if (hasAnyGeoFilter && !hasCompleteGeoFilter) {
+    throw new BadRequestException("nearLatitude, nearLongitude, and radiusMeters must be provided together");
+  }
+
+  const filters: PropertySearchRequest = {
+    market: query.market,
+    minPriceThb: toOptionalNumber(query.minPriceThb),
+    maxPriceThb: toOptionalNumber(query.maxPriceThb),
+    minBedrooms: toOptionalNumber(query.minBedrooms),
+    minBathrooms: toOptionalNumber(query.minBathrooms),
+    minAreaSqm: toOptionalNumber(query.minAreaSqm),
+    maxBeachDistanceMeters: toOptionalNumber(query.maxBeachDistanceMeters),
+    requiredAmenities: toOptionalStringArray(query.requiredAmenities),
+    radiusMeters
+  };
+
+  if (nearLatitude !== undefined && nearLongitude !== undefined && radiusMeters !== undefined) {
+    filters.near = {
+      latitude: nearLatitude,
+      longitude: nearLongitude
+    };
+  }
+
+  return filters;
+}
+
+function toOptionalNumber(value: number | string | undefined): number | undefined {
+  if (value === undefined || value === "") {
+    return undefined;
+  }
+
+  return Number(value);
+}
+
+function toOptionalStringArray(value: string[] | string | undefined): string[] | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  return value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }

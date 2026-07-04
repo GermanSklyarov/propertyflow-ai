@@ -1,4 +1,4 @@
-import { BadRequestException, CanActivate, ExecutionContext, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, CanActivate, ExecutionContext, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { TenantSnapshot } from "@propertyflow/contracts";
 import { TenantService } from "../../tenants/application/tenant.service.js";
 
@@ -9,7 +9,7 @@ interface TenantAwareRequest {
 
 @Injectable()
 export class TenantGuard implements CanActivate {
-  constructor(private readonly tenants: TenantService) {}
+  constructor(@Inject(TenantService) private readonly tenants: TenantService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<TenantAwareRequest>();
@@ -31,4 +31,3 @@ export class TenantGuard implements CanActivate {
     return true;
   }
 }
-
