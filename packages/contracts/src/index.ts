@@ -46,7 +46,8 @@ export type AuditAction =
   | "property.compared"
   | "tenant.current_viewed"
   | "lead.created"
-  | "lead.assigned";
+  | "lead.assigned"
+  | "job.enqueued";
 
 export interface AuditEventSnapshot {
   id: string;
@@ -54,7 +55,7 @@ export interface AuditEventSnapshot {
   userId?: string;
   userRole?: UserRole;
   action: AuditAction;
-  resourceType: "property" | "tenant" | "search" | "comparison" | "lead";
+  resourceType: "property" | "tenant" | "search" | "comparison" | "lead" | "job";
   resourceId?: string;
   metadata: Record<string, unknown>;
   createdAt: string;
@@ -329,4 +330,58 @@ export interface RealtimeEvent<TPayload = Record<string, unknown>> {
   tenantId: string;
   payload: TPayload;
   occurredAt: string;
+}
+
+export const PROPERTYFLOW_JOBS_QUEUE = "propertyflow.jobs";
+
+export type BackgroundJobName =
+  | "properties.import"
+  | "properties.ai_description.generate"
+  | "properties.images.analyze"
+  | "properties.search.index";
+
+export interface BackgroundJobBasePayload {
+  tenantId: string;
+  requestedByUserId?: string;
+}
+
+export interface PropertyImportJobPayload extends BackgroundJobBasePayload {
+  source: "csv" | "json" | "partner-api";
+  objectUrl?: string;
+  dryRun?: boolean;
+}
+
+export interface PropertyAiDescriptionJobPayload extends BackgroundJobBasePayload {
+  propertyId: string;
+  locales: Array<"en" | "ru" | "th" | "zh">;
+}
+
+export interface PropertyImageAnalysisJobPayload extends BackgroundJobBasePayload {
+  propertyId: string;
+  imageUrls: string[];
+}
+
+export interface PropertySearchIndexJobPayload extends BackgroundJobBasePayload {
+  propertyId: string;
+  reason: "created" | "updated" | "manual";
+}
+
+export type BackgroundJobPayload =
+  | PropertyImportJobPayload
+  | PropertyAiDescriptionJobPayload
+  | PropertyImageAnalysisJobPayload
+  | PropertySearchIndexJobPayload;
+
+export interface EnqueueBackgroundJobRequest {
+  name: BackgroundJobName;
+  payload: BackgroundJobPayload;
+}
+
+export interface BackgroundJobSnapshot {
+  id: string;
+  name: BackgroundJobName;
+  queue: typeof PROPERTYFLOW_JOBS_QUEUE;
+  status: "queued";
+  tenantId: string;
+  createdAt: string;
 }

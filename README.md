@@ -84,6 +84,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
+- `POST /jobs`
 - `GET /properties`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
@@ -108,6 +109,21 @@ Realtime v1 emits:
 - `lead.assigned`
 - `event`
 
+Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs through `POST /jobs`, and the worker processes them from the shared `propertyflow.jobs` queue.
+
+Supported job names:
+
+- `properties.import`
+- `properties.ai_description.generate`
+- `properties.images.analyze`
+- `properties.search.index`
+
+Run the worker locally with:
+
+```sh
+npm run dev --workspace @propertyflow/worker
+```
+
 All tenant-aware routes require the `x-tenant-id` header. The API validates it against an active tenant record. Local development seeds `demo-agency`.
 
 Routes with write or workspace-sensitive behavior also require dev RBAC headers:
@@ -125,6 +141,7 @@ Current protected routes:
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
+- `POST /jobs`
 - `GET /tenants/current`
 
 Audit log v1 records these actions:
@@ -135,6 +152,7 @@ Audit log v1 records these actions:
 - `tenant.current_viewed`
 - `lead.created`
 - `lead.assigned`
+- `job.enqueued`
 
 `GET /properties` supports the first structured search filters:
 

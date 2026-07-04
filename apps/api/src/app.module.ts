@@ -4,6 +4,7 @@ import { AnalyticsModule } from "./analytics/analytics.module.js";
 import { AuditModule } from "./audit/audit.module.js";
 import { AuthModule } from "./shared/auth/auth.module.js";
 import { DatabaseModule } from "./database/database.module.js";
+import { JobsModule } from "./jobs/jobs.module.js";
 import { LeadsModule } from "./leads/leads.module.js";
 import { PropertiesModule } from "./properties/properties.module.js";
 import { PublicApiModule } from "./public-api/public-api.module.js";
@@ -20,6 +21,7 @@ import { UsersModule } from "./users/users.module.js";
     DatabaseModule,
     TenantsModule,
     UsersModule,
+    JobsModule,
     PropertiesModule,
     LeadsModule,
     PublicApiModule,

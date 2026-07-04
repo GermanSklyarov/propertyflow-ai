@@ -1,6 +1,15 @@
-import { loadAppConfig } from "@propertyflow/config";
+import { PropertyflowWorker } from "./jobs/propertyflow-worker.js";
 
-const config = loadAppConfig();
+const worker = new PropertyflowWorker();
 
-console.log(`PropertyFlow worker connected to Redis at ${config.redisUrl}`);
+await worker.waitUntilReady();
+console.log("PropertyFlow worker is listening for background jobs");
 
+const shutdown = async () => {
+  console.log("PropertyFlow worker shutting down");
+  await worker.close();
+  process.exit(0);
+};
+
+process.once("SIGINT", () => void shutdown());
+process.once("SIGTERM", () => void shutdown());
