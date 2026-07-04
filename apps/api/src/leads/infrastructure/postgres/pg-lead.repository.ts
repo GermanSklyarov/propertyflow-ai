@@ -78,6 +78,37 @@ export class PgLeadRepository implements LeadRepository {
     return this.toSnapshot(result.rows[0]);
   }
 
+  async listUnassigned(tenantId: string): Promise<LeadSnapshot[]> {
+    const result = await this.pool.query<LeadRow>(
+      `
+        select *
+        from leads
+        where tenant_id = $1
+          and assigned_agent_id is null
+          and status in ('new', 'contacted', 'qualified')
+        order by created_at desc
+      `,
+      [tenantId]
+    );
+
+    return result.rows.map((row) => this.toSnapshot(row));
+  }
+
+  async assign(tenantId: string, leadId: string, assignedAgentId: string): Promise<LeadSnapshot | null> {
+    const result = await this.pool.query<LeadRow>(
+      `
+        update leads
+        set assigned_agent_id = $3,
+            updated_at = $4
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, leadId, assignedAgentId, new Date().toISOString()]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   private toSnapshot(row: LeadRow): LeadSnapshot {
     return {
       id: row.id,
@@ -96,4 +127,3 @@ export class PgLeadRepository implements LeadRepository {
     };
   }
 }
-

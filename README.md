@@ -80,6 +80,9 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/ai-search`
 - `POST /properties/compare`
 - `POST /leads`
+- `GET /leads/unassigned`
+- `GET /leads/agents`
+- `PATCH /leads/:leadId/assign`
 - `GET /properties`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/investment`
@@ -108,6 +111,9 @@ Current protected routes:
 - `POST /properties/ai-search`
 - `POST /properties/compare`
 - `POST /leads`
+- `GET /leads/unassigned`
+- `GET /leads/agents`
+- `PATCH /leads/:leadId/assign`
 - `GET /tenants/current`
 
 Audit log v1 records these actions:
@@ -117,6 +123,7 @@ Audit log v1 records these actions:
 - `property.compared`
 - `tenant.current_viewed`
 - `lead.created`
+- `lead.assigned`
 
 `GET /properties` supports the first structured search filters:
 

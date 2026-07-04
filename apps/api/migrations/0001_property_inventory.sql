@@ -37,6 +37,32 @@ insert into tenants (
   now()
 ) on conflict (id) do nothing;
 
+create table if not exists tenant_users (
+  id text not null,
+  tenant_id text not null references tenants(id) on delete cascade,
+  name text not null,
+  email text not null,
+  role text not null,
+  status text not null,
+  created_at timestamptz not null,
+  primary key (tenant_id, id)
+);
+
+insert into tenant_users (
+  id,
+  tenant_id,
+  name,
+  email,
+  role,
+  status,
+  created_at
+) values
+  ('agent-demo-1', 'demo-agency', 'Demo Agent', 'agent@propertyflow.local', 'agent', 'active', now()),
+  ('manager-demo-1', 'demo-agency', 'Demo Manager', 'manager@propertyflow.local', 'manager', 'active', now())
+on conflict (tenant_id, id) do nothing;
+
+create index if not exists idx_tenant_users_tenant_role on tenant_users (tenant_id, role, status);
+
 create table if not exists properties (
   id uuid primary key,
   tenant_id text not null,
@@ -152,3 +178,4 @@ create table if not exists leads (
 create index if not exists idx_leads_tenant_status on leads (tenant_id, status);
 create index if not exists idx_leads_tenant_property on leads (tenant_id, property_id);
 create index if not exists idx_leads_tenant_created on leads (tenant_id, created_at desc);
+create index if not exists idx_leads_tenant_assigned_agent on leads (tenant_id, assigned_agent_id);

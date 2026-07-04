@@ -30,12 +30,23 @@ export interface RequestUser {
   role: UserRole;
 }
 
+export interface TenantUserSnapshot {
+  id: string;
+  tenantId: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: "active" | "inactive";
+  createdAt: string;
+}
+
 export type AuditAction =
   | "property.created"
   | "property.ai_search"
   | "property.compared"
   | "tenant.current_viewed"
-  | "lead.created";
+  | "lead.created"
+  | "lead.assigned";
 
 export interface AuditEventSnapshot {
   id: string;
@@ -280,4 +291,13 @@ export interface LeadSnapshot {
   assignedAgentId?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AssignLeadRequest {
+  assignedAgentId: string;
+}
+
+export interface LeadListResponse {
+  items: LeadSnapshot[];
+  total: number;
 }
