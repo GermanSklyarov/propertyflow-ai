@@ -96,3 +96,39 @@ create table if not exists audit_events (
 
 create index if not exists idx_audit_events_tenant_created on audit_events (tenant_id, created_at desc);
 create index if not exists idx_audit_events_action on audit_events (action);
+
+create table if not exists api_keys (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  name text not null,
+  key_prefix text not null,
+  key_hash text not null unique,
+  status text not null,
+  scopes text[] not null default '{}',
+  created_at timestamptz not null,
+  last_used_at timestamptz
+);
+
+insert into api_keys (
+  id,
+  tenant_id,
+  name,
+  key_prefix,
+  key_hash,
+  status,
+  scopes,
+  created_at,
+  last_used_at
+) values (
+  '11111111-1111-4111-8111-111111111111',
+  'demo-agency',
+  'Demo Public API Key',
+  'pf_demo',
+  '4dcc05bed1685cd17afcfdfb499497e980b89048c0c4a1219262fdb5043ce74b',
+  'active',
+  array['properties:read'],
+  now(),
+  null
+) on conflict (id) do nothing;
+
+create index if not exists idx_api_keys_tenant_status on api_keys (tenant_id, status);

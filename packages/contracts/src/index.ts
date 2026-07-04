@@ -48,6 +48,17 @@ export interface AuditEventSnapshot {
   createdAt: string;
 }
 
+export interface PublicApiKeySnapshot {
+  id: string;
+  tenantId: string;
+  name: string;
+  keyPrefix: string;
+  status: "active" | "revoked";
+  scopes: string[];
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
 export interface CreatePropertyRequest {
   title: string;
   description?: string;

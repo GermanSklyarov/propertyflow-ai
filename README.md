@@ -87,7 +87,11 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/:propertyId/rental-yield`
 - `GET /properties/:propertyId`
 - `GET /tenants/current`
+- `GET /public/v1/properties`
+- `GET /public/v1/properties/:propertyId`
 - `GET /health`
+
+Swagger UI is available at `/docs`; the OpenAPI JSON document is available at `/docs-json`.
 
 All tenant-aware routes require the `x-tenant-id` header. The API validates it against an active tenant record. Local development seeds `demo-agency`.
 
@@ -180,6 +184,17 @@ Audit log v1 records these actions:
 - confidence, label, summary, and warnings.
 
 `GET /tenants/current` returns the active tenant workspace, branding, status, and primary market for the supplied `x-tenant-id`.
+
+Public API v1 uses the `x-api-key` header and is read-only. Local development seeds this demo key:
+
+```txt
+pf_demo_public_key
+```
+
+Public API v1 endpoints:
+
+- `GET /public/v1/properties`
+- `GET /public/v1/properties/:propertyId`
 
 ## First Milestones
 

@@ -1,4 +1,5 @@
 import { Controller, Get, Inject, UseGuards } from "@nestjs/common";
+import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type { RequestUser, TenantSnapshot } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
@@ -9,6 +10,10 @@ import { Tenant } from "../../../shared/presentation/tenant.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 
 @Controller("tenants")
+@ApiTags("tenants")
+@ApiHeader({ name: "x-tenant-id", required: true })
+@ApiHeader({ name: "x-user-id", required: true })
+@ApiHeader({ name: "x-user-role", required: true })
 @UseGuards(TenantGuard, UserContextGuard, RolesGuard)
 export class CurrentTenantController {
   constructor(@Inject(AuditService) private readonly audit: AuditService) {}

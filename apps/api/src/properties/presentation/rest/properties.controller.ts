@@ -1,5 +1,6 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
+import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   AiAdvisorSummary,
   InvestmentAnalysis,
@@ -35,6 +36,10 @@ import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { SearchPropertiesDto } from "./search-properties.dto.js";
 
 @Controller("properties")
+@ApiTags("properties")
+@ApiHeader({ name: "x-tenant-id", required: true })
+@ApiHeader({ name: "x-user-id", required: false })
+@ApiHeader({ name: "x-user-role", required: false })
 @UseGuards(TenantGuard, UserContextGuard, RolesGuard)
 export class PropertiesController {
   constructor(
