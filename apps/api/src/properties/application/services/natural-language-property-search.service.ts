@@ -1,11 +1,13 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  IndexedPropertySearchRequest,
   NaturalLanguagePropertySearchResponse,
   NaturalLanguageSearchRequest,
   PropertySearchRequest
 } from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
+import { IndexedPropertySearchService } from "./indexed-property-search.service.js";
 
 interface InterpretationResult {
   interpretedIntent: string;
@@ -16,11 +18,25 @@ interface InterpretationResult {
 
 @Injectable()
 export class NaturalLanguagePropertySearchService {
-  constructor(@Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository) {}
+  constructor(
+    @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
+    @Inject(IndexedPropertySearchService) private readonly indexedSearch: IndexedPropertySearchService
+  ) {}
 
   async search(tenantId: string, request: NaturalLanguageSearchRequest): Promise<NaturalLanguagePropertySearchResponse> {
     const interpretation = this.interpret(request);
-    const items = await this.properties.search(tenantId, interpretation.filters);
+    const indexedRequest: IndexedPropertySearchRequest = {
+      ...interpretation.filters,
+      query: request.query,
+      limit: 20,
+      offset: 0
+    };
+    const indexedResult = await this.indexedSearch.search(tenantId, indexedRequest);
+    const items = (
+      await Promise.all(
+        indexedResult.items.map((item) => this.properties.findById(tenantId, item.propertyId))
+      )
+    ).filter((item) => item !== null);
 
     return {
       interpretedIntent: interpretation.interpretedIntent,
@@ -31,7 +47,7 @@ export class NaturalLanguagePropertySearchService {
       },
       rankingExplanation: interpretation.rankingExplanation,
       items,
-      total: items.length
+      total: indexedResult.total
     };
   }
 
@@ -83,8 +99,8 @@ export class NaturalLanguagePropertySearchService {
       filters,
       rankingExplanation:
         explanations.length > 0
-          ? `Rule-based interpreter extracted ${explanations.join("; ")}.`
-          : "Rule-based interpreter did not find strict filters, so results are tenant-wide.",
+          ? `Rule-based interpreter extracted ${explanations.join("; ")}. OpenSearch ranks matching indexed listings by text relevance and recency.`
+          : "Rule-based interpreter did not find strict filters; OpenSearch ranks tenant listings by text relevance and recency.",
       purpose
     };
   }
@@ -208,4 +224,3 @@ export class NaturalLanguagePropertySearchService {
     return parts.join("; ");
   }
 }
-

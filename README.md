@@ -185,7 +185,7 @@ Audit log v1 records these actions:
 
 Text search matches `title`, `address`, `description`, and `searchableText`, returns highlights, and keeps full listing details behind `GET /properties/:propertyId`.
 
-`POST /properties/ai-search` accepts natural-language intent and maps it to the structured filters above.
+`POST /properties/ai-search` accepts natural-language intent, maps it to structured filters, searches OpenSearch for ranking, and hydrates the ranked property IDs back from PostgreSQL.
 
 ```json
 {
