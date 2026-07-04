@@ -218,6 +218,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `GET /properties/:propertyId/ai-assets` returns generated descriptions and image analysis results saved by the worker.
 
+`POST /properties/:propertyId/ai-assets/descriptions/:assetId/review` and `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review` approve or reject AI outputs before publication.
+
 `GET /properties/:propertyId/advisor` returns a rule-based AI advisor summary:
 
 - best fit: living, investment, relocation, family;

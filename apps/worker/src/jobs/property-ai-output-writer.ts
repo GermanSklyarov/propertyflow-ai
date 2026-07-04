@@ -21,6 +21,7 @@ export class PropertyAiOutputWriter {
             title,
             description,
             source,
+            review_status,
             created_at
           ) values (
             $1,
@@ -30,6 +31,7 @@ export class PropertyAiOutputWriter {
             $5,
             $6,
             'ai-worker-v1',
+            'draft',
             $7
           )
         `,
@@ -61,6 +63,7 @@ export class PropertyAiOutputWriter {
             image_url,
             detected_features,
             confidence,
+            review_status,
             created_at
           ) values (
             $1,
@@ -69,6 +72,7 @@ export class PropertyAiOutputWriter {
             $4,
             $5,
             $6,
+            'draft',
             $7
           )
         `,

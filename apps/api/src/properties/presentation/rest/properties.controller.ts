@@ -10,6 +10,8 @@ import type {
   PropertyAiAssets,
   PropertyComparisonResponse,
   PropertyPriceHistory,
+  GeneratedPropertyDescription,
+  PropertyImageAnalysisResult,
   PropertySearchResponse,
   RentalYieldSummary,
   RunListingAssistantResponse
@@ -44,6 +46,7 @@ import { CreatePropertyDto } from "./create-property.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
+import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 
 @Controller("properties")
@@ -263,6 +266,60 @@ export class PropertiesController {
   @Get(":propertyId/ai-assets")
   aiAssetsSummary(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<PropertyAiAssets> {
     return this.aiAssets.getByPropertyId(tenantId, propertyId);
+  }
+
+  @Post(":propertyId/ai-assets/descriptions/:assetId/review")
+  @Roles("agent", "broker", "manager", "admin")
+  async reviewDescriptionAsset(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("assetId") assetId: string,
+    @Body() payload: ReviewAiAssetDto
+  ): Promise<GeneratedPropertyDescription> {
+    const result = await this.aiAssets.reviewDescription(tenantId, propertyId, assetId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_asset_reviewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        assetType: "description",
+        assetId,
+        status: payload.status
+      }
+    });
+
+    return result;
+  }
+
+  @Post(":propertyId/ai-assets/image-analysis/:assetId/review")
+  @Roles("agent", "broker", "manager", "admin")
+  async reviewImageAnalysisAsset(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("assetId") assetId: string,
+    @Body() payload: ReviewAiAssetDto
+  ): Promise<PropertyImageAnalysisResult> {
+    const result = await this.aiAssets.reviewImageAnalysis(tenantId, propertyId, assetId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_asset_reviewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        assetType: "image-analysis",
+        assetId,
+        status: payload.status
+      }
+    });
+
+    return result;
   }
 
   @Get(":propertyId/investment")

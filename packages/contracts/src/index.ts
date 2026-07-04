@@ -43,6 +43,7 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "property.created"
   | "property.ai_assistant"
+  | "property.ai_asset_reviewed"
   | "property.ai_search"
   | "property.compared"
   | "tenant.current_viewed"
@@ -283,6 +284,8 @@ export interface RunListingAssistantResponse {
   jobs: BackgroundJobSnapshot[];
 }
 
+export type AiAssetReviewStatus = "draft" | "approved" | "rejected";
+
 export interface GeneratedPropertyDescription {
   id: string;
   propertyId: string;
@@ -290,6 +293,10 @@ export interface GeneratedPropertyDescription {
   title: string;
   description: string;
   source: "ai-worker-v1";
+  reviewStatus: AiAssetReviewStatus;
+  reviewedByUserId?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
   createdAt: string;
 }
 
@@ -299,7 +306,16 @@ export interface PropertyImageAnalysisResult {
   imageUrl: string;
   detectedFeatures: string[];
   confidence: number;
+  reviewStatus: AiAssetReviewStatus;
+  reviewedByUserId?: string;
+  reviewedAt?: string;
+  reviewNote?: string;
   createdAt: string;
+}
+
+export interface ReviewAiAssetRequest {
+  status: Exclude<AiAssetReviewStatus, "draft">;
+  note?: string;
 }
 
 export interface PropertyAiAssets {

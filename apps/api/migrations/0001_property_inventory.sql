@@ -116,10 +116,20 @@ create table if not exists property_generated_descriptions (
   title text not null,
   description text not null,
   source text not null,
+  review_status text not null default 'draft',
+  reviewed_by_user_id text,
+  reviewed_at timestamptz,
+  review_note text,
   created_at timestamptz not null
 );
 
+alter table property_generated_descriptions add column if not exists review_status text not null default 'draft';
+alter table property_generated_descriptions add column if not exists reviewed_by_user_id text;
+alter table property_generated_descriptions add column if not exists reviewed_at timestamptz;
+alter table property_generated_descriptions add column if not exists review_note text;
+
 create index if not exists idx_property_generated_descriptions_property on property_generated_descriptions (tenant_id, property_id, locale);
+create index if not exists idx_property_generated_descriptions_review on property_generated_descriptions (tenant_id, review_status);
 
 create table if not exists property_image_analysis (
   id uuid primary key,
@@ -128,10 +138,20 @@ create table if not exists property_image_analysis (
   image_url text not null,
   detected_features text[] not null default '{}',
   confidence numeric(4, 3) not null,
+  review_status text not null default 'draft',
+  reviewed_by_user_id text,
+  reviewed_at timestamptz,
+  review_note text,
   created_at timestamptz not null
 );
 
+alter table property_image_analysis add column if not exists review_status text not null default 'draft';
+alter table property_image_analysis add column if not exists reviewed_by_user_id text;
+alter table property_image_analysis add column if not exists reviewed_at timestamptz;
+alter table property_image_analysis add column if not exists review_note text;
+
 create index if not exists idx_property_image_analysis_property on property_image_analysis (tenant_id, property_id);
+create index if not exists idx_property_image_analysis_review on property_image_analysis (tenant_id, review_status);
 
 create table if not exists audit_events (
   id uuid primary key,
