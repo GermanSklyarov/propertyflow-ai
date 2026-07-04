@@ -17,6 +17,7 @@ import type { PropertySnapshot } from "@propertyflow/domain";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
 import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
+import { SearchObservabilityService } from "../../../search-observability/application/search-observability.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
@@ -73,7 +74,9 @@ export class PropertiesController {
     @Inject(JobQueueService)
     private readonly jobs: JobQueueService,
     @Inject(RealtimePublisherService)
-    private readonly realtime: RealtimePublisherService
+    private readonly realtime: RealtimePublisherService,
+    @Inject(SearchObservabilityService)
+    private readonly searchObservability: SearchObservabilityService
   ) {}
 
   @Post()
@@ -118,16 +121,43 @@ export class PropertiesController {
   }
 
   @Get()
-  list(@TenantId() tenantId: string, @Query() query: SearchPropertiesDto): Promise<PropertySearchResponse> {
-    return this.queryBus.execute(new ListPropertiesQuery(tenantId, toPropertySearchRequest(query)));
+  async list(@TenantId() tenantId: string, @Query() query: SearchPropertiesDto): Promise<PropertySearchResponse> {
+    const startedAt = Date.now();
+    const filters = toPropertySearchRequest(query);
+    const result = await this.queryBus.execute<ListPropertiesQuery, PropertySearchResponse>(
+      new ListPropertiesQuery(tenantId, filters)
+    );
+
+    await this.searchObservability.record({
+      tenantId,
+      source: "structured",
+      filters,
+      totalResults: result.total,
+      latencyMs: Date.now() - startedAt
+    });
+
+    return result;
   }
 
   @Get("search-index")
-  searchIndex(
+  async searchIndex(
     @TenantId() tenantId: string,
     @Query() query: IndexedSearchPropertiesDto
   ): Promise<IndexedPropertySearchResponse> {
-    return this.indexedSearch.search(tenantId, toIndexedPropertySearchRequest(query));
+    const startedAt = Date.now();
+    const filters = toIndexedPropertySearchRequest(query);
+    const result = await this.indexedSearch.search(tenantId, filters);
+
+    await this.searchObservability.record({
+      tenantId,
+      source: "indexed",
+      query: filters.query,
+      filters,
+      totalResults: result.total,
+      latencyMs: Date.now() - startedAt
+    });
+
+    return result;
   }
 
   @Post("ai-search")
@@ -137,6 +167,7 @@ export class PropertiesController {
     @CurrentUser() user: RequestUser,
     @Body() payload: NaturalLanguageSearchDto
   ): Promise<NaturalLanguagePropertySearchResponse> {
+    const startedAt = Date.now();
     const result = await this.naturalLanguageSearch.search(tenantId, payload);
 
     await this.audit.record({
@@ -150,6 +181,16 @@ export class PropertiesController {
         filters: result.filters,
         total: result.total
       }
+    });
+
+    await this.searchObservability.record({
+      tenantId,
+      user,
+      source: "ai",
+      query: payload.query,
+      filters: result.filters,
+      totalResults: result.total,
+      latencyMs: Date.now() - startedAt
     });
 
     return result;

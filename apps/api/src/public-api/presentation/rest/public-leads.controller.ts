@@ -1,4 +1,4 @@
-import { Body, Controller, Post, UnauthorizedException, UseGuards } from "@nestjs/common";
+import { Body, Controller, Inject, Post, UnauthorizedException, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { LeadSnapshot, PublicApiKeySnapshot } from "@propertyflow/contracts";
 import { LeadService } from "../../../leads/application/lead.service.js";
@@ -11,7 +11,7 @@ import { PublicApiKeyGuard } from "./public-api-key.guard.js";
 @Controller("public/v1/leads")
 @UseGuards(PublicApiKeyGuard)
 export class PublicLeadsController {
-  constructor(private readonly leads: LeadService) {}
+  constructor(@Inject(LeadService) private readonly leads: LeadService) {}
 
   @Post()
   @ApiOperation({ summary: "Create a lead for the API key tenant" })
@@ -26,4 +26,3 @@ export class PublicLeadsController {
     });
   }
 }
-

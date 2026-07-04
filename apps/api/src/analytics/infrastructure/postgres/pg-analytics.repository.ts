@@ -26,8 +26,12 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       unassignedLeads,
       wonLeads,
       lostLeads,
+      totalSearches,
+      averageSearchLatencyMs,
       leadsBySource,
-      leadsByStatus
+      leadsByStatus,
+      searchesBySource,
+      topSearchQueries
     ] = await Promise.all([
       this.count("select count(*) from properties where tenant_id = $1", [tenantId]),
       this.count("select count(*) from properties where tenant_id = $1 and status = 'available'", [tenantId]),
@@ -36,12 +40,22 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.count("select count(*) from leads where tenant_id = $1 and assigned_agent_id is null", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'won'", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'lost'", [tenantId]),
+      this.count("select count(*) from search_events where tenant_id = $1", [tenantId]),
+      this.average("select coalesce(avg(latency_ms), 0) as count from search_events where tenant_id = $1", [tenantId]),
       this.bucket("select source as bucket, count(*) from leads where tenant_id = $1 group by source order by count(*) desc", [
         tenantId
       ]),
       this.bucket("select status as bucket, count(*) from leads where tenant_id = $1 group by status order by count(*) desc", [
         tenantId
-      ])
+      ]),
+      this.bucket(
+        "select source as bucket, count(*) from search_events where tenant_id = $1 group by source order by count(*) desc",
+        [tenantId]
+      ),
+      this.bucket(
+        "select query as bucket, count(*) from search_events where tenant_id = $1 and query is not null group by query order by count(*) desc, query asc limit 10",
+        [tenantId]
+      )
     ]);
 
     return {
@@ -52,8 +66,12 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       unassignedLeads,
       wonLeads,
       lostLeads,
+      totalSearches,
+      averageSearchLatencyMs,
       leadsBySource,
-      leadsByStatus
+      leadsByStatus,
+      searchesBySource,
+      topSearchQueries
     };
   }
 
@@ -70,5 +88,9 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       count: Number(row.count)
     }));
   }
-}
 
+  private async average(sql: string, values: unknown[]): Promise<number> {
+    const result = await this.pool.query<CountRow>(sql, values);
+    return Math.round(Number(result.rows[0]?.count ?? 0));
+  }
+}

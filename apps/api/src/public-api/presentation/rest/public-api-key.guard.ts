@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from "@nestjs/common";
+import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
 import type { PublicApiKeySnapshot } from "@propertyflow/contracts";
 import { PublicApiKeyService } from "../../application/public-api-key.service.js";
 
@@ -9,7 +9,7 @@ interface PublicApiRequest {
 
 @Injectable()
 export class PublicApiKeyGuard implements CanActivate {
-  constructor(private readonly apiKeys: PublicApiKeyService) {}
+  constructor(@Inject(PublicApiKeyService) private readonly apiKeys: PublicApiKeyService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<PublicApiRequest>();
@@ -31,4 +31,3 @@ export class PublicApiKeyGuard implements CanActivate {
     return true;
   }
 }
-

@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from "@nestjs/common";
+import { Controller, Get, Inject, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type { TenantDashboardMetrics } from "@propertyflow/contracts";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -15,7 +15,7 @@ import { AnalyticsService } from "../../application/analytics.service.js";
 @Controller("analytics")
 @UseGuards(TenantGuard, UserContextGuard, RolesGuard)
 export class AnalyticsController {
-  constructor(private readonly analytics: AnalyticsService) {}
+  constructor(@Inject(AnalyticsService) private readonly analytics: AnalyticsService) {}
 
   @Get("dashboard")
   @Roles("broker", "manager", "admin")
@@ -23,4 +23,3 @@ export class AnalyticsController {
     return this.analytics.getDashboard(tenantId);
   }
 }
-

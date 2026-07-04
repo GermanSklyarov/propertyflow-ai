@@ -123,6 +123,23 @@ create table if not exists audit_events (
 create index if not exists idx_audit_events_tenant_created on audit_events (tenant_id, created_at desc);
 create index if not exists idx_audit_events_action on audit_events (action);
 
+create table if not exists search_events (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  user_id text,
+  user_role text,
+  source text not null,
+  query text,
+  filters jsonb not null default '{}'::jsonb,
+  total_results integer not null,
+  latency_ms integer not null,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_search_events_tenant_created on search_events (tenant_id, created_at desc);
+create index if not exists idx_search_events_tenant_source on search_events (tenant_id, source);
+create index if not exists idx_search_events_tenant_query on search_events (tenant_id, query);
+
 create table if not exists api_keys (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

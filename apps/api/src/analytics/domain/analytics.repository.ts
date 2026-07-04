@@ -10,11 +10,14 @@ export interface TenantAnalyticsRawMetrics {
   unassignedLeads: number;
   wonLeads: number;
   lostLeads: number;
+  totalSearches: number;
+  averageSearchLatencyMs: number;
   leadsBySource: CountByBucket[];
   leadsByStatus: CountByBucket[];
+  searchesBySource: CountByBucket[];
+  topSearchQueries: CountByBucket[];
 }
 
 export interface AnalyticsRepository {
   getTenantMetrics(tenantId: string): Promise<TenantAnalyticsRawMetrics>;
 }
-

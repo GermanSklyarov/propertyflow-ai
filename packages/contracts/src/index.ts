@@ -61,6 +61,8 @@ export interface AuditEventSnapshot {
   createdAt: string;
 }
 
+export type SearchEventSource = "structured" | "indexed" | "ai";
+
 export interface PublicApiKeySnapshot {
   id: string;
   tenantId: string;
@@ -353,8 +355,12 @@ export interface TenantDashboardMetrics {
   wonLeads: number;
   lostLeads: number;
   conversionRate: number;
+  totalSearches: number;
+  averageSearchLatencyMs: number;
   leadsBySource: CountByBucket[];
   leadsByStatus: CountByBucket[];
+  searchesBySource: CountByBucket[];
+  topSearchQueries: CountByBucket[];
   generatedAt: string;
 }
 
