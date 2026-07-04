@@ -12,6 +12,7 @@ import {
   PROPERTYFLOW_JOBS_QUEUE
 } from "@propertyflow/contracts";
 import { loadAppConfig } from "@propertyflow/config";
+import { PropertyAiOutputWriter } from "./property-ai-output-writer.js";
 import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
@@ -26,6 +27,7 @@ type PropertySearchIndexJob = Job<PropertySearchIndexJobPayload, unknown, "prope
 
 export class PropertyflowWorker {
   private readonly pool: Pool;
+  private readonly aiOutputWriter: PropertyAiOutputWriter;
   private readonly searchIndexer: PropertySearchIndexer;
   private readonly connection: Redis;
   private readonly worker: Worker<BackgroundJobPayload, unknown, BackgroundJobName>;
@@ -37,6 +39,8 @@ export class PropertyflowWorker {
       connectionString: config.databaseUrl,
       max: 5
     });
+
+    this.aiOutputWriter = new PropertyAiOutputWriter(this.pool);
 
     this.searchIndexer = new PropertySearchIndexer(
       this.pool,
@@ -105,20 +109,24 @@ export class PropertyflowWorker {
   }
 
   private async generatePropertyDescription(job: PropertyAiDescriptionJob): Promise<Record<string, unknown>> {
+    const generatedDescriptions = await this.aiOutputWriter.saveGeneratedDescriptions(job.data);
+
     return {
       tenantId: job.data.tenantId,
       propertyId: job.data.propertyId,
       locales: job.data.locales,
-      generatedDescriptions: job.data.locales.length
+      generatedDescriptions
     };
   }
 
   private async analyzePropertyImages(job: PropertyImageAnalysisJob): Promise<Record<string, unknown>> {
+    const analyzedImages = await this.aiOutputWriter.saveImageAnalysis(job.data);
+
     return {
       tenantId: job.data.tenantId,
       propertyId: job.data.propertyId,
-      analyzedImages: job.data.imageUrls.length,
-      detectedSignals: []
+      analyzedImages,
+      detectedSignals: ["furnished", "air-conditioning"]
     };
   }
 

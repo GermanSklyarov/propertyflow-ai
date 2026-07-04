@@ -16,11 +16,14 @@ import { ListingAssistantService } from "./application/services/listing-assistan
 import { NaturalLanguagePropertySearchService } from "./application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "./application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "./application/services/price-history.service.js";
+import { PropertyAiAssetsService } from "./application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
+import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
 import { createPropertySearchClient, PROPERTY_SEARCH_CLIENT } from "./infrastructure/opensearch/property-search-client.js";
+import { PgPropertyAiAssetsRepository } from "./infrastructure/postgres/pg-property-ai-assets.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
 
@@ -49,11 +52,16 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     NaturalLanguagePropertySearchService,
     NeighborhoodIntelligenceService,
     PriceHistoryService,
+    PropertyAiAssetsService,
     PropertyComparisonService,
     RentalYieldService,
     {
       provide: PROPERTY_REPOSITORY,
       useClass: PgPropertyRepository
+    },
+    {
+      provide: PROPERTY_AI_ASSETS_REPOSITORY,
+      useClass: PgPropertyAiAssetsRepository
     },
     {
       provide: PROPERTY_SEARCH_CLIENT,

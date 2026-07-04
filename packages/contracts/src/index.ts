@@ -283,6 +283,31 @@ export interface RunListingAssistantResponse {
   jobs: BackgroundJobSnapshot[];
 }
 
+export interface GeneratedPropertyDescription {
+  id: string;
+  propertyId: string;
+  locale: "en" | "ru" | "th" | "zh";
+  title: string;
+  description: string;
+  source: "ai-worker-v1";
+  createdAt: string;
+}
+
+export interface PropertyImageAnalysisResult {
+  id: string;
+  propertyId: string;
+  imageUrl: string;
+  detectedFeatures: string[];
+  confidence: number;
+  createdAt: string;
+}
+
+export interface PropertyAiAssets {
+  propertyId: string;
+  descriptions: GeneratedPropertyDescription[];
+  imageAnalysis: PropertyImageAnalysisResult[];
+}
+
 export interface PropertyPriceHistoryPoint {
   effectiveDate: string;
   price: Money;

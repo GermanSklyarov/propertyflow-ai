@@ -108,6 +108,31 @@ create table if not exists property_price_history (
 
 create index if not exists idx_property_price_history_property on property_price_history (tenant_id, property_id, effective_date);
 
+create table if not exists property_generated_descriptions (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid not null references properties(id) on delete cascade,
+  locale text not null,
+  title text not null,
+  description text not null,
+  source text not null,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_property_generated_descriptions_property on property_generated_descriptions (tenant_id, property_id, locale);
+
+create table if not exists property_image_analysis (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid not null references properties(id) on delete cascade,
+  image_url text not null,
+  detected_features text[] not null default '{}',
+  confidence numeric(4, 3) not null,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_property_image_analysis_property on property_image_analysis (tenant_id, property_id);
+
 create table if not exists audit_events (
   id uuid primary key,
   tenant_id text not null,
