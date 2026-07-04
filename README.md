@@ -111,12 +111,16 @@ Realtime v1 emits:
 
 Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs through `POST /jobs`, and the worker processes them from the shared `propertyflow.jobs` queue.
 
+`POST /properties` also enqueues `properties.search.index` automatically after a listing is created.
+
 Supported job names:
 
 - `properties.import`
 - `properties.ai_description.generate`
 - `properties.images.analyze`
 - `properties.search.index`
+
+The search indexing job reads the property from PostgreSQL and writes an OpenSearch document to `propertyflow-properties-v1`. The index stores tenant, market, status, pricing, amenities, `geo_point` location, and a combined `searchableText` field for the next AI/search slice.
 
 Run the worker locally with:
 

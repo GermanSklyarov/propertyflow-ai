@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { CqrsModule } from "@nestjs/cqrs";
 import { AuditModule } from "../audit/audit.module.js";
 import { DatabaseModule } from "../database/database.module.js";
+import { JobsModule } from "../jobs/jobs.module.js";
 import { RealtimeModule } from "../realtime/realtime.module.js";
 import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
@@ -23,7 +24,7 @@ const commandHandlers = [CreatePropertyHandler];
 const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
 
 @Module({
-  imports: [AuditModule, AuthModule, CqrsModule, DatabaseModule, RealtimeModule, TenantsModule],
+  imports: [AuditModule, AuthModule, CqrsModule, DatabaseModule, JobsModule, RealtimeModule, TenantsModule],
   controllers: [PropertiesController],
   providers: [
     ...commandHandlers,

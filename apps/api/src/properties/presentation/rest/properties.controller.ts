@@ -14,6 +14,7 @@ import type {
 import type { RequestUser } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { AuditService } from "../../../audit/application/audit.service.js";
+import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
 import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -64,6 +65,8 @@ export class PropertiesController {
     private readonly rentalYield: RentalYieldService,
     @Inject(AuditService)
     private readonly audit: AuditService,
+    @Inject(JobQueueService)
+    private readonly jobs: JobQueueService,
     @Inject(RealtimePublisherService)
     private readonly realtime: RealtimePublisherService
   ) {}
@@ -97,6 +100,13 @@ export class PropertiesController {
       title: property.title,
       market: property.market,
       status: property.status
+    });
+
+    await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId: property.id,
+      reason: "created"
     });
 
     return property;

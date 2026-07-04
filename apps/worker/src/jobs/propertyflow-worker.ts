@@ -1,5 +1,7 @@
 import { Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
+import { Client } from "@opensearch-project/opensearch";
+import { Pool } from "pg";
 import {
   type BackgroundJobName,
   type BackgroundJobPayload,
@@ -10,6 +12,7 @@ import {
   PROPERTYFLOW_JOBS_QUEUE
 } from "@propertyflow/contracts";
 import { loadAppConfig } from "@propertyflow/config";
+import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
 type PropertyImportJob = Job<PropertyImportJobPayload, unknown, "properties.import">;
@@ -22,11 +25,27 @@ type PropertyImageAnalysisJob = Job<PropertyImageAnalysisJobPayload, unknown, "p
 type PropertySearchIndexJob = Job<PropertySearchIndexJobPayload, unknown, "properties.search.index">;
 
 export class PropertyflowWorker {
+  private readonly pool: Pool;
+  private readonly searchIndexer: PropertySearchIndexer;
   private readonly connection: Redis;
   private readonly worker: Worker<BackgroundJobPayload, unknown, BackgroundJobName>;
 
-  constructor(redisUrl = loadAppConfig().redisUrl) {
-    this.connection = new Redis(redisUrl, {
+  constructor() {
+    const config = loadAppConfig();
+
+    this.pool = new Pool({
+      connectionString: config.databaseUrl,
+      max: 5
+    });
+
+    this.searchIndexer = new PropertySearchIndexer(
+      this.pool,
+      new Client({
+        node: config.opensearchUrl
+      })
+    );
+
+    this.connection = new Redis(config.redisUrl, {
       maxRetriesPerRequest: null
     });
 
@@ -54,6 +73,7 @@ export class PropertyflowWorker {
 
   async close(): Promise<void> {
     await this.worker.close();
+    await this.pool.end();
     this.connection.disconnect();
   }
 
@@ -103,11 +123,15 @@ export class PropertyflowWorker {
   }
 
   private async indexProperty(job: PropertySearchIndexJob): Promise<Record<string, unknown>> {
+    const document = await this.searchIndexer.indexProperty(job.data.tenantId, job.data.propertyId);
+
     return {
       tenantId: job.data.tenantId,
       propertyId: job.data.propertyId,
       reason: job.data.reason,
-      indexed: true
+      index: "propertyflow-properties-v1",
+      indexed: true,
+      searchableTextLength: document.searchableText.length
     };
   }
 }
