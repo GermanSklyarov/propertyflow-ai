@@ -1,6 +1,6 @@
-import { Body, Controller, Inject, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiExtraModels, ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { BackgroundJobSnapshot, RequestUser } from "@propertyflow/contracts";
+import type { BackgroundJobMonitorResponse, BackgroundJobSnapshot, RequestUser } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -17,6 +17,7 @@ import {
   PropertySearchIndexPayloadDto,
   withTenantJobContext
 } from "./enqueue-background-job.dto.js";
+import { ListJobsDto, toListJobsQuery } from "./list-jobs.dto.js";
 
 @ApiTags("jobs")
 @ApiHeader({ name: "x-tenant-id", required: true })
@@ -60,5 +61,13 @@ export class JobsController {
 
       return job;
     });
+  }
+
+  @Get()
+  @Roles("broker", "manager", "admin")
+  list(@TenantId() tenantId: string, @Query() query: ListJobsDto): Promise<BackgroundJobMonitorResponse> {
+    const filters = toListJobsQuery(query);
+
+    return this.jobs.list(tenantId, filters.states, filters.limit);
   }
 }

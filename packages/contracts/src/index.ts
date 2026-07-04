@@ -436,3 +436,35 @@ export interface BackgroundJobSnapshot {
   tenantId: string;
   createdAt: string;
 }
+
+export type BackgroundJobState =
+  | "active"
+  | "completed"
+  | "delayed"
+  | "failed"
+  | "paused"
+  | "prioritized"
+  | "waiting"
+  | "waiting-children";
+
+export interface BackgroundJobMonitorItem {
+  id: string;
+  name: BackgroundJobName;
+  queue: typeof PROPERTYFLOW_JOBS_QUEUE;
+  state: BackgroundJobState | "unknown";
+  tenantId: string;
+  requestedByUserId?: string;
+  attemptsMade: number;
+  progress: boolean | number | string | object;
+  createdAt?: string;
+  processedAt?: string;
+  finishedAt?: string;
+  failedReason?: string;
+  payload: BackgroundJobPayload;
+}
+
+export interface BackgroundJobMonitorResponse {
+  items: BackgroundJobMonitorItem[];
+  total: number;
+  states: BackgroundJobState[];
+}
