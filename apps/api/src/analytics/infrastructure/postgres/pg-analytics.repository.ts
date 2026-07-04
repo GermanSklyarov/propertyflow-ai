@@ -27,11 +27,14 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       wonLeads,
       lostLeads,
       totalSearches,
+      attributedLeads,
       averageSearchLatencyMs,
       leadsBySource,
       leadsByStatus,
       searchesBySource,
-      topSearchQueries
+      topSearchQueries,
+      leadsByAttributedSearchSource,
+      topLeadSearchQueries
     ] = await Promise.all([
       this.count("select count(*) from properties where tenant_id = $1", [tenantId]),
       this.count("select count(*) from properties where tenant_id = $1 and status = 'available'", [tenantId]),
@@ -41,6 +44,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.count("select count(*) from leads where tenant_id = $1 and status = 'won'", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'lost'", [tenantId]),
       this.count("select count(*) from search_events where tenant_id = $1", [tenantId]),
+      this.count("select count(*) from leads where tenant_id = $1 and attribution_search_query is not null", [tenantId]),
       this.average("select coalesce(avg(latency_ms), 0) as count from search_events where tenant_id = $1", [tenantId]),
       this.bucket("select source as bucket, count(*) from leads where tenant_id = $1 group by source order by count(*) desc", [
         tenantId
@@ -55,6 +59,14 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.bucket(
         "select query as bucket, count(*) from search_events where tenant_id = $1 and query is not null group by query order by count(*) desc, query asc limit 10",
         [tenantId]
+      ),
+      this.bucket(
+        "select attribution_search_source as bucket, count(*) from leads where tenant_id = $1 and attribution_search_source is not null group by attribution_search_source order by count(*) desc",
+        [tenantId]
+      ),
+      this.bucket(
+        "select attribution_search_query as bucket, count(*) from leads where tenant_id = $1 and attribution_search_query is not null group by attribution_search_query order by count(*) desc, attribution_search_query asc limit 10",
+        [tenantId]
       )
     ]);
 
@@ -67,11 +79,14 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       wonLeads,
       lostLeads,
       totalSearches,
+      attributedLeads,
       averageSearchLatencyMs,
       leadsBySource,
       leadsByStatus,
       searchesBySource,
-      topSearchQueries
+      topSearchQueries,
+      leadsByAttributedSearchSource,
+      topLeadSearchQueries
     };
   }
 

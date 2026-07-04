@@ -11,11 +11,14 @@ export interface TenantAnalyticsRawMetrics {
   wonLeads: number;
   lostLeads: number;
   totalSearches: number;
+  attributedLeads: number;
   averageSearchLatencyMs: number;
   leadsBySource: CountByBucket[];
   leadsByStatus: CountByBucket[];
   searchesBySource: CountByBucket[];
   topSearchQueries: CountByBucket[];
+  leadsByAttributedSearchSource: CountByBucket[];
+  topLeadSearchQueries: CountByBucket[];
 }
 
 export interface AnalyticsRepository {

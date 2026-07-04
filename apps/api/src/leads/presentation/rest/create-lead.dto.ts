@@ -1,7 +1,8 @@
 import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
-import type { CreateLeadRequest, LeadSource } from "@propertyflow/contracts";
+import type { CreateLeadRequest, LeadSource, SearchEventSource } from "@propertyflow/contracts";
 
 const leadSources: LeadSource[] = ["website", "public-api", "agent", "ai-chat"];
+const searchEventSources: SearchEventSource[] = ["structured", "indexed", "ai"];
 const locales: NonNullable<CreateLeadRequest["preferredLocale"]>[] = ["en", "ru", "th", "zh"];
 
 export class CreateLeadDto implements CreateLeadRequest {
@@ -35,5 +36,16 @@ export class CreateLeadDto implements CreateLeadRequest {
   @IsOptional()
   @IsString()
   assignedAgentId?: string;
-}
 
+  @IsOptional()
+  @IsString()
+  attributionSearchEventId?: string;
+
+  @IsOptional()
+  @IsString()
+  attributionSearchQuery?: string;
+
+  @IsOptional()
+  @IsIn(searchEventSources)
+  attributionSearchSource?: SearchEventSource;
+}

@@ -188,11 +188,20 @@ create table if not exists leads (
   message text,
   preferred_locale text,
   assigned_agent_id text,
+  attribution_search_event_id uuid,
+  attribution_search_query text,
+  attribution_search_source text,
   created_at timestamptz not null,
   updated_at timestamptz not null
 );
+
+alter table leads add column if not exists attribution_search_event_id uuid;
+alter table leads add column if not exists attribution_search_query text;
+alter table leads add column if not exists attribution_search_source text;
 
 create index if not exists idx_leads_tenant_status on leads (tenant_id, status);
 create index if not exists idx_leads_tenant_property on leads (tenant_id, property_id);
 create index if not exists idx_leads_tenant_created on leads (tenant_id, created_at desc);
 create index if not exists idx_leads_tenant_assigned_agent on leads (tenant_id, assigned_agent_id);
+create index if not exists idx_leads_tenant_attribution_source on leads (tenant_id, attribution_search_source);
+create index if not exists idx_leads_tenant_attribution_query on leads (tenant_id, attribution_search_query);

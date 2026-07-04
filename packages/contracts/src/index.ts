@@ -313,6 +313,9 @@ export interface CreateLeadRequest {
   message?: string;
   preferredLocale?: "en" | "ru" | "th" | "zh";
   assignedAgentId?: string;
+  attributionSearchEventId?: string;
+  attributionSearchQuery?: string;
+  attributionSearchSource?: SearchEventSource;
 }
 
 export interface LeadSnapshot {
@@ -327,6 +330,9 @@ export interface LeadSnapshot {
   message?: string;
   preferredLocale?: "en" | "ru" | "th" | "zh";
   assignedAgentId?: string;
+  attributionSearchEventId?: string;
+  attributionSearchQuery?: string;
+  attributionSearchSource?: SearchEventSource;
   createdAt: string;
   updatedAt: string;
 }
@@ -356,11 +362,15 @@ export interface TenantDashboardMetrics {
   lostLeads: number;
   conversionRate: number;
   totalSearches: number;
+  attributedLeads: number;
+  searchToLeadConversionRate: number;
   averageSearchLatencyMs: number;
   leadsBySource: CountByBucket[];
   leadsByStatus: CountByBucket[];
   searchesBySource: CountByBucket[];
   topSearchQueries: CountByBucket[];
+  leadsByAttributedSearchSource: CountByBucket[];
+  topLeadSearchQueries: CountByBucket[];
   generatedAt: string;
 }
 

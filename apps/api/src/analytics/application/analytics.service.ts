@@ -14,8 +14,9 @@ export class AnalyticsService {
       tenantId,
       ...metrics,
       conversionRate: closedLeads > 0 ? Math.round((metrics.wonLeads / closedLeads) * 10_000) / 100 : 0,
+      searchToLeadConversionRate:
+        metrics.totalSearches > 0 ? Math.round((metrics.attributedLeads / metrics.totalSearches) * 10_000) / 100 : 0,
       generatedAt: new Date().toISOString()
     };
   }
 }
-

@@ -16,6 +16,9 @@ interface LeadRow {
   message: string | null;
   preferred_locale: LeadSnapshot["preferredLocale"] | null;
   assigned_agent_id: string | null;
+  attribution_search_event_id: string | null;
+  attribution_search_query: string | null;
+  attribution_search_source: LeadSnapshot["attributionSearchSource"] | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -40,6 +43,9 @@ export class PgLeadRepository implements LeadRepository {
           message,
           preferred_locale,
           assigned_agent_id,
+          attribution_search_event_id,
+          attribution_search_query,
+          attribution_search_source,
           created_at,
           updated_at
         ) values (
@@ -55,7 +61,10 @@ export class PgLeadRepository implements LeadRepository {
           $9,
           $10,
           $11,
-          $12
+          $12,
+          $13,
+          $14,
+          $15
         )
         returning *
       `,
@@ -70,6 +79,9 @@ export class PgLeadRepository implements LeadRepository {
         input.message ?? null,
         input.preferredLocale ?? null,
         input.assignedAgentId ?? null,
+        input.attributionSearchEventId ?? null,
+        input.attributionSearchQuery ?? null,
+        input.attributionSearchSource ?? null,
         now,
         now
       ]
@@ -122,6 +134,9 @@ export class PgLeadRepository implements LeadRepository {
       message: row.message ?? undefined,
       preferredLocale: row.preferred_locale ?? undefined,
       assignedAgentId: row.assigned_agent_id ?? undefined,
+      attributionSearchEventId: row.attribution_search_event_id ?? undefined,
+      attributionSearchQuery: row.attribution_search_query ?? undefined,
+      attributionSearchSource: row.attribution_search_source ?? undefined,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
     };

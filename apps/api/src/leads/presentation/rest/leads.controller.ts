@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type { LeadListResponse, LeadSnapshot, RequestUser, TenantUserSnapshot } from "@propertyflow/contracts";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
@@ -20,8 +20,8 @@ import { CreateLeadDto } from "./create-lead.dto.js";
 @UseGuards(TenantGuard, UserContextGuard, RolesGuard)
 export class LeadsController {
   constructor(
-    private readonly leads: LeadService,
-    private readonly users: UserService
+    @Inject(LeadService) private readonly leads: LeadService,
+    @Inject(UserService) private readonly users: UserService
   ) {}
 
   @Post()
