@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   GeneratedPropertyDescription,
   PropertyAiAssets,
@@ -6,6 +6,7 @@ import type {
   RequestUser,
   ReviewAiAssetRequest
 } from "@propertyflow/contracts";
+import type { PropertySnapshot } from "@propertyflow/domain";
 import {
   PROPERTY_AI_ASSETS_REPOSITORY,
   type PropertyAiAssetsRepository
@@ -59,6 +60,28 @@ export class PropertyAiAssetsService {
     }
 
     return result;
+  }
+
+  async applyApprovedDescription(tenantId: string, propertyId: string, assetId: string): Promise<PropertySnapshot> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const asset = await this.aiAssets.findDescriptionById(tenantId, propertyId, assetId);
+
+    if (!asset) {
+      throw new NotFoundException("AI description asset not found");
+    }
+
+    if (asset.reviewStatus !== "approved") {
+      throw new BadRequestException("AI description asset must be approved before applying");
+    }
+
+    const property = await this.properties.updateListingText(tenantId, propertyId, asset.title, asset.description);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    return property;
   }
 
   private async ensurePropertyExists(tenantId: string, propertyId: string): Promise<void> {

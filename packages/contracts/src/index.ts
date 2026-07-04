@@ -43,6 +43,7 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "property.created"
   | "property.ai_assistant"
+  | "property.ai_description_applied"
   | "property.ai_asset_reviewed"
   | "property.ai_search"
   | "property.compared"

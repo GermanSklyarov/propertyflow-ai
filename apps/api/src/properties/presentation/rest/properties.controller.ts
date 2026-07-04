@@ -295,6 +295,38 @@ export class PropertiesController {
     return result;
   }
 
+  @Post(":propertyId/ai-assets/descriptions/:assetId/apply")
+  @Roles("agent", "broker", "manager", "admin")
+  async applyDescriptionAsset(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("assetId") assetId: string
+  ): Promise<PropertySnapshot> {
+    const property = await this.aiAssets.applyApprovedDescription(tenantId, propertyId, assetId);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_description_applied",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        assetId,
+        jobId: job.id
+      }
+    });
+
+    return property;
+  }
+
   @Post(":propertyId/ai-assets/image-analysis/:assetId/review")
   @Roles("agent", "broker", "manager", "admin")
   async reviewImageAnalysisAsset(

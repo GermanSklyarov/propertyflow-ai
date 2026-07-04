@@ -17,6 +17,31 @@ export class InMemoryPropertyRepository implements PropertyRepository {
     return this.properties.get(this.key(tenantId, propertyId)) ?? null;
   }
 
+  async updateListingText(
+    tenantId: string,
+    propertyId: string,
+    title: string,
+    description: string
+  ): Promise<PropertySnapshot | null> {
+    const key = this.key(tenantId, propertyId);
+    const property = this.properties.get(key);
+
+    if (!property) {
+      return null;
+    }
+
+    const updated = {
+      ...property,
+      title,
+      description,
+      updatedAt: new Date().toISOString()
+    };
+
+    this.properties.set(key, updated);
+
+    return updated;
+  }
+
   async list(tenantId: string): Promise<PropertySnapshot[]> {
     return [...this.properties.values()].filter((property) => property.tenantId === tenantId);
   }

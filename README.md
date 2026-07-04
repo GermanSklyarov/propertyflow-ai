@@ -80,6 +80,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/ai-search`
 - `POST /properties/compare`
 - `POST /properties/:propertyId/ai-assistant`
+- `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
 - `POST /leads`
 - `GET /leads/unassigned`
 - `GET /leads/agents`
@@ -219,6 +220,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 `GET /properties/:propertyId/ai-assets` returns generated descriptions and image analysis results saved by the worker.
 
 `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review` and `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review` approve or reject AI outputs before publication.
+
+`POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply` applies an approved AI description to the public listing title and description, then enqueues `properties.search.index` with `reason: "updated"` so OpenSearch can refresh the searchable document.
 
 `GET /properties/:propertyId/advisor` returns a rule-based AI advisor summary:
 

@@ -146,6 +146,27 @@ export class PgPropertyRepository implements PropertyRepository {
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async updateListingText(
+    tenantId: string,
+    propertyId: string,
+    title: string,
+    description: string
+  ): Promise<PropertySnapshot | null> {
+    const result = await this.pool.query<PropertyRow>(
+      `
+        update properties
+        set title = $3,
+            description = $4,
+            updated_at = $5
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, propertyId, title, description, new Date().toISOString()]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async list(tenantId: string): Promise<PropertySnapshot[]> {
     return this.search(tenantId, {});
   }

@@ -5,6 +5,11 @@ export const PROPERTY_AI_ASSETS_REPOSITORY = Symbol("PROPERTY_AI_ASSETS_REPOSITO
 
 export interface PropertyAiAssetsRepository {
   getByPropertyId(tenantId: string, propertyId: string): Promise<PropertyAiAssets>;
+  findDescriptionById(
+    tenantId: string,
+    propertyId: string,
+    assetId: string
+  ): Promise<GeneratedPropertyDescription | null>;
   reviewDescription(
     tenantId: string,
     propertyId: string,
