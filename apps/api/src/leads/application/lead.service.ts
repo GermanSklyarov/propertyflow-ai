@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { CreateLeadRequest, LeadListResponse, LeadSnapshot, RequestUser } from "@propertyflow/contracts";
 import { AuditService } from "../../audit/application/audit.service.js";
+import { RealtimePublisherService } from "../../realtime/application/realtime-publisher.service.js";
 import { UserService } from "../../users/application/user.service.js";
 import { LEAD_REPOSITORY, type LeadRepository } from "../domain/lead.repository.js";
 
@@ -9,7 +10,8 @@ export class LeadService {
   constructor(
     @Inject(LEAD_REPOSITORY) private readonly leads: LeadRepository,
     @Inject(AuditService) private readonly audit: AuditService,
-    @Inject(UserService) private readonly users: UserService
+    @Inject(UserService) private readonly users: UserService,
+    @Inject(RealtimePublisherService) private readonly realtime: RealtimePublisherService
   ) {}
 
   async create(tenantId: string, request: CreateLeadRequest, user?: RequestUser): Promise<LeadSnapshot> {
@@ -29,6 +31,13 @@ export class LeadService {
         source: lead.source,
         assignedAgentId: lead.assignedAgentId
       }
+    });
+
+    this.realtime.publish(tenantId, "lead.created", {
+      leadId: lead.id,
+      propertyId: lead.propertyId,
+      source: lead.source,
+      assignedAgentId: lead.assignedAgentId
     });
 
     return lead;
@@ -61,6 +70,12 @@ export class LeadService {
       metadata: {
         assignedAgentId
       }
+    });
+
+    this.realtime.publish(tenantId, "lead.assigned", {
+      leadId: lead.id,
+      assignedAgentId,
+      status: lead.status
     });
 
     return lead;

@@ -99,6 +99,15 @@ The API starts with a tenant-aware property inventory slice:
 
 Swagger UI is available at `/docs`; the OpenAPI JSON document is available at `/docs-json`.
 
+Realtime WebSocket namespace is `/realtime`. Clients can join a tenant room with `tenantId` in the handshake query or by sending `tenant.join`.
+
+Realtime v1 emits:
+
+- `property.created`
+- `lead.created`
+- `lead.assigned`
+- `event`
+
 All tenant-aware routes require the `x-tenant-id` header. The API validates it against an active tenant record. Local development seeds `demo-agency`.
 
 Routes with write or workspace-sensitive behavior also require dev RBAC headers:

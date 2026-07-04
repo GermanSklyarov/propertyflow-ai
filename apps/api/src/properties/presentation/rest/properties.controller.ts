@@ -14,6 +14,7 @@ import type {
 import type { RequestUser } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { AuditService } from "../../../audit/application/audit.service.js";
+import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
@@ -62,7 +63,9 @@ export class PropertiesController {
     @Inject(RentalYieldService)
     private readonly rentalYield: RentalYieldService,
     @Inject(AuditService)
-    private readonly audit: AuditService
+    private readonly audit: AuditService,
+    @Inject(RealtimePublisherService)
+    private readonly realtime: RealtimePublisherService
   ) {}
 
   @Post()
@@ -87,6 +90,13 @@ export class PropertiesController {
         price: property.price,
         kind: property.kind
       }
+    });
+
+    this.realtime.publish(tenantId, "property.created", {
+      propertyId: property.id,
+      title: property.title,
+      market: property.market,
+      status: property.status
     });
 
     return property;

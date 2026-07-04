@@ -15,7 +15,9 @@
     "@nestjs/core": "^11.1.27",
     "@nestjs/cqrs": "^11.0.3",
     "@nestjs/platform-fastify": "^11.1.27",
+    "@nestjs/platform-socket.io": "^11.1.27",
     "@nestjs/swagger": "^11.4.5",
+    "@nestjs/websockets": "^11.1.27",
     "@propertyflow/config": "0.1.0",
     "@propertyflow/contracts": "0.1.0",
     "@propertyflow/domain": "0.1.0",
@@ -23,7 +25,8 @@
     "class-validator": "^0.15.1",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2"
+    "rxjs": "^7.8.2",
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@types/pg": "^8.20.0",

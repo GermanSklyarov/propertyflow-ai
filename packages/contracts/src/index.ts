@@ -321,3 +321,12 @@ export interface TenantDashboardMetrics {
   leadsByStatus: CountByBucket[];
   generatedAt: string;
 }
+
+export type RealtimeEventType = "property.created" | "lead.created" | "lead.assigned";
+
+export interface RealtimeEvent<TPayload = Record<string, unknown>> {
+  type: RealtimeEventType;
+  tenantId: string;
+  payload: TPayload;
+  occurredAt: string;
+}
