@@ -10,7 +10,8 @@ import type {
   PropertyComparisonResponse,
   PropertyPriceHistory,
   PropertySearchResponse,
-  RentalYieldSummary
+  RentalYieldSummary,
+  RunListingAssistantResponse
 } from "@propertyflow/contracts";
 import type { RequestUser } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -30,6 +31,7 @@ import { ListPropertiesQuery } from "../../application/queries/list-properties.q
 import { AiPropertyAdvisorService } from "../../application/services/ai-property-advisor.service.js";
 import { IndexedPropertySearchService } from "../../application/services/indexed-property-search.service.js";
 import { InvestmentCalculatorService } from "../../application/services/investment-calculator.service.js";
+import { ListingAssistantService } from "../../application/services/listing-assistant.service.js";
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "../../application/services/price-history.service.js";
@@ -39,6 +41,7 @@ import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
+import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 
 @Controller("properties")
@@ -59,6 +62,8 @@ export class PropertiesController {
     private readonly indexedSearch: IndexedPropertySearchService,
     @Inject(InvestmentCalculatorService)
     private readonly investmentCalculator: InvestmentCalculatorService,
+    @Inject(ListingAssistantService)
+    private readonly listingAssistant: ListingAssistantService,
     @Inject(NaturalLanguagePropertySearchService)
     private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService,
     @Inject(NeighborhoodIntelligenceService)
@@ -213,6 +218,33 @@ export class PropertiesController {
       metadata: {
         propertyIds: payload.propertyIds,
         winners: result.winners
+      }
+    });
+
+    return result;
+  }
+
+  @Post(":propertyId/ai-assistant")
+  @Roles("agent", "broker", "manager", "admin")
+  async runListingAssistant(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: RunListingAssistantDto
+  ): Promise<RunListingAssistantResponse> {
+    const result = await this.listingAssistant.run(tenantId, propertyId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_assistant",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        jobs: result.jobs.map((job) => ({
+          id: job.id,
+          name: job.name
+        }))
       }
     });
 

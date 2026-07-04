@@ -42,6 +42,7 @@ export interface TenantUserSnapshot {
 
 export type AuditAction =
   | "property.created"
+  | "property.ai_assistant"
   | "property.ai_search"
   | "property.compared"
   | "tenant.current_viewed"
@@ -268,6 +269,18 @@ export interface PropertyComparisonResponse {
   scores: PropertyComparisonScore[];
   winners: PropertyComparisonWinner[];
   summary: string;
+}
+
+export interface RunListingAssistantRequest {
+  generateDescriptions?: boolean;
+  analyzeImages?: boolean;
+  locales?: Array<"en" | "ru" | "th" | "zh">;
+  imageUrls?: string[];
+}
+
+export interface RunListingAssistantResponse {
+  propertyId: string;
+  jobs: BackgroundJobSnapshot[];
 }
 
 export interface PropertyPriceHistoryPoint {

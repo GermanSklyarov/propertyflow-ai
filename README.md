@@ -79,6 +79,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
+- `POST /properties/:propertyId/ai-assistant`
 - `POST /leads`
 - `GET /leads/unassigned`
 - `GET /leads/agents`
@@ -150,6 +151,7 @@ Current protected routes:
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
+- `POST /properties/:propertyId/ai-assistant`
 - `POST /leads`
 - `GET /leads/unassigned`
 - `GET /leads/agents`
@@ -210,6 +212,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
   ]
 }
 ```
+
+`POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`.
 
 `GET /properties/:propertyId/advisor` returns a rule-based AI advisor summary:
 

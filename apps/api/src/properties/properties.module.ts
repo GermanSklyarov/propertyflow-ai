@@ -12,6 +12,7 @@ import { GetPropertyHandler } from "./application/queries/get-property.handler.j
 import { ListPropertiesHandler } from "./application/queries/list-properties.handler.js";
 import { AiPropertyAdvisorService } from "./application/services/ai-property-advisor.service.js";
 import { InvestmentCalculatorService } from "./application/services/investment-calculator.service.js";
+import { ListingAssistantService } from "./application/services/listing-assistant.service.js";
 import { NaturalLanguagePropertySearchService } from "./application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "./application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "./application/services/price-history.service.js";
@@ -44,6 +45,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     AiPropertyAdvisorService,
     IndexedPropertySearchService,
     InvestmentCalculatorService,
+    ListingAssistantService,
     NaturalLanguagePropertySearchService,
     NeighborhoodIntelligenceService,
     PriceHistoryService,
