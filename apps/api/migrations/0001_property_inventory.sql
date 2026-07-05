@@ -96,6 +96,21 @@ create index if not exists idx_properties_tenant_market on properties (tenant_id
 create index if not exists idx_properties_location on properties using gist (location);
 create index if not exists idx_properties_price_amount on properties (price_amount);
 
+create table if not exists property_status_events (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid not null references properties(id) on delete cascade,
+  previous_status text not null,
+  status text not null,
+  changed_by_user_id text,
+  changed_by_user_role text,
+  note text,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_property_status_events_property on property_status_events (tenant_id, property_id, created_at);
+create index if not exists idx_property_status_events_status on property_status_events (tenant_id, status, created_at desc);
+
 create table if not exists property_price_history (
   id uuid primary key,
   tenant_id text not null,

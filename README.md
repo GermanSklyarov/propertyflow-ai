@@ -98,6 +98,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/:propertyId/neighborhood`
 - `GET /properties/:propertyId/price-history`
 - `GET /properties/:propertyId/rental-yield`
+- `GET /properties/:propertyId/status-history`
 - `GET /properties/:propertyId`
 - `GET /tenants/current`
 - `GET /public/v1/properties`
@@ -163,6 +164,7 @@ Current protected routes:
 - `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/status`
+- `GET /properties/:propertyId/status-history`
 - `POST /leads`
 - `GET /leads/unassigned`
 - `GET /leads/agents`
@@ -246,6 +248,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 - `reserved -> available | sold | archived`
 - `sold -> archived`
 - `archived -> draft`
+
+`GET /properties/:propertyId/status-history` returns the operational status timeline for one listing, including previous status, new status, user, role, optional note, and timestamp.
 
 `GET /properties/:propertyId/advisor` returns a rule-based AI advisor summary:
 

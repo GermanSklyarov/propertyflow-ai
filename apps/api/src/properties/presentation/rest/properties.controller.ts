@@ -13,6 +13,7 @@ import type {
   GeneratedPropertyDescription,
   PropertyImageAnalysisResult,
   PropertySearchResponse,
+  PropertyStatusHistoryResponse,
   RentalYieldSummary,
   RunListingAssistantResponse
 } from "@propertyflow/contracts";
@@ -269,7 +270,7 @@ export class PropertiesController {
     @CurrentUser() user: RequestUser,
     @Param("propertyId") propertyId: string
   ): Promise<PropertySnapshot> {
-    const result = await this.publication.publish(tenantId, propertyId);
+    const result = await this.publication.publish(tenantId, propertyId, user);
     const property = result.property;
 
     const job = await this.jobs.enqueue("properties.search.index", {
@@ -288,6 +289,7 @@ export class PropertiesController {
       metadata: {
         previousStatus: result.previousStatus,
         status: property.status,
+        changed: result.changed,
         jobId: job.id
       }
     });
@@ -310,7 +312,7 @@ export class PropertiesController {
     @Param("propertyId") propertyId: string,
     @Body() payload: UpdatePropertyStatusDto
   ): Promise<PropertySnapshot> {
-    const result = await this.publication.changeStatus(tenantId, propertyId, payload.status);
+    const result = await this.publication.changeStatus(tenantId, propertyId, payload.status, user, payload.note);
     const property = result.property;
 
     const job = await this.jobs.enqueue("properties.search.index", {
@@ -329,6 +331,7 @@ export class PropertiesController {
       metadata: {
         previousStatus: result.previousStatus,
         status: property.status,
+        changed: result.changed,
         note: payload.note,
         jobId: job.id
       }
@@ -343,6 +346,15 @@ export class PropertiesController {
     });
 
     return property;
+  }
+
+  @Get(":propertyId/status-history")
+  @Roles("agent", "broker", "manager", "admin")
+  statusHistory(
+    @TenantId() tenantId: string,
+    @Param("propertyId") propertyId: string
+  ): Promise<PropertyStatusHistoryResponse> {
+    return this.publication.getStatusHistory(tenantId, propertyId);
   }
 
   @Get(":propertyId/advisor")

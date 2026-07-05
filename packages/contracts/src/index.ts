@@ -102,6 +102,23 @@ export interface UpdatePropertyStatusRequest {
   note?: string;
 }
 
+export interface PropertyStatusEventSnapshot {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  previousStatus: PropertySnapshot["status"];
+  status: PropertySnapshot["status"];
+  changedByUserId?: string;
+  changedByUserRole?: UserRole;
+  note?: string;
+  createdAt: string;
+}
+
+export interface PropertyStatusHistoryResponse {
+  propertyId: string;
+  items: PropertyStatusEventSnapshot[];
+}
+
 export interface PropertyListResponse {
   items: PropertySnapshot[];
 }
