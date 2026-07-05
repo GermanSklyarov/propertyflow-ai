@@ -3,6 +3,7 @@ import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   AiAdvisorSummary,
+  BackgroundJobSnapshot,
   InvestmentAnalysis,
   IndexedPropertySearchResponse,
   NaturalLanguagePropertySearchResponse,
@@ -65,6 +66,7 @@ import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 import { SubmitPriceRecommendationFeedbackDto } from "./submit-price-recommendation-feedback.dto.js";
+import { TrainPricingModelDto } from "./train-pricing-model.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
 import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
 
@@ -283,6 +285,37 @@ export class PropertiesController {
   @Roles("agent", "broker", "manager", "admin")
   pricingModelRegistry(): PricingModelRegistryResponse {
     return this.priceRecommendation.registry();
+  }
+
+  @Post("price-recommendation/train")
+  @Roles("manager", "admin")
+  async trainPricingModel(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: TrainPricingModelDto
+  ): Promise<BackgroundJobSnapshot> {
+    const job = await this.jobs.enqueue("pricing.model.train", {
+      tenantId,
+      requestedByUserId: user.id,
+      modelVersion: payload.modelVersion,
+      algorithm: payload.algorithm,
+      dryRun: payload.dryRun
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "pricing.model_training_requested",
+      resourceType: "job",
+      resourceId: job.id,
+      metadata: {
+        modelVersion: payload.modelVersion,
+        algorithm: payload.algorithm,
+        dryRun: payload.dryRun ?? false
+      }
+    });
+
+    return job;
   }
 
   @Post(":propertyId/ai-assistant")

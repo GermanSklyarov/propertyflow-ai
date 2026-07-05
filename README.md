@@ -101,6 +101,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties`
 - `GET /properties/price-recommendation/model-registry`
 - `GET /properties/price-recommendation/training-dataset`
+- `POST /properties/price-recommendation/train`
 - `GET /properties/search-index`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/ai-assets`
@@ -145,6 +146,7 @@ Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs thr
 
 Supported job names:
 
+- `pricing.model.train`
 - `properties.import`
 - `properties.ai_description.generate`
 - `properties.images.analyze`
@@ -181,6 +183,7 @@ Current protected routes:
 - `POST /properties/compare`
 - `GET /properties/price-recommendation/model-registry`
 - `GET /properties/price-recommendation/training-dataset`
+- `POST /properties/price-recommendation/train`
 - `POST /properties/:propertyId/ai-assistant`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
@@ -209,6 +212,7 @@ Audit log v1 records these actions:
 
 - `chat.asked`
 - `knowledge.document_created`
+- `pricing.model_training_requested`
 - `property.created`
 - `property.ai_assistant`
 - `property.ai_asset_reviewed`

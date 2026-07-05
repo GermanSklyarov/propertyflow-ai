@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import {
   type BackgroundJobName,
   type BackgroundJobPayload,
+  type PricingModelTrainJobPayload,
   type PropertyAiDescriptionJobPayload,
   type PropertyImageAnalysisJobPayload,
   type PropertyImportJobPayload,
@@ -16,6 +17,7 @@ import { PropertyAiOutputWriter } from "./property-ai-output-writer.js";
 import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
+type PricingModelTrainJob = Job<PricingModelTrainJobPayload, unknown, "pricing.model.train">;
 type PropertyImportJob = Job<PropertyImportJobPayload, unknown, "properties.import">;
 type PropertyAiDescriptionJob = Job<
   PropertyAiDescriptionJobPayload,
@@ -85,6 +87,8 @@ export class PropertyflowWorker {
     console.log(`[jobs] processing ${job.name}#${job.id} for tenant ${job.data.tenantId}`);
 
     switch (job.name) {
+      case "pricing.model.train":
+        return this.trainPricingModel(job as PricingModelTrainJob);
       case "properties.import":
         return this.importProperties(job as PropertyImportJob);
       case "properties.ai_description.generate":
@@ -105,6 +109,28 @@ export class PropertyflowWorker {
       dryRun: job.data.dryRun ?? false,
       imported: 0,
       skipped: 0
+    };
+  }
+
+  private async trainPricingModel(job: PricingModelTrainJob): Promise<Record<string, unknown>> {
+    const result = await this.pool.query<{ count: string }>(
+      `
+        select count(*) as count
+        from property_price_recommendation_feedback
+        where tenant_id = $1
+      `,
+      [job.data.tenantId]
+    );
+    const sampleSize = Number(result.rows[0]?.count ?? 0);
+
+    return {
+      tenantId: job.data.tenantId,
+      modelVersion: job.data.modelVersion,
+      algorithm: job.data.algorithm,
+      dryRun: job.data.dryRun ?? false,
+      sampleSize,
+      trained: false,
+      status: sampleSize > 0 ? "dataset-ready" : "insufficient-data"
     };
   }
 

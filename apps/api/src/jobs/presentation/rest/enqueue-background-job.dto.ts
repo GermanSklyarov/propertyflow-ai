@@ -3,6 +3,7 @@ import { IsArray, IsBoolean, IsIn, IsOptional, IsString, ValidateIf } from "clas
 import type {
   BackgroundJobName,
   EnqueueBackgroundJobRequest,
+  PricingModelTrainJobPayload,
   PropertyAiDescriptionJobPayload,
   PropertyImageAnalysisJobPayload,
   PropertyImportJobPayload,
@@ -10,6 +11,7 @@ import type {
 } from "@propertyflow/contracts";
 
 const jobNames = [
+  "pricing.model.train",
   "properties.import",
   "properties.ai_description.generate",
   "properties.images.analyze",
@@ -26,16 +28,37 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
   @ApiProperty({
     oneOf: [
       { $ref: "#/components/schemas/PropertyImportPayloadDto" },
+      { $ref: "#/components/schemas/PricingModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyAiDescriptionPayloadDto" },
       { $ref: "#/components/schemas/PropertyImageAnalysisPayloadDto" },
       { $ref: "#/components/schemas/PropertySearchIndexPayloadDto" }
     ]
   })
   payload!:
+    | PricingModelTrainPayloadDto
     | PropertyImportPayloadDto
     | PropertyAiDescriptionPayloadDto
     | PropertyImageAnalysisPayloadDto
     | PropertySearchIndexPayloadDto;
+}
+
+export class PricingModelTrainPayloadDto implements PricingModelTrainJobPayload {
+  tenantId!: string;
+
+  requestedByUserId?: string;
+
+  @ApiProperty()
+  @IsString()
+  modelVersion!: string;
+
+  @ApiProperty({ enum: ["baseline-refresh", "catboost", "lightgbm"] })
+  @IsIn(["baseline-refresh", "catboost", "lightgbm"])
+  algorithm!: PricingModelTrainJobPayload["algorithm"];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
 }
 
 export class PropertyImportPayloadDto implements PropertyImportJobPayload {

@@ -43,6 +43,7 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "chat.asked"
   | "knowledge.document_created"
+  | "pricing.model_training_requested"
   | "property.created"
   | "property.ai_assistant"
   | "property.ai_description_applied"
@@ -730,6 +731,7 @@ export interface RealtimeEvent<TPayload = Record<string, unknown>> {
 export const PROPERTYFLOW_JOBS_QUEUE = "propertyflow.jobs";
 
 export type BackgroundJobName =
+  | "pricing.model.train"
   | "properties.import"
   | "properties.ai_description.generate"
   | "properties.images.analyze"
@@ -762,7 +764,14 @@ export interface PropertySearchIndexJobPayload extends BackgroundJobBasePayload 
   reason: "created" | "updated" | "manual";
 }
 
+export interface PricingModelTrainJobPayload extends BackgroundJobBasePayload {
+  modelVersion: string;
+  algorithm: "baseline-refresh" | "catboost" | "lightgbm";
+  dryRun?: boolean;
+}
+
 export type BackgroundJobPayload =
+  | PricingModelTrainJobPayload
   | PropertyImportJobPayload
   | PropertyAiDescriptionJobPayload
   | PropertyImageAnalysisJobPayload
