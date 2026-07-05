@@ -12,6 +12,7 @@ import type {
   PropertyImageGalleryResponse,
   PropertyImageSnapshot,
   PropertyPriceHistory,
+  CreatePropertyImageUploadResponse,
   GeneratedPropertyDescription,
   PropertyImageAnalysisResult,
   PropertySearchResponse,
@@ -48,8 +49,10 @@ import { PropertyImagesService } from "../../application/services/property-image
 import { PropertyPublicationService } from "../../application/services/property-publication.service.js";
 import { RentalYieldService } from "../../application/services/rental-yield.service.js";
 import { AddPropertyImageDto } from "./add-property-image.dto.js";
+import { ConfirmPropertyImageUploadDto } from "./confirm-property-image-upload.dto.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
+import { CreatePropertyImageUploadDto } from "./create-property-image-upload.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
@@ -418,6 +421,59 @@ export class PropertiesController {
   @Get(":propertyId/images")
   images(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<PropertyImageGalleryResponse> {
     return this.propertyImages.getGallery(tenantId, propertyId);
+  }
+
+  @Post(":propertyId/images/upload-url")
+  @Roles("agent", "broker", "manager", "admin")
+  createImageUploadUrl(
+    @TenantId() tenantId: string,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: CreatePropertyImageUploadDto
+  ): Promise<CreatePropertyImageUploadResponse> {
+    return this.propertyImages.createUploadUrl(tenantId, propertyId, payload);
+  }
+
+  @Post(":propertyId/images/confirm-upload")
+  @Roles("agent", "broker", "manager", "admin")
+  async confirmImageUpload(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: ConfirmPropertyImageUploadDto
+  ): Promise<PropertyImageSnapshot> {
+    const image = await this.propertyImages.confirmUpload(tenantId, propertyId, payload);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.image_added",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        imageId: image.id,
+        bucket: image.bucket,
+        objectKey: image.objectKey,
+        imageUrl: image.imageUrl,
+        position: image.position,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.images_updated", {
+      propertyId,
+      action: "added",
+      imageId: image.id,
+      imageUrl: image.imageUrl
+    });
+
+    return image;
   }
 
   @Post(":propertyId/images")

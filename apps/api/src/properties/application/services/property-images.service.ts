@@ -1,5 +1,13 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { AddPropertyImageRequest, PropertyImageGalleryResponse, PropertyImageSnapshot } from "@propertyflow/contracts";
+import type {
+  AddPropertyImageRequest,
+  ConfirmPropertyImageUploadRequest,
+  CreatePropertyImageUploadRequest,
+  CreatePropertyImageUploadResponse,
+  PropertyImageGalleryResponse,
+  PropertyImageSnapshot
+} from "@propertyflow/contracts";
+import { ObjectStorageService } from "../../../storage/object-storage.service.js";
 import { PROPERTY_IMAGES_REPOSITORY, type PropertyImagesRepository } from "../../domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
@@ -7,7 +15,8 @@ import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/prope
 export class PropertyImagesService {
   constructor(
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
-    @Inject(PROPERTY_IMAGES_REPOSITORY) private readonly images: PropertyImagesRepository
+    @Inject(PROPERTY_IMAGES_REPOSITORY) private readonly images: PropertyImagesRepository,
+    @Inject(ObjectStorageService) private readonly storage: ObjectStorageService
   ) {}
 
   async getGallery(tenantId: string, propertyId: string): Promise<PropertyImageGalleryResponse> {
@@ -33,6 +42,51 @@ export class PropertyImagesService {
     });
   }
 
+  async createUploadUrl(
+    tenantId: string,
+    propertyId: string,
+    request: CreatePropertyImageUploadRequest
+  ): Promise<CreatePropertyImageUploadResponse> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const objectKey = [
+      "tenants",
+      this.safePathSegment(tenantId),
+      "properties",
+      propertyId,
+      "images",
+      `${crypto.randomUUID()}-${this.safeFilename(request.filename)}`
+    ].join("/");
+
+    return this.storage.createPresignedPutUrl({
+      objectKey,
+      contentType: request.mimeType
+    });
+  }
+
+  async confirmUpload(
+    tenantId: string,
+    propertyId: string,
+    request: ConfirmPropertyImageUploadRequest
+  ): Promise<PropertyImageSnapshot> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const bucket = request.bucket ?? this.storage.defaultBucket();
+
+    return this.images.add({
+      tenantId,
+      propertyId,
+      imageUrl: this.storage.publicObjectUrl(bucket, request.objectKey),
+      bucket,
+      objectKey: request.objectKey,
+      mimeType: request.mimeType,
+      sizeBytes: request.sizeBytes,
+      originalFilename: request.originalFilename,
+      caption: request.caption,
+      position: request.position
+    });
+  }
+
   async removeImage(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
     await this.ensurePropertyExists(tenantId, propertyId);
 
@@ -51,5 +105,15 @@ export class PropertyImagesService {
     if (!property) {
       throw new NotFoundException("Property not found");
     }
+  }
+
+  private safePathSegment(value: string): string {
+    return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+  }
+
+  private safeFilename(filename: string): string {
+    const normalized = filename.trim().replace(/[^a-zA-Z0-9._-]/g, "-");
+
+    return normalized || "image";
   }
 }

@@ -6,6 +6,7 @@ import { JobsModule } from "../jobs/jobs.module.js";
 import { RealtimeModule } from "../realtime/realtime.module.js";
 import { SearchObservabilityModule } from "../search-observability/search-observability.module.js";
 import { AuthModule } from "../shared/auth/auth.module.js";
+import { StorageModule } from "../storage/storage.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
 import { CreatePropertyHandler } from "./application/commands/create-property.handler.js";
 import { GetPropertyHandler } from "./application/queries/get-property.handler.js";
@@ -45,6 +46,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     JobsModule,
     RealtimeModule,
     SearchObservabilityModule,
+    StorageModule,
     TenantsModule
   ],
   controllers: [PropertiesController],

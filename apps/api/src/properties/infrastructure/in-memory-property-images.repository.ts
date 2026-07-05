@@ -14,6 +14,11 @@ export class InMemoryPropertyImagesRepository implements PropertyImagesRepositor
       tenantId: input.tenantId,
       propertyId: input.propertyId,
       imageUrl: input.imageUrl,
+      bucket: input.bucket,
+      objectKey: input.objectKey,
+      mimeType: input.mimeType,
+      sizeBytes: input.sizeBytes,
+      originalFilename: input.originalFilename,
       caption: input.caption,
       position: input.position ?? existing.length,
       createdAt: new Date().toISOString()

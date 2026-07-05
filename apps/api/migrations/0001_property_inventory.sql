@@ -101,12 +101,24 @@ create table if not exists property_images (
   tenant_id text not null references tenants(id) on delete cascade,
   property_id uuid not null references properties(id) on delete cascade,
   image_url text not null,
+  bucket text,
+  object_key text,
+  mime_type text,
+  size_bytes integer,
+  original_filename text,
   caption text,
   position integer not null default 0,
   created_at timestamptz not null
 );
 
+alter table property_images add column if not exists bucket text;
+alter table property_images add column if not exists object_key text;
+alter table property_images add column if not exists mime_type text;
+alter table property_images add column if not exists size_bytes integer;
+alter table property_images add column if not exists original_filename text;
+
 create index if not exists idx_property_images_property on property_images (tenant_id, property_id, position, created_at);
+create index if not exists idx_property_images_object_key on property_images (tenant_id, object_key);
 
 create table if not exists property_status_events (
   id uuid primary key,

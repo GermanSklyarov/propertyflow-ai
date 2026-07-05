@@ -9,6 +9,9 @@ export interface AppConfig {
   redisUrl: string;
   opensearchUrl: string;
   s3Endpoint: string;
+  s3AccessKey: string;
+  s3SecretKey: string;
+  s3Bucket: string;
 }
 
 export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -22,7 +25,10 @@ export function loadAppConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     databaseUrl: requireEnv(env, "DATABASE_URL"),
     redisUrl: requireEnv(env, "REDIS_URL"),
     opensearchUrl: requireEnv(env, "OPENSEARCH_URL"),
-    s3Endpoint: requireEnv(env, "S3_ENDPOINT")
+    s3Endpoint: requireEnv(env, "S3_ENDPOINT"),
+    s3AccessKey: requireEnv(env, "S3_ACCESS_KEY"),
+    s3SecretKey: requireEnv(env, "S3_SECRET_KEY"),
+    s3Bucket: requireEnv(env, "S3_BUCKET")
   };
 }
 

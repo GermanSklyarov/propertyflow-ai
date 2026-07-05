@@ -132,6 +132,11 @@ export interface PropertyImageSnapshot {
   tenantId: string;
   propertyId: string;
   imageUrl: string;
+  bucket?: string;
+  objectKey?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  originalFilename?: string;
   caption?: string;
   position: number;
   createdAt: string;
@@ -139,6 +144,36 @@ export interface PropertyImageSnapshot {
 
 export interface AddPropertyImageRequest {
   imageUrl: string;
+  bucket?: string;
+  objectKey?: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  originalFilename?: string;
+  caption?: string;
+  position?: number;
+}
+
+export interface CreatePropertyImageUploadRequest {
+  filename: string;
+  mimeType: string;
+  sizeBytes?: number;
+}
+
+export interface CreatePropertyImageUploadResponse {
+  bucket: string;
+  objectKey: string;
+  uploadUrl: string;
+  method: "PUT";
+  headers: Record<string, string>;
+  expiresInSeconds: number;
+}
+
+export interface ConfirmPropertyImageUploadRequest {
+  bucket?: string;
+  objectKey: string;
+  mimeType?: string;
+  sizeBytes?: number;
+  originalFilename?: string;
   caption?: string;
   position?: number;
 }
