@@ -47,6 +47,8 @@ export type AuditAction =
   | "property.ai_asset_reviewed"
   | "property.ai_search"
   | "property.compared"
+  | "property.image_added"
+  | "property.image_removed"
   | "property.published"
   | "property.price_updated"
   | "property.status_changed"
@@ -123,6 +125,27 @@ export interface PropertyStatusEventSnapshot {
 export interface PropertyStatusHistoryResponse {
   propertyId: string;
   items: PropertyStatusEventSnapshot[];
+}
+
+export interface PropertyImageSnapshot {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  imageUrl: string;
+  caption?: string;
+  position: number;
+  createdAt: string;
+}
+
+export interface AddPropertyImageRequest {
+  imageUrl: string;
+  caption?: string;
+  position?: number;
+}
+
+export interface PropertyImageGalleryResponse {
+  propertyId: string;
+  images: PropertyImageSnapshot[];
 }
 
 export interface PropertyListResponse {
@@ -466,6 +489,7 @@ export interface TenantDashboardMetrics {
 
 export type RealtimeEventType =
   | "property.created"
+  | "property.images_updated"
   | "property.published"
   | "property.price_updated"
   | "property.status_changed"

@@ -81,6 +81,8 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/compare`
 - `POST /properties/:propertyId/ai-assistant`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
+- `POST /properties/:propertyId/images`
+- `DELETE /properties/:propertyId/images/:imageId`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
 - `PATCH /properties/:propertyId/status`
@@ -95,6 +97,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/search-index`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/ai-assets`
+- `GET /properties/:propertyId/images`
 - `GET /properties/:propertyId/investment`
 - `GET /properties/:propertyId/neighborhood`
 - `GET /properties/:propertyId/price-history`
@@ -114,6 +117,7 @@ Realtime WebSocket namespace is `/realtime`. Clients can join a tenant room with
 Realtime v1 emits:
 
 - `property.created`
+- `property.images_updated`
 - `property.published`
 - `property.price_updated`
 - `property.status_changed`
@@ -164,6 +168,8 @@ Current protected routes:
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
 - `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review`
+- `POST /properties/:propertyId/images`
+- `DELETE /properties/:propertyId/images/:imageId`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
 - `PATCH /properties/:propertyId/status`
@@ -185,6 +191,8 @@ Audit log v1 records these actions:
 - `property.ai_description_applied`
 - `property.ai_search`
 - `property.compared`
+- `property.image_added`
+- `property.image_removed`
 - `property.published`
 - `property.price_updated`
 - `property.status_changed`
@@ -238,6 +246,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 `POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`.
 
 `GET /properties/:propertyId/ai-assets` returns generated descriptions and image analysis results saved by the worker.
+
+`GET /properties/:propertyId/images`, `POST /properties/:propertyId/images`, and `DELETE /properties/:propertyId/images/:imageId` manage the listing photo gallery with ordered image URLs, optional captions, audit/realtime events, and search reindexing.
 
 `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review` and `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review` approve or reject AI outputs before publication.
 

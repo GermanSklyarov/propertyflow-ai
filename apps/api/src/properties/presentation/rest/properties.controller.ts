@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
@@ -9,6 +9,8 @@ import type {
   NeighborhoodIntelligence,
   PropertyAiAssets,
   PropertyComparisonResponse,
+  PropertyImageGalleryResponse,
+  PropertyImageSnapshot,
   PropertyPriceHistory,
   GeneratedPropertyDescription,
   PropertyImageAnalysisResult,
@@ -42,8 +44,10 @@ import { NeighborhoodIntelligenceService } from "../../application/services/neig
 import { PriceHistoryService } from "../../application/services/price-history.service.js";
 import { PropertyAiAssetsService } from "../../application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
+import { PropertyImagesService } from "../../application/services/property-images.service.js";
 import { PropertyPublicationService } from "../../application/services/property-publication.service.js";
 import { RentalYieldService } from "../../application/services/rental-yield.service.js";
+import { AddPropertyImageDto } from "./add-property-image.dto.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
@@ -84,6 +88,8 @@ export class PropertiesController {
     private readonly aiAssets: PropertyAiAssetsService,
     @Inject(PropertyComparisonService)
     private readonly propertyComparison: PropertyComparisonService,
+    @Inject(PropertyImagesService)
+    private readonly propertyImages: PropertyImagesService,
     @Inject(PropertyPublicationService)
     private readonly publication: PropertyPublicationService,
     @Inject(RentalYieldService)
@@ -407,6 +413,91 @@ export class PropertiesController {
   @Get(":propertyId/ai-assets")
   aiAssetsSummary(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<PropertyAiAssets> {
     return this.aiAssets.getByPropertyId(tenantId, propertyId);
+  }
+
+  @Get(":propertyId/images")
+  images(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<PropertyImageGalleryResponse> {
+    return this.propertyImages.getGallery(tenantId, propertyId);
+  }
+
+  @Post(":propertyId/images")
+  @Roles("agent", "broker", "manager", "admin")
+  async addImage(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: AddPropertyImageDto
+  ): Promise<PropertyImageSnapshot> {
+    const image = await this.propertyImages.addImage(tenantId, propertyId, payload);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.image_added",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        imageId: image.id,
+        imageUrl: image.imageUrl,
+        position: image.position,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.images_updated", {
+      propertyId,
+      action: "added",
+      imageId: image.id,
+      imageUrl: image.imageUrl
+    });
+
+    return image;
+  }
+
+  @Delete(":propertyId/images/:imageId")
+  @Roles("agent", "broker", "manager", "admin")
+  async removeImage(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("imageId") imageId: string
+  ): Promise<PropertyImageSnapshot> {
+    const image = await this.propertyImages.removeImage(tenantId, propertyId, imageId);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.image_removed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        imageId: image.id,
+        imageUrl: image.imageUrl,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.images_updated", {
+      propertyId,
+      action: "removed",
+      imageId: image.id
+    });
+
+    return image;
   }
 
   @Post(":propertyId/ai-assets/descriptions/:assetId/review")

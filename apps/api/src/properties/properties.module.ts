@@ -18,14 +18,17 @@ import { NeighborhoodIntelligenceService } from "./application/services/neighbor
 import { PriceHistoryService } from "./application/services/price-history.service.js";
 import { PropertyAiAssetsService } from "./application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
+import { PropertyImagesService } from "./application/services/property-images.service.js";
 import { PropertyPublicationService } from "./application/services/property-publication.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
 import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
+import { PROPERTY_IMAGES_REPOSITORY } from "./domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
 import { PROPERTY_STATUS_HISTORY_REPOSITORY } from "./domain/property-status-history.repository.js";
 import { createPropertySearchClient, PROPERTY_SEARCH_CLIENT } from "./infrastructure/opensearch/property-search-client.js";
 import { PgPropertyAiAssetsRepository } from "./infrastructure/postgres/pg-property-ai-assets.repository.js";
+import { PgPropertyImagesRepository } from "./infrastructure/postgres/pg-property-images.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PgPropertyStatusHistoryRepository } from "./infrastructure/postgres/pg-property-status-history.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
@@ -57,6 +60,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     PriceHistoryService,
     PropertyAiAssetsService,
     PropertyComparisonService,
+    PropertyImagesService,
     PropertyPublicationService,
     RentalYieldService,
     {
@@ -66,6 +70,10 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     {
       provide: PROPERTY_AI_ASSETS_REPOSITORY,
       useClass: PgPropertyAiAssetsRepository
+    },
+    {
+      provide: PROPERTY_IMAGES_REPOSITORY,
+      useClass: PgPropertyImagesRepository
     },
     {
       provide: PROPERTY_STATUS_HISTORY_REPOSITORY,
