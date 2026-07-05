@@ -174,6 +174,7 @@ create table if not exists property_image_analysis (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,
   property_id uuid not null references properties(id) on delete cascade,
+  property_image_id uuid references property_images(id) on delete set null,
   image_url text not null,
   detected_features text[] not null default '{}',
   confidence numeric(4, 3) not null,
@@ -184,12 +185,14 @@ create table if not exists property_image_analysis (
   created_at timestamptz not null
 );
 
+alter table property_image_analysis add column if not exists property_image_id uuid references property_images(id) on delete set null;
 alter table property_image_analysis add column if not exists review_status text not null default 'draft';
 alter table property_image_analysis add column if not exists reviewed_by_user_id text;
 alter table property_image_analysis add column if not exists reviewed_at timestamptz;
 alter table property_image_analysis add column if not exists review_note text;
 
 create index if not exists idx_property_image_analysis_property on property_image_analysis (tenant_id, property_id);
+create index if not exists idx_property_image_analysis_property_image on property_image_analysis (tenant_id, property_image_id);
 create index if not exists idx_property_image_analysis_review on property_image_analysis (tenant_id, review_status);
 
 create table if not exists audit_events (

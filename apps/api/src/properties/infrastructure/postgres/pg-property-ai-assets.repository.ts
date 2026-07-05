@@ -27,6 +27,7 @@ interface DescriptionRow {
 interface ImageAnalysisRow {
   id: string;
   property_id: string;
+  property_image_id: string | null;
   image_url: string;
   detected_features: string[];
   confidence: string;
@@ -54,7 +55,7 @@ export class PgPropertyAiAssetsRepository implements PropertyAiAssetsRepository 
       ),
       this.pool.query<ImageAnalysisRow>(
         `
-          select id, property_id, image_url, detected_features, confidence, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
+          select id, property_id, property_image_id, image_url, detected_features, confidence, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
           from property_image_analysis
           where tenant_id = $1 and property_id = $2
           order by created_at desc, image_url asc
@@ -126,7 +127,7 @@ export class PgPropertyAiAssetsRepository implements PropertyAiAssetsRepository 
             reviewed_at = $6,
             review_note = $7
         where tenant_id = $1 and property_id = $2 and id = $3
-        returning id, property_id, image_url, detected_features, confidence, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
+        returning id, property_id, property_image_id, image_url, detected_features, confidence, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
       `,
       [tenantId, propertyId, assetId, request.status, user.id, new Date().toISOString(), request.note ?? null]
     );
@@ -154,6 +155,7 @@ export class PgPropertyAiAssetsRepository implements PropertyAiAssetsRepository 
     return {
       id: row.id,
       propertyId: row.property_id,
+      propertyImageId: row.property_image_id ?? undefined,
       imageUrl: row.image_url,
       detectedFeatures: row.detected_features,
       confidence: Number(row.confidence),

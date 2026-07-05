@@ -86,6 +86,12 @@ export class PropertyImageAnalysisPayloadDto implements PropertyImageAnalysisJob
   @IsArray()
   @IsString({ each: true })
   imageUrls!: string[];
+
+  @ApiProperty({ required: false, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imageIds?: string[];
 }
 
 export class PropertySearchIndexPayloadDto implements PropertySearchIndexJobPayload {

@@ -53,13 +53,16 @@ export class PropertyAiOutputWriter {
   async saveImageAnalysis(input: PropertyImageAnalysisJobPayload): Promise<number> {
     const now = new Date().toISOString();
 
-    for (const imageUrl of input.imageUrls) {
+    for (const [index, imageUrl] of input.imageUrls.entries()) {
+      const imageId = input.imageIds?.[index] ?? null;
+
       await this.pool.query(
         `
           insert into property_image_analysis (
             id,
             tenant_id,
             property_id,
+            property_image_id,
             image_url,
             detected_features,
             confidence,
@@ -72,14 +75,16 @@ export class PropertyAiOutputWriter {
             $4,
             $5,
             $6,
+            $7,
             'draft',
-            $7
+            $8
           )
         `,
         [
           crypto.randomUUID(),
           input.tenantId,
           input.propertyId,
+          imageId,
           imageUrl,
           this.detectFeatures(imageUrl),
           0.82,

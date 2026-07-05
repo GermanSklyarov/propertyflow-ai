@@ -456,7 +456,8 @@ export class PropertiesController {
             tenantId,
             requestedByUserId: user.id,
             propertyId,
-            imageUrls: [image.imageUrl]
+            imageUrls: [image.imageUrl],
+            imageIds: [image.id]
           });
 
     await this.audit.record({
@@ -509,7 +510,8 @@ export class PropertiesController {
             tenantId,
             requestedByUserId: user.id,
             propertyId,
-            imageUrls: [image.imageUrl]
+            imageUrls: [image.imageUrl],
+            imageIds: [image.id]
           });
 
     await this.audit.record({

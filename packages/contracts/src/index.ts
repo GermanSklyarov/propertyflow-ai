@@ -394,6 +394,7 @@ export interface GeneratedPropertyDescription {
 export interface PropertyImageAnalysisResult {
   id: string;
   propertyId: string;
+  propertyImageId?: string;
   imageUrl: string;
   detectedFeatures: string[];
   confidence: number;
@@ -567,6 +568,7 @@ export interface PropertyAiDescriptionJobPayload extends BackgroundJobBasePayloa
 export interface PropertyImageAnalysisJobPayload extends BackgroundJobBasePayload {
   propertyId: string;
   imageUrls: string[];
+  imageIds?: string[];
 }
 
 export interface PropertySearchIndexJobPayload extends BackgroundJobBasePayload {

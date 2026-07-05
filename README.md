@@ -247,9 +247,9 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 }
 ```
 
-`POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`.
+`POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`. Image analysis jobs support `imageUrls` and optional matching `imageIds` for gallery-linked AI assets.
 
-`GET /properties/:propertyId/ai-assets` returns generated descriptions and image analysis results saved by the worker.
+`GET /properties/:propertyId/ai-assets` returns generated descriptions and image analysis results saved by the worker. Image analysis results include `propertyImageId` when the job was created from a gallery image.
 
 `POST /properties/:propertyId/images/upload-url` returns a MinIO/S3 presigned `PUT` URL for direct browser uploads. `POST /properties/:propertyId/images/confirm-upload` stores the uploaded object in the listing gallery with bucket/object metadata and enqueues `properties.images.analyze` by default.
 
