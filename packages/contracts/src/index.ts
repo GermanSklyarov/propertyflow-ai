@@ -48,6 +48,7 @@ export type AuditAction =
   | "property.ai_search"
   | "property.compared"
   | "property.published"
+  | "property.status_changed"
   | "tenant.current_viewed"
   | "lead.created"
   | "lead.assigned"
@@ -94,6 +95,11 @@ export interface CreatePropertyRequest {
   monthlyRentEstimate?: Money;
   maintenanceFeeMonthly?: Money;
   amenities?: string[];
+}
+
+export interface UpdatePropertyStatusRequest {
+  status: PropertySnapshot["status"];
+  note?: string;
 }
 
 export interface PropertyListResponse {
@@ -430,7 +436,12 @@ export interface TenantDashboardMetrics {
   generatedAt: string;
 }
 
-export type RealtimeEventType = "property.created" | "property.published" | "lead.created" | "lead.assigned";
+export type RealtimeEventType =
+  | "property.created"
+  | "property.published"
+  | "property.status_changed"
+  | "lead.created"
+  | "lead.assigned";
 
 export interface RealtimeEvent<TPayload = Record<string, unknown>> {
   type: RealtimeEventType;

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
@@ -49,6 +49,7 @@ import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
+import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
 
 @Controller("properties")
 @ApiTags("properties")
@@ -295,6 +296,49 @@ export class PropertiesController {
       propertyId,
       title: property.title,
       market: property.market,
+      status: property.status
+    });
+
+    return property;
+  }
+
+  @Patch(":propertyId/status")
+  @Roles("broker", "manager", "admin")
+  async updateStatus(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: UpdatePropertyStatusDto
+  ): Promise<PropertySnapshot> {
+    const result = await this.publication.changeStatus(tenantId, propertyId, payload.status);
+    const property = result.property;
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.status_changed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        previousStatus: result.previousStatus,
+        status: property.status,
+        note: payload.note,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.status_changed", {
+      propertyId,
+      title: property.title,
+      market: property.market,
+      previousStatus: result.previousStatus,
       status: property.status
     });
 
