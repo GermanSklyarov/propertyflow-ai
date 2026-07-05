@@ -151,6 +151,7 @@ export interface AddPropertyImageRequest {
   originalFilename?: string;
   caption?: string;
   position?: number;
+  analyzeImage?: boolean;
 }
 
 export interface CreatePropertyImageUploadRequest {
@@ -176,6 +177,7 @@ export interface ConfirmPropertyImageUploadRequest {
   originalFilename?: string;
   caption?: string;
   position?: number;
+  analyzeImage?: boolean;
 }
 
 export interface PropertyImageGalleryResponse {

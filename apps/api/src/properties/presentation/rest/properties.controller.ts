@@ -449,6 +449,15 @@ export class PropertiesController {
       propertyId,
       reason: "updated"
     });
+    const analysisJob =
+      payload.analyzeImage === false
+        ? undefined
+        : await this.jobs.enqueue("properties.images.analyze", {
+            tenantId,
+            requestedByUserId: user.id,
+            propertyId,
+            imageUrls: [image.imageUrl]
+          });
 
     await this.audit.record({
       tenantId,
@@ -462,7 +471,8 @@ export class PropertiesController {
         objectKey: image.objectKey,
         imageUrl: image.imageUrl,
         position: image.position,
-        jobId: job.id
+        jobId: job.id,
+        analysisJobId: analysisJob?.id
       }
     });
 
@@ -492,6 +502,15 @@ export class PropertiesController {
       propertyId,
       reason: "updated"
     });
+    const analysisJob =
+      payload.analyzeImage === false
+        ? undefined
+        : await this.jobs.enqueue("properties.images.analyze", {
+            tenantId,
+            requestedByUserId: user.id,
+            propertyId,
+            imageUrls: [image.imageUrl]
+          });
 
     await this.audit.record({
       tenantId,
@@ -503,7 +522,8 @@ export class PropertiesController {
         imageId: image.id,
         imageUrl: image.imageUrl,
         position: image.position,
-        jobId: job.id
+        jobId: job.id,
+        analysisJobId: analysisJob?.id
       }
     });
 

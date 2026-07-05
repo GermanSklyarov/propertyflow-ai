@@ -251,9 +251,9 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `GET /properties/:propertyId/ai-assets` returns generated descriptions and image analysis results saved by the worker.
 
-`POST /properties/:propertyId/images/upload-url` returns a MinIO/S3 presigned `PUT` URL for direct browser uploads. `POST /properties/:propertyId/images/confirm-upload` stores the uploaded object in the listing gallery with bucket/object metadata.
+`POST /properties/:propertyId/images/upload-url` returns a MinIO/S3 presigned `PUT` URL for direct browser uploads. `POST /properties/:propertyId/images/confirm-upload` stores the uploaded object in the listing gallery with bucket/object metadata and enqueues `properties.images.analyze` by default.
 
-`GET /properties/:propertyId/images`, `POST /properties/:propertyId/images`, and `DELETE /properties/:propertyId/images/:imageId` manage the listing photo gallery with ordered image URLs, optional captions, audit/realtime events, and search reindexing. Direct URL insertion remains useful for imports and partner feeds.
+`GET /properties/:propertyId/images`, `POST /properties/:propertyId/images`, and `DELETE /properties/:propertyId/images/:imageId` manage the listing photo gallery with ordered image URLs, optional captions, audit/realtime events, and search reindexing. Direct URL insertion remains useful for imports and partner feeds. Image analysis can be disabled per add/confirm request with `analyzeImage: false`.
 
 `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review` and `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review` approve or reject AI outputs before publication.
 

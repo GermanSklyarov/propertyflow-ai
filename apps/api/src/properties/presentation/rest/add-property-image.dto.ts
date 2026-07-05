@@ -1,4 +1,4 @@
-import { IsInt, IsOptional, IsString, IsUrl, Min } from "class-validator";
+import { IsBoolean, IsInt, IsOptional, IsString, IsUrl, Min } from "class-validator";
 import type { AddPropertyImageRequest } from "@propertyflow/contracts";
 
 export class AddPropertyImageDto implements AddPropertyImageRequest {
@@ -13,4 +13,8 @@ export class AddPropertyImageDto implements AddPropertyImageRequest {
   @IsInt()
   @Min(0)
   position?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  analyzeImage?: boolean;
 }

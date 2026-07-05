@@ -1,4 +1,4 @@
-import { IsInt, IsMimeType, IsOptional, IsString, Min } from "class-validator";
+import { IsBoolean, IsInt, IsMimeType, IsOptional, IsString, Min } from "class-validator";
 import type { ConfirmPropertyImageUploadRequest } from "@propertyflow/contracts";
 
 export class ConfirmPropertyImageUploadDto implements ConfirmPropertyImageUploadRequest {
@@ -30,4 +30,8 @@ export class ConfirmPropertyImageUploadDto implements ConfirmPropertyImageUpload
   @IsInt()
   @Min(0)
   position?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  analyzeImage?: boolean;
 }
