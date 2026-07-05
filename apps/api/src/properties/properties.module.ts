@@ -17,6 +17,7 @@ import { ListingAssistantService } from "./application/services/listing-assistan
 import { NaturalLanguagePropertySearchService } from "./application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "./application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "./application/services/price-history.service.js";
+import { PriceRecommendationService } from "./application/services/price-recommendation.service.js";
 import { PropertyAiAssetsService } from "./application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
 import { PropertyImagesService } from "./application/services/property-images.service.js";
@@ -60,6 +61,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     NaturalLanguagePropertySearchService,
     NeighborhoodIntelligenceService,
     PriceHistoryService,
+    PriceRecommendationService,
     PropertyAiAssetsService,
     PropertyComparisonService,
     PropertyImagesService,
@@ -90,6 +92,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     AiPropertyAdvisorService,
     NaturalLanguagePropertySearchService,
     NeighborhoodIntelligenceService,
+    PriceRecommendationService,
     PROPERTY_REPOSITORY
   ]
 })

@@ -15,6 +15,7 @@ import type {
   CreatePropertyImageUploadResponse,
   GeneratedPropertyDescription,
   PropertyImageAnalysisResult,
+  PropertyPriceRecommendation,
   PropertySearchResponse,
   PropertyStatusHistoryResponse,
   RentalYieldSummary,
@@ -43,6 +44,7 @@ import { ListingAssistantService } from "../../application/services/listing-assi
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "../../application/services/price-history.service.js";
+import { PriceRecommendationService } from "../../application/services/price-recommendation.service.js";
 import { PropertyAiAssetsService } from "../../application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
 import { PropertyImagesService } from "../../application/services/property-images.service.js";
@@ -87,6 +89,8 @@ export class PropertiesController {
     private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService,
     @Inject(PriceHistoryService)
     private readonly priceHistory: PriceHistoryService,
+    @Inject(PriceRecommendationService)
+    private readonly priceRecommendation: PriceRecommendationService,
     @Inject(PropertyAiAssetsService)
     private readonly aiAssets: PropertyAiAssetsService,
     @Inject(PropertyComparisonService)
@@ -724,6 +728,32 @@ export class PropertiesController {
     @Param("propertyId") propertyId: string
   ): Promise<PropertyPriceHistory> {
     return this.priceHistory.getHistory(tenantId, propertyId);
+  }
+
+  @Get(":propertyId/price-recommendation")
+  @Roles("agent", "broker", "manager", "admin")
+  async priceRecommendationSummary(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string
+  ): Promise<PropertyPriceRecommendation> {
+    const result = await this.priceRecommendation.recommend(tenantId, propertyId);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.price_recommended",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        suggestedPrice: result.suggestedPrice,
+        position: result.position,
+        confidence: result.confidence,
+        comparablePropertyIds: result.comparableProperties.map((property) => property.propertyId)
+      }
+    });
+
+    return result;
   }
 
   @Get(":propertyId/rental-yield")

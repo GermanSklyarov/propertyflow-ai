@@ -53,6 +53,7 @@ export type AuditAction =
   | "property.image_added"
   | "property.image_removed"
   | "property.published"
+  | "property.price_recommended"
   | "property.price_updated"
   | "property.status_changed"
   | "tenant.current_viewed"
@@ -498,6 +499,35 @@ export interface PropertyPriceHistory {
 export interface UpdatePropertyPriceResponse {
   property: PropertySnapshot;
   pricePoint: PropertyPriceHistoryPoint;
+}
+
+export interface PropertyPriceComparable {
+  propertyId: string;
+  title: string;
+  price: Money;
+  areaSqm: number;
+  pricePerSqm: Money;
+  bedrooms: number;
+  beachDistanceMeters?: number;
+  similarityScore: number;
+}
+
+export interface PropertyPriceRecommendation {
+  propertyId: string;
+  currentPrice: Money;
+  currentPricePerSqm: Money;
+  suggestedPrice: Money;
+  suggestedRange: {
+    min: Money;
+    max: Money;
+  };
+  pricePerSqmBenchmark: Money;
+  position: "underpriced" | "fair" | "overpriced" | "insufficient-data";
+  confidence: "low" | "medium" | "high";
+  comparableProperties: PropertyPriceComparable[];
+  rationale: string[];
+  warnings: string[];
+  generatedAt: string;
 }
 
 export interface RentalYieldSummary {
