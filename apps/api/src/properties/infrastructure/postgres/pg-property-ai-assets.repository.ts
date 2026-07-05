@@ -89,6 +89,24 @@ export class PgPropertyAiAssetsRepository implements PropertyAiAssetsRepository 
     return result.rows[0] ? this.toDescription(result.rows[0]) : null;
   }
 
+  async findImageAnalysisById(
+    tenantId: string,
+    propertyId: string,
+    assetId: string
+  ): Promise<PropertyImageAnalysisResult | null> {
+    const result = await this.pool.query<ImageAnalysisRow>(
+      `
+        select id, property_id, property_image_id, image_url, detected_features, confidence, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
+        from property_image_analysis
+        where tenant_id = $1 and property_id = $2 and id = $3
+        limit 1
+      `,
+      [tenantId, propertyId, assetId]
+    );
+
+    return result.rows[0] ? this.toImageAnalysis(result.rows[0]) : null;
+  }
+
   async reviewDescription(
     tenantId: string,
     propertyId: string,

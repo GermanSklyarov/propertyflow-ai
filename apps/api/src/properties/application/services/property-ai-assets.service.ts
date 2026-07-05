@@ -13,6 +13,11 @@ import {
 } from "../../domain/property-ai-assets.repository.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
+export interface ApplyImageAnalysisResult {
+  property: PropertySnapshot;
+  addedAmenities: string[];
+}
+
 @Injectable()
 export class PropertyAiAssetsService {
   constructor(
@@ -82,6 +87,59 @@ export class PropertyAiAssetsService {
     }
 
     return property;
+  }
+
+  async applyApprovedImageAnalysis(
+    tenantId: string,
+    propertyId: string,
+    assetId: string
+  ): Promise<ApplyImageAnalysisResult> {
+    const currentProperty = await this.properties.findById(tenantId, propertyId);
+
+    if (!currentProperty) {
+      throw new NotFoundException("Property not found");
+    }
+
+    const asset = await this.aiAssets.findImageAnalysisById(tenantId, propertyId, assetId);
+
+    if (!asset) {
+      throw new NotFoundException("AI image analysis asset not found");
+    }
+
+    if (asset.reviewStatus !== "approved") {
+      throw new BadRequestException("AI image analysis asset must be approved before applying");
+    }
+
+    const existingAmenities = new Set(currentProperty.amenities);
+    const addedAmenities = asset.detectedFeatures.filter((feature) => {
+      if (existingAmenities.has(feature)) {
+        return false;
+      }
+
+      existingAmenities.add(feature);
+      return true;
+    });
+
+    if (!addedAmenities.length) {
+      return {
+        property: currentProperty,
+        addedAmenities
+      };
+    }
+
+    const property = await this.properties.updateAmenities(tenantId, propertyId, [
+      ...currentProperty.amenities,
+      ...addedAmenities
+    ]);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    return {
+      property,
+      addedAmenities
+    };
   }
 
   private async ensurePropertyExists(tenantId: string, propertyId: string): Promise<void> {

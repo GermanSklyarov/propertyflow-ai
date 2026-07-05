@@ -42,6 +42,25 @@ export class InMemoryPropertyRepository implements PropertyRepository {
     return updated;
   }
 
+  async updateAmenities(tenantId: string, propertyId: string, amenities: string[]): Promise<PropertySnapshot | null> {
+    const key = this.key(tenantId, propertyId);
+    const property = this.properties.get(key);
+
+    if (!property) {
+      return null;
+    }
+
+    const updated = {
+      ...property,
+      amenities,
+      updatedAt: new Date().toISOString()
+    };
+
+    this.properties.set(key, updated);
+
+    return updated;
+  }
+
   async updatePrice(tenantId: string, propertyId: string, price: Money): Promise<PropertySnapshot | null> {
     const key = this.key(tenantId, propertyId);
     const property = this.properties.get(key);

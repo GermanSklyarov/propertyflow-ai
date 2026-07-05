@@ -12,6 +12,7 @@ export interface PropertyRepository {
     title: string,
     description: string
   ): Promise<PropertySnapshot | null>;
+  updateAmenities(tenantId: string, propertyId: string, amenities: string[]): Promise<PropertySnapshot | null>;
   updatePrice(tenantId: string, propertyId: string, price: Money): Promise<PropertySnapshot | null>;
   updateStatus(tenantId: string, propertyId: string, status: PropertyStatus): Promise<PropertySnapshot | null>;
   list(tenantId: string): Promise<PropertySnapshot[]>;

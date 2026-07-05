@@ -664,6 +664,47 @@ export class PropertiesController {
     return result;
   }
 
+  @Post(":propertyId/ai-assets/image-analysis/:assetId/apply")
+  @Roles("agent", "broker", "manager", "admin")
+  async applyImageAnalysisAsset(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("assetId") assetId: string
+  ): Promise<PropertySnapshot> {
+    const result = await this.aiAssets.applyApprovedImageAnalysis(tenantId, propertyId, assetId);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_image_analysis_applied",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        assetId,
+        addedAmenities: result.addedAmenities,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.amenities_updated", {
+      propertyId,
+      amenities: result.property.amenities,
+      addedAmenities: result.addedAmenities,
+      source: "ai-image-analysis",
+      assetId
+    });
+
+    return result.property;
+  }
+
   @Get(":propertyId/investment")
   investment(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<InvestmentAnalysis> {
     return this.investmentCalculator.analyze(tenantId, propertyId);

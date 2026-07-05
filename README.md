@@ -119,6 +119,7 @@ Realtime WebSocket namespace is `/realtime`. Clients can join a tenant room with
 Realtime v1 emits:
 
 - `property.created`
+- `property.amenities_updated`
 - `property.images_updated`
 - `property.published`
 - `property.price_updated`
@@ -170,6 +171,7 @@ Current protected routes:
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
 - `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review`
+- `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/apply`
 - `POST /properties/:propertyId/images/upload-url`
 - `POST /properties/:propertyId/images/confirm-upload`
 - `POST /properties/:propertyId/images`
@@ -193,6 +195,7 @@ Audit log v1 records these actions:
 - `property.ai_assistant`
 - `property.ai_asset_reviewed`
 - `property.ai_description_applied`
+- `property.ai_image_analysis_applied`
 - `property.ai_search`
 - `property.compared`
 - `property.image_added`

@@ -10,6 +10,11 @@ export interface PropertyAiAssetsRepository {
     propertyId: string,
     assetId: string
   ): Promise<GeneratedPropertyDescription | null>;
+  findImageAnalysisById(
+    tenantId: string,
+    propertyId: string,
+    assetId: string
+  ): Promise<PropertyImageAnalysisResult | null>;
   reviewDescription(
     tenantId: string,
     propertyId: string,

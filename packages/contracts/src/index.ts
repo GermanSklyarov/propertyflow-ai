@@ -44,6 +44,7 @@ export type AuditAction =
   | "property.created"
   | "property.ai_assistant"
   | "property.ai_description_applied"
+  | "property.ai_image_analysis_applied"
   | "property.ai_asset_reviewed"
   | "property.ai_search"
   | "property.compared"
@@ -527,6 +528,7 @@ export interface TenantDashboardMetrics {
 
 export type RealtimeEventType =
   | "property.created"
+  | "property.amenities_updated"
   | "property.images_updated"
   | "property.published"
   | "property.price_updated"
