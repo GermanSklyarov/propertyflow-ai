@@ -324,6 +324,23 @@ export interface KnowledgeDocumentSnapshot {
   updatedAt: string;
 }
 
+export interface KnowledgeDocumentChunkSnapshot {
+  id: string;
+  tenantId: string;
+  documentId: string;
+  chunkIndex: number;
+  title: string;
+  content: string;
+  locale: KnowledgeDocumentSnapshot["locale"];
+  kind: KnowledgeDocumentKind;
+  tags: string[];
+  tokenEstimate: number;
+  score: number;
+  embeddingStatus: "pending" | "embedded" | "failed";
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface CreateKnowledgeDocumentRequest {
   title: string;
   body: string;
@@ -342,6 +359,20 @@ export interface KnowledgeDocumentSearchRequest {
 export interface KnowledgeDocumentListResponse {
   items: KnowledgeDocumentSnapshot[];
   total: number;
+}
+
+export interface KnowledgeChunkSearchRequest {
+  query: string;
+  locale?: KnowledgeDocumentSnapshot["locale"];
+  kind?: KnowledgeDocumentKind;
+  limit?: number;
+}
+
+export interface KnowledgeChunkSearchResponse {
+  items: KnowledgeDocumentChunkSnapshot[];
+  total: number;
+  retrieval: "lexical-chunks-v1";
+  generatedAt: string;
 }
 
 export interface AiAdvisorSummary {

@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   CreateKnowledgeDocumentRequest,
+  KnowledgeChunkSearchRequest,
+  KnowledgeDocumentChunkSnapshot,
   KnowledgeDocumentKind,
   KnowledgeDocumentSearchRequest,
   KnowledgeDocumentSnapshot
@@ -17,6 +19,23 @@ interface KnowledgeDocumentRow {
   locale: KnowledgeDocumentSnapshot["locale"];
   kind: KnowledgeDocumentKind;
   tags: string[];
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface KnowledgeDocumentChunkRow {
+  id: string;
+  tenant_id: string;
+  document_id: string;
+  chunk_index: number;
+  title: string;
+  content: string;
+  locale: KnowledgeDocumentSnapshot["locale"];
+  kind: KnowledgeDocumentKind;
+  tags: string[];
+  token_estimate: number;
+  score: number;
+  embedding_status: KnowledgeDocumentChunkSnapshot["embeddingStatus"];
   created_at: Date;
   updated_at: Date;
 }
@@ -111,6 +130,63 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     return result.rows.map((row) => this.toSnapshot(row));
   }
 
+  async searchChunks(
+    tenantId: string,
+    request: KnowledgeChunkSearchRequest
+  ): Promise<KnowledgeDocumentChunkSnapshot[]> {
+    const clauses = ["tenant_id = $1"];
+    const values: unknown[] = [tenantId];
+    const limit = Math.min(Math.max(request.limit ?? 5, 1), 20);
+
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (request.locale) {
+      clauses.push(`locale = ${addValue(request.locale)}`);
+    }
+
+    if (request.kind) {
+      clauses.push(`kind = ${addValue(request.kind)}`);
+    }
+
+    const terms = this.searchTerms(request.query);
+    const scoreParts: string[] = [];
+
+    if (terms.length) {
+      const termClauses = terms.map((term) => {
+        const pattern = addValue(`%${term}%`);
+        scoreParts.push(`
+          case when title ilike ${pattern} then 4 else 0 end +
+          case when content ilike ${pattern} then 2 else 0 end +
+          case when exists (select 1 from unnest(tags) as tag where tag ilike ${pattern}) then 3 else 0 end
+        `);
+
+        return `(title ilike ${pattern} or content ilike ${pattern} or exists (
+          select 1 from unnest(tags) as tag where tag ilike ${pattern}
+        ))`;
+      });
+      clauses.push(`(${termClauses.join(" or ")})`);
+    }
+
+    const scoreExpression = scoreParts.length ? scoreParts.join(" + ") : "1";
+    const result = await this.pool.query<KnowledgeDocumentChunkRow>(
+      `
+        select
+          *,
+          (${scoreExpression})::float as score
+        from knowledge_document_chunks
+        where ${clauses.join(" and ")}
+        order by score desc, updated_at desc, chunk_index asc
+        limit ${addValue(limit)}
+      `,
+      values
+    );
+
+    return result.rows.map((row) => this.toChunkSnapshot(row));
+  }
+
   private searchTerms(query?: string): string[] {
     return (query ?? "")
       .toLowerCase()
@@ -130,6 +206,25 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
       locale: row.locale,
       kind: row.kind,
       tags: row.tags,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString()
+    };
+  }
+
+  private toChunkSnapshot(row: KnowledgeDocumentChunkRow): KnowledgeDocumentChunkSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      documentId: row.document_id,
+      chunkIndex: row.chunk_index,
+      title: row.title,
+      content: row.content,
+      locale: row.locale,
+      kind: row.kind,
+      tags: row.tags,
+      tokenEstimate: row.token_estimate,
+      score: Number(row.score),
+      embeddingStatus: row.embedding_status,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
     };

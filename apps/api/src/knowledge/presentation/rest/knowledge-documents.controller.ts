@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@n
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   BackgroundJobSnapshot,
+  KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
   KnowledgeDocumentSnapshot,
   RequestUser
@@ -17,6 +18,7 @@ import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { KnowledgeDocumentService } from "../../application/knowledge-document.service.js";
 import { CreateKnowledgeDocumentDto } from "./create-knowledge-document.dto.js";
 import { ListKnowledgeDocumentsDto } from "./list-knowledge-documents.dto.js";
+import { SearchKnowledgeChunksDto } from "./search-knowledge-chunks.dto.js";
 
 @ApiTags("knowledge")
 @ApiHeader({ name: "x-tenant-id", required: true })
@@ -38,6 +40,15 @@ export class KnowledgeDocumentsController {
     @Query() query: ListKnowledgeDocumentsDto
   ): Promise<KnowledgeDocumentListResponse> {
     return this.knowledge.search(tenantId, query);
+  }
+
+  @Get("chunks/search")
+  @Roles("agent", "broker", "manager", "admin")
+  searchChunks(
+    @TenantId() tenantId: string,
+    @Query() query: SearchKnowledgeChunksDto
+  ): Promise<KnowledgeChunkSearchResponse> {
+    return this.knowledge.searchChunks(tenantId, query);
   }
 
   @Post()

@@ -95,6 +95,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /analytics/dashboard`
 - `POST /chat`
 - `GET /knowledge-documents`
+- `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
 - `POST /knowledge-documents/:documentId/ingest`
 - `GET /jobs`
@@ -158,6 +159,8 @@ The search indexing job reads the property from PostgreSQL and writes an OpenSea
 
 The knowledge ingestion job reads a tenant knowledge document, rebuilds `knowledge_document_chunks`, stores lexical search text, token estimates, tags, locale/kind metadata, and marks embeddings as `pending`. This keeps the Chat/RAG contract ready for a later embedding provider without changing the admin workflow.
 
+`GET /knowledge-documents/chunks/search` returns scored tenant-isolated knowledge chunks from `knowledge_document_chunks`. `POST /chat` uses the same retrieval path, so grounded answers cite the exact document chunk selected for context instead of scanning full raw documents.
+
 Run the worker locally with:
 
 ```sh
@@ -181,6 +184,7 @@ Current protected routes:
 
 - `POST /chat`
 - `GET /knowledge-documents`
+- `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
 - `POST /knowledge-documents/:documentId/ingest`
 - `POST /properties`

@@ -1,5 +1,10 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { AiChatCitation, AiChatRequest, AiChatResponse } from "@propertyflow/contracts";
+import type {
+  AiChatCitation,
+  AiChatRequest,
+  AiChatResponse,
+  KnowledgeDocumentChunkSnapshot
+} from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
 import { AiPropertyAdvisorService } from "../../properties/application/services/ai-property-advisor.service.js";
@@ -66,8 +71,8 @@ export class AiChatService {
     }
 
     if (knowledge.length) {
-      citations.push(...knowledge.map((document) => this.knowledgeCitation(document.id, document.title, document.kind)));
-      answerParts.push(`Relevant knowledge: ${knowledge.map((document) => this.knowledgeLine(document.title, document.body)).join(" ")}`);
+      citations.push(...knowledge.map((chunk) => this.knowledgeCitation(chunk)));
+      answerParts.push(`Relevant knowledge: ${knowledge.map((chunk) => this.knowledgeLine(chunk)).join(" ")}`);
     }
 
     return this.buildResponse(request, answerParts.join(" "), [property.id], citations, [
@@ -101,12 +106,12 @@ export class AiChatService {
       return this.buildResponse(
         request,
         knowledge.length
-          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((document) => this.knowledgeLine(document.title, document.body)).join(" ")}`
+          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((chunk) => this.knowledgeLine(chunk)).join(" ")}`
           : "I could not find matching listings in this tenant workspace yet. Try broadening the market, budget, or beach-distance requirements.",
         [],
         [
           { source: "search", label: search.rankingExplanation },
-          ...knowledge.map((document) => this.knowledgeCitation(document.id, document.title, document.kind))
+          ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
         ],
         ["relax-filters", "ask-agent-for-off-market-options"]
       );
@@ -117,7 +122,10 @@ export class AiChatService {
       `Top matches: ${matches.map((property) => this.shortPropertyLine(property)).join(" ")}`,
       search.items.length
         ? search.rankingExplanation
-        : "The indexed search returned no hits, so I used the structured PostgreSQL filters as a fallback."
+        : "The indexed search returned no hits, so I used the structured PostgreSQL filters as a fallback.",
+      knowledge.length
+        ? `Relevant knowledge: ${knowledge.map((chunk) => this.knowledgeLine(chunk)).join(" ")}`
+        : ""
     ].join(" ");
 
     return this.buildResponse(
@@ -127,14 +135,14 @@ export class AiChatService {
       [
         { source: "search", label: search.interpretedIntent },
         ...matches.map((property) => this.propertyCitation(property)),
-        ...knowledge.map((document) => this.knowledgeCitation(document.id, document.title, document.kind))
+        ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
       ],
       ["compare-results", "open-map", "save-search"]
     );
   }
 
   private async retrieveKnowledge(tenantId: string, request: AiChatRequest) {
-    const result = await this.knowledge.search(tenantId, {
+    const result = await this.knowledge.searchChunks(tenantId, {
       query: request.message,
       locale: request.locale,
       limit: 3
@@ -170,18 +178,18 @@ export class AiChatService {
     };
   }
 
-  private knowledgeCitation(documentId: string, title: string, kind: string): AiChatCitation {
+  private knowledgeCitation(chunk: KnowledgeDocumentChunkSnapshot): AiChatCitation {
     return {
       source: "knowledge",
-      documentId,
-      title,
-      label: `${title} (${kind})`
+      documentId: chunk.documentId,
+      title: chunk.title,
+      label: `${chunk.title} (${chunk.kind}, chunk ${chunk.chunkIndex + 1}, score ${chunk.score})`
     };
   }
 
-  private knowledgeLine(title: string, body: string): string {
-    const excerpt = body.length > 180 ? `${body.slice(0, 177)}...` : body;
-    return `${title}: ${excerpt}`;
+  private knowledgeLine(chunk: KnowledgeDocumentChunkSnapshot): string {
+    const excerpt = chunk.content.length > 180 ? `${chunk.content.slice(0, 177)}...` : chunk.content;
+    return `${chunk.title}: ${excerpt}`;
   }
 
   private describeProperty(property: PropertySnapshot): string {

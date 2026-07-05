@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   CreateKnowledgeDocumentRequest,
+  KnowledgeChunkSearchRequest,
+  KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
   KnowledgeDocumentSearchRequest,
   KnowledgeDocumentSnapshot
@@ -29,6 +31,17 @@ export class KnowledgeDocumentService {
     return {
       items,
       total: items.length
+    };
+  }
+
+  async searchChunks(tenantId: string, request: KnowledgeChunkSearchRequest): Promise<KnowledgeChunkSearchResponse> {
+    const items = await this.documents.searchChunks(tenantId, request);
+
+    return {
+      items,
+      total: items.length,
+      retrieval: "lexical-chunks-v1",
+      generatedAt: new Date().toISOString()
     };
   }
 
