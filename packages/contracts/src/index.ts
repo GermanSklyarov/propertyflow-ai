@@ -372,7 +372,7 @@ export interface KnowledgeChunkSearchRequest {
 export interface KnowledgeChunkSearchResponse {
   items: KnowledgeDocumentChunkSnapshot[];
   total: number;
-  retrieval: "lexical-chunks-v1";
+  retrieval: "hybrid-chunks-v1" | "lexical-chunks-v1";
   generatedAt: string;
 }
 

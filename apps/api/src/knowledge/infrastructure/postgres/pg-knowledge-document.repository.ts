@@ -137,6 +137,7 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     const clauses = ["tenant_id = $1"];
     const values: unknown[] = [tenantId];
     const limit = Math.min(Math.max(request.limit ?? 5, 1), 20);
+    const queryEmbedding = this.embedText(request.query, 16);
 
     const addValue = (value: unknown): string => {
       values.push(value);
@@ -155,22 +156,35 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     const scoreParts: string[] = [];
 
     if (terms.length) {
-      const termClauses = terms.map((term) => {
+      terms.forEach((term) => {
         const pattern = addValue(`%${term}%`);
         scoreParts.push(`
           case when title ilike ${pattern} then 4 else 0 end +
           case when content ilike ${pattern} then 2 else 0 end +
           case when exists (select 1 from unnest(tags) as tag where tag ilike ${pattern}) then 3 else 0 end
         `);
-
-        return `(title ilike ${pattern} or content ilike ${pattern} or exists (
-          select 1 from unnest(tags) as tag where tag ilike ${pattern}
-        ))`;
       });
-      clauses.push(`(${termClauses.join(" or ")})`);
     }
 
-    const scoreExpression = scoreParts.length ? scoreParts.join(" + ") : "1";
+    const lexicalScoreExpression = scoreParts.length ? scoreParts.join(" + ") : "1";
+    const embeddingParameter = addValue(queryEmbedding);
+    const vectorScoreExpression = `
+      case
+        when embedding_status = 'embedded' and embedding is not null then coalesce((
+          select
+            sum(chunk_value * query_value) /
+            nullif(
+              sqrt(sum(chunk_value * chunk_value)) * sqrt(sum(query_value * query_value)),
+              0
+            )
+          from unnest(embedding) with ordinality as chunk_embedding(chunk_value, ordinality)
+          join unnest(${embeddingParameter}::double precision[]) with ordinality as query_embedding(query_value, ordinality)
+            using (ordinality)
+        ), 0)
+        else 0
+      end
+    `;
+    const scoreExpression = `((${lexicalScoreExpression}) + (${vectorScoreExpression}) * 10)`;
     const result = await this.pool.query<KnowledgeDocumentChunkRow>(
       `
         select
@@ -228,5 +242,34 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
     };
+  }
+
+  private embedText(text: string, dimensions: number): number[] {
+    const vector = Array.from({ length: dimensions }, () => 0);
+    const tokens = text
+      .toLowerCase()
+      .replaceAll("ё", "е")
+      .split(/[^a-zа-я0-9-]+/i)
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    for (const token of tokens.length ? tokens : [text]) {
+      const hash = this.hashToken(token);
+      const index = Math.abs(hash) % dimensions;
+      vector[index] += hash < 0 ? -1 : 1;
+    }
+
+    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
+    return vector.map((value) => Number((value / magnitude).toFixed(6)));
+  }
+
+  private hashToken(token: string): number {
+    let hash = 0;
+
+    for (let index = 0; index < token.length; index += 1) {
+      hash = (hash * 31 + token.charCodeAt(index)) | 0;
+    }
+
+    return hash;
   }
 }

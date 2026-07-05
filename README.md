@@ -161,7 +161,7 @@ The search indexing job reads the property from PostgreSQL and writes an OpenSea
 
 The knowledge ingestion job reads a tenant knowledge document, rebuilds `knowledge_document_chunks`, stores lexical search text, token estimates, tags, locale/kind metadata, and marks embeddings as `pending`. This keeps the Chat/RAG contract ready for a later embedding provider without changing the admin workflow.
 
-`GET /knowledge-documents/chunks/search` returns scored tenant-isolated knowledge chunks from `knowledge_document_chunks`. `POST /chat` uses the same retrieval path, so grounded answers cite the exact document chunk selected for context instead of scanning full raw documents.
+`GET /knowledge-documents/chunks/search` returns scored tenant-isolated knowledge chunks from `knowledge_document_chunks`. Retrieval is `hybrid-chunks-v1`: lexical relevance plus cosine similarity for embedded chunks, with lexical fallback for chunks still marked `pending`. `POST /chat` uses the same retrieval path, so grounded answers cite the exact document chunk selected for context instead of scanning full raw documents.
 
 `POST /knowledge-documents/chunks/embed` enqueues `knowledge.chunks.embed` for pending chunks. The current worker provider is `local-hash`, a deterministic vector prototype that updates `embedding`, `embedding_model`, and `embedding_status`; the API contract is shaped so OpenAI/Gemini/Anthropic embeddings can replace it later without changing admin workflows.
 

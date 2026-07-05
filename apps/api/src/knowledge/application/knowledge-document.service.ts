@@ -40,7 +40,7 @@ export class KnowledgeDocumentService {
     return {
       items,
       total: items.length,
-      retrieval: "lexical-chunks-v1",
+      retrieval: "hybrid-chunks-v1",
       generatedAt: new Date().toISOString()
     };
   }
