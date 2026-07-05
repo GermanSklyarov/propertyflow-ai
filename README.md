@@ -99,6 +99,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /jobs`
 - `POST /jobs`
 - `GET /properties`
+- `GET /properties/price-recommendation/model-registry`
 - `GET /properties/price-recommendation/training-dataset`
 - `GET /properties/search-index`
 - `GET /properties/:propertyId/advisor`
@@ -178,6 +179,7 @@ Current protected routes:
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
+- `GET /properties/price-recommendation/model-registry`
 - `GET /properties/price-recommendation/training-dataset`
 - `POST /properties/:propertyId/ai-assistant`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review`

@@ -599,6 +599,29 @@ export interface PricingTrainingDatasetResponse {
   generatedAt: string;
 }
 
+export interface PricingModelRegistryEntry {
+  engine: PropertyPriceRecommendation["engine"];
+  modelVersion: string;
+  predictionTarget: PropertyPriceRecommendation["predictionTarget"];
+  trainingStatus: PropertyPriceRecommendation["trainingStatus"];
+  featuresUsed: string[];
+  active: boolean;
+  description: string;
+  trainedAt?: string;
+  metrics?: {
+    mae?: Money;
+    mape?: number;
+    r2?: number;
+    sampleSize?: number;
+  };
+}
+
+export interface PricingModelRegistryResponse {
+  activeModelVersion: string;
+  models: PricingModelRegistryEntry[];
+  generatedAt: string;
+}
+
 export interface RentalYieldSummary {
   propertyId: string;
   price: Money;

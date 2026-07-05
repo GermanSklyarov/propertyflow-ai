@@ -7,6 +7,7 @@ import type {
   IndexedPropertySearchResponse,
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
+  PricingModelRegistryResponse,
   PricingTrainingDatasetResponse,
   PropertyAiAssets,
   PropertyComparisonResponse,
@@ -276,6 +277,12 @@ export class PropertiesController {
     });
 
     return result;
+  }
+
+  @Get("price-recommendation/model-registry")
+  @Roles("agent", "broker", "manager", "admin")
+  pricingModelRegistry(): PricingModelRegistryResponse {
+    return this.priceRecommendation.registry();
   }
 
   @Post(":propertyId/ai-assistant")

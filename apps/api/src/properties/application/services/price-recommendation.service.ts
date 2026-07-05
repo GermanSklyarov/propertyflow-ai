@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { Money, PropertySnapshot } from "@propertyflow/domain";
-import type { PropertyPriceComparable, PropertyPriceRecommendation } from "@propertyflow/contracts";
+import type { PricingModelRegistryResponse, PropertyPriceComparable, PropertyPriceRecommendation } from "@propertyflow/contracts";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
 const PRICE_RECOMMENDATION_ENGINE = "baseline-comparables";
@@ -28,6 +28,21 @@ interface ComparableCandidate {
 @Injectable()
 export class PriceRecommendationService {
   constructor(@Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository) {}
+
+  registry(): PricingModelRegistryResponse {
+    return {
+      activeModelVersion: PRICE_RECOMMENDATION_MODEL_VERSION,
+      models: [
+        {
+          ...this.modelMetadata(),
+          active: true,
+          description:
+            "Explainable baseline using weighted comparable listings and deterministic amenity/location adjustments. This is not a trained ML model yet."
+        }
+      ],
+      generatedAt: new Date().toISOString()
+    };
+  }
 
   async recommend(tenantId: string, propertyId: string): Promise<PropertyPriceRecommendation> {
     const property = await this.properties.findById(tenantId, propertyId);
