@@ -147,6 +147,28 @@ create table if not exists property_price_history (
 
 create index if not exists idx_property_price_history_property on property_price_history (tenant_id, property_id, effective_date);
 
+create table if not exists property_price_recommendation_feedback (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid not null references properties(id) on delete cascade,
+  engine text not null,
+  model_version text not null,
+  recommendation_generated_at timestamptz,
+  suggested_price_amount numeric(14, 2) not null,
+  suggested_price_currency text not null,
+  decision text not null,
+  selected_price_amount numeric(14, 2),
+  selected_price_currency text,
+  note text,
+  created_by_user_id text,
+  created_by_user_role text,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_price_recommendation_feedback_property on property_price_recommendation_feedback (tenant_id, property_id, created_at desc);
+create index if not exists idx_price_recommendation_feedback_decision on property_price_recommendation_feedback (tenant_id, decision, created_at desc);
+create index if not exists idx_price_recommendation_feedback_model on property_price_recommendation_feedback (tenant_id, engine, model_version);
+
 create table if not exists property_generated_descriptions (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

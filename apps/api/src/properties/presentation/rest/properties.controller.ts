@@ -16,6 +16,7 @@ import type {
   GeneratedPropertyDescription,
   PropertyImageAnalysisResult,
   PropertyPriceRecommendation,
+  PropertyPriceRecommendationFeedbackSnapshot,
   PropertySearchResponse,
   PropertyStatusHistoryResponse,
   RentalYieldSummary,
@@ -44,6 +45,7 @@ import { ListingAssistantService } from "../../application/services/listing-assi
 import { NaturalLanguagePropertySearchService } from "../../application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "../../application/services/price-history.service.js";
+import { PriceRecommendationFeedbackService } from "../../application/services/price-recommendation-feedback.service.js";
 import { PriceRecommendationService } from "../../application/services/price-recommendation.service.js";
 import { PropertyAiAssetsService } from "../../application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
@@ -60,6 +62,7 @@ import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
+import { SubmitPriceRecommendationFeedbackDto } from "./submit-price-recommendation-feedback.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
 import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
 
@@ -89,6 +92,8 @@ export class PropertiesController {
     private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService,
     @Inject(PriceHistoryService)
     private readonly priceHistory: PriceHistoryService,
+    @Inject(PriceRecommendationFeedbackService)
+    private readonly priceRecommendationFeedback: PriceRecommendationFeedbackService,
     @Inject(PriceRecommendationService)
     private readonly priceRecommendation: PriceRecommendationService,
     @Inject(PropertyAiAssetsService)
@@ -753,6 +758,35 @@ export class PropertiesController {
         position: result.position,
         confidence: result.confidence,
         comparablePropertyIds: result.comparableProperties.map((property) => property.propertyId)
+      }
+    });
+
+    return result;
+  }
+
+  @Post(":propertyId/price-recommendation/feedback")
+  @Roles("agent", "broker", "manager", "admin")
+  async submitPriceRecommendationFeedback(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: SubmitPriceRecommendationFeedbackDto
+  ): Promise<PropertyPriceRecommendationFeedbackSnapshot> {
+    const result = await this.priceRecommendationFeedback.submit(tenantId, propertyId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.price_recommendation_feedback",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        feedbackId: result.id,
+        engine: result.engine,
+        modelVersion: result.modelVersion,
+        decision: result.decision,
+        suggestedPrice: result.suggestedPrice,
+        selectedPrice: result.selectedPrice
       }
     });
 

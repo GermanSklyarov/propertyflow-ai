@@ -53,6 +53,7 @@ export type AuditAction =
   | "property.image_added"
   | "property.image_removed"
   | "property.published"
+  | "property.price_recommendation_feedback"
   | "property.price_recommended"
   | "property.price_updated"
   | "property.status_changed"
@@ -533,6 +534,34 @@ export interface PropertyPriceRecommendation {
   rationale: string[];
   warnings: string[];
   generatedAt: string;
+}
+
+export type PropertyPriceRecommendationFeedbackDecision = "accepted" | "rejected" | "adjusted";
+
+export interface SubmitPropertyPriceRecommendationFeedbackRequest {
+  engine: PropertyPriceRecommendation["engine"];
+  modelVersion: string;
+  recommendationGeneratedAt?: string;
+  suggestedPrice: Money;
+  decision: PropertyPriceRecommendationFeedbackDecision;
+  selectedPrice?: Money;
+  note?: string;
+}
+
+export interface PropertyPriceRecommendationFeedbackSnapshot {
+  id: string;
+  tenantId: string;
+  propertyId: string;
+  engine: PropertyPriceRecommendation["engine"];
+  modelVersion: string;
+  recommendationGeneratedAt?: string;
+  suggestedPrice: Money;
+  decision: PropertyPriceRecommendationFeedbackDecision;
+  selectedPrice?: Money;
+  note?: string;
+  createdByUserId?: string;
+  createdByUserRole?: UserRole;
+  createdAt: string;
 }
 
 export interface RentalYieldSummary {

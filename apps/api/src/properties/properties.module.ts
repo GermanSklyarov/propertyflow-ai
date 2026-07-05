@@ -17,6 +17,7 @@ import { ListingAssistantService } from "./application/services/listing-assistan
 import { NaturalLanguagePropertySearchService } from "./application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "./application/services/neighborhood-intelligence.service.js";
 import { PriceHistoryService } from "./application/services/price-history.service.js";
+import { PriceRecommendationFeedbackService } from "./application/services/price-recommendation-feedback.service.js";
 import { PriceRecommendationService } from "./application/services/price-recommendation.service.js";
 import { PropertyAiAssetsService } from "./application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
@@ -24,6 +25,7 @@ import { PropertyImagesService } from "./application/services/property-images.se
 import { PropertyPublicationService } from "./application/services/property-publication.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
+import { PRICE_RECOMMENDATION_FEEDBACK_REPOSITORY } from "./domain/price-recommendation-feedback.repository.js";
 import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
 import { PROPERTY_IMAGES_REPOSITORY } from "./domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
@@ -33,6 +35,7 @@ import { PgPropertyAiAssetsRepository } from "./infrastructure/postgres/pg-prope
 import { PgPropertyImagesRepository } from "./infrastructure/postgres/pg-property-images.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PgPropertyStatusHistoryRepository } from "./infrastructure/postgres/pg-property-status-history.repository.js";
+import { PgPriceRecommendationFeedbackRepository } from "./infrastructure/postgres/pg-price-recommendation-feedback.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
 
 const commandHandlers = [CreatePropertyHandler];
@@ -61,6 +64,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     NaturalLanguagePropertySearchService,
     NeighborhoodIntelligenceService,
     PriceHistoryService,
+    PriceRecommendationFeedbackService,
     PriceRecommendationService,
     PropertyAiAssetsService,
     PropertyComparisonService,
@@ -86,6 +90,10 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     {
       provide: PROPERTY_SEARCH_CLIENT,
       useFactory: createPropertySearchClient
+    },
+    {
+      provide: PRICE_RECOMMENDATION_FEEDBACK_REPOSITORY,
+      useClass: PgPriceRecommendationFeedbackRepository
     }
   ],
   exports: [

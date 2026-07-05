@@ -107,6 +107,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/:propertyId/neighborhood`
 - `GET /properties/:propertyId/price-history`
 - `GET /properties/:propertyId/price-recommendation`
+- `POST /properties/:propertyId/price-recommendation/feedback`
 - `GET /properties/:propertyId/rental-yield`
 - `GET /properties/:propertyId/status-history`
 - `GET /properties/:propertyId`
@@ -188,6 +189,7 @@ Current protected routes:
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
 - `GET /properties/:propertyId/price-recommendation`
+- `POST /properties/:propertyId/price-recommendation/feedback`
 - `PATCH /properties/:propertyId/status`
 - `GET /properties/:propertyId/status-history`
 - `POST /leads`
@@ -213,6 +215,7 @@ Audit log v1 records these actions:
 - `property.image_added`
 - `property.image_removed`
 - `property.published`
+- `property.price_recommendation_feedback`
 - `property.price_recommended`
 - `property.price_updated`
 - `property.status_changed`
