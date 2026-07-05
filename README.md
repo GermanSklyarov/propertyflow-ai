@@ -82,6 +82,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/:propertyId/ai-assistant`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
 - `POST /properties/:propertyId/publish`
+- `PATCH /properties/:propertyId/price`
 - `PATCH /properties/:propertyId/status`
 - `POST /leads`
 - `GET /leads/unassigned`
@@ -114,6 +115,7 @@ Realtime v1 emits:
 
 - `property.created`
 - `property.published`
+- `property.price_updated`
 - `property.status_changed`
 - `lead.created`
 - `lead.assigned`
@@ -163,6 +165,7 @@ Current protected routes:
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
 - `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review`
 - `POST /properties/:propertyId/publish`
+- `PATCH /properties/:propertyId/price`
 - `PATCH /properties/:propertyId/status`
 - `GET /properties/:propertyId/status-history`
 - `POST /leads`
@@ -183,6 +186,7 @@ Audit log v1 records these actions:
 - `property.ai_search`
 - `property.compared`
 - `property.published`
+- `property.price_updated`
 - `property.status_changed`
 - `tenant.current_viewed`
 - `lead.created`
@@ -240,6 +244,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply` applies an approved AI description to the public listing title and description, then enqueues `properties.search.index` with `reason: "updated"` so OpenSearch can refresh the searchable document.
 
 `POST /properties/:propertyId/publish` moves a draft listing to `status: "available"`, records audit/realtime events, and enqueues `properties.search.index` so public and indexed search can pick up the published state.
+
+`PATCH /properties/:propertyId/price` updates the current listing price, records an `agent-update` price history point, emits audit/realtime events, and enqueues `properties.search.index`.
 
 `PATCH /properties/:propertyId/status` changes operational listing status with transition validation, audit/realtime events, and search reindexing. Supported transitions are:
 

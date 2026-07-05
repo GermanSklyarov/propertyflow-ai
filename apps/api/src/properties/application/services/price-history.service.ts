@@ -1,5 +1,9 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { PropertyPriceHistory, PropertyPriceHistoryPoint } from "@propertyflow/contracts";
+import type {
+  PropertyPriceHistory,
+  PropertyPriceHistoryPoint,
+  UpdatePropertyPriceResponse
+} from "@propertyflow/contracts";
 import type { Money } from "@propertyflow/domain";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
@@ -43,6 +47,33 @@ export class PriceHistoryService {
     };
   }
 
+  async updatePrice(tenantId: string, propertyId: string, price: Money): Promise<UpdatePropertyPriceResponse> {
+    const existing = await this.properties.findById(tenantId, propertyId);
+
+    if (!existing) {
+      throw new NotFoundException("Property not found");
+    }
+
+    const property = await this.properties.updatePrice(tenantId, propertyId, price);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    const pricePoint = await this.properties.addPriceHistoryPoint(
+      tenantId,
+      propertyId,
+      property.price,
+      "agent-update",
+      property.updatedAt
+    );
+
+    return {
+      property,
+      pricePoint
+    };
+  }
+
   private subtractMoney(current: Money, previous: Money): Money {
     return {
       amount: Math.round((current.amount - previous.amount) * 100) / 100,
@@ -82,4 +113,3 @@ export class PriceHistoryService {
     return `Price stayed broadly flat across ${points.length} recorded points.`;
   }
 }
-

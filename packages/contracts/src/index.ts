@@ -48,6 +48,7 @@ export type AuditAction =
   | "property.ai_search"
   | "property.compared"
   | "property.published"
+  | "property.price_updated"
   | "property.status_changed"
   | "tenant.current_viewed"
   | "lead.created"
@@ -99,6 +100,11 @@ export interface CreatePropertyRequest {
 
 export interface UpdatePropertyStatusRequest {
   status: PropertySnapshot["status"];
+  note?: string;
+}
+
+export interface UpdatePropertyPriceRequest {
+  price: Money;
   note?: string;
 }
 
@@ -365,6 +371,11 @@ export interface PropertyPriceHistory {
   summary: string;
 }
 
+export interface UpdatePropertyPriceResponse {
+  property: PropertySnapshot;
+  pricePoint: PropertyPriceHistoryPoint;
+}
+
 export interface RentalYieldSummary {
   propertyId: string;
   price: Money;
@@ -456,6 +467,7 @@ export interface TenantDashboardMetrics {
 export type RealtimeEventType =
   | "property.created"
   | "property.published"
+  | "property.price_updated"
   | "property.status_changed"
   | "lead.created"
   | "lead.assigned";

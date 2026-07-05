@@ -15,7 +15,8 @@ import type {
   PropertySearchResponse,
   PropertyStatusHistoryResponse,
   RentalYieldSummary,
-  RunListingAssistantResponse
+  RunListingAssistantResponse,
+  UpdatePropertyPriceResponse
 } from "@propertyflow/contracts";
 import type { RequestUser } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -50,6 +51,7 @@ import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
+import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
 import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
 
 @Controller("properties")
@@ -355,6 +357,46 @@ export class PropertiesController {
     @Param("propertyId") propertyId: string
   ): Promise<PropertyStatusHistoryResponse> {
     return this.publication.getStatusHistory(tenantId, propertyId);
+  }
+
+  @Patch(":propertyId/price")
+  @Roles("agent", "broker", "manager", "admin")
+  async updatePrice(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: UpdatePropertyPriceDto
+  ): Promise<UpdatePropertyPriceResponse> {
+    const result = await this.priceHistory.updatePrice(tenantId, propertyId, payload.price);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.price_updated",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        price: result.property.price,
+        note: payload.note,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.price_updated", {
+      propertyId,
+      title: result.property.title,
+      market: result.property.market,
+      price: result.property.price
+    });
+
+    return result;
   }
 
   @Get(":propertyId/advisor")
