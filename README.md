@@ -81,6 +81,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/compare`
 - `POST /properties/:propertyId/ai-assistant`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
+- `POST /properties/:propertyId/publish`
 - `POST /leads`
 - `GET /leads/unassigned`
 - `GET /leads/agents`
@@ -154,6 +155,10 @@ Current protected routes:
 - `POST /properties/ai-search`
 - `POST /properties/compare`
 - `POST /properties/:propertyId/ai-assistant`
+- `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review`
+- `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
+- `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review`
+- `POST /properties/:propertyId/publish`
 - `POST /leads`
 - `GET /leads/unassigned`
 - `GET /leads/agents`
@@ -166,8 +171,12 @@ Current protected routes:
 Audit log v1 records these actions:
 
 - `property.created`
+- `property.ai_assistant`
+- `property.ai_asset_reviewed`
+- `property.ai_description_applied`
 - `property.ai_search`
 - `property.compared`
+- `property.published`
 - `tenant.current_viewed`
 - `lead.created`
 - `lead.assigned`
@@ -223,6 +232,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply` applies an approved AI description to the public listing title and description, then enqueues `properties.search.index` with `reason: "updated"` so OpenSearch can refresh the searchable document.
 
+`POST /properties/:propertyId/publish` moves a draft listing to `status: "available"`, records audit/realtime events, and enqueues `properties.search.index` so public and indexed search can pick up the published state.
+
 `GET /properties/:propertyId/advisor` returns a rule-based AI advisor summary:
 
 - best fit: living, investment, relocation, family;
@@ -275,6 +286,8 @@ Public API v1 endpoints:
 - `GET /public/v1/properties`
 - `GET /public/v1/properties/:propertyId`
 - `POST /public/v1/leads`
+
+Public property reads only expose listings with `status: "available"`; draft, reserved, sold, and archived properties are hidden from public API consumers.
 
 ## First Milestones
 

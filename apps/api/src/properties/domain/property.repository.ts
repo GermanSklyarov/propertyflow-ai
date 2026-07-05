@@ -1,4 +1,4 @@
-import type { Money, PropertySnapshot } from "@propertyflow/domain";
+import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
 import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
 
 export const PROPERTY_REPOSITORY = Symbol("PROPERTY_REPOSITORY");
@@ -12,6 +12,7 @@ export interface PropertyRepository {
     title: string,
     description: string
   ): Promise<PropertySnapshot | null>;
+  updateStatus(tenantId: string, propertyId: string, status: PropertyStatus): Promise<PropertySnapshot | null>;
   list(tenantId: string): Promise<PropertySnapshot[]>;
   search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]>;
   addPriceHistoryPoint(

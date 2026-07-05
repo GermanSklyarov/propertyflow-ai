@@ -40,6 +40,7 @@ import { NeighborhoodIntelligenceService } from "../../application/services/neig
 import { PriceHistoryService } from "../../application/services/price-history.service.js";
 import { PropertyAiAssetsService } from "../../application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
+import { PropertyPublicationService } from "../../application/services/property-publication.service.js";
 import { RentalYieldService } from "../../application/services/rental-yield.service.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
@@ -79,6 +80,8 @@ export class PropertiesController {
     private readonly aiAssets: PropertyAiAssetsService,
     @Inject(PropertyComparisonService)
     private readonly propertyComparison: PropertyComparisonService,
+    @Inject(PropertyPublicationService)
+    private readonly publication: PropertyPublicationService,
     @Inject(RentalYieldService)
     private readonly rentalYield: RentalYieldService,
     @Inject(AuditService)
@@ -256,6 +259,46 @@ export class PropertiesController {
     });
 
     return result;
+  }
+
+  @Post(":propertyId/publish")
+  @Roles("broker", "manager", "admin")
+  async publish(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string
+  ): Promise<PropertySnapshot> {
+    const result = await this.publication.publish(tenantId, propertyId);
+    const property = result.property;
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.published",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        previousStatus: result.previousStatus,
+        status: property.status,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.published", {
+      propertyId,
+      title: property.title,
+      market: property.market,
+      status: property.status
+    });
+
+    return property;
   }
 
   @Get(":propertyId/advisor")

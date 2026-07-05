@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
-import type { Money, PropertySnapshot } from "@propertyflow/domain";
+import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
 import type { PropertyRepository } from "../domain/property.repository.js";
 
 @Injectable()
@@ -34,6 +34,29 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       ...property,
       title,
       description,
+      updatedAt: new Date().toISOString()
+    };
+
+    this.properties.set(key, updated);
+
+    return updated;
+  }
+
+  async updateStatus(
+    tenantId: string,
+    propertyId: string,
+    status: PropertyStatus
+  ): Promise<PropertySnapshot | null> {
+    const key = this.key(tenantId, propertyId);
+    const property = this.properties.get(key);
+
+    if (!property) {
+      return null;
+    }
+
+    const updated = {
+      ...property,
+      status,
       updatedAt: new Date().toISOString()
     };
 

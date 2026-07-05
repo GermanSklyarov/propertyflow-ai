@@ -47,6 +47,7 @@ export type AuditAction =
   | "property.ai_asset_reviewed"
   | "property.ai_search"
   | "property.compared"
+  | "property.published"
   | "tenant.current_viewed"
   | "lead.created"
   | "lead.assigned"
@@ -429,7 +430,7 @@ export interface TenantDashboardMetrics {
   generatedAt: string;
 }
 
-export type RealtimeEventType = "property.created" | "lead.created" | "lead.assigned";
+export type RealtimeEventType = "property.created" | "property.published" | "lead.created" | "lead.assigned";
 
 export interface RealtimeEvent<TPayload = Record<string, unknown>> {
   type: RealtimeEventType;

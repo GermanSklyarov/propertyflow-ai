@@ -21,7 +21,9 @@ export class PublicPropertiesController {
     @Query() query: SearchPropertiesDto
   ): Promise<PropertySearchResponse> {
     const filters = query.toSearchRequest();
-    const items = await this.properties.search(apiKey.tenantId, filters);
+    const items = (await this.properties.search(apiKey.tenantId, filters)).filter(
+      (property) => property.status === "available"
+    );
 
     return {
       items,
@@ -38,7 +40,7 @@ export class PublicPropertiesController {
   ): Promise<PropertySnapshot> {
     const property = await this.properties.findById(apiKey.tenantId, propertyId);
 
-    if (!property) {
+    if (!property || property.status !== "available") {
       throw new NotFoundException("Property not found");
     }
 

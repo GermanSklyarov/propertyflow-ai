@@ -18,6 +18,7 @@ import { NeighborhoodIntelligenceService } from "./application/services/neighbor
 import { PriceHistoryService } from "./application/services/price-history.service.js";
 import { PropertyAiAssetsService } from "./application/services/property-ai-assets.service.js";
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
+import { PropertyPublicationService } from "./application/services/property-publication.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
 import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
@@ -54,6 +55,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     PriceHistoryService,
     PropertyAiAssetsService,
     PropertyComparisonService,
+    PropertyPublicationService,
     RentalYieldService,
     {
       provide: PROPERTY_REPOSITORY,
