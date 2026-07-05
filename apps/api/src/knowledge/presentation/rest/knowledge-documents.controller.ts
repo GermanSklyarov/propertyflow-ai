@@ -17,6 +17,7 @@ import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { KnowledgeDocumentService } from "../../application/knowledge-document.service.js";
 import { CreateKnowledgeDocumentDto } from "./create-knowledge-document.dto.js";
+import { EmbedKnowledgeChunksDto } from "./embed-knowledge-chunks.dto.js";
 import { ListKnowledgeDocumentsDto } from "./list-knowledge-documents.dto.js";
 import { SearchKnowledgeChunksDto } from "./search-knowledge-chunks.dto.js";
 
@@ -97,6 +98,41 @@ export class KnowledgeDocumentsController {
       metadata: {
         jobId: job.id,
         reason: "manual"
+      }
+    });
+
+    return job;
+  }
+
+  @Post("chunks/embed")
+  @Roles("manager", "admin")
+  async embedChunks(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: EmbedKnowledgeChunksDto
+  ): Promise<BackgroundJobSnapshot> {
+    const job = await this.jobs.enqueue("knowledge.chunks.embed", {
+      tenantId,
+      requestedByUserId: user.id,
+      documentId: payload.documentId,
+      provider: payload.provider,
+      model: payload.model,
+      dimensions: payload.dimensions,
+      limit: payload.limit
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "knowledge.document_embedding_requested",
+      resourceType: "knowledge",
+      resourceId: payload.documentId,
+      metadata: {
+        jobId: job.id,
+        provider: payload.provider,
+        model: payload.model,
+        dimensions: payload.dimensions,
+        limit: payload.limit
       }
     });
 

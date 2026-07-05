@@ -1,8 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { IsArray, IsBoolean, IsIn, IsOptional, IsString, ValidateIf } from "class-validator";
 import type {
   BackgroundJobName,
   EnqueueBackgroundJobRequest,
+  KnowledgeChunkEmbeddingJobPayload,
   KnowledgeDocumentIngestJobPayload,
   PricingModelTrainJobPayload,
   PropertyAiDescriptionJobPayload,
@@ -10,8 +10,11 @@ import type {
   PropertyImportJobPayload,
   PropertySearchIndexJobPayload
 } from "@propertyflow/contracts";
+import { Type } from "class-transformer";
+import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 
 const jobNames = [
+  "knowledge.chunks.embed",
   "knowledge.documents.ingest",
   "pricing.model.train",
   "properties.import",
@@ -29,6 +32,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
 
   @ApiProperty({
     oneOf: [
+      { $ref: "#/components/schemas/KnowledgeChunkEmbeddingPayloadDto" },
       { $ref: "#/components/schemas/KnowledgeDocumentIngestPayloadDto" },
       { $ref: "#/components/schemas/PropertyImportPayloadDto" },
       { $ref: "#/components/schemas/PricingModelTrainPayloadDto" },
@@ -38,12 +42,47 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
     ]
   })
   payload!:
+    | KnowledgeChunkEmbeddingPayloadDto
     | KnowledgeDocumentIngestPayloadDto
     | PricingModelTrainPayloadDto
     | PropertyImportPayloadDto
     | PropertyAiDescriptionPayloadDto
     | PropertyImageAnalysisPayloadDto
     | PropertySearchIndexPayloadDto;
+}
+
+export class KnowledgeChunkEmbeddingPayloadDto implements KnowledgeChunkEmbeddingJobPayload {
+  tenantId!: string;
+
+  requestedByUserId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  documentId?: string;
+
+  @ApiProperty({ enum: ["local-hash", "openai", "anthropic", "gemini"] })
+  @IsIn(["local-hash", "openai", "anthropic", "gemini"])
+  provider!: KnowledgeChunkEmbeddingJobPayload["provider"];
+
+  @ApiProperty()
+  @IsString()
+  model!: string;
+
+  @ApiProperty({ minimum: 1, maximum: 4096 })
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(4096)
+  dimensions!: number;
+
+  @ApiProperty({ required: false, minimum: 1, maximum: 500 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  limit?: number;
 }
 
 export class KnowledgeDocumentIngestPayloadDto implements KnowledgeDocumentIngestJobPayload {

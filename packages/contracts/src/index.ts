@@ -43,6 +43,7 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "chat.asked"
   | "knowledge.document_created"
+  | "knowledge.document_embedding_requested"
   | "knowledge.document_ingestion_requested"
   | "pricing.model_training_requested"
   | "property.created"
@@ -763,6 +764,7 @@ export interface RealtimeEvent<TPayload = Record<string, unknown>> {
 export const PROPERTYFLOW_JOBS_QUEUE = "propertyflow.jobs";
 
 export type BackgroundJobName =
+  | "knowledge.chunks.embed"
   | "knowledge.documents.ingest"
   | "pricing.model.train"
   | "properties.import"
@@ -784,6 +786,14 @@ export interface PropertyImportJobPayload extends BackgroundJobBasePayload {
 export interface KnowledgeDocumentIngestJobPayload extends BackgroundJobBasePayload {
   documentId: string;
   reason: "created" | "updated" | "manual";
+}
+
+export interface KnowledgeChunkEmbeddingJobPayload extends BackgroundJobBasePayload {
+  documentId?: string;
+  provider: "local-hash" | "openai" | "anthropic" | "gemini";
+  model: string;
+  dimensions: number;
+  limit?: number;
 }
 
 export interface PropertyAiDescriptionJobPayload extends BackgroundJobBasePayload {
@@ -809,6 +819,7 @@ export interface PricingModelTrainJobPayload extends BackgroundJobBasePayload {
 }
 
 export type BackgroundJobPayload =
+  | KnowledgeChunkEmbeddingJobPayload
   | KnowledgeDocumentIngestJobPayload
   | PricingModelTrainJobPayload
   | PropertyImportJobPayload

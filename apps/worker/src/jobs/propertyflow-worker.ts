@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import {
   type BackgroundJobName,
   type BackgroundJobPayload,
+  type KnowledgeChunkEmbeddingJobPayload,
   type KnowledgeDocumentIngestJobPayload,
   type PricingModelTrainJobPayload,
   type PropertyAiDescriptionJobPayload,
@@ -18,6 +19,11 @@ import { PropertyAiOutputWriter } from "./property-ai-output-writer.js";
 import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
+type KnowledgeChunkEmbeddingJob = Job<
+  KnowledgeChunkEmbeddingJobPayload,
+  unknown,
+  "knowledge.chunks.embed"
+>;
 type KnowledgeDocumentIngestJob = Job<
   KnowledgeDocumentIngestJobPayload,
   unknown,
@@ -93,6 +99,8 @@ export class PropertyflowWorker {
     console.log(`[jobs] processing ${job.name}#${job.id} for tenant ${job.data.tenantId}`);
 
     switch (job.name) {
+      case "knowledge.chunks.embed":
+        return this.embedKnowledgeChunks(job as KnowledgeChunkEmbeddingJob);
       case "knowledge.documents.ingest":
         return this.ingestKnowledgeDocument(job as KnowledgeDocumentIngestJob);
       case "pricing.model.train":
@@ -238,6 +246,84 @@ export class PropertyflowWorker {
     };
   }
 
+  private async embedKnowledgeChunks(job: KnowledgeChunkEmbeddingJob): Promise<Record<string, unknown>> {
+    const clauses = ["tenant_id = $1", "embedding_status in ('pending', 'failed')"];
+    const values: unknown[] = [job.data.tenantId];
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (job.data.documentId) {
+      clauses.push(`document_id = ${addValue(job.data.documentId)}`);
+    }
+
+    const limit = Math.min(Math.max(job.data.limit ?? 100, 1), 500);
+    const chunks = await this.pool.query<{
+      id: string;
+      title: string;
+      content: string;
+      tags: string[];
+    }>(
+      `
+        select id, title, content, tags
+        from knowledge_document_chunks
+        where ${clauses.join(" and ")}
+        order by updated_at asc, chunk_index asc
+        limit ${addValue(limit)}
+      `,
+      values
+    );
+
+    let embedded = 0;
+    let failed = 0;
+    const now = new Date().toISOString();
+
+    for (const chunk of chunks.rows) {
+      try {
+        const vector = this.embedText(
+          [chunk.title, chunk.content, chunk.tags.join(" ")].join(" "),
+          job.data.dimensions
+        );
+
+        await this.pool.query(
+          `
+            update knowledge_document_chunks
+            set
+              embedding = $1,
+              embedding_model = $2,
+              embedding_status = 'embedded',
+              updated_at = $3
+            where tenant_id = $4 and id = $5
+          `,
+          [vector, `${job.data.provider}:${job.data.model}`, now, job.data.tenantId, chunk.id]
+        );
+        embedded += 1;
+      } catch {
+        await this.pool.query(
+          `
+            update knowledge_document_chunks
+            set embedding_status = 'failed', updated_at = $1
+            where tenant_id = $2 and id = $3
+          `,
+          [now, job.data.tenantId, chunk.id]
+        );
+        failed += 1;
+      }
+    }
+
+    return {
+      tenantId: job.data.tenantId,
+      documentId: job.data.documentId,
+      provider: job.data.provider,
+      model: job.data.model,
+      dimensions: job.data.dimensions,
+      scanned: chunks.rowCount,
+      embedded,
+      failed
+    };
+  }
+
   private async trainPricingModel(job: PricingModelTrainJob): Promise<Record<string, unknown>> {
     const result = await this.pool.query<{ count: string }>(
       `
@@ -344,6 +430,35 @@ export class PropertyflowWorker {
 
   private buildKnowledgeSearchText(title: string, chunk: string, tags: string[]): string {
     return [title, chunk, tags.join(" ")].join(" ").toLowerCase().replaceAll("ё", "е");
+  }
+
+  private embedText(text: string, dimensions: number): number[] {
+    const vector = Array.from({ length: dimensions }, () => 0);
+    const tokens = text
+      .toLowerCase()
+      .replaceAll("ё", "е")
+      .split(/[^a-zа-я0-9-]+/i)
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    for (const token of tokens.length ? tokens : [text]) {
+      const hash = this.hashToken(token);
+      const index = Math.abs(hash) % dimensions;
+      vector[index] += hash < 0 ? -1 : 1;
+    }
+
+    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
+    return vector.map((value) => Number((value / magnitude).toFixed(6)));
+  }
+
+  private hashToken(token: string): number {
+    let hash = 0;
+
+    for (let index = 0; index < token.length; index += 1) {
+      hash = (hash * 31 + token.charCodeAt(index)) | 0;
+    }
+
+    return hash;
   }
 }
 

@@ -97,6 +97,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
+- `POST /knowledge-documents/chunks/embed`
 - `POST /knowledge-documents/:documentId/ingest`
 - `GET /jobs`
 - `POST /jobs`
@@ -148,6 +149,7 @@ Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs thr
 
 Supported job names:
 
+- `knowledge.chunks.embed`
 - `knowledge.documents.ingest`
 - `pricing.model.train`
 - `properties.import`
@@ -160,6 +162,8 @@ The search indexing job reads the property from PostgreSQL and writes an OpenSea
 The knowledge ingestion job reads a tenant knowledge document, rebuilds `knowledge_document_chunks`, stores lexical search text, token estimates, tags, locale/kind metadata, and marks embeddings as `pending`. This keeps the Chat/RAG contract ready for a later embedding provider without changing the admin workflow.
 
 `GET /knowledge-documents/chunks/search` returns scored tenant-isolated knowledge chunks from `knowledge_document_chunks`. `POST /chat` uses the same retrieval path, so grounded answers cite the exact document chunk selected for context instead of scanning full raw documents.
+
+`POST /knowledge-documents/chunks/embed` enqueues `knowledge.chunks.embed` for pending chunks. The current worker provider is `local-hash`, a deterministic vector prototype that updates `embedding`, `embedding_model`, and `embedding_status`; the API contract is shaped so OpenAI/Gemini/Anthropic embeddings can replace it later without changing admin workflows.
 
 Run the worker locally with:
 
@@ -186,6 +190,7 @@ Current protected routes:
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
+- `POST /knowledge-documents/chunks/embed`
 - `POST /knowledge-documents/:documentId/ingest`
 - `POST /properties`
 - `POST /properties/ai-search`
@@ -221,6 +226,7 @@ Audit log v1 records these actions:
 
 - `chat.asked`
 - `knowledge.document_created`
+- `knowledge.document_embedding_requested`
 - `knowledge.document_ingestion_requested`
 - `pricing.model_training_requested`
 - `property.created`
