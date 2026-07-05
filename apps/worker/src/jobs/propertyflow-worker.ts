@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import {
   type BackgroundJobName,
   type BackgroundJobPayload,
+  type KnowledgeDocumentIngestJobPayload,
   type PricingModelTrainJobPayload,
   type PropertyAiDescriptionJobPayload,
   type PropertyImageAnalysisJobPayload,
@@ -17,6 +18,11 @@ import { PropertyAiOutputWriter } from "./property-ai-output-writer.js";
 import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
+type KnowledgeDocumentIngestJob = Job<
+  KnowledgeDocumentIngestJobPayload,
+  unknown,
+  "knowledge.documents.ingest"
+>;
 type PricingModelTrainJob = Job<PricingModelTrainJobPayload, unknown, "pricing.model.train">;
 type PropertyImportJob = Job<PropertyImportJobPayload, unknown, "properties.import">;
 type PropertyAiDescriptionJob = Job<
@@ -87,6 +93,8 @@ export class PropertyflowWorker {
     console.log(`[jobs] processing ${job.name}#${job.id} for tenant ${job.data.tenantId}`);
 
     switch (job.name) {
+      case "knowledge.documents.ingest":
+        return this.ingestKnowledgeDocument(job as KnowledgeDocumentIngestJob);
       case "pricing.model.train":
         return this.trainPricingModel(job as PricingModelTrainJob);
       case "properties.import":
@@ -109,6 +117,124 @@ export class PropertyflowWorker {
       dryRun: job.data.dryRun ?? false,
       imported: 0,
       skipped: 0
+    };
+  }
+
+  private async ingestKnowledgeDocument(job: KnowledgeDocumentIngestJob): Promise<Record<string, unknown>> {
+    const documentResult = await this.pool.query<{
+      id: string;
+      tenant_id: string;
+      title: string;
+      body: string;
+      locale: string;
+      kind: string;
+      tags: string[];
+    }>(
+      `
+        select id, tenant_id, title, body, locale, kind, tags
+        from knowledge_documents
+        where tenant_id = $1 and id = $2
+      `,
+      [job.data.tenantId, job.data.documentId]
+    );
+    const document = documentResult.rows[0];
+
+    if (!document) {
+      return {
+        tenantId: job.data.tenantId,
+        documentId: job.data.documentId,
+        reason: job.data.reason,
+        ingested: false,
+        status: "document-not-found"
+      };
+    }
+
+    const now = new Date().toISOString();
+    const chunks = this.chunkKnowledgeDocument(document.title, document.body);
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+      await client.query(
+        `
+          delete from knowledge_document_chunks
+          where tenant_id = $1 and document_id = $2
+        `,
+        [job.data.tenantId, job.data.documentId]
+      );
+
+      for (const [index, chunk] of chunks.entries()) {
+        await client.query(
+          `
+            insert into knowledge_document_chunks (
+              id,
+              tenant_id,
+              document_id,
+              chunk_index,
+              title,
+              content,
+              locale,
+              kind,
+              tags,
+              token_estimate,
+              search_text,
+              embedding_model,
+              embedding_status,
+              created_at,
+              updated_at
+            ) values (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              $7,
+              $8,
+              $9,
+              $10,
+              $11,
+              $12,
+              $13,
+              $14,
+              $15
+            )
+          `,
+          [
+            crypto.randomUUID(),
+            job.data.tenantId,
+            job.data.documentId,
+            index,
+            document.title,
+            chunk,
+            document.locale,
+            document.kind,
+            document.tags,
+            this.estimateTokens(chunk),
+            this.buildKnowledgeSearchText(document.title, chunk, document.tags),
+            "pending-embedding-provider",
+            "pending",
+            now,
+            now
+          ]
+        );
+      }
+
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+
+    return {
+      tenantId: job.data.tenantId,
+      documentId: job.data.documentId,
+      reason: job.data.reason,
+      ingested: true,
+      chunks: chunks.length,
+      embeddingStatus: "pending"
     };
   }
 
@@ -167,6 +293,57 @@ export class PropertyflowWorker {
       indexed: true,
       searchableTextLength: document.searchableText.length
     };
+  }
+
+  private chunkKnowledgeDocument(title: string, body: string): string[] {
+    const paragraphs = body
+      .replace(/\r\n/g, "\n")
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    const chunks: string[] = [];
+    let current = "";
+    const maxCharacters = 900;
+
+    for (const paragraph of paragraphs.length ? paragraphs : [body.replace(/\s+/g, " ").trim()]) {
+      if (!paragraph) {
+        continue;
+      }
+
+      const next = current ? `${current}\n\n${paragraph}` : paragraph;
+      if (next.length <= maxCharacters) {
+        current = next;
+        continue;
+      }
+
+      if (current) {
+        chunks.push(current);
+      }
+
+      if (paragraph.length <= maxCharacters) {
+        current = paragraph;
+        continue;
+      }
+
+      for (let offset = 0; offset < paragraph.length; offset += maxCharacters) {
+        chunks.push(paragraph.slice(offset, offset + maxCharacters));
+      }
+      current = "";
+    }
+
+    if (current) {
+      chunks.push(current);
+    }
+
+    return chunks.length ? chunks : [title];
+  }
+
+  private estimateTokens(text: string): number {
+    return Math.max(1, Math.ceil(text.length / 4));
+  }
+
+  private buildKnowledgeSearchText(title: string, chunk: string, tags: string[]): string {
+    return [title, chunk, tags.join(" ")].join(" ").toLowerCase().replaceAll("ё", "е");
   }
 }
 

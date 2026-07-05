@@ -3,6 +3,7 @@ import { IsArray, IsBoolean, IsIn, IsOptional, IsString, ValidateIf } from "clas
 import type {
   BackgroundJobName,
   EnqueueBackgroundJobRequest,
+  KnowledgeDocumentIngestJobPayload,
   PricingModelTrainJobPayload,
   PropertyAiDescriptionJobPayload,
   PropertyImageAnalysisJobPayload,
@@ -11,6 +12,7 @@ import type {
 } from "@propertyflow/contracts";
 
 const jobNames = [
+  "knowledge.documents.ingest",
   "pricing.model.train",
   "properties.import",
   "properties.ai_description.generate",
@@ -27,6 +29,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
 
   @ApiProperty({
     oneOf: [
+      { $ref: "#/components/schemas/KnowledgeDocumentIngestPayloadDto" },
       { $ref: "#/components/schemas/PropertyImportPayloadDto" },
       { $ref: "#/components/schemas/PricingModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyAiDescriptionPayloadDto" },
@@ -35,11 +38,26 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
     ]
   })
   payload!:
+    | KnowledgeDocumentIngestPayloadDto
     | PricingModelTrainPayloadDto
     | PropertyImportPayloadDto
     | PropertyAiDescriptionPayloadDto
     | PropertyImageAnalysisPayloadDto
     | PropertySearchIndexPayloadDto;
+}
+
+export class KnowledgeDocumentIngestPayloadDto implements KnowledgeDocumentIngestJobPayload {
+  tenantId!: string;
+
+  requestedByUserId?: string;
+
+  @ApiProperty()
+  @IsString()
+  documentId!: string;
+
+  @ApiProperty({ enum: ["created", "updated", "manual"] })
+  @IsIn(["created", "updated", "manual"])
+  reason!: KnowledgeDocumentIngestJobPayload["reason"];
 }
 
 export class PricingModelTrainPayloadDto implements PricingModelTrainJobPayload {

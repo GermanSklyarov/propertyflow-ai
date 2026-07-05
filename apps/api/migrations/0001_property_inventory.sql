@@ -265,6 +265,31 @@ create index if not exists idx_knowledge_documents_tenant_locale on knowledge_do
 create index if not exists idx_knowledge_documents_tenant_updated on knowledge_documents (tenant_id, updated_at desc);
 create index if not exists idx_knowledge_documents_tags on knowledge_documents using gin (tags);
 
+create table if not exists knowledge_document_chunks (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  document_id uuid not null references knowledge_documents(id) on delete cascade,
+  chunk_index integer not null,
+  title text not null,
+  content text not null,
+  locale text not null,
+  kind text not null,
+  tags text[] not null default '{}',
+  token_estimate integer not null,
+  search_text text not null,
+  embedding_model text,
+  embedding_status text not null default 'pending',
+  embedding double precision[],
+  created_at timestamptz not null,
+  updated_at timestamptz not null,
+  unique (tenant_id, document_id, chunk_index)
+);
+
+create index if not exists idx_knowledge_document_chunks_document on knowledge_document_chunks (tenant_id, document_id);
+create index if not exists idx_knowledge_document_chunks_locale_kind on knowledge_document_chunks (tenant_id, locale, kind);
+create index if not exists idx_knowledge_document_chunks_search on knowledge_document_chunks using gin (to_tsvector('simple', search_text));
+create index if not exists idx_knowledge_document_chunks_embedding_status on knowledge_document_chunks (tenant_id, embedding_status);
+
 create table if not exists api_keys (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

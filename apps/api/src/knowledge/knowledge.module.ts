@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module.js";
 import { DatabaseModule } from "../database/database.module.js";
+import { JobsModule } from "../jobs/jobs.module.js";
 import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
 import { KnowledgeDocumentService } from "./application/knowledge-document.service.js";
@@ -9,7 +10,7 @@ import { PgKnowledgeDocumentRepository } from "./infrastructure/postgres/pg-know
 import { KnowledgeDocumentsController } from "./presentation/rest/knowledge-documents.controller.js";
 
 @Module({
-  imports: [AuditModule, AuthModule, DatabaseModule, TenantsModule],
+  imports: [AuditModule, AuthModule, DatabaseModule, JobsModule, TenantsModule],
   controllers: [KnowledgeDocumentsController],
   providers: [
     KnowledgeDocumentService,

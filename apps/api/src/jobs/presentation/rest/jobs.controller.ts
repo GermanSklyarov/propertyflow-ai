@@ -11,6 +11,7 @@ import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { JobQueueService } from "../../application/job-queue.service.js";
 import {
   EnqueueBackgroundJobDto,
+  KnowledgeDocumentIngestPayloadDto,
   PricingModelTrainPayloadDto,
   PropertyAiDescriptionPayloadDto,
   PropertyImageAnalysisPayloadDto,
@@ -25,6 +26,7 @@ import { ListJobsDto, toListJobsQuery } from "./list-jobs.dto.js";
 @ApiHeader({ name: "x-user-id", required: true })
 @ApiHeader({ name: "x-user-role", required: true })
 @ApiExtraModels(
+  KnowledgeDocumentIngestPayloadDto,
   PropertyImportPayloadDto,
   PricingModelTrainPayloadDto,
   PropertyAiDescriptionPayloadDto,

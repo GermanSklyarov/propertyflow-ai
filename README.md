@@ -96,6 +96,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /chat`
 - `GET /knowledge-documents`
 - `POST /knowledge-documents`
+- `POST /knowledge-documents/:documentId/ingest`
 - `GET /jobs`
 - `POST /jobs`
 - `GET /properties`
@@ -146,6 +147,7 @@ Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs thr
 
 Supported job names:
 
+- `knowledge.documents.ingest`
 - `pricing.model.train`
 - `properties.import`
 - `properties.ai_description.generate`
@@ -153,6 +155,8 @@ Supported job names:
 - `properties.search.index`
 
 The search indexing job reads the property from PostgreSQL and writes an OpenSearch document to `propertyflow-properties-v1`. The index stores tenant, market, status, pricing, amenities, `geo_point` location, and a combined `searchableText` field for the next AI/search slice.
+
+The knowledge ingestion job reads a tenant knowledge document, rebuilds `knowledge_document_chunks`, stores lexical search text, token estimates, tags, locale/kind metadata, and marks embeddings as `pending`. This keeps the Chat/RAG contract ready for a later embedding provider without changing the admin workflow.
 
 Run the worker locally with:
 
@@ -178,6 +182,7 @@ Current protected routes:
 - `POST /chat`
 - `GET /knowledge-documents`
 - `POST /knowledge-documents`
+- `POST /knowledge-documents/:documentId/ingest`
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
@@ -212,6 +217,7 @@ Audit log v1 records these actions:
 
 - `chat.asked`
 - `knowledge.document_created`
+- `knowledge.document_ingestion_requested`
 - `pricing.model_training_requested`
 - `property.created`
 - `property.ai_assistant`

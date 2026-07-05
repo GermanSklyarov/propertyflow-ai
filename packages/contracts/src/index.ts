@@ -43,6 +43,7 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "chat.asked"
   | "knowledge.document_created"
+  | "knowledge.document_ingestion_requested"
   | "pricing.model_training_requested"
   | "property.created"
   | "property.ai_assistant"
@@ -731,6 +732,7 @@ export interface RealtimeEvent<TPayload = Record<string, unknown>> {
 export const PROPERTYFLOW_JOBS_QUEUE = "propertyflow.jobs";
 
 export type BackgroundJobName =
+  | "knowledge.documents.ingest"
   | "pricing.model.train"
   | "properties.import"
   | "properties.ai_description.generate"
@@ -746,6 +748,11 @@ export interface PropertyImportJobPayload extends BackgroundJobBasePayload {
   source: "csv" | "json" | "partner-api";
   objectUrl?: string;
   dryRun?: boolean;
+}
+
+export interface KnowledgeDocumentIngestJobPayload extends BackgroundJobBasePayload {
+  documentId: string;
+  reason: "created" | "updated" | "manual";
 }
 
 export interface PropertyAiDescriptionJobPayload extends BackgroundJobBasePayload {
@@ -771,6 +778,7 @@ export interface PricingModelTrainJobPayload extends BackgroundJobBasePayload {
 }
 
 export type BackgroundJobPayload =
+  | KnowledgeDocumentIngestJobPayload
   | PricingModelTrainJobPayload
   | PropertyImportJobPayload
   | PropertyAiDescriptionJobPayload

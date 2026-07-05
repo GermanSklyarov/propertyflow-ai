@@ -1,7 +1,13 @@
-import { Body, Controller, Get, Inject, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { KnowledgeDocumentListResponse, KnowledgeDocumentSnapshot, RequestUser } from "@propertyflow/contracts";
+import type {
+  BackgroundJobSnapshot,
+  KnowledgeDocumentListResponse,
+  KnowledgeDocumentSnapshot,
+  RequestUser
+} from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
+import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
@@ -21,6 +27,7 @@ import { ListKnowledgeDocumentsDto } from "./list-knowledge-documents.dto.js";
 export class KnowledgeDocumentsController {
   constructor(
     @Inject(KnowledgeDocumentService) private readonly knowledge: KnowledgeDocumentService,
+    @Inject(JobQueueService) private readonly jobs: JobQueueService,
     @Inject(AuditService) private readonly audit: AuditService
   ) {}
 
@@ -41,6 +48,7 @@ export class KnowledgeDocumentsController {
     @Body() payload: CreateKnowledgeDocumentDto
   ): Promise<KnowledgeDocumentSnapshot> {
     const document = await this.knowledge.create(tenantId, payload);
+    const ingestJob = await this.enqueueIngestion(tenantId, user.id, document.id, "created");
 
     await this.audit.record({
       tenantId,
@@ -52,10 +60,49 @@ export class KnowledgeDocumentsController {
         title: document.title,
         locale: document.locale,
         kind: document.kind,
-        tags: document.tags
+        tags: document.tags,
+        ingestionJobId: ingestJob.id
       }
     });
 
     return document;
+  }
+
+  @Post(":documentId/ingest")
+  @Roles("manager", "admin")
+  async ingest(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("documentId") documentId: string
+  ): Promise<BackgroundJobSnapshot> {
+    const job = await this.enqueueIngestion(tenantId, user.id, documentId, "manual");
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "knowledge.document_ingestion_requested",
+      resourceType: "knowledge",
+      resourceId: documentId,
+      metadata: {
+        jobId: job.id,
+        reason: "manual"
+      }
+    });
+
+    return job;
+  }
+
+  private enqueueIngestion(
+    tenantId: string,
+    requestedByUserId: string | undefined,
+    documentId: string,
+    reason: "created" | "updated" | "manual"
+  ): Promise<BackgroundJobSnapshot> {
+    return this.jobs.enqueue("knowledge.documents.ingest", {
+      tenantId,
+      requestedByUserId,
+      documentId,
+      reason
+    });
   }
 }
