@@ -85,6 +85,12 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
       provide: PROPERTY_SEARCH_CLIENT,
       useFactory: createPropertySearchClient
     }
+  ],
+  exports: [
+    AiPropertyAdvisorService,
+    NaturalLanguagePropertySearchService,
+    NeighborhoodIntelligenceService,
+    PROPERTY_REPOSITORY
   ]
 })
 export class PropertiesModule {}

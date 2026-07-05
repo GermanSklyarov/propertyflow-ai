@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { CqrsModule } from "@nestjs/cqrs";
 import { AnalyticsModule } from "./analytics/analytics.module.js";
 import { AuditModule } from "./audit/audit.module.js";
+import { ChatModule } from "./chat/chat.module.js";
 import { AuthModule } from "./shared/auth/auth.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
@@ -17,6 +18,7 @@ import { UsersModule } from "./users/users.module.js";
     CqrsModule.forRoot(),
     AnalyticsModule,
     AuditModule,
+    ChatModule,
     AuthModule,
     DatabaseModule,
     TenantsModule,

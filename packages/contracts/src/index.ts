@@ -41,6 +41,7 @@ export interface TenantUserSnapshot {
 }
 
 export type AuditAction =
+  | "chat.asked"
   | "property.created"
   | "property.ai_assistant"
   | "property.ai_description_applied"
@@ -275,6 +276,31 @@ export interface NaturalLanguageSearchResponse {
 export interface NaturalLanguagePropertySearchResponse extends NaturalLanguageSearchResponse {
   items: PropertySnapshot[];
   total: number;
+}
+
+export interface AiChatRequest {
+  locale: "en" | "ru" | "th" | "zh";
+  message: string;
+  propertyId?: string;
+  market?: ThailandMarket;
+  purpose?: PropertyPurpose;
+}
+
+export interface AiChatCitation {
+  source: "property" | "advisor" | "neighborhood" | "search";
+  propertyId?: string;
+  title?: string;
+  label: string;
+}
+
+export interface AiChatResponse {
+  id: string;
+  message: string;
+  answer: string;
+  matchedPropertyIds: string[];
+  citations: AiChatCitation[];
+  suggestedActions: string[];
+  createdAt: string;
 }
 
 export interface AiAdvisorSummary {

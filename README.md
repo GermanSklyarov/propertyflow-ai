@@ -93,6 +93,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
+- `POST /chat`
 - `GET /jobs`
 - `POST /jobs`
 - `GET /properties`
@@ -164,6 +165,7 @@ Routes with write or workspace-sensitive behavior also require dev RBAC headers:
 
 Current protected routes:
 
+- `POST /chat`
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
@@ -191,6 +193,7 @@ Current protected routes:
 
 Audit log v1 records these actions:
 
+- `chat.asked`
 - `property.created`
 - `property.ai_assistant`
 - `property.ai_asset_reviewed`
