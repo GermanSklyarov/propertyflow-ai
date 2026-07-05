@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { AiChatCitation, AiChatRequest, AiChatResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
+import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
 import { AiPropertyAdvisorService } from "../../properties/application/services/ai-property-advisor.service.js";
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
@@ -14,7 +15,8 @@ export class AiChatService {
     @Inject(NaturalLanguagePropertySearchService)
     private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService,
     @Inject(NeighborhoodIntelligenceService)
-    private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService
+    private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService,
+    @Inject(KnowledgeDocumentService) private readonly knowledge: KnowledgeDocumentService
   ) {}
 
   async ask(tenantId: string, request: AiChatRequest): Promise<AiChatResponse> {
@@ -35,6 +37,7 @@ export class AiChatService {
     const normalized = this.normalize(request.message);
     const citations: AiChatCitation[] = [this.propertyCitation(property)];
     const answerParts = [this.describeProperty(property)];
+    const knowledge = await this.retrieveKnowledge(tenantId, request);
 
     if (this.isNeighborhoodQuestion(normalized)) {
       const neighborhood = await this.neighborhoodIntelligence.analyze(tenantId, property.id);
@@ -62,6 +65,11 @@ export class AiChatService {
       }
     }
 
+    if (knowledge.length) {
+      citations.push(...knowledge.map((document) => this.knowledgeCitation(document.id, document.title, document.kind)));
+      answerParts.push(`Relevant knowledge: ${knowledge.map((document) => this.knowledgeLine(document.title, document.body)).join(" ")}`);
+    }
+
     return this.buildResponse(request, answerParts.join(" "), [property.id], citations, [
       "compare-similar-properties",
       "open-investment-calculator",
@@ -87,13 +95,19 @@ export class AiChatService {
       : await this.properties.search(tenantId, interpretation.filters);
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
+    const knowledge = await this.retrieveKnowledge(tenantId, request);
 
     if (!matches.length) {
       return this.buildResponse(
         request,
-        "I could not find matching listings in this tenant workspace yet. Try broadening the market, budget, or beach-distance requirements.",
+        knowledge.length
+          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((document) => this.knowledgeLine(document.title, document.body)).join(" ")}`
+          : "I could not find matching listings in this tenant workspace yet. Try broadening the market, budget, or beach-distance requirements.",
         [],
-        [{ source: "search", label: search.rankingExplanation }],
+        [
+          { source: "search", label: search.rankingExplanation },
+          ...knowledge.map((document) => this.knowledgeCitation(document.id, document.title, document.kind))
+        ],
         ["relax-filters", "ask-agent-for-off-market-options"]
       );
     }
@@ -112,10 +126,21 @@ export class AiChatService {
       matches.map((property) => property.id),
       [
         { source: "search", label: search.interpretedIntent },
-        ...matches.map((property) => this.propertyCitation(property))
+        ...matches.map((property) => this.propertyCitation(property)),
+        ...knowledge.map((document) => this.knowledgeCitation(document.id, document.title, document.kind))
       ],
       ["compare-results", "open-map", "save-search"]
     );
+  }
+
+  private async retrieveKnowledge(tenantId: string, request: AiChatRequest) {
+    const result = await this.knowledge.search(tenantId, {
+      query: request.message,
+      locale: request.locale,
+      limit: 3
+    });
+
+    return result.items;
   }
 
   private buildResponse(
@@ -143,6 +168,20 @@ export class AiChatService {
       title: property.title,
       label: `${property.title}, ${property.market}, ${property.price.amount} ${property.price.currency}`
     };
+  }
+
+  private knowledgeCitation(documentId: string, title: string, kind: string): AiChatCitation {
+    return {
+      source: "knowledge",
+      documentId,
+      title,
+      label: `${title} (${kind})`
+    };
+  }
+
+  private knowledgeLine(title: string, body: string): string {
+    const excerpt = body.length > 180 ? `${body.slice(0, 177)}...` : body;
+    return `${title}: ${excerpt}`;
   }
 
   private describeProperty(property: PropertySnapshot): string {

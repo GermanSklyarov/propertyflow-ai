@@ -6,6 +6,7 @@ import { ChatModule } from "./chat/chat.module.js";
 import { AuthModule } from "./shared/auth/auth.module.js";
 import { DatabaseModule } from "./database/database.module.js";
 import { JobsModule } from "./jobs/jobs.module.js";
+import { KnowledgeModule } from "./knowledge/knowledge.module.js";
 import { LeadsModule } from "./leads/leads.module.js";
 import { PropertiesModule } from "./properties/properties.module.js";
 import { PublicApiModule } from "./public-api/public-api.module.js";
@@ -24,6 +25,7 @@ import { UsersModule } from "./users/users.module.js";
     TenantsModule,
     UsersModule,
     JobsModule,
+    KnowledgeModule,
     PropertiesModule,
     LeadsModule,
     PublicApiModule,

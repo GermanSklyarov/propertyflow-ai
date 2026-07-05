@@ -227,6 +227,22 @@ create index if not exists idx_search_events_tenant_created on search_events (te
 create index if not exists idx_search_events_tenant_source on search_events (tenant_id, source);
 create index if not exists idx_search_events_tenant_query on search_events (tenant_id, query);
 
+create table if not exists knowledge_documents (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  title text not null,
+  body text not null,
+  locale text not null,
+  kind text not null,
+  tags text[] not null default '{}',
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+create index if not exists idx_knowledge_documents_tenant_locale on knowledge_documents (tenant_id, locale, kind);
+create index if not exists idx_knowledge_documents_tenant_updated on knowledge_documents (tenant_id, updated_at desc);
+create index if not exists idx_knowledge_documents_tags on knowledge_documents using gin (tags);
+
 create table if not exists api_keys (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

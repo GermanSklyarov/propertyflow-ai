@@ -42,6 +42,7 @@ export interface TenantUserSnapshot {
 
 export type AuditAction =
   | "chat.asked"
+  | "knowledge.document_created"
   | "property.created"
   | "property.ai_assistant"
   | "property.ai_description_applied"
@@ -65,7 +66,7 @@ export interface AuditEventSnapshot {
   userId?: string;
   userRole?: UserRole;
   action: AuditAction;
-  resourceType: "property" | "tenant" | "search" | "comparison" | "lead" | "job";
+  resourceType: "property" | "tenant" | "search" | "comparison" | "lead" | "job" | "knowledge";
   resourceId?: string;
   metadata: Record<string, unknown>;
   createdAt: string;
@@ -287,8 +288,9 @@ export interface AiChatRequest {
 }
 
 export interface AiChatCitation {
-  source: "property" | "advisor" | "neighborhood" | "search";
+  source: "property" | "advisor" | "neighborhood" | "search" | "knowledge";
   propertyId?: string;
+  documentId?: string;
   title?: string;
   label: string;
 }
@@ -301,6 +303,40 @@ export interface AiChatResponse {
   citations: AiChatCitation[];
   suggestedActions: string[];
   createdAt: string;
+}
+
+export type KnowledgeDocumentKind = "article" | "neighborhood" | "relocation" | "legal" | "investment" | "faq";
+
+export interface KnowledgeDocumentSnapshot {
+  id: string;
+  tenantId: string;
+  title: string;
+  body: string;
+  locale: "en" | "ru" | "th" | "zh";
+  kind: KnowledgeDocumentKind;
+  tags: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateKnowledgeDocumentRequest {
+  title: string;
+  body: string;
+  locale: KnowledgeDocumentSnapshot["locale"];
+  kind: KnowledgeDocumentKind;
+  tags?: string[];
+}
+
+export interface KnowledgeDocumentSearchRequest {
+  query?: string;
+  locale?: KnowledgeDocumentSnapshot["locale"];
+  kind?: KnowledgeDocumentKind;
+  limit?: number;
+}
+
+export interface KnowledgeDocumentListResponse {
+  items: KnowledgeDocumentSnapshot[];
+  total: number;
 }
 
 export interface AiAdvisorSummary {
