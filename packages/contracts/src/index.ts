@@ -514,6 +514,11 @@ export interface PropertyPriceComparable {
 
 export interface PropertyPriceRecommendation {
   propertyId: string;
+  engine: "baseline-comparables" | "ml-model";
+  modelVersion: string;
+  predictionTarget: "sale_price";
+  trainingStatus: "not-trained" | "trained";
+  featuresUsed: string[];
   currentPrice: Money;
   currentPricePerSqm: Money;
   suggestedPrice: Money;

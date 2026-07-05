@@ -3,6 +3,22 @@ import type { Money, PropertySnapshot } from "@propertyflow/domain";
 import type { PropertyPriceComparable, PropertyPriceRecommendation } from "@propertyflow/contracts";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
+const PRICE_RECOMMENDATION_ENGINE = "baseline-comparables";
+const PRICE_RECOMMENDATION_MODEL_VERSION = "baseline-comparables-v1";
+const PRICE_RECOMMENDATION_FEATURES = [
+  "market",
+  "propertyKind",
+  "currency",
+  "areaSqm",
+  "bedrooms",
+  "bathrooms",
+  "beachDistanceMeters",
+  "amenities",
+  "floor",
+  "comparablePricePerSqm",
+  "comparableSimilarityScore"
+];
+
 interface ComparableCandidate {
   property: PropertySnapshot;
   pricePerSqm: number;
@@ -36,6 +52,7 @@ export class PriceRecommendationService {
     if (!candidates.length) {
       return {
         propertyId: property.id,
+        ...this.modelMetadata(),
         currentPrice: property.price,
         currentPricePerSqm,
         suggestedPrice: property.price,
@@ -64,6 +81,7 @@ export class PriceRecommendationService {
 
     return {
       propertyId: property.id,
+      ...this.modelMetadata(),
       currentPrice: property.price,
       currentPricePerSqm,
       suggestedPrice,
@@ -83,6 +101,19 @@ export class PriceRecommendationService {
       property,
       pricePerSqm: property.price.amount / property.areaSqm,
       similarityScore: this.similarityScore(target, property)
+    };
+  }
+
+  private modelMetadata(): Pick<
+    PropertyPriceRecommendation,
+    "engine" | "modelVersion" | "predictionTarget" | "trainingStatus" | "featuresUsed"
+  > {
+    return {
+      engine: PRICE_RECOMMENDATION_ENGINE,
+      modelVersion: PRICE_RECOMMENDATION_MODEL_VERSION,
+      predictionTarget: "sale_price",
+      trainingStatus: "not-trained",
+      featuresUsed: PRICE_RECOMMENDATION_FEATURES
     };
   }
 

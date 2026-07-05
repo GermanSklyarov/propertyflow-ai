@@ -746,6 +746,9 @@ export class PropertiesController {
       resourceType: "property",
       resourceId: propertyId,
       metadata: {
+        engine: result.engine,
+        modelVersion: result.modelVersion,
+        trainingStatus: result.trainingStatus,
         suggestedPrice: result.suggestedPrice,
         position: result.position,
         confidence: result.confidence,

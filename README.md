@@ -138,6 +138,8 @@ Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs thr
 
 `POST /properties` also enqueues `properties.search.index` automatically after a listing is created.
 
+`GET /properties/:propertyId/price-recommendation` returns an explainable pricing recommendation. The current engine is `baseline-comparables-v1`: it is not an ML model yet, but the response already includes `engine`, `modelVersion`, `trainingStatus`, `predictionTarget`, and `featuresUsed` so the endpoint can later switch to a trained pricing model without changing the product contract.
+
 Supported job names:
 
 - `properties.import`
