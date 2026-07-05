@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
+  PricingTrainingDatasetResponse,
   PropertyPriceRecommendationFeedbackSnapshot,
   RequestUser,
   SubmitPropertyPriceRecommendationFeedbackRequest
@@ -39,5 +40,15 @@ export class PriceRecommendationFeedbackService {
     }
 
     return this.feedback.save(tenantId, propertyId, request, user);
+  }
+
+  async trainingDataset(tenantId: string): Promise<PricingTrainingDatasetResponse> {
+    const items = await this.feedback.listTrainingRows(tenantId);
+
+    return {
+      items,
+      total: items.length,
+      generatedAt: new Date().toISOString()
+    };
   }
 }

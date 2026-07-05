@@ -54,6 +54,7 @@ export type AuditAction =
   | "property.image_removed"
   | "property.published"
   | "property.price_recommendation_feedback"
+  | "property.price_training_dataset_viewed"
   | "property.price_recommended"
   | "property.price_updated"
   | "property.status_changed"
@@ -562,6 +563,40 @@ export interface PropertyPriceRecommendationFeedbackSnapshot {
   createdByUserId?: string;
   createdByUserRole?: UserRole;
   createdAt: string;
+}
+
+export interface PricingTrainingDatasetRow {
+  feedbackId: string;
+  propertyId: string;
+  engine: PropertyPriceRecommendation["engine"];
+  modelVersion: string;
+  decision: PropertyPriceRecommendationFeedbackDecision;
+  features: {
+    market: ThailandMarket;
+    kind: PropertyKind;
+    status: PropertySnapshot["status"];
+    bedrooms: number;
+    bathrooms: number;
+    areaSqm: number;
+    floor?: number;
+    beachDistanceMeters?: number;
+    amenities: string[];
+    currentPrice: Money;
+    currentPricePerSqm: Money;
+    suggestedPrice: Money;
+  };
+  label: {
+    accepted: boolean;
+    selectedPrice?: Money;
+    selectedPricePerSqm?: Money;
+  };
+  createdAt: string;
+}
+
+export interface PricingTrainingDatasetResponse {
+  items: PricingTrainingDatasetRow[];
+  total: number;
+  generatedAt: string;
 }
 
 export interface RentalYieldSummary {

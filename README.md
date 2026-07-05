@@ -99,6 +99,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /jobs`
 - `POST /jobs`
 - `GET /properties`
+- `GET /properties/price-recommendation/training-dataset`
 - `GET /properties/search-index`
 - `GET /properties/:propertyId/advisor`
 - `GET /properties/:propertyId/ai-assets`
@@ -177,6 +178,7 @@ Current protected routes:
 - `POST /properties`
 - `POST /properties/ai-search`
 - `POST /properties/compare`
+- `GET /properties/price-recommendation/training-dataset`
 - `POST /properties/:propertyId/ai-assistant`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review`
 - `POST /properties/:propertyId/ai-assets/descriptions/:assetId/apply`
@@ -216,6 +218,7 @@ Audit log v1 records these actions:
 - `property.image_removed`
 - `property.published`
 - `property.price_recommendation_feedback`
+- `property.price_training_dataset_viewed`
 - `property.price_recommended`
 - `property.price_updated`
 - `property.status_changed`

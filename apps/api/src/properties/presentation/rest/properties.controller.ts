@@ -7,6 +7,7 @@ import type {
   IndexedPropertySearchResponse,
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
+  PricingTrainingDatasetResponse,
   PropertyAiAssets,
   PropertyComparisonResponse,
   PropertyImageGalleryResponse,
@@ -250,6 +251,27 @@ export class PropertiesController {
       metadata: {
         propertyIds: payload.propertyIds,
         winners: result.winners
+      }
+    });
+
+    return result;
+  }
+
+  @Get("price-recommendation/training-dataset")
+  @Roles("manager", "admin")
+  async pricingTrainingDataset(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser
+  ): Promise<PricingTrainingDatasetResponse> {
+    const result = await this.priceRecommendationFeedback.trainingDataset(tenantId);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.price_training_dataset_viewed",
+      resourceType: "property",
+      metadata: {
+        total: result.total
       }
     });
 

@@ -1,4 +1,5 @@
 import type {
+  PricingTrainingDatasetRow,
   PropertyPriceRecommendationFeedbackSnapshot,
   RequestUser,
   SubmitPropertyPriceRecommendationFeedbackRequest
@@ -13,4 +14,5 @@ export interface PriceRecommendationFeedbackRepository {
     request: SubmitPropertyPriceRecommendationFeedbackRequest,
     user: RequestUser
   ): Promise<PropertyPriceRecommendationFeedbackSnapshot>;
+  listTrainingRows(tenantId: string): Promise<PricingTrainingDatasetRow[]>;
 }
