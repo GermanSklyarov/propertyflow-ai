@@ -96,6 +96,9 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /analytics/dashboard`
 - `POST /chat`
 - `POST /concierge/advise`
+- `POST /concierge/sessions`
+- `POST /concierge/sessions/:sessionId/messages`
+- `GET /concierge/sessions/:sessionId`
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
@@ -190,6 +193,9 @@ Current protected routes:
 
 - `POST /chat`
 - `POST /concierge/advise`
+- `POST /concierge/sessions`
+- `POST /concierge/sessions/:sessionId/messages`
+- `GET /concierge/sessions/:sessionId`
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
@@ -229,6 +235,8 @@ Audit log v1 records these actions:
 
 - `chat.asked`
 - `concierge.advised`
+- `concierge.message_added`
+- `concierge.session_created`
 - `knowledge.document_created`
 - `knowledge.document_embedding_requested`
 - `knowledge.document_ingestion_requested`
@@ -284,6 +292,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 ```
 
 `POST /concierge/advise` powers AI Concierge. The first call can contain a broad user message such as `"Переезжаю в Паттайю с семьей."`; the API returns a normalized profile and the most important follow-up questions. Once the profile includes budget, family/children, car, remote-work, purpose, and quiet preference, the response recommends an area such as Wongamat and ranks matching listings with reasons and tradeoffs.
+
+`POST /concierge/sessions` starts a persisted concierge consultation. `POST /concierge/sessions/:sessionId/messages` appends follow-up answers, merges them into the saved profile, and stores both user and assistant turns in `concierge_messages`. `GET /concierge/sessions/:sessionId` returns the current profile, latest recommendation, and full message history.
 
 `POST /properties/compare` compares 2-3 properties for investment, living, family, and relocation.
 

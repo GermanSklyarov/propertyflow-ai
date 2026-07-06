@@ -10,7 +10,11 @@ import {
   Min,
   ValidateNested
 } from "class-validator";
-import type { ConciergeProfile, ConciergeRequest } from "@propertyflow/contracts";
+import type {
+  AddConciergeSessionMessageRequest,
+  ConciergeProfile,
+  ConciergeRequest
+} from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
@@ -69,6 +73,18 @@ export class ConciergeRequestDto implements ConciergeRequest {
   @IsIn(["en", "ru"])
   locale!: "en" | "ru";
 
+  @ApiProperty()
+  @IsString()
+  message!: string;
+
+  @ApiProperty({ required: false, type: ConciergeProfileDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ConciergeProfileDto)
+  profile?: ConciergeProfileDto;
+}
+
+export class AddConciergeSessionMessageDto implements AddConciergeSessionMessageRequest {
   @ApiProperty()
   @IsString()
   message!: string;

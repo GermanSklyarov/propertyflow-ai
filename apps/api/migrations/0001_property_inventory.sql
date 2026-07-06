@@ -232,6 +232,35 @@ create table if not exists audit_events (
 create index if not exists idx_audit_events_tenant_created on audit_events (tenant_id, created_at desc);
 create index if not exists idx_audit_events_action on audit_events (action);
 
+create table if not exists concierge_sessions (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  user_id text,
+  locale text not null,
+  status text not null,
+  profile jsonb not null default '{}',
+  latest_response jsonb not null,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+create index if not exists idx_concierge_sessions_tenant_updated on concierge_sessions (tenant_id, updated_at desc);
+create index if not exists idx_concierge_sessions_tenant_user on concierge_sessions (tenant_id, user_id, updated_at desc);
+create index if not exists idx_concierge_sessions_status on concierge_sessions (tenant_id, status, updated_at desc);
+
+create table if not exists concierge_messages (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  session_id uuid not null references concierge_sessions(id) on delete cascade,
+  role text not null,
+  message text not null,
+  response jsonb,
+  profile jsonb,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_concierge_messages_session on concierge_messages (tenant_id, session_id, created_at);
+
 create table if not exists search_events (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

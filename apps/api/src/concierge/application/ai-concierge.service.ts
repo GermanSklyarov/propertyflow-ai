@@ -1,18 +1,51 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
+  AddConciergeSessionMessageRequest,
   ConciergeAreaRecommendation,
   ConciergeProfile,
   ConciergePropertyRecommendation,
   ConciergeQuestion,
   ConciergeRequest,
-  ConciergeResponse
+  ConciergeResponse,
+  ConciergeSessionDetailResponse,
+  ConciergeSessionMessageSnapshot,
+  ConciergeSessionSnapshot,
+  CreateConciergeSessionRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
+import type { Pool } from "pg";
+import { PG_POOL } from "../../database/database.constants.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
+
+interface ConciergeSessionRow {
+  id: string;
+  tenant_id: string;
+  user_id?: string;
+  locale: ConciergeSessionSnapshot["locale"];
+  status: ConciergeSessionSnapshot["status"];
+  profile: ConciergeProfile;
+  latest_response: ConciergeResponse;
+  created_at: Date;
+  updated_at: Date;
+}
+
+interface ConciergeMessageRow {
+  id: string;
+  tenant_id: string;
+  session_id: string;
+  role: ConciergeSessionMessageSnapshot["role"];
+  message: string;
+  response?: ConciergeResponse;
+  profile?: ConciergeProfile;
+  created_at: Date;
+}
 
 @Injectable()
 export class AiConciergeService {
-  constructor(@Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository) {}
+  constructor(
+    @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository
+  ) {}
 
   async advise(tenantId: string, request: ConciergeRequest): Promise<ConciergeResponse> {
     const profile = this.mergeProfile(request.profile ?? {}, this.inferProfile(request.message));
@@ -42,6 +75,189 @@ export class AiConciergeService {
       propertyRecommendations: recommendations,
       summary: this.recommendationSummary(areaRecommendation, recommendations, request.locale),
       createdAt: new Date().toISOString()
+    };
+  }
+
+  async createSession(
+    tenantId: string,
+    userId: string | undefined,
+    request: CreateConciergeSessionRequest
+  ): Promise<ConciergeSessionDetailResponse> {
+    const response = await this.advise(tenantId, request);
+    const now = new Date().toISOString();
+    const sessionId = crypto.randomUUID();
+    const userMessageId = crypto.randomUUID();
+    const assistantMessageId = crypto.randomUUID();
+
+    await this.pool.query(
+      `
+        insert into concierge_sessions (
+          id,
+          tenant_id,
+          user_id,
+          locale,
+          status,
+          profile,
+          latest_response,
+          created_at,
+          updated_at
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `,
+      [
+        sessionId,
+        tenantId,
+        userId,
+        request.locale,
+        this.sessionStatus(response),
+        response.profile,
+        response,
+        now,
+        now
+      ]
+    );
+    await this.insertMessage(tenantId, sessionId, userMessageId, "user", request.message, undefined, request.profile, now);
+    await this.insertMessage(tenantId, sessionId, assistantMessageId, "assistant", response.summary, response, response.profile, now);
+
+    return this.getSession(tenantId, sessionId);
+  }
+
+  async addSessionMessage(
+    tenantId: string,
+    sessionId: string,
+    request: AddConciergeSessionMessageRequest
+  ): Promise<ConciergeSessionDetailResponse> {
+    const session = await this.findSession(tenantId, sessionId);
+    const mergedProfile = this.mergeProfile(session.profile, request.profile ?? {});
+    const response = await this.advise(tenantId, {
+      locale: session.locale,
+      message: request.message,
+      profile: mergedProfile
+    });
+    const now = new Date().toISOString();
+
+    await this.pool.query(
+      `
+        update concierge_sessions
+        set status = $1, profile = $2, latest_response = $3, updated_at = $4
+        where tenant_id = $5 and id = $6
+      `,
+      [this.sessionStatus(response), response.profile, response, now, tenantId, sessionId]
+    );
+    await this.insertMessage(
+      tenantId,
+      sessionId,
+      crypto.randomUUID(),
+      "user",
+      request.message,
+      undefined,
+      request.profile,
+      now
+    );
+    await this.insertMessage(
+      tenantId,
+      sessionId,
+      crypto.randomUUID(),
+      "assistant",
+      response.summary,
+      response,
+      response.profile,
+      now
+    );
+
+    return this.getSession(tenantId, sessionId);
+  }
+
+  async getSession(tenantId: string, sessionId: string): Promise<ConciergeSessionDetailResponse> {
+    const session = await this.findSession(tenantId, sessionId);
+    const messagesResult = await this.pool.query<ConciergeMessageRow>(
+      `
+        select *
+        from concierge_messages
+        where tenant_id = $1 and session_id = $2
+        order by created_at asc
+      `,
+      [tenantId, sessionId]
+    );
+
+    return {
+      session,
+      messages: messagesResult.rows.map((row) => this.toMessageSnapshot(row))
+    };
+  }
+
+  private async findSession(tenantId: string, sessionId: string): Promise<ConciergeSessionSnapshot> {
+    const result = await this.pool.query<ConciergeSessionRow>(
+      `
+        select *
+        from concierge_sessions
+        where tenant_id = $1 and id = $2
+      `,
+      [tenantId, sessionId]
+    );
+    const row = result.rows[0];
+
+    if (!row) {
+      throw new NotFoundException("Concierge session not found");
+    }
+
+    return this.toSessionSnapshot(row);
+  }
+
+  private insertMessage(
+    tenantId: string,
+    sessionId: string,
+    messageId: string,
+    role: ConciergeSessionMessageSnapshot["role"],
+    message: string,
+    response: ConciergeResponse | undefined,
+    profile: ConciergeProfile | undefined,
+    createdAt: string
+  ): Promise<unknown> {
+    return this.pool.query(
+      `
+        insert into concierge_messages (
+          id,
+          tenant_id,
+          session_id,
+          role,
+          message,
+          response,
+          profile,
+          created_at
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8)
+      `,
+      [messageId, tenantId, sessionId, role, message, response, profile, createdAt]
+    );
+  }
+
+  private sessionStatus(response: ConciergeResponse): ConciergeSessionSnapshot["status"] {
+    return response.stage === "recommendation" ? "recommended" : "awaiting-input";
+  }
+
+  private toSessionSnapshot(row: ConciergeSessionRow): ConciergeSessionSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      userId: row.user_id,
+      locale: row.locale,
+      status: row.status,
+      profile: row.profile,
+      latestResponse: row.latest_response,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString()
+    };
+  }
+
+  private toMessageSnapshot(row: ConciergeMessageRow): ConciergeSessionMessageSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      sessionId: row.session_id,
+      role: row.role,
+      message: row.message,
+      response: row.response,
+      profile: row.profile,
+      createdAt: row.created_at.toISOString()
     };
   }
 

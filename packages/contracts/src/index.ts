@@ -43,6 +43,8 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "chat.asked"
   | "concierge.advised"
+  | "concierge.message_added"
+  | "concierge.session_created"
   | "knowledge.document_created"
   | "knowledge.document_embedding_requested"
   | "knowledge.document_ingestion_requested"
@@ -361,6 +363,41 @@ export interface ConciergeResponse {
   propertyRecommendations: ConciergePropertyRecommendation[];
   summary: string;
   createdAt: string;
+}
+
+export interface CreateConciergeSessionRequest extends ConciergeRequest {}
+
+export interface AddConciergeSessionMessageRequest {
+  message: string;
+  profile?: ConciergeProfile;
+}
+
+export interface ConciergeSessionSnapshot {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  locale: ConciergeRequest["locale"];
+  status: "awaiting-input" | "recommended";
+  profile: ConciergeProfile;
+  latestResponse: ConciergeResponse;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConciergeSessionMessageSnapshot {
+  id: string;
+  tenantId: string;
+  sessionId: string;
+  role: "user" | "assistant";
+  message: string;
+  response?: ConciergeResponse;
+  profile?: ConciergeProfile;
+  createdAt: string;
+}
+
+export interface ConciergeSessionDetailResponse {
+  session: ConciergeSessionSnapshot;
+  messages: ConciergeSessionMessageSnapshot[];
 }
 
 export type KnowledgeDocumentKind = "article" | "neighborhood" | "relocation" | "legal" | "investment" | "faq";

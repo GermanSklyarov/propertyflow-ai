@@ -1,6 +1,6 @@
-import { Body, Controller, Inject, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { ConciergeResponse, RequestUser } from "@propertyflow/contracts";
+import type { ConciergeResponse, ConciergeSessionDetailResponse, RequestUser } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -9,7 +9,7 @@ import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { AiConciergeService } from "../../application/ai-concierge.service.js";
-import { ConciergeRequestDto } from "./concierge.dto.js";
+import { AddConciergeSessionMessageDto, ConciergeRequestDto } from "./concierge.dto.js";
 
 @ApiTags("concierge")
 @ApiHeader({ name: "x-tenant-id", required: true })
@@ -49,5 +49,68 @@ export class ConciergeController {
     });
 
     return response;
+  }
+
+  @Post("sessions")
+  @Roles("agent", "broker", "manager", "admin")
+  async createSession(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: ConciergeRequestDto
+  ): Promise<ConciergeSessionDetailResponse> {
+    const detail = await this.concierge.createSession(tenantId, user.id, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "concierge.session_created",
+      resourceType: "search",
+      resourceId: detail.session.id,
+      metadata: {
+        status: detail.session.status,
+        market: detail.session.profile.market,
+        purpose: detail.session.profile.purpose,
+        questions: detail.session.latestResponse.nextQuestions.map((question) => question.id)
+      }
+    });
+
+    return detail;
+  }
+
+  @Post("sessions/:sessionId/messages")
+  @Roles("agent", "broker", "manager", "admin")
+  async addMessage(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("sessionId") sessionId: string,
+    @Body() payload: AddConciergeSessionMessageDto
+  ): Promise<ConciergeSessionDetailResponse> {
+    const detail = await this.concierge.addSessionMessage(tenantId, sessionId, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "concierge.message_added",
+      resourceType: "search",
+      resourceId: detail.session.id,
+      metadata: {
+        status: detail.session.status,
+        market: detail.session.profile.market,
+        purpose: detail.session.profile.purpose,
+        area: detail.session.latestResponse.areaRecommendation?.area,
+        recommendedPropertyIds: detail.session.latestResponse.propertyRecommendations.map((property) => property.propertyId)
+      }
+    });
+
+    return detail;
+  }
+
+  @Get("sessions/:sessionId")
+  @Roles("agent", "broker", "manager", "admin")
+  getSession(
+    @TenantId() tenantId: string,
+    @Param("sessionId") sessionId: string
+  ): Promise<ConciergeSessionDetailResponse> {
+    return this.concierge.getSession(tenantId, sessionId);
   }
 }
