@@ -44,7 +44,13 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       conciergeTrainingDatasetRows,
       conciergeTrainingLabeledRows,
       conciergeRecommendationsByArea,
-      conciergeFeedbackByRating
+      conciergeFeedbackByRating,
+      rejectedJobEnqueues,
+      blockedAiActions,
+      imageDeletePreviews,
+      imageRemovals,
+      rejectedJobsByName,
+      blockedAiActionsByName
     ] = await Promise.all([
       this.count("select count(*) from properties where tenant_id = $1", [tenantId]),
       this.count("select count(*) from properties where tenant_id = $1 and status = 'available'", [tenantId]),
@@ -121,6 +127,51 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.bucket(
         "select rating as bucket, count(*) from concierge_feedback where tenant_id = $1 group by rating order by count(*) desc, rating asc",
         [tenantId]
+      ),
+      this.count("select count(*) from audit_events where tenant_id = $1 and action = 'job.enqueue_rejected'", [tenantId]),
+      this.count(
+        `
+          select count(*)
+          from audit_events event
+          cross join lateral jsonb_array_elements(coalesce(event.metadata->'actionPolicy', '[]'::jsonb)) policy
+          where event.tenant_id = $1
+            and event.action = 'property.ai_assistant'
+            and policy->>'decision' = 'blocked'
+        `,
+        [tenantId]
+      ),
+      this.count("select count(*) from audit_events where tenant_id = $1 and action = 'property.image_delete_previewed'", [
+        tenantId
+      ]),
+      this.count("select count(*) from audit_events where tenant_id = $1 and action = 'property.image_removed'", [
+        tenantId
+      ]),
+      this.bucket(
+        `
+          select coalesce(metadata->>'name', resource_id, 'unknown') as bucket, count(*)
+          from audit_events
+          where tenant_id = $1
+            and action = 'job.enqueue_rejected'
+          group by bucket
+          order by count(*) desc, bucket asc
+          limit 10
+        `,
+        [tenantId]
+      ),
+      this.bucket(
+        `
+          select policy->>'action' as bucket, count(*)
+          from audit_events event
+          cross join lateral jsonb_array_elements(coalesce(event.metadata->'actionPolicy', '[]'::jsonb)) policy
+          where event.tenant_id = $1
+            and event.action = 'property.ai_assistant'
+            and policy->>'decision' = 'blocked'
+            and policy->>'action' is not null
+          group by bucket
+          order by count(*) desc, bucket asc
+          limit 10
+        `,
+        [tenantId]
       )
     ]);
 
@@ -150,7 +201,13 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       conciergeTrainingDatasetRows,
       conciergeTrainingLabeledRows,
       conciergeRecommendationsByArea,
-      conciergeFeedbackByRating
+      conciergeFeedbackByRating,
+      rejectedJobEnqueues,
+      blockedAiActions,
+      imageDeletePreviews,
+      imageRemovals,
+      rejectedJobsByName,
+      blockedAiActionsByName
     };
   }
 

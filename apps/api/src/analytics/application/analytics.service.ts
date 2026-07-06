@@ -11,6 +11,12 @@ export class AnalyticsService {
     const {
       conciergePositiveFeedbackCount,
       conciergeTrainingLabeledRows,
+      rejectedJobEnqueues,
+      blockedAiActions,
+      imageDeletePreviews,
+      imageRemovals,
+      rejectedJobsByName,
+      blockedAiActionsByName,
       ...publicMetrics
     } = metrics;
     const closedLeads = metrics.wonLeads + metrics.lostLeads;
@@ -31,6 +37,14 @@ export class AnalyticsService {
         metrics.conciergeTrainingDatasetRows > 0
           ? Math.round((conciergeTrainingLabeledRows / metrics.conciergeTrainingDatasetRows) * 10_000) / 100
           : 0,
+      security: {
+        rejectedJobEnqueues,
+        blockedAiActions,
+        imageDeletePreviews,
+        imageRemovals,
+        rejectedJobsByName,
+        blockedAiActionsByName
+      },
       generatedAt: new Date().toISOString()
     };
   }

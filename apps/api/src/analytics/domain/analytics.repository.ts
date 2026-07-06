@@ -29,6 +29,12 @@ export interface TenantAnalyticsRawMetrics {
   conciergeTrainingLabeledRows: number;
   conciergeRecommendationsByArea: CountByBucket[];
   conciergeFeedbackByRating: CountByBucket[];
+  rejectedJobEnqueues: number;
+  blockedAiActions: number;
+  imageDeletePreviews: number;
+  imageRemovals: number;
+  rejectedJobsByName: CountByBucket[];
+  blockedAiActionsByName: CountByBucket[];
 }
 
 export interface AnalyticsRepository {

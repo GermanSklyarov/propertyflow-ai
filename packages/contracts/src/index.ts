@@ -1031,6 +1031,15 @@ export interface CountByBucket {
   count: number;
 }
 
+export interface TenantSecurityDashboardMetrics {
+  rejectedJobEnqueues: number;
+  blockedAiActions: number;
+  imageDeletePreviews: number;
+  imageRemovals: number;
+  rejectedJobsByName: CountByBucket[];
+  blockedAiActionsByName: CountByBucket[];
+}
+
 export interface TenantDashboardMetrics {
   tenantId: string;
   totalProperties: number;
@@ -1062,6 +1071,7 @@ export interface TenantDashboardMetrics {
   conciergeTrainingLabelCoverageRate: number;
   conciergeRecommendationsByArea: CountByBucket[];
   conciergeFeedbackByRating: CountByBucket[];
+  security: TenantSecurityDashboardMetrics;
   generatedAt: string;
 }
 
