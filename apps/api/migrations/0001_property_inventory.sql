@@ -126,7 +126,8 @@ create table if not exists property_images (
   original_filename text,
   caption text,
   position integer not null default 0,
-  created_at timestamptz not null
+  created_at timestamptz not null,
+  deleted_at timestamptz
 );
 
 alter table property_images add column if not exists bucket text;
@@ -134,9 +135,26 @@ alter table property_images add column if not exists object_key text;
 alter table property_images add column if not exists mime_type text;
 alter table property_images add column if not exists size_bytes integer;
 alter table property_images add column if not exists original_filename text;
+alter table property_images add column if not exists deleted_at timestamptz;
 
 create index if not exists idx_property_images_property on property_images (tenant_id, property_id, position, created_at);
 create index if not exists idx_property_images_object_key on property_images (tenant_id, object_key);
+
+create table if not exists property_image_delete_confirmations (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid not null references properties(id) on delete cascade,
+  image_id uuid not null,
+  token_hash text not null unique,
+  requested_by_user_id text,
+  expires_at timestamptz not null,
+  consumed_at timestamptz,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_property_image_delete_confirmations_lookup
+  on property_image_delete_confirmations (tenant_id, property_id, image_id, expires_at)
+  where consumed_at is null;
 
 create table if not exists property_status_events (
   id uuid primary key,

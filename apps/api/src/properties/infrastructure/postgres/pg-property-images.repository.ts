@@ -2,7 +2,12 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { PropertyImageSnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { AddPropertyImageInput, PropertyImagesRepository } from "../../domain/property-images.repository.js";
+import type {
+  AddPropertyImageInput,
+  ConsumePropertyImageDeleteConfirmationInput,
+  PropertyImageDeleteConfirmationInput,
+  PropertyImagesRepository
+} from "../../domain/property-images.repository.js";
 
 interface PropertyImageRow {
   id: string;
@@ -17,6 +22,11 @@ interface PropertyImageRow {
   caption: string | null;
   position: number;
   created_at: Date;
+  deleted_at: Date | null;
+}
+
+interface ConsumeConfirmationRow {
+  id: string;
 }
 
 @Injectable()
@@ -57,7 +67,7 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
           )),
           $12
         )
-        returning id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at
+        returning id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
       `,
       [
         crypto.randomUUID(),
@@ -78,12 +88,62 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
     return this.toSnapshot(result.rows[0]);
   }
 
+  async createDeleteConfirmation(input: PropertyImageDeleteConfirmationInput): Promise<void> {
+    await this.pool.query(
+      `
+        insert into property_image_delete_confirmations (
+          id,
+          tenant_id,
+          property_id,
+          image_id,
+          token_hash,
+          requested_by_user_id,
+          expires_at,
+          created_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8
+        )
+      `,
+      [
+        crypto.randomUUID(),
+        input.tenantId,
+        input.propertyId,
+        input.imageId,
+        input.tokenHash,
+        input.requestedByUserId ?? null,
+        input.expiresAt.toISOString(),
+        new Date().toISOString()
+      ]
+    );
+  }
+
+  async findById(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
+    const result = await this.pool.query<PropertyImageRow>(
+      `
+        select id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
+        from property_images
+        where tenant_id = $1 and property_id = $2 and id = $3 and deleted_at is null
+        limit 1
+      `,
+      [tenantId, propertyId, imageId]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async listByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]> {
     const result = await this.pool.query<PropertyImageRow>(
       `
-        select id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at
+        select id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
         from property_images
-        where tenant_id = $1 and property_id = $2
+        where tenant_id = $1 and property_id = $2 and deleted_at is null
         order by position asc, created_at asc
       `,
       [tenantId, propertyId]
@@ -92,14 +152,35 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
     return result.rows.map((row) => this.toSnapshot(row));
   }
 
+  async consumeDeleteConfirmation(input: ConsumePropertyImageDeleteConfirmationInput): Promise<boolean> {
+    const result = await this.pool.query<ConsumeConfirmationRow>(
+      `
+        update property_image_delete_confirmations
+        set consumed_at = $5
+        where tenant_id = $1
+          and property_id = $2
+          and image_id = $3
+          and token_hash = $4
+          and consumed_at is null
+          and expires_at > $5
+        returning id
+      `,
+      [input.tenantId, input.propertyId, input.imageId, input.tokenHash, new Date().toISOString()]
+    );
+
+    return result.rowCount === 1;
+  }
+
   async remove(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
     const result = await this.pool.query<PropertyImageRow>(
       `
-        delete from property_images
+        update property_images
+        set deleted_at = $4
         where tenant_id = $1 and property_id = $2 and id = $3
-        returning id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at
+          and deleted_at is null
+        returning id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
       `,
-      [tenantId, propertyId, imageId]
+      [tenantId, propertyId, imageId, new Date().toISOString()]
     );
 
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
@@ -118,7 +199,8 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
       originalFilename: row.original_filename ?? undefined,
       caption: row.caption ?? undefined,
       position: row.position,
-      createdAt: row.created_at.toISOString()
+      createdAt: row.created_at.toISOString(),
+      deletedAt: row.deleted_at?.toISOString()
     };
   }
 }

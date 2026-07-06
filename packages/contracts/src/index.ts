@@ -99,6 +99,7 @@ export type AuditAction =
   | "property.ai_search"
   | "property.compared"
   | "property.image_added"
+  | "property.image_delete_previewed"
   | "property.image_removed"
   | "property.published"
   | "property.price_recommendation_feedback"
@@ -209,6 +210,19 @@ export interface PropertyImageSnapshot {
   caption?: string;
   position: number;
   createdAt: string;
+  deletedAt?: string;
+}
+
+export interface PropertyImageDeletePreviewResponse {
+  propertyId: string;
+  image: PropertyImageSnapshot;
+  confirmationToken: string;
+  expiresAt: string;
+  warnings: string[];
+}
+
+export interface ConfirmPropertyImageDeleteRequest {
+  confirmationToken: string;
 }
 
 export interface AddPropertyImageRequest {

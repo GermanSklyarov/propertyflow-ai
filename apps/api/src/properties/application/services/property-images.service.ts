@@ -1,9 +1,12 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { createHash, randomBytes } from "node:crypto";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   AddPropertyImageRequest,
+  ConfirmPropertyImageDeleteRequest,
   ConfirmPropertyImageUploadRequest,
   CreatePropertyImageUploadRequest,
   CreatePropertyImageUploadResponse,
+  PropertyImageDeletePreviewResponse,
   PropertyImageGalleryResponse,
   PropertyImageSnapshot
 } from "@propertyflow/contracts";
@@ -87,8 +90,66 @@ export class PropertyImagesService {
     });
   }
 
-  async removeImage(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
+  async createDeletePreview(
+    tenantId: string,
+    propertyId: string,
+    imageId: string,
+    requestedByUserId?: string
+  ): Promise<PropertyImageDeletePreviewResponse> {
     await this.ensurePropertyExists(tenantId, propertyId);
+
+    const image = await this.images.findById(tenantId, propertyId, imageId);
+
+    if (!image) {
+      throw new NotFoundException("Property image not found");
+    }
+
+    const confirmationToken = randomBytes(32).toString("base64url");
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
+    await this.images.createDeleteConfirmation({
+      tenantId,
+      propertyId,
+      imageId,
+      tokenHash: this.hashToken(confirmationToken),
+      requestedByUserId,
+      expiresAt
+    });
+
+    return {
+      propertyId,
+      image,
+      confirmationToken,
+      expiresAt: expiresAt.toISOString(),
+      warnings: [
+        "This token authorizes a destructive image delete for the exact tenant, property, and image.",
+        "Do not pass this token to autonomous AI tools without an explicit human confirmation step."
+      ]
+    };
+  }
+
+  async removeImage(
+    tenantId: string,
+    propertyId: string,
+    imageId: string,
+    request: ConfirmPropertyImageDeleteRequest
+  ): Promise<PropertyImageSnapshot> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    if (!request.confirmationToken) {
+      throw new BadRequestException("Valid image delete confirmation token is required");
+    }
+
+    const confirmed = await this.images.consumeDeleteConfirmation({
+      tenantId,
+      propertyId,
+      imageId,
+      tokenHash: this.hashToken(request.confirmationToken)
+    });
+
+    if (!confirmed) {
+      throw new BadRequestException("Valid image delete confirmation token is required");
+    }
 
     const image = await this.images.remove(tenantId, propertyId, imageId);
 
@@ -115,5 +176,9 @@ export class PropertyImagesService {
     const normalized = filename.trim().replace(/[^a-zA-Z0-9._-]/g, "-");
 
     return normalized || "image";
+  }
+
+  private hashToken(token: string): string {
+    return createHash("sha256").update(token).digest("hex");
   }
 }

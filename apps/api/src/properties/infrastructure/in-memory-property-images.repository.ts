@@ -1,10 +1,21 @@
 import { Injectable } from "@nestjs/common";
 import type { PropertyImageSnapshot } from "@propertyflow/contracts";
-import type { AddPropertyImageInput, PropertyImagesRepository } from "../domain/property-images.repository.js";
+import type {
+  AddPropertyImageInput,
+  ConsumePropertyImageDeleteConfirmationInput,
+  PropertyImageDeleteConfirmationInput,
+  PropertyImagesRepository
+} from "../domain/property-images.repository.js";
+
+interface InMemoryDeleteConfirmation {
+  input: PropertyImageDeleteConfirmationInput;
+  consumedAt?: string;
+}
 
 @Injectable()
 export class InMemoryPropertyImagesRepository implements PropertyImagesRepository {
   private readonly images = new Map<string, PropertyImageSnapshot[]>();
+  private readonly confirmations = new Map<string, InMemoryDeleteConfirmation>();
 
   async add(input: AddPropertyImageInput): Promise<PropertyImageSnapshot> {
     const key = this.key(input.tenantId, input.propertyId);
@@ -29,10 +40,41 @@ export class InMemoryPropertyImagesRepository implements PropertyImagesRepositor
     return image;
   }
 
-  async listByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]> {
-    return [...(this.images.get(this.key(tenantId, propertyId)) ?? [])].sort(
-      (left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt)
+  async createDeleteConfirmation(input: PropertyImageDeleteConfirmationInput): Promise<void> {
+    this.confirmations.set(input.tokenHash, { input });
+  }
+
+  async findById(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
+    return (
+      (this.images.get(this.key(tenantId, propertyId)) ?? []).find(
+        (item) => item.id === imageId && !item.deletedAt
+      ) ?? null
     );
+  }
+
+  async listByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]> {
+    return [...(this.images.get(this.key(tenantId, propertyId)) ?? [])]
+      .filter((image) => !image.deletedAt)
+      .sort((left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt));
+  }
+
+  async consumeDeleteConfirmation(input: ConsumePropertyImageDeleteConfirmationInput): Promise<boolean> {
+    const confirmation = this.confirmations.get(input.tokenHash);
+    const now = new Date();
+
+    if (
+      !confirmation ||
+      confirmation.consumedAt ||
+      confirmation.input.tenantId !== input.tenantId ||
+      confirmation.input.propertyId !== input.propertyId ||
+      confirmation.input.imageId !== input.imageId ||
+      confirmation.input.expiresAt <= now
+    ) {
+      return false;
+    }
+
+    confirmation.consumedAt = now.toISOString();
+    return true;
   }
 
   async remove(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
@@ -44,10 +86,7 @@ export class InMemoryPropertyImagesRepository implements PropertyImagesRepositor
       return null;
     }
 
-    this.images.set(
-      key,
-      existing.filter((item) => item.id !== imageId)
-    );
+    image.deletedAt = new Date().toISOString();
 
     return image;
   }

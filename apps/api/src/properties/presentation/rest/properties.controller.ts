@@ -12,6 +12,7 @@ import type {
   PricingTrainingDatasetResponse,
   PropertyAiAssets,
   PropertyComparisonResponse,
+  PropertyImageDeletePreviewResponse,
   PropertyImageGalleryResponse,
   PropertyImageSnapshot,
   PropertyPriceHistory,
@@ -56,6 +57,7 @@ import { PropertyImagesService } from "../../application/services/property-image
 import { PropertyPublicationService } from "../../application/services/property-publication.service.js";
 import { RentalYieldService } from "../../application/services/rental-yield.service.js";
 import { AddPropertyImageDto } from "./add-property-image.dto.js";
+import { ConfirmPropertyImageDeleteDto } from "./confirm-property-image-delete.dto.js";
 import { ConfirmPropertyImageUploadDto } from "./confirm-property-image-upload.dto.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
@@ -610,15 +612,42 @@ export class PropertiesController {
     return image;
   }
 
+  @Post(":propertyId/images/:imageId/delete-preview")
+  @Roles("agent", "broker", "manager", "admin")
+  async previewImageDelete(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("imageId") imageId: string
+  ): Promise<PropertyImageDeletePreviewResponse> {
+    const preview = await this.propertyImages.createDeletePreview(tenantId, propertyId, imageId, user.id);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.image_delete_previewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        imageId: preview.image.id,
+        imageUrl: preview.image.imageUrl,
+        expiresAt: preview.expiresAt
+      }
+    });
+
+    return preview;
+  }
+
   @Delete(":propertyId/images/:imageId")
   @Roles("agent", "broker", "manager", "admin")
   async removeImage(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
     @Param("propertyId") propertyId: string,
-    @Param("imageId") imageId: string
+    @Param("imageId") imageId: string,
+    @Body() payload: ConfirmPropertyImageDeleteDto
   ): Promise<PropertyImageSnapshot> {
-    const image = await this.propertyImages.removeImage(tenantId, propertyId, imageId);
+    const image = await this.propertyImages.removeImage(tenantId, propertyId, imageId, payload);
 
     const job = await this.jobs.enqueue("properties.search.index", {
       tenantId,
