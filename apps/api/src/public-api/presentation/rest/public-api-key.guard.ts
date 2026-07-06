@@ -29,6 +29,7 @@ export class PublicApiKeyGuard implements CanActivate {
     }
 
     request.publicApiKey = apiKey;
+    await this.apiKeys.assertWithinMonthlyRequestLimit(apiKey);
     await this.apiKeys.recordUsage(apiKey, `${request.method ?? "GET"} ${request.url ?? "unknown"}`);
 
     return true;

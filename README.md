@@ -401,7 +401,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`.
 
-Public API v1 uses the `x-api-key` header. It is read-only for properties and supports lead intake. Local development seeds this demo key:
+Public API v1 uses the `x-api-key` header. It is read-only for properties and supports lead intake. Successful requests are counted against `publicApiRequestsMonthly`; once the tenant reaches its monthly limit the API returns `429 Public API monthly request limit exceeded`. Local development seeds this demo key:
 
 ```txt
 pf_demo_public_key

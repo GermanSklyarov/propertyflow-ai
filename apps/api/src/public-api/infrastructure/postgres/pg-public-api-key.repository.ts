@@ -3,7 +3,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { PublicApiKeySnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { PublicApiKeyRepository } from "../../domain/public-api-key.repository.js";
+import type { PublicApiKeyRepository, PublicApiMonthlyUsage } from "../../domain/public-api-key.repository.js";
 
 interface PublicApiKeyRow {
   id: string;
@@ -14,6 +14,11 @@ interface PublicApiKeyRow {
   scopes: string[];
   created_at: Date;
   last_used_at: Date | null;
+}
+
+interface PublicApiUsageRow {
+  used: string;
+  monthly_limit: string;
 }
 
 @Injectable()
@@ -43,6 +48,34 @@ export class PgPublicApiKeyRepository implements PublicApiKeyRepository {
       `,
       [apiKeyId]
     );
+  }
+
+  async getPublicApiMonthlyUsage(
+    tenantId: string,
+    periodStart: Date,
+    periodEnd: Date
+  ): Promise<PublicApiMonthlyUsage> {
+    const result = await this.pool.query<PublicApiUsageRow>(
+      `
+        select
+          coalesce(sum(event.quantity), 0) as used,
+          coalesce((tenant.limits->>'publicApiRequestsMonthly')::integer, 0) as monthly_limit
+        from tenants tenant
+        left join tenant_usage_events event
+          on event.tenant_id = tenant.id
+          and event.event_type = 'public-api.request'
+          and event.created_at >= $2
+          and event.created_at < $3
+        where tenant.id = $1
+        group by tenant.limits
+      `,
+      [tenantId, periodStart.toISOString(), periodEnd.toISOString()]
+    );
+
+    return {
+      used: Number(result.rows[0]?.used ?? 0),
+      limit: Number(result.rows[0]?.monthly_limit ?? 0)
+    };
   }
 
   async recordUsage(tenantId: string, apiKeyId: string, route: string): Promise<void> {
