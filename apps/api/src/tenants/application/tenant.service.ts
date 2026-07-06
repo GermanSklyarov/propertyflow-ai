@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { TenantSnapshot } from "@propertyflow/contracts";
+import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
 
 @Injectable()
@@ -25,5 +25,14 @@ export class TenantService {
 
     return tenant;
   }
-}
 
+  async updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot> {
+    const tenant = await this.tenants.updateSettings(tenantId, request);
+
+    if (!tenant) {
+      throw new NotFoundException("Tenant not found");
+    }
+
+    return tenant;
+  }
+}

@@ -6,6 +6,10 @@ create table if not exists tenants (
   slug text not null unique,
   status text not null,
   primary_market text,
+  custom_domain text,
+  domain_status text not null default 'not-configured',
+  subscription_plan text not null default 'starter',
+  limits jsonb not null default '{"properties":100,"agents":5,"aiCreditsMonthly":1000,"publicApiRequestsMonthly":10000}'::jsonb,
   branding_display_name text not null,
   branding_primary_color text,
   branding_logo_url text,
@@ -13,12 +17,22 @@ create table if not exists tenants (
   updated_at timestamptz not null
 );
 
+alter table tenants add column if not exists custom_domain text;
+alter table tenants add column if not exists domain_status text not null default 'not-configured';
+alter table tenants add column if not exists subscription_plan text not null default 'starter';
+alter table tenants add column if not exists limits jsonb not null default '{"properties":100,"agents":5,"aiCreditsMonthly":1000,"publicApiRequestsMonthly":10000}'::jsonb;
+create unique index if not exists idx_tenants_custom_domain on tenants (custom_domain) where custom_domain is not null;
+
 insert into tenants (
   id,
   name,
   slug,
   status,
   primary_market,
+  custom_domain,
+  domain_status,
+  subscription_plan,
+  limits,
   branding_display_name,
   branding_primary_color,
   branding_logo_url,
@@ -30,6 +44,10 @@ insert into tenants (
   'demo-agency',
   'active',
   'pattaya',
+  null,
+  'not-configured',
+  'growth',
+  '{"properties":500,"agents":25,"aiCreditsMonthly":10000,"publicApiRequestsMonthly":100000}'::jsonb,
   'Demo Agency',
   '#0f766e',
   null,

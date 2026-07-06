@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Patch, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type { RequestUser, TenantSnapshot } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
@@ -8,6 +8,8 @@ import { RolesGuard } from "../../../shared/auth/roles.guard.js";
 import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { Tenant } from "../../../shared/presentation/tenant.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
+import { TenantService } from "../../application/tenant.service.js";
+import { UpdateTenantSettingsDto } from "./update-tenant-settings.dto.js";
 
 @Controller("tenants")
 @ApiTags("tenants")
@@ -16,7 +18,10 @@ import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 @ApiHeader({ name: "x-user-role", required: true })
 @UseGuards(TenantGuard, UserContextGuard, RolesGuard)
 export class CurrentTenantController {
-  constructor(@Inject(AuditService) private readonly audit: AuditService) {}
+  constructor(
+    @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(TenantService) private readonly tenants: TenantService
+  ) {}
 
   @Get("current")
   @Roles("agent", "broker", "manager", "admin")
@@ -34,5 +39,31 @@ export class CurrentTenantController {
     });
 
     return tenant;
+  }
+
+  @Patch("current/settings")
+  @Roles("manager", "admin")
+  async updateSettings(
+    @Tenant() tenant: TenantSnapshot,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: UpdateTenantSettingsDto
+  ): Promise<TenantSnapshot> {
+    const updated = await this.tenants.updateSettings(tenant.id, payload);
+
+    await this.audit.record({
+      tenantId: tenant.id,
+      user,
+      action: "tenant.settings_updated",
+      resourceType: "tenant",
+      resourceId: tenant.id,
+      metadata: {
+        primaryMarket: updated.primaryMarket,
+        customDomain: updated.customDomain,
+        domainStatus: updated.domainStatus,
+        branding: updated.branding
+      }
+    });
+
+    return updated;
   }
 }

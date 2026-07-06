@@ -13,6 +13,15 @@ export interface TenantSnapshot {
   slug: string;
   status: "active" | "suspended";
   primaryMarket?: ThailandMarket;
+  customDomain?: string;
+  domainStatus?: "not-configured" | "pending-verification" | "verified";
+  subscriptionPlan: "starter" | "growth" | "enterprise";
+  limits: {
+    properties: number;
+    agents: number;
+    aiCreditsMonthly: number;
+    publicApiRequestsMonthly: number;
+  };
   branding: {
     displayName: string;
     primaryColor?: string;
@@ -20,6 +29,16 @@ export interface TenantSnapshot {
   };
   createdAt: string;
   updatedAt: string;
+}
+
+export interface UpdateTenantSettingsRequest {
+  primaryMarket?: ThailandMarket;
+  customDomain?: string;
+  branding?: {
+    displayName?: string;
+    primaryColor?: string;
+    logoUrl?: string;
+  };
 }
 
 export type UserRole = "agent" | "broker" | "manager" | "admin";
@@ -69,6 +88,7 @@ export type AuditAction =
   | "property.price_updated"
   | "property.status_changed"
   | "tenant.current_viewed"
+  | "tenant.settings_updated"
   | "lead.created"
   | "lead.assigned"
   | "job.enqueued";
