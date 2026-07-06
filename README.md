@@ -96,6 +96,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
+- `GET /analytics/security-events`
 - `GET /audit/events`
 - `POST /chat`
 - `POST /concierge/advise`
@@ -250,6 +251,7 @@ Current protected routes:
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
+- `GET /analytics/security-events`
 - `GET /jobs`
 - `POST /jobs`
 - `GET /tenants/current`
@@ -406,6 +408,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 `GET /tenants/current` returns the active tenant workspace, branding, status, primary market, custom domain state, subscription plan, and usage limits for the supplied `x-tenant-id`. `GET /tenants/current/usage` returns current-month usage versus plan limits for properties, active users, AI-credit events, and public API requests. `PATCH /tenants/current/settings` lets managers/admins update branding, primary market, and custom domain; a new custom domain is marked `pending-verification`.
 
 `GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, search volume, average search latency, searches by source, top search queries, attributed leads, search-to-lead conversion rate, lead attribution by search source/query, basic conversion rate, AI Concierge adoption, Concierge lead conversion, feedback quality, recommendation areas, training label coverage, and a `security` block with rejected job enqueue attempts, blocked AI actions, image delete previews, image removals, rejected jobs by name, and blocked AI actions by name.
+
+`GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals.
 
 Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`.
 

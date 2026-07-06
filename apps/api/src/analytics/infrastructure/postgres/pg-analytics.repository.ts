@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CountByBucket } from "@propertyflow/contracts";
+import type { CountByBucket, TenantSecurityEventSnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { AnalyticsRepository, TenantAnalyticsRawMetrics } from "../../domain/analytics.repository.js";
@@ -11,6 +11,22 @@ interface CountRow {
 interface BucketRow {
   bucket: string;
   count: string;
+}
+
+interface SecurityEventRow {
+  id: string;
+  audit_event_id: string;
+  tenant_id: string;
+  kind: TenantSecurityEventSnapshot["kind"];
+  severity: TenantSecurityEventSnapshot["severity"];
+  action: TenantSecurityEventSnapshot["action"];
+  user_id: string | null;
+  user_role: TenantSecurityEventSnapshot["userRole"] | null;
+  resource_type: TenantSecurityEventSnapshot["resourceType"];
+  resource_id: string | null;
+  message: string;
+  metadata: Record<string, unknown>;
+  created_at: Date;
 }
 
 @Injectable()
@@ -211,6 +227,106 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
     };
   }
 
+  async listSecurityEvents(tenantId: string, limit: number): Promise<TenantSecurityEventSnapshot[]> {
+    const boundedLimit = Math.min(Math.max(limit, 1), 100);
+    const result = await this.pool.query<SecurityEventRow>(
+      `
+        select *
+        from (
+          select
+            event.id || ':job-rejected' as id,
+            event.id as audit_event_id,
+            event.tenant_id,
+            'rejected-job-enqueue' as kind,
+            'warning' as severity,
+            event.action,
+            event.user_id,
+            event.user_role,
+            event.resource_type,
+            event.resource_id,
+            'Background job enqueue rejected by policy' as message,
+            event.metadata,
+            event.created_at
+          from audit_events event
+          where event.tenant_id = $1
+            and event.action = 'job.enqueue_rejected'
+
+          union all
+
+          select
+            event.id || ':blocked-ai-action:' || coalesce(policy->>'action', 'unknown') as id,
+            event.id as audit_event_id,
+            event.tenant_id,
+            'blocked-ai-action' as kind,
+            case when policy->>'risk' = 'destructive' then 'critical' else 'warning' end as severity,
+            event.action,
+            event.user_id,
+            event.user_role,
+            event.resource_type,
+            event.resource_id,
+            'AI action blocked by policy' as message,
+            jsonb_build_object(
+              'blockedAction', policy->>'action',
+              'risk', policy->>'risk',
+              'reason', policy->>'reason',
+              'decision', policy->>'decision'
+            ) as metadata,
+            event.created_at
+          from audit_events event
+          cross join lateral jsonb_array_elements(coalesce(event.metadata->'actionPolicy', '[]'::jsonb)) policy
+          where event.tenant_id = $1
+            and event.action = 'property.ai_assistant'
+            and policy->>'decision' = 'blocked'
+
+          union all
+
+          select
+            event.id || ':image-delete-previewed' as id,
+            event.id as audit_event_id,
+            event.tenant_id,
+            'image-delete-previewed' as kind,
+            'info' as severity,
+            event.action,
+            event.user_id,
+            event.user_role,
+            event.resource_type,
+            event.resource_id,
+            'Image delete preview token created' as message,
+            event.metadata,
+            event.created_at
+          from audit_events event
+          where event.tenant_id = $1
+            and event.action = 'property.image_delete_previewed'
+
+          union all
+
+          select
+            event.id || ':image-removed' as id,
+            event.id as audit_event_id,
+            event.tenant_id,
+            'image-removed' as kind,
+            'warning' as severity,
+            event.action,
+            event.user_id,
+            event.user_role,
+            event.resource_type,
+            event.resource_id,
+            'Property image removed after confirmation' as message,
+            event.metadata,
+            event.created_at
+          from audit_events event
+          where event.tenant_id = $1
+            and event.action = 'property.image_removed'
+        ) security_events
+        order by created_at desc
+        limit $2
+      `,
+      [tenantId, boundedLimit]
+    );
+
+    return result.rows.map((row) => this.toSecurityEvent(row));
+  }
+
   private async count(sql: string, values: unknown[]): Promise<number> {
     const result = await this.pool.query<CountRow>(sql, values);
     return Number(result.rows[0]?.count ?? 0);
@@ -228,5 +344,23 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
   private async average(sql: string, values: unknown[]): Promise<number> {
     const result = await this.pool.query<CountRow>(sql, values);
     return Math.round(Number(result.rows[0]?.count ?? 0));
+  }
+
+  private toSecurityEvent(row: SecurityEventRow): TenantSecurityEventSnapshot {
+    return {
+      id: row.id,
+      auditEventId: row.audit_event_id,
+      tenantId: row.tenant_id,
+      kind: row.kind,
+      severity: row.severity,
+      action: row.action,
+      userId: row.user_id ?? undefined,
+      userRole: row.user_role ?? undefined,
+      resourceType: row.resource_type,
+      resourceId: row.resource_id ?? undefined,
+      message: row.message,
+      metadata: row.metadata,
+      createdAt: row.created_at.toISOString()
+    };
   }
 }

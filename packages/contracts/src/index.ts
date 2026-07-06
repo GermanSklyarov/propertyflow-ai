@@ -1040,6 +1040,36 @@ export interface TenantSecurityDashboardMetrics {
   blockedAiActionsByName: CountByBucket[];
 }
 
+export type TenantSecurityEventKind =
+  | "rejected-job-enqueue"
+  | "blocked-ai-action"
+  | "image-delete-previewed"
+  | "image-removed";
+
+export type TenantSecurityEventSeverity = "info" | "warning" | "critical";
+
+export interface TenantSecurityEventSnapshot {
+  id: string;
+  auditEventId: string;
+  tenantId: string;
+  kind: TenantSecurityEventKind;
+  severity: TenantSecurityEventSeverity;
+  action: AuditAction;
+  userId?: string;
+  userRole?: UserRole;
+  resourceType: AuditEventSnapshot["resourceType"];
+  resourceId?: string;
+  message: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface TenantSecurityEventsResponse {
+  items: TenantSecurityEventSnapshot[];
+  total: number;
+  limit: number;
+}
+
 export interface TenantDashboardMetrics {
   tenantId: string;
   totalProperties: number;

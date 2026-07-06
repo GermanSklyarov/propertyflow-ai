@@ -1,4 +1,4 @@
-import type { CountByBucket } from "@propertyflow/contracts";
+import type { CountByBucket, TenantSecurityEventSnapshot } from "@propertyflow/contracts";
 
 export const ANALYTICS_REPOSITORY = Symbol("ANALYTICS_REPOSITORY");
 
@@ -39,4 +39,5 @@ export interface TenantAnalyticsRawMetrics {
 
 export interface AnalyticsRepository {
   getTenantMetrics(tenantId: string): Promise<TenantAnalyticsRawMetrics>;
+  listSecurityEvents(tenantId: string, limit: number): Promise<TenantSecurityEventSnapshot[]>;
 }
