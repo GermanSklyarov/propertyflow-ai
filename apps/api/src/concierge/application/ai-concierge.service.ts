@@ -11,12 +11,16 @@ import type {
   ConciergeSessionListResponse,
   ConciergeSessionMessageSnapshot,
   ConciergeSessionSnapshot,
+  CreateLeadFromConciergeSessionRequest,
   CreateConciergeSessionRequest,
+  LeadSnapshot,
+  RequestUser,
   ListConciergeSessionsRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../database/database.constants.js";
+import { LeadService } from "../../leads/application/lead.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
 
 interface ConciergeSessionRow {
@@ -46,6 +50,7 @@ interface ConciergeMessageRow {
 export class AiConciergeService {
   constructor(
     @Inject(PG_POOL) private readonly pool: Pool,
+    @Inject(LeadService) private readonly leads: LeadService,
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository
   ) {}
 
@@ -229,6 +234,34 @@ export class AiConciergeService {
     };
   }
 
+  async createLeadFromSession(
+    tenantId: string,
+    sessionId: string,
+    request: CreateLeadFromConciergeSessionRequest,
+    user: RequestUser
+  ): Promise<LeadSnapshot> {
+    const session = await this.findSession(tenantId, sessionId);
+    const preferredPropertyId = request.propertyId ?? session.latestResponse.propertyRecommendations[0]?.propertyId;
+
+    return this.leads.create(
+      tenantId,
+      {
+        propertyId: preferredPropertyId,
+        source: "ai-concierge",
+        contactName: request.contactName,
+        contactEmail: request.contactEmail,
+        contactPhone: request.contactPhone,
+        preferredLocale: session.locale,
+        assignedAgentId: request.assignedAgentId ?? user.id,
+        message: request.message ?? this.buildLeadMessage(session),
+        attributionSearchEventId: session.id,
+        attributionSearchQuery: session.latestResponse.summary,
+        attributionSearchSource: "ai"
+      },
+      user
+    );
+  }
+
   private async findSession(tenantId: string, sessionId: string): Promise<ConciergeSessionSnapshot> {
     const result = await this.pool.query<ConciergeSessionRow>(
       `
@@ -303,6 +336,31 @@ export class AiConciergeService {
       profile: row.profile,
       createdAt: row.created_at.toISOString()
     };
+  }
+
+  private buildLeadMessage(session: ConciergeSessionSnapshot): string {
+    const profile = session.profile;
+    const area = session.latestResponse.areaRecommendation?.area;
+    const topProperty = session.latestResponse.propertyRecommendations[0];
+    const profileParts = [
+      profile.market ? `market=${profile.market}` : undefined,
+      profile.budgetThb ? `budgetThb=${profile.budgetThb}` : undefined,
+      profile.purpose ? `purpose=${profile.purpose}` : undefined,
+      profile.hasChildren !== undefined ? `hasChildren=${profile.hasChildren}` : undefined,
+      profile.hasCar !== undefined ? `hasCar=${profile.hasCar}` : undefined,
+      profile.remoteWork !== undefined ? `remoteWork=${profile.remoteWork}` : undefined,
+      profile.prefersQuiet !== undefined ? `prefersQuiet=${profile.prefersQuiet}` : undefined
+    ].filter(Boolean);
+
+    return [
+      "Created from AI Concierge session.",
+      area ? `Recommended area: ${area}.` : undefined,
+      topProperty ? `Top listing: ${topProperty.title} (${topProperty.fit}, score ${topProperty.score}).` : undefined,
+      profileParts.length ? `Profile: ${profileParts.join(", ")}.` : undefined,
+      `Concierge summary: ${session.latestResponse.summary}`
+    ]
+      .filter(Boolean)
+      .join(" ");
   }
 
   private inferProfile(message: string): ConciergeProfile {

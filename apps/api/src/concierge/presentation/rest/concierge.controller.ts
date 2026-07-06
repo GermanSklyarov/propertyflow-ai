@@ -4,6 +4,7 @@ import type {
   ConciergeResponse,
   ConciergeSessionDetailResponse,
   ConciergeSessionListResponse,
+  LeadSnapshot,
   RequestUser
 } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
@@ -17,6 +18,7 @@ import { AiConciergeService } from "../../application/ai-concierge.service.js";
 import {
   AddConciergeSessionMessageDto,
   ConciergeRequestDto,
+  CreateLeadFromConciergeSessionDto,
   ListConciergeSessionsDto
 } from "./concierge.dto.js";
 
@@ -134,5 +136,31 @@ export class ConciergeController {
     @Param("sessionId") sessionId: string
   ): Promise<ConciergeSessionDetailResponse> {
     return this.concierge.getSession(tenantId, sessionId);
+  }
+
+  @Post("sessions/:sessionId/lead")
+  @Roles("agent", "broker", "manager", "admin")
+  async createLead(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("sessionId") sessionId: string,
+    @Body() payload: CreateLeadFromConciergeSessionDto
+  ): Promise<LeadSnapshot> {
+    const lead = await this.concierge.createLeadFromSession(tenantId, sessionId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "concierge.lead_created",
+      resourceType: "lead",
+      resourceId: lead.id,
+      metadata: {
+        sessionId,
+        propertyId: lead.propertyId,
+        assignedAgentId: lead.assignedAgentId
+      }
+    });
+
+    return lead;
   }
 }

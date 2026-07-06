@@ -43,6 +43,7 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "chat.asked"
   | "concierge.advised"
+  | "concierge.lead_created"
   | "concierge.message_added"
   | "concierge.session_created"
   | "knowledge.document_created"
@@ -398,6 +399,15 @@ export interface ConciergeSessionMessageSnapshot {
 export interface ConciergeSessionDetailResponse {
   session: ConciergeSessionSnapshot;
   messages: ConciergeSessionMessageSnapshot[];
+}
+
+export interface CreateLeadFromConciergeSessionRequest {
+  contactName: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  message?: string;
+  propertyId?: string;
+  assignedAgentId?: string;
 }
 
 export interface ListConciergeSessionsRequest {
@@ -773,7 +783,7 @@ export interface RentalYieldSummary {
 
 export type LeadStatus = "new" | "contacted" | "qualified" | "lost" | "won";
 
-export type LeadSource = "website" | "public-api" | "agent" | "ai-chat";
+export type LeadSource = "website" | "public-api" | "agent" | "ai-chat" | "ai-concierge";
 
 export interface CreateLeadRequest {
   propertyId?: string;

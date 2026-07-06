@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import {
+  IsEmail,
   IsBoolean,
   IsIn,
   IsInt,
@@ -8,12 +9,14 @@ import {
   IsString,
   Max,
   Min,
+  MinLength,
   ValidateNested
 } from "class-validator";
 import type {
   AddConciergeSessionMessageRequest,
   ConciergeProfile,
   ConciergeRequest,
+  CreateLeadFromConciergeSessionRequest,
   ListConciergeSessionsRequest
 } from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
@@ -115,4 +118,36 @@ export class ListConciergeSessionsDto implements ListConciergeSessionsRequest {
   @Min(1)
   @Max(100)
   limit?: number;
+}
+
+export class CreateLeadFromConciergeSessionDto implements CreateLeadFromConciergeSessionRequest {
+  @ApiProperty()
+  @IsString()
+  @MinLength(2)
+  contactName!: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  message?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  propertyId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  assignedAgentId?: string;
 }
