@@ -58,13 +58,14 @@ export class AnalyticsService {
       ...request,
       limit: boundedLimit
     };
-    const items = await this.analytics.listSecurityEvents(tenantId, filters);
+    const result = await this.analytics.listSecurityEvents(tenantId, filters);
 
     return {
-      items,
-      total: items.length,
+      items: result.items,
+      total: result.summary.total,
       limit: boundedLimit,
-      filters
+      filters,
+      summary: result.summary
     };
   }
 }

@@ -1069,6 +1069,7 @@ export interface TenantSecurityEventsResponse {
   total: number;
   limit: number;
   filters: TenantSecurityEventsRequest;
+  summary: TenantSecurityEventsSummary;
 }
 
 export interface TenantSecurityEventsRequest {
@@ -1076,6 +1077,12 @@ export interface TenantSecurityEventsRequest {
   severity?: TenantSecurityEventSeverity;
   userId?: string;
   limit?: number;
+}
+
+export interface TenantSecurityEventsSummary {
+  total: number;
+  bySeverity: CountByBucket[];
+  byKind: CountByBucket[];
 }
 
 export interface TenantDashboardMetrics {

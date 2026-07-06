@@ -2,7 +2,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import type { CountByBucket, TenantSecurityEventsRequest, TenantSecurityEventSnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { AnalyticsRepository, TenantAnalyticsRawMetrics } from "../../domain/analytics.repository.js";
+import type {
+  AnalyticsRepository,
+  TenantAnalyticsRawMetrics,
+  TenantSecurityEventsQueryResult
+} from "../../domain/analytics.repository.js";
 
 interface CountRow {
   count: string;
@@ -230,8 +234,156 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
   async listSecurityEvents(
     tenantId: string,
     request: TenantSecurityEventsRequest
-  ): Promise<TenantSecurityEventSnapshot[]> {
+  ): Promise<TenantSecurityEventsQueryResult> {
     const boundedLimit = Math.min(Math.max(request.limit ?? 50, 1), 100);
+    const { filterSql, values } = this.securityEventFilters(tenantId, request);
+    const limitValues = [...values, boundedLimit];
+    const limitPlaceholder = `$${limitValues.length}`;
+    const securityEventsSql = this.securityEventsSql();
+    const [itemsResult, total, bySeverity, byKind] = await Promise.all([
+      this.pool.query<SecurityEventRow>(
+        `
+          select *
+          from (${securityEventsSql}) security_events
+          ${filterSql}
+          order by created_at desc
+          limit ${limitPlaceholder}
+        `,
+        limitValues
+      ),
+      this.count(
+        `
+          select count(*)
+          from (${securityEventsSql}) security_events
+          ${filterSql}
+        `,
+        values
+      ),
+      this.bucket(
+        `
+          select severity as bucket, count(*)
+          from (${securityEventsSql}) security_events
+          ${filterSql}
+          group by severity
+          order by count(*) desc, severity asc
+        `,
+        values
+      ),
+      this.bucket(
+        `
+          select kind as bucket, count(*)
+          from (${securityEventsSql}) security_events
+          ${filterSql}
+          group by kind
+          order by count(*) desc, kind asc
+        `,
+        values
+      )
+    ]);
+
+    return {
+      items: itemsResult.rows.map((row) => this.toSecurityEvent(row)),
+      summary: {
+        total,
+        bySeverity,
+        byKind
+      }
+    };
+  }
+
+  private securityEventsSql(): string {
+    return `
+      select
+        event.id || ':job-rejected' as id,
+        event.id as audit_event_id,
+        event.tenant_id,
+        'rejected-job-enqueue' as kind,
+        'warning' as severity,
+        event.action,
+        event.user_id,
+        event.user_role,
+        event.resource_type,
+        event.resource_id,
+        'Background job enqueue rejected by policy' as message,
+        event.metadata,
+        event.created_at
+      from audit_events event
+      where event.tenant_id = $1
+        and event.action = 'job.enqueue_rejected'
+
+      union all
+
+      select
+        event.id || ':blocked-ai-action:' || coalesce(policy->>'action', 'unknown') as id,
+        event.id as audit_event_id,
+        event.tenant_id,
+        'blocked-ai-action' as kind,
+        case when policy->>'risk' = 'destructive' then 'critical' else 'warning' end as severity,
+        event.action,
+        event.user_id,
+        event.user_role,
+        event.resource_type,
+        event.resource_id,
+        'AI action blocked by policy' as message,
+        jsonb_build_object(
+          'blockedAction', policy->>'action',
+          'risk', policy->>'risk',
+          'reason', policy->>'reason',
+          'decision', policy->>'decision'
+        ) as metadata,
+        event.created_at
+      from audit_events event
+      cross join lateral jsonb_array_elements(coalesce(event.metadata->'actionPolicy', '[]'::jsonb)) policy
+      where event.tenant_id = $1
+        and event.action = 'property.ai_assistant'
+        and policy->>'decision' = 'blocked'
+
+      union all
+
+      select
+        event.id || ':image-delete-previewed' as id,
+        event.id as audit_event_id,
+        event.tenant_id,
+        'image-delete-previewed' as kind,
+        'info' as severity,
+        event.action,
+        event.user_id,
+        event.user_role,
+        event.resource_type,
+        event.resource_id,
+        'Image delete preview token created' as message,
+        event.metadata,
+        event.created_at
+      from audit_events event
+      where event.tenant_id = $1
+        and event.action = 'property.image_delete_previewed'
+
+      union all
+
+      select
+        event.id || ':image-removed' as id,
+        event.id as audit_event_id,
+        event.tenant_id,
+        'image-removed' as kind,
+        'warning' as severity,
+        event.action,
+        event.user_id,
+        event.user_role,
+        event.resource_type,
+        event.resource_id,
+        'Property image removed after confirmation' as message,
+        event.metadata,
+        event.created_at
+      from audit_events event
+      where event.tenant_id = $1
+        and event.action = 'property.image_removed'
+    `;
+  }
+
+  private securityEventFilters(
+    tenantId: string,
+    request: TenantSecurityEventsRequest
+  ): { filterSql: string; values: unknown[] } {
     const filters: string[] = [];
     const values: unknown[] = [tenantId];
     const addValue = (value: unknown): string => {
@@ -251,105 +403,10 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       filters.push(`user_id = ${addValue(request.userId)}`);
     }
 
-    const filterSql = filters.length ? `where ${filters.join(" and ")}` : "";
-    const limitPlaceholder = addValue(boundedLimit);
-    const result = await this.pool.query<SecurityEventRow>(
-      `
-        select *
-        from (
-          select
-            event.id || ':job-rejected' as id,
-            event.id as audit_event_id,
-            event.tenant_id,
-            'rejected-job-enqueue' as kind,
-            'warning' as severity,
-            event.action,
-            event.user_id,
-            event.user_role,
-            event.resource_type,
-            event.resource_id,
-            'Background job enqueue rejected by policy' as message,
-            event.metadata,
-            event.created_at
-          from audit_events event
-          where event.tenant_id = $1
-            and event.action = 'job.enqueue_rejected'
-
-          union all
-
-          select
-            event.id || ':blocked-ai-action:' || coalesce(policy->>'action', 'unknown') as id,
-            event.id as audit_event_id,
-            event.tenant_id,
-            'blocked-ai-action' as kind,
-            case when policy->>'risk' = 'destructive' then 'critical' else 'warning' end as severity,
-            event.action,
-            event.user_id,
-            event.user_role,
-            event.resource_type,
-            event.resource_id,
-            'AI action blocked by policy' as message,
-            jsonb_build_object(
-              'blockedAction', policy->>'action',
-              'risk', policy->>'risk',
-              'reason', policy->>'reason',
-              'decision', policy->>'decision'
-            ) as metadata,
-            event.created_at
-          from audit_events event
-          cross join lateral jsonb_array_elements(coalesce(event.metadata->'actionPolicy', '[]'::jsonb)) policy
-          where event.tenant_id = $1
-            and event.action = 'property.ai_assistant'
-            and policy->>'decision' = 'blocked'
-
-          union all
-
-          select
-            event.id || ':image-delete-previewed' as id,
-            event.id as audit_event_id,
-            event.tenant_id,
-            'image-delete-previewed' as kind,
-            'info' as severity,
-            event.action,
-            event.user_id,
-            event.user_role,
-            event.resource_type,
-            event.resource_id,
-            'Image delete preview token created' as message,
-            event.metadata,
-            event.created_at
-          from audit_events event
-          where event.tenant_id = $1
-            and event.action = 'property.image_delete_previewed'
-
-          union all
-
-          select
-            event.id || ':image-removed' as id,
-            event.id as audit_event_id,
-            event.tenant_id,
-            'image-removed' as kind,
-            'warning' as severity,
-            event.action,
-            event.user_id,
-            event.user_role,
-            event.resource_type,
-            event.resource_id,
-            'Property image removed after confirmation' as message,
-            event.metadata,
-            event.created_at
-          from audit_events event
-          where event.tenant_id = $1
-            and event.action = 'property.image_removed'
-        ) security_events
-        ${filterSql}
-        order by created_at desc
-        limit ${limitPlaceholder}
-      `,
+    return {
+      filterSql: filters.length ? `where ${filters.join(" and ")}` : "",
       values
-    );
-
-    return result.rows.map((row) => this.toSecurityEvent(row));
+    };
   }
 
   private async count(sql: string, values: unknown[]): Promise<number> {
