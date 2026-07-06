@@ -1,5 +1,12 @@
-import { Inject, Injectable } from "@nestjs/common";
-import type { TenantDashboardMetrics, TenantSecurityEventsRequest, TenantSecurityEventsResponse } from "@propertyflow/contracts";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import type {
+  AcknowledgeSecurityEventRequest,
+  AcknowledgeSecurityEventResponse,
+  RequestUser,
+  TenantDashboardMetrics,
+  TenantSecurityEventsRequest,
+  TenantSecurityEventsResponse
+} from "@propertyflow/contracts";
 import { ANALYTICS_REPOSITORY, type AnalyticsRepository } from "../domain/analytics.repository.js";
 
 @Injectable()
@@ -67,5 +74,20 @@ export class AnalyticsService {
       filters,
       summary: result.summary
     };
+  }
+
+  async acknowledgeSecurityEvent(
+    tenantId: string,
+    eventId: string,
+    request: AcknowledgeSecurityEventRequest,
+    user: RequestUser
+  ): Promise<AcknowledgeSecurityEventResponse> {
+    const event = await this.analytics.acknowledgeSecurityEvent(tenantId, eventId, request, user);
+
+    if (!event) {
+      throw new NotFoundException("Security event not found");
+    }
+
+    return { event };
   }
 }

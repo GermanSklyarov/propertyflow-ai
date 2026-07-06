@@ -268,6 +268,19 @@ create table if not exists audit_events (
 create index if not exists idx_audit_events_tenant_created on audit_events (tenant_id, created_at desc);
 create index if not exists idx_audit_events_action on audit_events (action);
 
+create table if not exists security_event_acknowledgements (
+  tenant_id text not null,
+  event_id text not null,
+  acknowledged_by_user_id text,
+  acknowledged_by_user_role text,
+  acknowledged_at timestamptz not null,
+  note text,
+  primary key (tenant_id, event_id)
+);
+
+create index if not exists idx_security_event_acknowledgements_tenant_acknowledged
+  on security_event_acknowledgements (tenant_id, acknowledged_at desc);
+
 create table if not exists concierge_sessions (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

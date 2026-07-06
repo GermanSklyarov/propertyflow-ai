@@ -1061,6 +1061,10 @@ export interface TenantSecurityEventSnapshot {
   resourceId?: string;
   message: string;
   metadata: Record<string, unknown>;
+  acknowledgedAt?: string;
+  acknowledgedByUserId?: string;
+  acknowledgedByUserRole?: UserRole;
+  acknowledgementNote?: string;
   createdAt: string;
 }
 
@@ -1083,6 +1087,14 @@ export interface TenantSecurityEventsSummary {
   total: number;
   bySeverity: CountByBucket[];
   byKind: CountByBucket[];
+}
+
+export interface AcknowledgeSecurityEventRequest {
+  note?: string;
+}
+
+export interface AcknowledgeSecurityEventResponse {
+  event: TenantSecurityEventSnapshot;
 }
 
 export interface TenantDashboardMetrics {
@@ -1129,7 +1141,8 @@ export type RealtimeEventType =
   | "property.status_changed"
   | "lead.created"
   | "lead.assigned"
-  | "security.event_detected";
+  | "security.event_detected"
+  | "security.event_acknowledged";
 
 export interface RealtimeEvent<TPayload = Record<string, unknown>> {
   type: RealtimeEventType;

@@ -1,5 +1,7 @@
 import type {
+  AcknowledgeSecurityEventRequest,
   CountByBucket,
+  RequestUser,
   TenantSecurityEventsRequest,
   TenantSecurityEventsSummary,
   TenantSecurityEventSnapshot
@@ -45,6 +47,12 @@ export interface TenantAnalyticsRawMetrics {
 export interface AnalyticsRepository {
   getTenantMetrics(tenantId: string): Promise<TenantAnalyticsRawMetrics>;
   listSecurityEvents(tenantId: string, request: TenantSecurityEventsRequest): Promise<TenantSecurityEventsQueryResult>;
+  acknowledgeSecurityEvent(
+    tenantId: string,
+    eventId: string,
+    request: AcknowledgeSecurityEventRequest,
+    user: RequestUser
+  ): Promise<TenantSecurityEventSnapshot | null>;
 }
 
 export interface TenantSecurityEventsQueryResult {

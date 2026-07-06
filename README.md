@@ -97,6 +97,7 @@ The API starts with a tenant-aware property inventory slice:
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
 - `GET /analytics/security-events`
+- `POST /analytics/security-events/:eventId/acknowledge`
 - `GET /audit/events`
 - `POST /chat`
 - `POST /concierge/advise`
@@ -156,6 +157,7 @@ Realtime v1 emits:
 - `lead.created`
 - `lead.assigned`
 - `security.event_detected`
+- `security.event_acknowledged`
 - `event`
 
 Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs through `POST /jobs`, and the worker processes them from the shared `propertyflow.jobs` queue. Direct job enqueueing is guarded by a job policy layer that checks the caller role, validates the payload against the selected job name, and rejects mismatched requests before they reach BullMQ.
@@ -253,6 +255,7 @@ Current protected routes:
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
 - `GET /analytics/security-events`
+- `POST /analytics/security-events/:eventId/acknowledge`
 - `GET /jobs`
 - `POST /jobs`
 - `GET /tenants/current`
@@ -410,7 +413,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, search volume, average search latency, searches by source, top search queries, attributed leads, search-to-lead conversion rate, lead attribution by search source/query, basic conversion rate, AI Concierge adoption, Concierge lead conversion, feedback quality, recommendation areas, training label coverage, and a `security` block with rejected job enqueue attempts, blocked AI actions, image delete previews, image removals, rejected jobs by name, and blocked AI actions by name.
 
-`GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals. It supports `kind`, `severity`, `userId`, and `limit` filters for investigation workflows, and includes a `summary` with total matches plus severity/kind buckets for the active filters. Rejected job enqueue attempts and blocked AI actions also emit realtime `security.event_detected` events.
+`GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals. It supports `kind`, `severity`, `userId`, and `limit` filters for investigation workflows, and includes a `summary` with total matches plus severity/kind buckets for the active filters. `POST /analytics/security-events/:eventId/acknowledge` marks a security event as handled with an optional note. Rejected job enqueue attempts and blocked AI actions emit realtime `security.event_detected` events; acknowledgements emit `security.event_acknowledged`.
 
 Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`.
 

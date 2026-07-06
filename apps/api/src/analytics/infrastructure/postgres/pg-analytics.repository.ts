@@ -1,5 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CountByBucket, TenantSecurityEventsRequest, TenantSecurityEventSnapshot } from "@propertyflow/contracts";
+import type {
+  AcknowledgeSecurityEventRequest,
+  CountByBucket,
+  RequestUser,
+  TenantSecurityEventsRequest,
+  TenantSecurityEventSnapshot
+} from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type {
@@ -30,6 +36,10 @@ interface SecurityEventRow {
   resource_id: string | null;
   message: string;
   metadata: Record<string, unknown>;
+  acknowledged_at: Date | null;
+  acknowledged_by_user_id: string | null;
+  acknowledged_by_user_role: TenantSecurityEventSnapshot["acknowledgedByUserRole"] | null;
+  acknowledgement_note: string | null;
   created_at: Date;
 }
 
@@ -291,6 +301,61 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
     };
   }
 
+  async acknowledgeSecurityEvent(
+    tenantId: string,
+    eventId: string,
+    request: AcknowledgeSecurityEventRequest,
+    user: RequestUser
+  ): Promise<TenantSecurityEventSnapshot | null> {
+    const existing = await this.findSecurityEventById(tenantId, eventId);
+
+    if (!existing) {
+      return null;
+    }
+
+    await this.pool.query(
+      `
+        insert into security_event_acknowledgements (
+          tenant_id,
+          event_id,
+          acknowledged_by_user_id,
+          acknowledged_by_user_role,
+          acknowledged_at,
+          note
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          now(),
+          $5
+        )
+        on conflict (tenant_id, event_id) do update
+        set acknowledged_by_user_id = excluded.acknowledged_by_user_id,
+            acknowledged_by_user_role = excluded.acknowledged_by_user_role,
+            acknowledged_at = excluded.acknowledged_at,
+            note = excluded.note
+      `,
+      [tenantId, eventId, user.id, user.role, request.note ?? null]
+    );
+
+    return this.findSecurityEventById(tenantId, eventId);
+  }
+
+  private async findSecurityEventById(tenantId: string, eventId: string): Promise<TenantSecurityEventSnapshot | null> {
+    const securityEventsSql = this.securityEventsSql();
+    const result = await this.pool.query<SecurityEventRow>(
+      `
+        select *
+        from (${securityEventsSql}) security_events
+        where id = $2
+      `,
+      [tenantId, eventId]
+    );
+
+    return result.rows[0] ? this.toSecurityEvent(result.rows[0]) : null;
+  }
+
   private securityEventsSql(): string {
     return `
       select
@@ -306,8 +371,15 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
         event.resource_id,
         'Background job enqueue rejected by policy' as message,
         event.metadata,
-        event.created_at
+        event.created_at,
+        acknowledgement.acknowledged_at,
+        acknowledgement.acknowledged_by_user_id,
+        acknowledgement.acknowledged_by_user_role,
+        acknowledgement.note as acknowledgement_note
       from audit_events event
+      left join security_event_acknowledgements acknowledgement
+        on acknowledgement.tenant_id = event.tenant_id
+        and acknowledgement.event_id = event.id || ':job-rejected'
       where event.tenant_id = $1
         and event.action = 'job.enqueue_rejected'
 
@@ -331,9 +403,16 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
           'reason', policy->>'reason',
           'decision', policy->>'decision'
         ) as metadata,
-        event.created_at
+        event.created_at,
+        acknowledgement.acknowledged_at,
+        acknowledgement.acknowledged_by_user_id,
+        acknowledgement.acknowledged_by_user_role,
+        acknowledgement.note as acknowledgement_note
       from audit_events event
       cross join lateral jsonb_array_elements(coalesce(event.metadata->'actionPolicy', '[]'::jsonb)) policy
+      left join security_event_acknowledgements acknowledgement
+        on acknowledgement.tenant_id = event.tenant_id
+        and acknowledgement.event_id = event.id || ':blocked-ai-action:' || coalesce(policy->>'action', 'unknown')
       where event.tenant_id = $1
         and event.action = 'property.ai_assistant'
         and policy->>'decision' = 'blocked'
@@ -353,8 +432,15 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
         event.resource_id,
         'Image delete preview token created' as message,
         event.metadata,
-        event.created_at
+        event.created_at,
+        acknowledgement.acknowledged_at,
+        acknowledgement.acknowledged_by_user_id,
+        acknowledgement.acknowledged_by_user_role,
+        acknowledgement.note as acknowledgement_note
       from audit_events event
+      left join security_event_acknowledgements acknowledgement
+        on acknowledgement.tenant_id = event.tenant_id
+        and acknowledgement.event_id = event.id || ':image-delete-previewed'
       where event.tenant_id = $1
         and event.action = 'property.image_delete_previewed'
 
@@ -373,8 +459,15 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
         event.resource_id,
         'Property image removed after confirmation' as message,
         event.metadata,
-        event.created_at
+        event.created_at,
+        acknowledgement.acknowledged_at,
+        acknowledgement.acknowledged_by_user_id,
+        acknowledgement.acknowledged_by_user_role,
+        acknowledgement.note as acknowledgement_note
       from audit_events event
+      left join security_event_acknowledgements acknowledgement
+        on acknowledgement.tenant_id = event.tenant_id
+        and acknowledgement.event_id = event.id || ':image-removed'
       where event.tenant_id = $1
         and event.action = 'property.image_removed'
     `;
@@ -442,6 +535,10 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       resourceId: row.resource_id ?? undefined,
       message: row.message,
       metadata: row.metadata,
+      acknowledgedAt: row.acknowledged_at?.toISOString(),
+      acknowledgedByUserId: row.acknowledged_by_user_id ?? undefined,
+      acknowledgedByUserRole: row.acknowledged_by_user_role ?? undefined,
+      acknowledgementNote: row.acknowledgement_note ?? undefined,
       createdAt: row.created_at.toISOString()
     };
   }
