@@ -340,7 +340,8 @@ export class PropertiesController {
         jobs: result.jobs.map((job) => ({
           id: job.id,
           name: job.name
-        }))
+        })),
+        actionPolicy: result.actionPolicy
       }
     });
 

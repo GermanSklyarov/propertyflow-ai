@@ -340,7 +340,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 }
 ```
 
-`POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`. Image analysis jobs support `imageUrls` and optional matching `imageIds` for gallery-linked AI assets.
+`POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`. Image analysis jobs support `imageUrls` and optional matching `imageIds` for gallery-linked AI assets. The response includes `actionPolicy`, an explicit AI action allowlist decision for requested actions: background draft generation can be `allowed`, mutating actions such as applying AI output require human confirmation, and destructive actions such as `property.image.delete` are `blocked` so agents must use the guarded delete-preview plus confirmation-token flow.
 
 `GET /properties/:propertyId/ai-assets` returns generated descriptions and image analysis results saved by the worker. Image analysis results include `propertyImageId` when the job was created from a gallery image.
 

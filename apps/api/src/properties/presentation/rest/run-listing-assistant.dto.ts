@@ -1,8 +1,18 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsBoolean, IsIn, IsOptional, IsString } from "class-validator";
-import type { RunListingAssistantRequest } from "@propertyflow/contracts";
+import type { AiAgentActionName, RunListingAssistantRequest } from "@propertyflow/contracts";
 
 const locales = ["en", "ru", "th", "zh"] as const;
+const aiAgentActions = [
+  "property.ai_description.generate",
+  "property.images.analyze",
+  "property.ai_description.apply",
+  "property.ai_image_analysis.apply",
+  "property.image.delete",
+  "property.image.restore",
+  "property.publish",
+  "property.price.update"
+] as const satisfies readonly AiAgentActionName[];
 
 export class RunListingAssistantDto implements RunListingAssistantRequest {
   @ApiProperty({ required: false, default: true })
@@ -26,4 +36,10 @@ export class RunListingAssistantDto implements RunListingAssistantRequest {
   @IsArray()
   @IsString({ each: true })
   imageUrls?: string[];
+
+  @ApiProperty({ enum: aiAgentActions, isArray: true, required: false })
+  @IsOptional()
+  @IsArray()
+  @IsIn(aiAgentActions, { each: true })
+  requestedActions?: AiAgentActionName[];
 }

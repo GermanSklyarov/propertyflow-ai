@@ -747,16 +747,41 @@ export interface PropertyComparisonResponse {
   summary: string;
 }
 
+export type AiAgentActionName =
+  | "property.ai_description.generate"
+  | "property.images.analyze"
+  | "property.ai_description.apply"
+  | "property.ai_image_analysis.apply"
+  | "property.image.delete"
+  | "property.image.restore"
+  | "property.publish"
+  | "property.price.update";
+
+export type AiAgentActionRisk = "background" | "mutating" | "destructive";
+
+export type AiAgentActionPolicyDecision = "allowed" | "requires_human_confirmation" | "blocked";
+
+export interface AiAgentActionPolicyItem {
+  action: AiAgentActionName;
+  risk: AiAgentActionRisk;
+  decision: AiAgentActionPolicyDecision;
+  reason: string;
+  requiredRole?: UserRole;
+  requiresConfirmationToken?: boolean;
+}
+
 export interface RunListingAssistantRequest {
   generateDescriptions?: boolean;
   analyzeImages?: boolean;
   locales?: Array<"en" | "ru" | "th" | "zh">;
   imageUrls?: string[];
+  requestedActions?: AiAgentActionName[];
 }
 
 export interface RunListingAssistantResponse {
   propertyId: string;
   jobs: BackgroundJobSnapshot[];
+  actionPolicy: AiAgentActionPolicyItem[];
 }
 
 export type AiAssetReviewStatus = "draft" | "approved" | "rejected";

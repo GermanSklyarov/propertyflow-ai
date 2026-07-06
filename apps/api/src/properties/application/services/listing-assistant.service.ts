@@ -1,13 +1,21 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { BackgroundJobSnapshot, RequestUser, RunListingAssistantRequest, RunListingAssistantResponse } from "@propertyflow/contracts";
+import type {
+  AiAgentActionName,
+  BackgroundJobSnapshot,
+  RequestUser,
+  RunListingAssistantRequest,
+  RunListingAssistantResponse
+} from "@propertyflow/contracts";
 import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
+import { AiAgentActionPolicyService } from "./ai-agent-action-policy.service.js";
 
 @Injectable()
 export class ListingAssistantService {
   constructor(
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
-    @Inject(JobQueueService) private readonly jobs: JobQueueService
+    @Inject(JobQueueService) private readonly jobs: JobQueueService,
+    @Inject(AiAgentActionPolicyService) private readonly actionPolicy: AiAgentActionPolicyService
   ) {}
 
   async run(
@@ -25,8 +33,13 @@ export class ListingAssistantService {
     const jobs: BackgroundJobSnapshot[] = [];
     const shouldGenerateDescriptions = request.generateDescriptions ?? true;
     const shouldAnalyzeImages = request.analyzeImages ?? Boolean(request.imageUrls?.length);
+    const plannedActions = this.plannedActions(request, shouldGenerateDescriptions, shouldAnalyzeImages);
+    const policy = this.actionPolicy.evaluate(user, plannedActions);
+    const allowedActions = new Set(
+      policy.filter((item) => item.decision === "allowed").map((item) => item.action)
+    );
 
-    if (shouldGenerateDescriptions) {
+    if (shouldGenerateDescriptions && allowedActions.has("property.ai_description.generate")) {
       jobs.push(
         await this.jobs.enqueue("properties.ai_description.generate", {
           tenantId,
@@ -37,7 +50,7 @@ export class ListingAssistantService {
       );
     }
 
-    if (shouldAnalyzeImages && request.imageUrls?.length) {
+    if (shouldAnalyzeImages && request.imageUrls?.length && allowedActions.has("property.images.analyze")) {
       jobs.push(
         await this.jobs.enqueue("properties.images.analyze", {
           tenantId,
@@ -50,7 +63,26 @@ export class ListingAssistantService {
 
     return {
       propertyId,
-      jobs
+      jobs,
+      actionPolicy: policy
     };
+  }
+
+  private plannedActions(
+    request: RunListingAssistantRequest,
+    shouldGenerateDescriptions: boolean,
+    shouldAnalyzeImages: boolean
+  ): AiAgentActionName[] {
+    const actions: AiAgentActionName[] = [...(request.requestedActions ?? [])];
+
+    if (shouldGenerateDescriptions) {
+      actions.push("property.ai_description.generate");
+    }
+
+    if (shouldAnalyzeImages && request.imageUrls?.length) {
+      actions.push("property.images.analyze");
+    }
+
+    return actions;
   }
 }
