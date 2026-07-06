@@ -345,6 +345,25 @@ export class PropertiesController {
       }
     });
 
+    for (const policyItem of result.actionPolicy.filter((item) => item.decision === "blocked")) {
+      this.realtime.publish(tenantId, "security.event_detected", {
+        kind: "blocked-ai-action",
+        severity: policyItem.risk === "destructive" ? "critical" : "warning",
+        action: "property.ai_assistant",
+        userId: user.id,
+        userRole: user.role,
+        resourceType: "property",
+        resourceId: propertyId,
+        message: "AI action blocked by policy",
+        metadata: {
+          blockedAction: policyItem.action,
+          risk: policyItem.risk,
+          reason: policyItem.reason,
+          decision: policyItem.decision
+        }
+      });
+    }
+
     return result;
   }
 

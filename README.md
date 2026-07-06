@@ -155,6 +155,7 @@ Realtime v1 emits:
 - `property.status_changed`
 - `lead.created`
 - `lead.assigned`
+- `security.event_detected`
 - `event`
 
 Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs through `POST /jobs`, and the worker processes them from the shared `propertyflow.jobs` queue. Direct job enqueueing is guarded by a job policy layer that checks the caller role, validates the payload against the selected job name, and rejects mismatched requests before they reach BullMQ.
@@ -409,7 +410,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, search volume, average search latency, searches by source, top search queries, attributed leads, search-to-lead conversion rate, lead attribution by search source/query, basic conversion rate, AI Concierge adoption, Concierge lead conversion, feedback quality, recommendation areas, training label coverage, and a `security` block with rejected job enqueue attempts, blocked AI actions, image delete previews, image removals, rejected jobs by name, and blocked AI actions by name.
 
-`GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals. It supports `kind`, `severity`, `userId`, and `limit` filters for investigation workflows, and includes a `summary` with total matches plus severity/kind buckets for the active filters.
+`GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals. It supports `kind`, `severity`, `userId`, and `limit` filters for investigation workflows, and includes a `summary` with total matches plus severity/kind buckets for the active filters. Rejected job enqueue attempts and blocked AI actions also emit realtime `security.event_detected` events.
 
 Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`.
 

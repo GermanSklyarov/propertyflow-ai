@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpException, Inject, Post, Query, UseGuards } 
 import { ApiExtraModels, ApiHeader, ApiTags } from "@nestjs/swagger";
 import type { BackgroundJobMonitorResponse, BackgroundJobSnapshot, RequestUser } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
+import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
@@ -44,7 +45,8 @@ export class JobsController {
   constructor(
     @Inject(JobQueueService) private readonly jobs: JobQueueService,
     @Inject(BackgroundJobPolicyService) private readonly jobPolicy: BackgroundJobPolicyService,
-    @Inject(AuditService) private readonly audit: AuditService
+    @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(RealtimePublisherService) private readonly realtime: RealtimePublisherService
   ) {}
 
   @Post()
@@ -86,6 +88,9 @@ export class JobsController {
     request: ReturnType<typeof withTenantJobContext>,
     error: unknown
   ): Promise<void> {
+    const statusCode = error instanceof HttpException ? error.getStatus() : 500;
+    const reason = error instanceof Error ? error.message : "Unknown job policy rejection";
+
     await this.audit.record({
       tenantId,
       user,
@@ -94,8 +99,24 @@ export class JobsController {
       resourceId: request.name,
       metadata: {
         name: request.name,
-        statusCode: error instanceof HttpException ? error.getStatus() : 500,
-        reason: error instanceof Error ? error.message : "Unknown job policy rejection"
+        statusCode,
+        reason
+      }
+    });
+
+    this.realtime.publish(tenantId, "security.event_detected", {
+      kind: "rejected-job-enqueue",
+      severity: "warning",
+      action: "job.enqueue_rejected",
+      userId: user.id,
+      userRole: user.role,
+      resourceType: "job",
+      resourceId: request.name,
+      message: "Background job enqueue rejected by policy",
+      metadata: {
+        name: request.name,
+        statusCode,
+        reason
       }
     });
   }

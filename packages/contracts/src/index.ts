@@ -1128,7 +1128,8 @@ export type RealtimeEventType =
   | "property.price_updated"
   | "property.status_changed"
   | "lead.created"
-  | "lead.assigned";
+  | "lead.assigned"
+  | "security.event_detected";
 
 export interface RealtimeEvent<TPayload = Record<string, unknown>> {
   type: RealtimeEventType;
