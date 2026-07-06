@@ -6,6 +6,7 @@ import type {
   ConciergeResponse,
   ConciergeSessionDetailResponse,
   ConciergeSessionListResponse,
+  ConciergeTrainingDatasetResponse,
   LeadSnapshot,
   RequestUser
 } from "@propertyflow/contracts";
@@ -20,6 +21,7 @@ import { AiConciergeService } from "../../application/ai-concierge.service.js";
 import {
   AddConciergeSessionMessageDto,
   ConciergeRequestDto,
+  ConciergeTrainingDatasetDto,
   CreateLeadFromConciergeSessionDto,
   ListConciergeSessionsDto,
   SubmitConciergeFeedbackDto
@@ -115,6 +117,15 @@ export class ConciergeController {
       ...query,
       userId: user.role === "agent" ? user.id : query.userId
     });
+  }
+
+  @Get("training-dataset")
+  @Roles("manager", "admin")
+  getTrainingDataset(
+    @TenantId() tenantId: string,
+    @Query() query: ConciergeTrainingDatasetDto
+  ): Promise<ConciergeTrainingDatasetResponse> {
+    return this.concierge.getTrainingDataset(tenantId, query);
   }
 
   @Post("sessions/:sessionId/messages")

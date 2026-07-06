@@ -464,6 +464,44 @@ export interface ConciergeFeedbackSnapshot {
   createdAt: string;
 }
 
+export interface ConciergeTrainingDatasetRequest {
+  limit?: number;
+  rating?: ConciergeFeedbackRating;
+  convertedOnly?: boolean;
+}
+
+export interface ConciergeTrainingDatasetRow {
+  sessionId: string;
+  locale: ConciergeRequest["locale"];
+  profile: ConciergeProfile;
+  recommendation: {
+    stage: ConciergeResponse["stage"];
+    area?: ConciergeAreaRecommendation;
+    properties: ConciergePropertyRecommendation[];
+    summary: string;
+  };
+  feedback?: {
+    rating: ConciergeFeedbackRating;
+    areaAccurate?: boolean;
+    propertyRecommendationsUseful?: boolean;
+    selectedPropertyId?: string;
+    note?: string;
+    createdAt: string;
+  };
+  label: {
+    accepted: boolean;
+    convertedToLead: boolean;
+    selectedPropertyId?: string;
+  };
+  createdAt: string;
+}
+
+export interface ConciergeTrainingDatasetResponse {
+  items: ConciergeTrainingDatasetRow[];
+  total: number;
+  generatedAt: string;
+}
+
 export type KnowledgeDocumentKind = "article" | "neighborhood" | "relocation" | "legal" | "investment" | "faq";
 
 export interface KnowledgeDocumentSnapshot {

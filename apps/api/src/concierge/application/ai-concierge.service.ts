@@ -13,6 +13,9 @@ import type {
   ConciergeSessionListResponse,
   ConciergeSessionMessageSnapshot,
   ConciergeSessionSnapshot,
+  ConciergeTrainingDatasetRequest,
+  ConciergeTrainingDatasetResponse,
+  ConciergeTrainingDatasetRow,
   CreateLeadFromConciergeSessionRequest,
   CreateConciergeSessionRequest,
   LeadSnapshot,
@@ -70,6 +73,21 @@ interface ConciergeFeedbackRow {
   created_by_user_id: string | null;
   created_by_user_role: ConciergeFeedbackSnapshot["createdByUserRole"] | null;
   created_at: Date;
+}
+
+interface ConciergeTrainingDatasetSqlRow {
+  session_id: string;
+  locale: ConciergeSessionSnapshot["locale"];
+  profile: ConciergeProfile;
+  latest_response: ConciergeResponse;
+  session_created_at: Date;
+  feedback_rating: ConciergeFeedbackSnapshot["rating"] | null;
+  area_accurate: boolean | null;
+  property_recommendations_useful: boolean | null;
+  selected_property_id: string | null;
+  feedback_note: string | null;
+  feedback_created_at: Date | null;
+  converted_to_lead: boolean;
 }
 
 @Injectable()
@@ -331,6 +349,68 @@ export class AiConciergeService {
     return this.toFeedbackSnapshot(result.rows[0]);
   }
 
+  async getTrainingDataset(
+    tenantId: string,
+    request: ConciergeTrainingDatasetRequest
+  ): Promise<ConciergeTrainingDatasetResponse> {
+    const clauses = ["session.tenant_id = $1"];
+    const values: unknown[] = [tenantId];
+    const limit = Math.min(Math.max(request.limit ?? 100, 1), 500);
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (request.rating) {
+      clauses.push(`feedback.rating = ${addValue(request.rating)}`);
+    }
+
+    if (request.convertedOnly) {
+      clauses.push("lead.id is not null");
+    }
+
+    const result = await this.pool.query<ConciergeTrainingDatasetSqlRow>(
+      `
+        select
+          session.id as session_id,
+          session.locale,
+          session.profile,
+          session.latest_response,
+          session.created_at as session_created_at,
+          feedback.rating as feedback_rating,
+          feedback.area_accurate,
+          feedback.property_recommendations_useful,
+          feedback.selected_property_id,
+          feedback.note as feedback_note,
+          feedback.created_at as feedback_created_at,
+          (lead.id is not null) as converted_to_lead
+        from concierge_sessions session
+        left join lateral (
+          select *
+          from concierge_feedback feedback
+          where feedback.tenant_id = session.tenant_id
+            and feedback.session_id = session.id
+          order by feedback.created_at desc
+          limit 1
+        ) feedback on true
+        left join leads lead
+          on lead.tenant_id = session.tenant_id
+          and lead.source = 'ai-concierge'
+          and lead.attribution_search_event_id = session.id
+        where ${clauses.join(" and ")}
+        order by session.updated_at desc
+        limit ${addValue(limit)}
+      `,
+      values
+    );
+
+    return {
+      items: result.rows.map((row) => this.toTrainingDatasetRow(row)),
+      total: result.rows.length,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
   async getAnalytics(tenantId: string, request: ListConciergeSessionsRequest): Promise<ConciergeAnalyticsResponse> {
     const sessionClauses = ["tenant_id = $1"];
     const sessionValues: unknown[] = [tenantId];
@@ -547,6 +627,38 @@ export class AiConciergeService {
       createdByUserId: row.created_by_user_id ?? undefined,
       createdByUserRole: row.created_by_user_role ?? undefined,
       createdAt: row.created_at.toISOString()
+    };
+  }
+
+  private toTrainingDatasetRow(row: ConciergeTrainingDatasetSqlRow): ConciergeTrainingDatasetRow {
+    const feedback = row.feedback_rating
+      ? {
+          rating: row.feedback_rating,
+          areaAccurate: row.area_accurate ?? undefined,
+          propertyRecommendationsUseful: row.property_recommendations_useful ?? undefined,
+          selectedPropertyId: row.selected_property_id ?? undefined,
+          note: row.feedback_note ?? undefined,
+          createdAt: row.feedback_created_at!.toISOString()
+        }
+      : undefined;
+
+    return {
+      sessionId: row.session_id,
+      locale: row.locale,
+      profile: row.profile,
+      recommendation: {
+        stage: row.latest_response.stage,
+        area: row.latest_response.areaRecommendation,
+        properties: row.latest_response.propertyRecommendations,
+        summary: row.latest_response.summary
+      },
+      feedback,
+      label: {
+        accepted: row.feedback_rating === "positive",
+        convertedToLead: row.converted_to_lead,
+        selectedPropertyId: row.selected_property_id ?? undefined
+      },
+      createdAt: row.session_created_at.toISOString()
     };
   }
 

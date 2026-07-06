@@ -17,6 +17,7 @@ import type {
   ConciergeProfile,
   ConciergeRequest,
   CreateLeadFromConciergeSessionRequest,
+  ConciergeTrainingDatasetRequest,
   ListConciergeSessionsRequest,
   SubmitConciergeFeedbackRequest
 } from "@propertyflow/contracts";
@@ -177,4 +178,24 @@ export class SubmitConciergeFeedbackDto implements SubmitConciergeFeedbackReques
   @IsOptional()
   @IsString()
   note?: string;
+}
+
+export class ConciergeTrainingDatasetDto implements ConciergeTrainingDatasetRequest {
+  @ApiProperty({ required: false, minimum: 1, maximum: 500 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(500)
+  limit?: number;
+
+  @ApiProperty({ required: false, enum: ["positive", "neutral", "negative"] })
+  @IsOptional()
+  @IsIn(["positive", "neutral", "negative"])
+  rating?: ConciergeTrainingDatasetRequest["rating"];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  convertedOnly?: boolean;
 }
