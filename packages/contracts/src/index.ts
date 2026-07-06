@@ -42,6 +42,7 @@ export interface TenantUserSnapshot {
 
 export type AuditAction =
   | "chat.asked"
+  | "concierge.advised"
   | "knowledge.document_created"
   | "knowledge.document_embedding_requested"
   | "knowledge.document_ingestion_requested"
@@ -308,6 +309,57 @@ export interface AiChatResponse {
   matchedPropertyIds: string[];
   citations: AiChatCitation[];
   suggestedActions: string[];
+  createdAt: string;
+}
+
+export interface ConciergeProfile {
+  market?: ThailandMarket;
+  budgetThb?: number;
+  familySize?: number;
+  hasChildren?: boolean;
+  hasCar?: boolean;
+  remoteWork?: boolean;
+  purpose?: PropertyPurpose;
+  prefersQuiet?: boolean;
+}
+
+export interface ConciergeRequest {
+  locale: "en" | "ru";
+  message: string;
+  profile?: ConciergeProfile;
+}
+
+export interface ConciergeQuestion {
+  id: keyof ConciergeProfile;
+  question: string;
+  reason: string;
+}
+
+export interface ConciergePropertyRecommendation {
+  propertyId: string;
+  title: string;
+  score: number;
+  fit: "strong" | "moderate" | "weak";
+  reasons: string[];
+  tradeoffs: string[];
+}
+
+export interface ConciergeAreaRecommendation {
+  area: string;
+  market: ThailandMarket;
+  fit: "strong" | "moderate" | "weak";
+  reasons: string[];
+  tradeoffs: string[];
+}
+
+export interface ConciergeResponse {
+  id: string;
+  stage: "intake" | "recommendation";
+  profile: ConciergeProfile;
+  nextQuestions: ConciergeQuestion[];
+  areaRecommendation?: ConciergeAreaRecommendation;
+  propertyRecommendations: ConciergePropertyRecommendation[];
+  summary: string;
   createdAt: string;
 }
 

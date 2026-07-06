@@ -35,6 +35,7 @@ Do not split yet. The early cost of cross-repository coordination is higher than
 - Price History: property and area price movement over time.
 - Rental Yield: rent estimates, occupancy assumptions, net yield, and sensitivity analysis.
 - AI Chat: RAG chat over listings, neighborhoods, articles, and Thailand relocation knowledge.
+- AI Concierge: guided relocation intake that asks clarifying questions, recommends areas, and explains why listings fit or do not fit.
 - Agent AI Tools: image analysis, OCR, multilingual descriptions, price recommendations, and import automation.
 - Multi-Tenant SaaS: agency workspaces, branding, custom domains, RBAC, analytics, and public API.
 
@@ -94,6 +95,7 @@ The API starts with a tenant-aware property inventory slice:
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
 - `POST /chat`
+- `POST /concierge/advise`
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
@@ -187,6 +189,7 @@ Routes with write or workspace-sensitive behavior also require dev RBAC headers:
 Current protected routes:
 
 - `POST /chat`
+- `POST /concierge/advise`
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
 - `POST /knowledge-documents`
@@ -225,6 +228,7 @@ Current protected routes:
 Audit log v1 records these actions:
 
 - `chat.asked`
+- `concierge.advised`
 - `knowledge.document_created`
 - `knowledge.document_embedding_requested`
 - `knowledge.document_ingestion_requested`
@@ -278,6 +282,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
   "purpose": "living"
 }
 ```
+
+`POST /concierge/advise` powers AI Concierge. The first call can contain a broad user message such as `"Переезжаю в Паттайю с семьей."`; the API returns a normalized profile and the most important follow-up questions. Once the profile includes budget, family/children, car, remote-work, purpose, and quiet preference, the response recommends an area such as Wongamat and ranks matching listings with reasons and tradeoffs.
 
 `POST /properties/compare` compares 2-3 properties for investment, living, family, and relocation.
 
