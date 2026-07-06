@@ -112,7 +112,8 @@ export type AuditAction =
   | "tenant.settings_updated"
   | "lead.created"
   | "lead.assigned"
-  | "job.enqueued";
+  | "job.enqueued"
+  | "job.enqueue_rejected";
 
 export interface AuditEventSnapshot {
   id: string;

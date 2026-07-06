@@ -292,6 +292,7 @@ Audit log v1 records these actions:
 - `lead.created`
 - `lead.assigned`
 - `job.enqueued`
+- `job.enqueue_rejected`
 
 `GET /audit/events` returns tenant-scoped audit events for manager/admin review, with optional `action`, `resourceType`, `resourceId`, `userId`, and `limit` filters.
 

@@ -36,7 +36,8 @@ const auditActions = [
   "tenant.current_viewed",
   "lead.created",
   "lead.assigned",
-  "job.enqueued"
+  "job.enqueued",
+  "job.enqueue_rejected"
 ] as const satisfies readonly AuditAction[];
 
 const resourceTypes = [

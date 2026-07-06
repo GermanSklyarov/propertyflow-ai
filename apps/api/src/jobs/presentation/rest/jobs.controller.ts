@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, Inject, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiExtraModels, ApiHeader, ApiTags } from "@nestjs/swagger";
 import type { BackgroundJobMonitorResponse, BackgroundJobSnapshot, RequestUser } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
@@ -49,28 +49,54 @@ export class JobsController {
 
   @Post()
   @Roles("broker", "manager", "admin")
-  enqueue(
+  async enqueue(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
     @Body() payload: EnqueueBackgroundJobDto
   ): Promise<BackgroundJobSnapshot> {
     const request = withTenantJobContext(tenantId, user.id, payload);
-    this.jobPolicy.authorize(user, request);
 
-    return this.jobs.enqueue(request.name, request.payload).then(async (job) => {
-      await this.audit.record({
-        tenantId,
-        user,
-        action: "job.enqueued",
-        resourceType: "job",
-        resourceId: job.id,
-        metadata: {
-          name: job.name,
-          queue: job.queue
-        }
-      });
+    try {
+      this.jobPolicy.authorize(user, request);
+    } catch (error) {
+      await this.auditRejectedJob(tenantId, user, request, error);
+      throw error;
+    }
 
-      return job;
+    const job = await this.jobs.enqueue(request.name, request.payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "job.enqueued",
+      resourceType: "job",
+      resourceId: job.id,
+      metadata: {
+        name: job.name,
+        queue: job.queue
+      }
+    });
+
+    return job;
+  }
+
+  private async auditRejectedJob(
+    tenantId: string,
+    user: RequestUser,
+    request: ReturnType<typeof withTenantJobContext>,
+    error: unknown
+  ): Promise<void> {
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "job.enqueue_rejected",
+      resourceType: "job",
+      resourceId: request.name,
+      metadata: {
+        name: request.name,
+        statusCode: error instanceof HttpException ? error.getStatus() : 500,
+        reason: error instanceof Error ? error.message : "Unknown job policy rejection"
+      }
     });
   }
 
