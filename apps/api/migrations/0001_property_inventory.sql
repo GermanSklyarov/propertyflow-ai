@@ -261,6 +261,23 @@ create table if not exists concierge_messages (
 
 create index if not exists idx_concierge_messages_session on concierge_messages (tenant_id, session_id, created_at);
 
+create table if not exists concierge_feedback (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  session_id uuid not null references concierge_sessions(id) on delete cascade,
+  rating text not null,
+  area_accurate boolean,
+  property_recommendations_useful boolean,
+  selected_property_id uuid references properties(id) on delete set null,
+  note text,
+  created_by_user_id text,
+  created_by_user_role text,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_concierge_feedback_session on concierge_feedback (tenant_id, session_id, created_at desc);
+create index if not exists idx_concierge_feedback_rating on concierge_feedback (tenant_id, rating, created_at desc);
+
 create table if not exists search_events (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

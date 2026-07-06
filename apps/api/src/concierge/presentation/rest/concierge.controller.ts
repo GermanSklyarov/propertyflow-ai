@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@n
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   ConciergeAnalyticsResponse,
+  ConciergeFeedbackSnapshot,
   ConciergeResponse,
   ConciergeSessionDetailResponse,
   ConciergeSessionListResponse,
@@ -20,7 +21,8 @@ import {
   AddConciergeSessionMessageDto,
   ConciergeRequestDto,
   CreateLeadFromConciergeSessionDto,
-  ListConciergeSessionsDto
+  ListConciergeSessionsDto,
+  SubmitConciergeFeedbackDto
 } from "./concierge.dto.js";
 
 @ApiTags("concierge")
@@ -176,5 +178,33 @@ export class ConciergeController {
     });
 
     return lead;
+  }
+
+  @Post("sessions/:sessionId/feedback")
+  @Roles("agent", "broker", "manager", "admin")
+  async submitFeedback(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("sessionId") sessionId: string,
+    @Body() payload: SubmitConciergeFeedbackDto
+  ): Promise<ConciergeFeedbackSnapshot> {
+    const feedback = await this.concierge.submitFeedback(tenantId, sessionId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "concierge.feedback_submitted",
+      resourceType: "search",
+      resourceId: sessionId,
+      metadata: {
+        feedbackId: feedback.id,
+        rating: feedback.rating,
+        areaAccurate: feedback.areaAccurate,
+        propertyRecommendationsUseful: feedback.propertyRecommendationsUseful,
+        selectedPropertyId: feedback.selectedPropertyId
+      }
+    });
+
+    return feedback;
   }
 }

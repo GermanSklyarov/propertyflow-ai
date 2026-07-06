@@ -43,6 +43,7 @@ export interface TenantUserSnapshot {
 export type AuditAction =
   | "chat.asked"
   | "concierge.advised"
+  | "concierge.feedback_submitted"
   | "concierge.lead_created"
   | "concierge.message_added"
   | "concierge.session_created"
@@ -428,12 +429,39 @@ export interface ConciergeAnalyticsResponse {
   awaitingInputSessions: number;
   recommendedSessions: number;
   convertedLeads: number;
+  feedbackCount: number;
   recommendationRate: number;
   leadConversionRate: number;
+  positiveFeedbackRate: number;
   sessionsByPurpose: CountByBucket[];
   sessionsByMarket: CountByBucket[];
   recommendedAreas: CountByBucket[];
+  feedbackByRating: CountByBucket[];
   generatedAt: string;
+}
+
+export type ConciergeFeedbackRating = "positive" | "neutral" | "negative";
+
+export interface SubmitConciergeFeedbackRequest {
+  rating: ConciergeFeedbackRating;
+  areaAccurate?: boolean;
+  propertyRecommendationsUseful?: boolean;
+  selectedPropertyId?: string;
+  note?: string;
+}
+
+export interface ConciergeFeedbackSnapshot {
+  id: string;
+  tenantId: string;
+  sessionId: string;
+  rating: ConciergeFeedbackRating;
+  areaAccurate?: boolean;
+  propertyRecommendationsUseful?: boolean;
+  selectedPropertyId?: string;
+  note?: string;
+  createdByUserId?: string;
+  createdByUserRole?: UserRole;
+  createdAt: string;
 }
 
 export type KnowledgeDocumentKind = "article" | "neighborhood" | "relocation" | "legal" | "investment" | "faq";

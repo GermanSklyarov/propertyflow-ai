@@ -101,6 +101,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /concierge/sessions`
 - `POST /concierge/sessions/:sessionId/messages`
 - `POST /concierge/sessions/:sessionId/lead`
+- `POST /concierge/sessions/:sessionId/feedback`
 - `GET /concierge/sessions/:sessionId`
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
@@ -201,6 +202,7 @@ Current protected routes:
 - `POST /concierge/sessions`
 - `POST /concierge/sessions/:sessionId/messages`
 - `POST /concierge/sessions/:sessionId/lead`
+- `POST /concierge/sessions/:sessionId/feedback`
 - `GET /concierge/sessions/:sessionId`
 - `GET /knowledge-documents`
 - `GET /knowledge-documents/chunks/search`
@@ -241,6 +243,7 @@ Audit log v1 records these actions:
 
 - `chat.asked`
 - `concierge.advised`
+- `concierge.feedback_submitted`
 - `concierge.lead_created`
 - `concierge.message_added`
 - `concierge.session_created`
@@ -300,7 +303,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `POST /concierge/advise` powers AI Concierge. The first call can contain a broad user message such as `"Переезжаю в Паттайю с семьей."`; the API returns a normalized profile and the most important follow-up questions. Once the profile includes budget, family/children, car, remote-work, purpose, and quiet preference, the response recommends an area such as Wongamat and ranks matching listings with reasons and tradeoffs.
 
-`GET /concierge/analytics` returns the Concierge funnel: sessions, awaiting-input sessions, recommended sessions, `ai-concierge` leads, recommendation rate, lead conversion rate, top purposes, markets, and recommended areas. `GET /concierge/sessions` lists tenant consultations for an agent or manager dashboard with `status`, `userId`, and `limit` filters. `POST /concierge/sessions` starts a persisted concierge consultation. `POST /concierge/sessions/:sessionId/messages` appends follow-up answers, merges them into the saved profile, and stores both user and assistant turns in `concierge_messages`. `POST /concierge/sessions/:sessionId/lead` converts the recommendation into a CRM lead with source `ai-concierge`, defaulting to the top recommended listing when no property is specified. `GET /concierge/sessions/:sessionId` returns the current profile, latest recommendation, and full message history.
+`GET /concierge/analytics` returns the Concierge funnel: sessions, awaiting-input sessions, recommended sessions, `ai-concierge` leads, feedback count, recommendation rate, lead conversion rate, positive feedback rate, top purposes, markets, recommended areas, and ratings. `GET /concierge/sessions` lists tenant consultations for an agent or manager dashboard with `status`, `userId`, and `limit` filters. `POST /concierge/sessions` starts a persisted concierge consultation. `POST /concierge/sessions/:sessionId/messages` appends follow-up answers, merges them into the saved profile, and stores both user and assistant turns in `concierge_messages`. `POST /concierge/sessions/:sessionId/lead` converts the recommendation into a CRM lead with source `ai-concierge`, defaulting to the top recommended listing when no property is specified. `POST /concierge/sessions/:sessionId/feedback` captures quality signals for the recommendation. `GET /concierge/sessions/:sessionId` returns the current profile, latest recommendation, and full message history.
 
 `POST /properties/compare` compares 2-3 properties for investment, living, family, and relocation.
 

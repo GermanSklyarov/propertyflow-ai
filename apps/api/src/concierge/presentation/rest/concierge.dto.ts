@@ -17,7 +17,8 @@ import type {
   ConciergeProfile,
   ConciergeRequest,
   CreateLeadFromConciergeSessionRequest,
-  ListConciergeSessionsRequest
+  ListConciergeSessionsRequest,
+  SubmitConciergeFeedbackRequest
 } from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 
@@ -150,4 +151,30 @@ export class CreateLeadFromConciergeSessionDto implements CreateLeadFromConcierg
   @IsOptional()
   @IsString()
   assignedAgentId?: string;
+}
+
+export class SubmitConciergeFeedbackDto implements SubmitConciergeFeedbackRequest {
+  @ApiProperty({ enum: ["positive", "neutral", "negative"] })
+  @IsIn(["positive", "neutral", "negative"])
+  rating!: SubmitConciergeFeedbackRequest["rating"];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  areaAccurate?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  propertyRecommendationsUseful?: boolean;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  selectedPropertyId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  note?: string;
 }

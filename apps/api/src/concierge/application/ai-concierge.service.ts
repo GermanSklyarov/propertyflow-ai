@@ -3,6 +3,7 @@ import type {
   AddConciergeSessionMessageRequest,
   ConciergeAnalyticsResponse,
   ConciergeAreaRecommendation,
+  ConciergeFeedbackSnapshot,
   ConciergeProfile,
   ConciergePropertyRecommendation,
   ConciergeQuestion,
@@ -16,7 +17,8 @@ import type {
   CreateConciergeSessionRequest,
   LeadSnapshot,
   RequestUser,
-  ListConciergeSessionsRequest
+  ListConciergeSessionsRequest,
+  SubmitConciergeFeedbackRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import type { Pool } from "pg";
@@ -54,6 +56,20 @@ interface CountRow {
 interface BucketRow {
   bucket: string | null;
   count: string;
+}
+
+interface ConciergeFeedbackRow {
+  id: string;
+  tenant_id: string;
+  session_id: string;
+  rating: ConciergeFeedbackSnapshot["rating"];
+  area_accurate: boolean | null;
+  property_recommendations_useful: boolean | null;
+  selected_property_id: string | null;
+  note: string | null;
+  created_by_user_id: string | null;
+  created_by_user_role: ConciergeFeedbackSnapshot["createdByUserRole"] | null;
+  created_at: Date;
 }
 
 @Injectable()
@@ -272,6 +288,49 @@ export class AiConciergeService {
     );
   }
 
+  async submitFeedback(
+    tenantId: string,
+    sessionId: string,
+    request: SubmitConciergeFeedbackRequest,
+    user: RequestUser
+  ): Promise<ConciergeFeedbackSnapshot> {
+    await this.findSession(tenantId, sessionId);
+    const now = new Date().toISOString();
+    const result = await this.pool.query<ConciergeFeedbackRow>(
+      `
+        insert into concierge_feedback (
+          id,
+          tenant_id,
+          session_id,
+          rating,
+          area_accurate,
+          property_recommendations_useful,
+          selected_property_id,
+          note,
+          created_by_user_id,
+          created_by_user_role,
+          created_at
+        ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        returning *
+      `,
+      [
+        crypto.randomUUID(),
+        tenantId,
+        sessionId,
+        request.rating,
+        request.areaAccurate ?? null,
+        request.propertyRecommendationsUseful ?? null,
+        request.selectedPropertyId ?? null,
+        request.note ?? null,
+        user.id,
+        user.role,
+        now
+      ]
+    );
+
+    return this.toFeedbackSnapshot(result.rows[0]);
+  }
+
   async getAnalytics(tenantId: string, request: ListConciergeSessionsRequest): Promise<ConciergeAnalyticsResponse> {
     const sessionClauses = ["tenant_id = $1"];
     const sessionValues: unknown[] = [tenantId];
@@ -290,9 +349,12 @@ export class AiConciergeService {
       awaitingInputSessions,
       recommendedSessions,
       convertedLeads,
+      feedbackCount,
+      positiveFeedbackCount,
       sessionsByPurpose,
       sessionsByMarket,
-      recommendedAreas
+      recommendedAreas,
+      feedbackByRating
     ] = await Promise.all([
       this.count(`select count(*) from concierge_sessions where ${whereSessions}`, sessionValues),
       this.count(`select count(*) from concierge_sessions where ${whereSessions} and status = 'awaiting-input'`, sessionValues),
@@ -305,6 +367,27 @@ export class AiConciergeService {
             and source = 'ai-concierge'
             and attribution_search_event_id is not null
             ${request.userId ? "and assigned_agent_id = $2" : ""}
+        `,
+        request.userId ? [tenantId, request.userId] : [tenantId]
+      ),
+      this.count(
+        `
+          select count(*)
+          from concierge_feedback feedback
+          join concierge_sessions session on session.tenant_id = feedback.tenant_id and session.id = feedback.session_id
+          where feedback.tenant_id = $1
+            ${request.userId ? "and session.user_id = $2" : ""}
+        `,
+        request.userId ? [tenantId, request.userId] : [tenantId]
+      ),
+      this.count(
+        `
+          select count(*)
+          from concierge_feedback feedback
+          join concierge_sessions session on session.tenant_id = feedback.tenant_id and session.id = feedback.session_id
+          where feedback.tenant_id = $1
+            and feedback.rating = 'positive'
+            ${request.userId ? "and session.user_id = $2" : ""}
         `,
         request.userId ? [tenantId, request.userId] : [tenantId]
       ),
@@ -340,6 +423,19 @@ export class AiConciergeService {
           limit 10
         `,
         sessionValues
+      ),
+      this.bucket(
+        `
+          select feedback.rating as bucket, count(*)
+          from concierge_feedback feedback
+          join concierge_sessions session on session.tenant_id = feedback.tenant_id and session.id = feedback.session_id
+          where feedback.tenant_id = $1
+            ${request.userId ? "and session.user_id = $2" : ""}
+          group by bucket
+          order by count(*) desc, bucket asc
+          limit 10
+        `,
+        request.userId ? [tenantId, request.userId] : [tenantId]
       )
     ]);
 
@@ -349,11 +445,15 @@ export class AiConciergeService {
       awaitingInputSessions,
       recommendedSessions,
       convertedLeads,
+      feedbackCount,
       recommendationRate: totalSessions > 0 ? Math.round((recommendedSessions / totalSessions) * 10_000) / 100 : 0,
       leadConversionRate: totalSessions > 0 ? Math.round((convertedLeads / totalSessions) * 10_000) / 100 : 0,
+      positiveFeedbackRate:
+        feedbackCount > 0 ? Math.round((positiveFeedbackCount / feedbackCount) * 10_000) / 100 : 0,
       sessionsByPurpose,
       sessionsByMarket,
       recommendedAreas,
+      feedbackByRating,
       generatedAt: new Date().toISOString()
     };
   }
@@ -430,6 +530,22 @@ export class AiConciergeService {
       message: row.message,
       response: row.response,
       profile: row.profile,
+      createdAt: row.created_at.toISOString()
+    };
+  }
+
+  private toFeedbackSnapshot(row: ConciergeFeedbackRow): ConciergeFeedbackSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      sessionId: row.session_id,
+      rating: row.rating,
+      areaAccurate: row.area_accurate ?? undefined,
+      propertyRecommendationsUseful: row.property_recommendations_useful ?? undefined,
+      selectedPropertyId: row.selected_property_id ?? undefined,
+      note: row.note ?? undefined,
+      createdByUserId: row.created_by_user_id ?? undefined,
+      createdByUserRole: row.created_by_user_role ?? undefined,
       createdAt: row.created_at.toISOString()
     };
   }
