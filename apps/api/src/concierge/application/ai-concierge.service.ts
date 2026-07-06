@@ -4,6 +4,7 @@ import type {
   ConciergeAnalyticsResponse,
   ConciergeAreaRecommendation,
   ConciergeFeedbackSnapshot,
+  ConciergeModelRegistryResponse,
   ConciergeProfile,
   ConciergePropertyRecommendation,
   ConciergeQuestion,
@@ -28,6 +29,22 @@ import type { Pool } from "pg";
 import { PG_POOL } from "../../database/database.constants.js";
 import { LeadService } from "../../leads/application/lead.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
+
+const CONCIERGE_MODEL_VERSION = "baseline-advisory-v1";
+const CONCIERGE_FEATURES = [
+  "market",
+  "budget",
+  "purpose",
+  "family",
+  "children",
+  "car",
+  "remoteWork",
+  "quietPreference",
+  "areaSignals",
+  "propertyScore",
+  "feedbackRating",
+  "leadConversion"
+];
 
 interface ConciergeSessionRow {
   id: string;
@@ -126,6 +143,25 @@ export class AiConciergeService {
       propertyRecommendations: recommendations,
       summary: this.recommendationSummary(areaRecommendation, recommendations, request.locale),
       createdAt: new Date().toISOString()
+    };
+  }
+
+  registry(): ConciergeModelRegistryResponse {
+    return {
+      activeModelVersion: CONCIERGE_MODEL_VERSION,
+      models: [
+        {
+          engine: "baseline-advisory",
+          modelVersion: CONCIERGE_MODEL_VERSION,
+          predictionTarget: "property_ranking",
+          trainingStatus: "not-trained",
+          featuresUsed: CONCIERGE_FEATURES,
+          active: true,
+          description:
+            "Deterministic advisory baseline that scores intake profile, area fit, listing fit, feedback, and lead conversion. Ready to be replaced by an LLM reranker or learning-to-rank model."
+        }
+      ],
+      generatedAt: new Date().toISOString()
     };
   }
 

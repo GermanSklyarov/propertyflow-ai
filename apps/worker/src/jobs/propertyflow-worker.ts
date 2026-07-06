@@ -5,6 +5,7 @@ import { Pool } from "pg";
 import {
   type BackgroundJobName,
   type BackgroundJobPayload,
+  type ConciergeModelTrainJobPayload,
   type KnowledgeChunkEmbeddingJobPayload,
   type KnowledgeDocumentIngestJobPayload,
   type PricingModelTrainJobPayload,
@@ -19,6 +20,7 @@ import { PropertyAiOutputWriter } from "./property-ai-output-writer.js";
 import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
+type ConciergeModelTrainJob = Job<ConciergeModelTrainJobPayload, unknown, "concierge.model.train">;
 type KnowledgeChunkEmbeddingJob = Job<
   KnowledgeChunkEmbeddingJobPayload,
   unknown,
@@ -99,6 +101,8 @@ export class PropertyflowWorker {
     console.log(`[jobs] processing ${job.name}#${job.id} for tenant ${job.data.tenantId}`);
 
     switch (job.name) {
+      case "concierge.model.train":
+        return this.trainConciergeModel(job as ConciergeModelTrainJob);
       case "knowledge.chunks.embed":
         return this.embedKnowledgeChunks(job as KnowledgeChunkEmbeddingJob);
       case "knowledge.documents.ingest":
@@ -343,6 +347,58 @@ export class PropertyflowWorker {
       sampleSize,
       trained: false,
       status: sampleSize > 0 ? "dataset-ready" : "insufficient-data"
+    };
+  }
+
+  private async trainConciergeModel(job: ConciergeModelTrainJob): Promise<Record<string, unknown>> {
+    const result = await this.pool.query<{
+      total: string;
+      positive_feedback: string;
+      converted_leads: string;
+      selected_properties: string;
+    }>(
+      `
+        select
+          count(distinct session.id) as total,
+          count(distinct session.id) filter (where feedback.rating = 'positive') as positive_feedback,
+          count(distinct session.id) filter (where lead.id is not null) as converted_leads,
+          count(distinct session.id) filter (where feedback.selected_property_id is not null) as selected_properties
+        from concierge_sessions session
+        left join lateral (
+          select *
+          from concierge_feedback feedback
+          where feedback.tenant_id = session.tenant_id
+            and feedback.session_id = session.id
+          order by feedback.created_at desc
+          limit 1
+        ) feedback on true
+        left join leads lead
+          on lead.tenant_id = session.tenant_id
+          and lead.source = 'ai-concierge'
+          and lead.attribution_search_event_id = session.id
+        where session.tenant_id = $1
+      `,
+      [job.data.tenantId]
+    );
+    const row = result.rows[0];
+    const sampleSize = Number(row?.total ?? 0);
+    const positiveFeedback = Number(row?.positive_feedback ?? 0);
+    const convertedLeads = Number(row?.converted_leads ?? 0);
+    const selectedProperties = Number(row?.selected_properties ?? 0);
+
+    return {
+      tenantId: job.data.tenantId,
+      modelVersion: job.data.modelVersion,
+      algorithm: job.data.algorithm,
+      dryRun: job.data.dryRun ?? false,
+      sampleSize,
+      labels: {
+        positiveFeedback,
+        convertedLeads,
+        selectedProperties
+      },
+      trained: false,
+      status: sampleSize >= 10 && (positiveFeedback > 0 || convertedLeads > 0) ? "dataset-ready" : "insufficient-data"
     };
   }
 

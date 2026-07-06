@@ -1,6 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import type {
   BackgroundJobName,
+  ConciergeModelTrainJobPayload,
   EnqueueBackgroundJobRequest,
   KnowledgeChunkEmbeddingJobPayload,
   KnowledgeDocumentIngestJobPayload,
@@ -16,6 +17,7 @@ import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from 
 const jobNames = [
   "knowledge.chunks.embed",
   "knowledge.documents.ingest",
+  "concierge.model.train",
   "pricing.model.train",
   "properties.import",
   "properties.ai_description.generate",
@@ -34,6 +36,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
     oneOf: [
       { $ref: "#/components/schemas/KnowledgeChunkEmbeddingPayloadDto" },
       { $ref: "#/components/schemas/KnowledgeDocumentIngestPayloadDto" },
+      { $ref: "#/components/schemas/ConciergeModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyImportPayloadDto" },
       { $ref: "#/components/schemas/PricingModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyAiDescriptionPayloadDto" },
@@ -44,6 +47,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
   payload!:
     | KnowledgeChunkEmbeddingPayloadDto
     | KnowledgeDocumentIngestPayloadDto
+    | ConciergeModelTrainPayloadDto
     | PricingModelTrainPayloadDto
     | PropertyImportPayloadDto
     | PropertyAiDescriptionPayloadDto
@@ -97,6 +101,25 @@ export class KnowledgeDocumentIngestPayloadDto implements KnowledgeDocumentInges
   @ApiProperty({ enum: ["created", "updated", "manual"] })
   @IsIn(["created", "updated", "manual"])
   reason!: KnowledgeDocumentIngestJobPayload["reason"];
+}
+
+export class ConciergeModelTrainPayloadDto implements ConciergeModelTrainJobPayload {
+  tenantId!: string;
+
+  requestedByUserId?: string;
+
+  @ApiProperty()
+  @IsString()
+  modelVersion!: string;
+
+  @ApiProperty({ enum: ["baseline-refresh", "llm-reranker", "learning-to-rank"] })
+  @IsIn(["baseline-refresh", "llm-reranker", "learning-to-rank"])
+  algorithm!: ConciergeModelTrainJobPayload["algorithm"];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
 }
 
 export class PricingModelTrainPayloadDto implements PricingModelTrainJobPayload {

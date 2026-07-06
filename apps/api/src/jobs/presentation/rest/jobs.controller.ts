@@ -10,6 +10,7 @@ import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { JobQueueService } from "../../application/job-queue.service.js";
 import {
+  ConciergeModelTrainPayloadDto,
   EnqueueBackgroundJobDto,
   KnowledgeChunkEmbeddingPayloadDto,
   KnowledgeDocumentIngestPayloadDto,
@@ -29,6 +30,7 @@ import { ListJobsDto, toListJobsQuery } from "./list-jobs.dto.js";
 @ApiExtraModels(
   KnowledgeChunkEmbeddingPayloadDto,
   KnowledgeDocumentIngestPayloadDto,
+  ConciergeModelTrainPayloadDto,
   PropertyImportPayloadDto,
   PricingModelTrainPayloadDto,
   PropertyAiDescriptionPayloadDto,

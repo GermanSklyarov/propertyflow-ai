@@ -16,6 +16,7 @@ import type {
   AddConciergeSessionMessageRequest,
   ConciergeProfile,
   ConciergeRequest,
+  ConciergeModelTrainJobPayload,
   CreateLeadFromConciergeSessionRequest,
   ConciergeTrainingDatasetRequest,
   ListConciergeSessionsRequest,
@@ -198,4 +199,25 @@ export class ConciergeTrainingDatasetDto implements ConciergeTrainingDatasetRequ
   @IsOptional()
   @IsBoolean()
   convertedOnly?: boolean;
+}
+
+const conciergeTrainingAlgorithms = [
+  "baseline-refresh",
+  "llm-reranker",
+  "learning-to-rank"
+] as const satisfies readonly ConciergeModelTrainJobPayload["algorithm"][];
+
+export class TrainConciergeModelDto {
+  @ApiProperty()
+  @IsString()
+  modelVersion!: string;
+
+  @ApiProperty({ enum: conciergeTrainingAlgorithms })
+  @IsIn(conciergeTrainingAlgorithms)
+  algorithm!: ConciergeModelTrainJobPayload["algorithm"];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
 }

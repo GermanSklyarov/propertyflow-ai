@@ -46,7 +46,9 @@ export type AuditAction =
   | "concierge.feedback_submitted"
   | "concierge.lead_created"
   | "concierge.message_added"
+  | "concierge.model_training_requested"
   | "concierge.session_created"
+  | "concierge.training_dataset_viewed"
   | "knowledge.document_created"
   | "knowledge.document_embedding_requested"
   | "knowledge.document_ingestion_requested"
@@ -499,6 +501,29 @@ export interface ConciergeTrainingDatasetRow {
 export interface ConciergeTrainingDatasetResponse {
   items: ConciergeTrainingDatasetRow[];
   total: number;
+  generatedAt: string;
+}
+
+export interface ConciergeModelRegistryEntry {
+  engine: "baseline-advisory" | "llm-reranker" | "learning-to-rank";
+  modelVersion: string;
+  predictionTarget: "area_recommendation" | "property_ranking" | "lead_conversion";
+  trainingStatus: "not-trained" | "training" | "trained";
+  featuresUsed: string[];
+  active: boolean;
+  description: string;
+  trainedAt?: string;
+  metrics?: {
+    acceptanceRate?: number;
+    leadConversionRate?: number;
+    topKAccuracy?: number;
+    sampleSize?: number;
+  };
+}
+
+export interface ConciergeModelRegistryResponse {
+  activeModelVersion: string;
+  models: ConciergeModelRegistryEntry[];
   generatedAt: string;
 }
 
@@ -957,6 +982,7 @@ export const PROPERTYFLOW_JOBS_QUEUE = "propertyflow.jobs";
 export type BackgroundJobName =
   | "knowledge.chunks.embed"
   | "knowledge.documents.ingest"
+  | "concierge.model.train"
   | "pricing.model.train"
   | "properties.import"
   | "properties.ai_description.generate"
@@ -1009,7 +1035,14 @@ export interface PricingModelTrainJobPayload extends BackgroundJobBasePayload {
   dryRun?: boolean;
 }
 
+export interface ConciergeModelTrainJobPayload extends BackgroundJobBasePayload {
+  modelVersion: string;
+  algorithm: "baseline-refresh" | "llm-reranker" | "learning-to-rank";
+  dryRun?: boolean;
+}
+
 export type BackgroundJobPayload =
+  | ConciergeModelTrainJobPayload
   | KnowledgeChunkEmbeddingJobPayload
   | KnowledgeDocumentIngestJobPayload
   | PricingModelTrainJobPayload

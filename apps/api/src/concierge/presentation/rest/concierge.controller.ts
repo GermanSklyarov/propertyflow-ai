@@ -1,8 +1,10 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
+  BackgroundJobSnapshot,
   ConciergeAnalyticsResponse,
   ConciergeFeedbackSnapshot,
+  ConciergeModelRegistryResponse,
   ConciergeResponse,
   ConciergeSessionDetailResponse,
   ConciergeSessionListResponse,
@@ -11,6 +13,7 @@ import type {
   RequestUser
 } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
+import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
@@ -24,7 +27,8 @@ import {
   ConciergeTrainingDatasetDto,
   CreateLeadFromConciergeSessionDto,
   ListConciergeSessionsDto,
-  SubmitConciergeFeedbackDto
+  SubmitConciergeFeedbackDto,
+  TrainConciergeModelDto
 } from "./concierge.dto.js";
 
 @ApiTags("concierge")
@@ -36,7 +40,8 @@ import {
 export class ConciergeController {
   constructor(
     @Inject(AiConciergeService) private readonly concierge: AiConciergeService,
-    @Inject(AuditService) private readonly audit: AuditService
+    @Inject(AuditService) private readonly audit: AuditService,
+    @Inject(JobQueueService) private readonly jobs: JobQueueService
   ) {}
 
   @Post("advise")
@@ -119,13 +124,65 @@ export class ConciergeController {
     });
   }
 
+  @Get("model-registry")
+  @Roles("agent", "broker", "manager", "admin")
+  modelRegistry(): ConciergeModelRegistryResponse {
+    return this.concierge.registry();
+  }
+
+  @Post("model/train")
+  @Roles("manager", "admin")
+  async trainModel(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: TrainConciergeModelDto
+  ): Promise<BackgroundJobSnapshot> {
+    const job = await this.jobs.enqueue("concierge.model.train", {
+      tenantId,
+      requestedByUserId: user.id,
+      modelVersion: payload.modelVersion,
+      algorithm: payload.algorithm,
+      dryRun: payload.dryRun
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "concierge.model_training_requested",
+      resourceType: "job",
+      resourceId: job.id,
+      metadata: {
+        modelVersion: payload.modelVersion,
+        algorithm: payload.algorithm,
+        dryRun: payload.dryRun ?? false
+      }
+    });
+
+    return job;
+  }
+
   @Get("training-dataset")
   @Roles("manager", "admin")
-  getTrainingDataset(
+  async getTrainingDataset(
+    @CurrentUser() user: RequestUser,
     @TenantId() tenantId: string,
     @Query() query: ConciergeTrainingDatasetDto
   ): Promise<ConciergeTrainingDatasetResponse> {
-    return this.concierge.getTrainingDataset(tenantId, query);
+    const result = await this.concierge.getTrainingDataset(tenantId, query);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "concierge.training_dataset_viewed",
+      resourceType: "search",
+      metadata: {
+        total: result.total,
+        rating: query.rating,
+        convertedOnly: query.convertedOnly ?? false
+      }
+    });
+
+    return result;
   }
 
   @Post("sessions/:sessionId/messages")
