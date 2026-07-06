@@ -8,9 +8,11 @@ import type {
   ConciergeRequest,
   ConciergeResponse,
   ConciergeSessionDetailResponse,
+  ConciergeSessionListResponse,
   ConciergeSessionMessageSnapshot,
   ConciergeSessionSnapshot,
-  CreateConciergeSessionRequest
+  CreateConciergeSessionRequest,
+  ListConciergeSessionsRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import type { Pool } from "pg";
@@ -182,6 +184,48 @@ export class AiConciergeService {
     return {
       session,
       messages: messagesResult.rows.map((row) => this.toMessageSnapshot(row))
+    };
+  }
+
+  async listSessions(
+    tenantId: string,
+    request: ListConciergeSessionsRequest
+  ): Promise<ConciergeSessionListResponse> {
+    const clauses = ["tenant_id = $1"];
+    const values: unknown[] = [tenantId];
+    const limit = Math.min(Math.max(request.limit ?? 50, 1), 100);
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (request.status) {
+      clauses.push(`status = ${addValue(request.status)}`);
+    }
+
+    if (request.userId) {
+      clauses.push(`user_id = ${addValue(request.userId)}`);
+    }
+
+    const result = await this.pool.query<ConciergeSessionRow>(
+      `
+        select *
+        from concierge_sessions
+        where ${clauses.join(" and ")}
+        order by updated_at desc
+        limit ${addValue(limit)}
+      `,
+      values
+    );
+
+    return {
+      items: result.rows.map((row) => this.toSessionSnapshot(row)),
+      total: result.rows.length,
+      filters: {
+        status: request.status,
+        userId: request.userId,
+        limit
+      }
     };
   }
 

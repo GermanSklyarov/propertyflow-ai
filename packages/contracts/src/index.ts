@@ -400,6 +400,18 @@ export interface ConciergeSessionDetailResponse {
   messages: ConciergeSessionMessageSnapshot[];
 }
 
+export interface ListConciergeSessionsRequest {
+  status?: ConciergeSessionSnapshot["status"];
+  userId?: string;
+  limit?: number;
+}
+
+export interface ConciergeSessionListResponse {
+  items: ConciergeSessionSnapshot[];
+  total: number;
+  filters: ListConciergeSessionsRequest;
+}
+
 export type KnowledgeDocumentKind = "article" | "neighborhood" | "relocation" | "legal" | "investment" | "faq";
 
 export interface KnowledgeDocumentSnapshot {

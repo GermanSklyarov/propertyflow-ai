@@ -13,7 +13,8 @@ import {
 import type {
   AddConciergeSessionMessageRequest,
   ConciergeProfile,
-  ConciergeRequest
+  ConciergeRequest,
+  ListConciergeSessionsRequest
 } from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 
@@ -94,4 +95,24 @@ export class AddConciergeSessionMessageDto implements AddConciergeSessionMessage
   @ValidateNested()
   @Type(() => ConciergeProfileDto)
   profile?: ConciergeProfileDto;
+}
+
+export class ListConciergeSessionsDto implements ListConciergeSessionsRequest {
+  @ApiProperty({ required: false, enum: ["awaiting-input", "recommended"] })
+  @IsOptional()
+  @IsIn(["awaiting-input", "recommended"])
+  status?: ListConciergeSessionsRequest["status"];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @ApiProperty({ required: false, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }

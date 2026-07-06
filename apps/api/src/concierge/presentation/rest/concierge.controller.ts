@@ -1,6 +1,11 @@
-import { Body, Controller, Get, Inject, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { ConciergeResponse, ConciergeSessionDetailResponse, RequestUser } from "@propertyflow/contracts";
+import type {
+  ConciergeResponse,
+  ConciergeSessionDetailResponse,
+  ConciergeSessionListResponse,
+  RequestUser
+} from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -9,7 +14,11 @@ import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { AiConciergeService } from "../../application/ai-concierge.service.js";
-import { AddConciergeSessionMessageDto, ConciergeRequestDto } from "./concierge.dto.js";
+import {
+  AddConciergeSessionMessageDto,
+  ConciergeRequestDto,
+  ListConciergeSessionsDto
+} from "./concierge.dto.js";
 
 @ApiTags("concierge")
 @ApiHeader({ name: "x-tenant-id", required: true })
@@ -75,6 +84,19 @@ export class ConciergeController {
     });
 
     return detail;
+  }
+
+  @Get("sessions")
+  @Roles("agent", "broker", "manager", "admin")
+  listSessions(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListConciergeSessionsDto
+  ): Promise<ConciergeSessionListResponse> {
+    return this.concierge.listSessions(tenantId, {
+      ...query,
+      userId: user.role === "agent" ? user.id : query.userId
+    });
   }
 
   @Post("sessions/:sessionId/messages")
