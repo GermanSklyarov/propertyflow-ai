@@ -30,6 +30,6 @@ export class AnalyticsController {
     @TenantId() tenantId: string,
     @Query() query: ListSecurityEventsDto
   ): Promise<TenantSecurityEventsResponse> {
-    return this.analytics.listSecurityEvents(tenantId, query.limit);
+    return this.analytics.listSecurityEvents(tenantId, query);
   }
 }

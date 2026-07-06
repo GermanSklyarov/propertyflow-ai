@@ -409,7 +409,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, search volume, average search latency, searches by source, top search queries, attributed leads, search-to-lead conversion rate, lead attribution by search source/query, basic conversion rate, AI Concierge adoption, Concierge lead conversion, feedback quality, recommendation areas, training label coverage, and a `security` block with rejected job enqueue attempts, blocked AI actions, image delete previews, image removals, rejected jobs by name, and blocked AI actions by name.
 
-`GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals.
+`GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals. It supports `kind`, `severity`, `userId`, and `limit` filters for investigation workflows.
 
 Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`.
 

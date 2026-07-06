@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { CountByBucket, TenantSecurityEventSnapshot } from "@propertyflow/contracts";
+import type { CountByBucket, TenantSecurityEventsRequest, TenantSecurityEventSnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { AnalyticsRepository, TenantAnalyticsRawMetrics } from "../../domain/analytics.repository.js";
@@ -227,8 +227,32 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
     };
   }
 
-  async listSecurityEvents(tenantId: string, limit: number): Promise<TenantSecurityEventSnapshot[]> {
-    const boundedLimit = Math.min(Math.max(limit, 1), 100);
+  async listSecurityEvents(
+    tenantId: string,
+    request: TenantSecurityEventsRequest
+  ): Promise<TenantSecurityEventSnapshot[]> {
+    const boundedLimit = Math.min(Math.max(request.limit ?? 50, 1), 100);
+    const filters: string[] = [];
+    const values: unknown[] = [tenantId];
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (request.kind) {
+      filters.push(`kind = ${addValue(request.kind)}`);
+    }
+
+    if (request.severity) {
+      filters.push(`severity = ${addValue(request.severity)}`);
+    }
+
+    if (request.userId) {
+      filters.push(`user_id = ${addValue(request.userId)}`);
+    }
+
+    const filterSql = filters.length ? `where ${filters.join(" and ")}` : "";
+    const limitPlaceholder = addValue(boundedLimit);
     const result = await this.pool.query<SecurityEventRow>(
       `
         select *
@@ -318,10 +342,11 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
           where event.tenant_id = $1
             and event.action = 'property.image_removed'
         ) security_events
+        ${filterSql}
         order by created_at desc
-        limit $2
+        limit ${limitPlaceholder}
       `,
-      [tenantId, boundedLimit]
+      values
     );
 
     return result.rows.map((row) => this.toSecurityEvent(row));

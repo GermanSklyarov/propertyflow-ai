@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { TenantDashboardMetrics, TenantSecurityEventsResponse } from "@propertyflow/contracts";
+import type { TenantDashboardMetrics, TenantSecurityEventsRequest, TenantSecurityEventsResponse } from "@propertyflow/contracts";
 import { ANALYTICS_REPOSITORY, type AnalyticsRepository } from "../domain/analytics.repository.js";
 
 @Injectable()
@@ -49,14 +49,22 @@ export class AnalyticsService {
     };
   }
 
-  async listSecurityEvents(tenantId: string, limit = 50): Promise<TenantSecurityEventsResponse> {
-    const boundedLimit = Math.min(Math.max(limit, 1), 100);
-    const items = await this.analytics.listSecurityEvents(tenantId, boundedLimit);
+  async listSecurityEvents(
+    tenantId: string,
+    request: TenantSecurityEventsRequest = {}
+  ): Promise<TenantSecurityEventsResponse> {
+    const boundedLimit = Math.min(Math.max(request.limit ?? 50, 1), 100);
+    const filters = {
+      ...request,
+      limit: boundedLimit
+    };
+    const items = await this.analytics.listSecurityEvents(tenantId, filters);
 
     return {
       items,
       total: items.length,
-      limit: boundedLimit
+      limit: boundedLimit,
+      filters
     };
   }
 }

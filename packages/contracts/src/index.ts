@@ -1068,6 +1068,14 @@ export interface TenantSecurityEventsResponse {
   items: TenantSecurityEventSnapshot[];
   total: number;
   limit: number;
+  filters: TenantSecurityEventsRequest;
+}
+
+export interface TenantSecurityEventsRequest {
+  kind?: TenantSecurityEventKind;
+  severity?: TenantSecurityEventSeverity;
+  userId?: string;
+  limit?: number;
 }
 
 export interface TenantDashboardMetrics {
