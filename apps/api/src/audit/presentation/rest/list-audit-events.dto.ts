@@ -26,6 +26,7 @@ const auditActions = [
   "property.image_added",
   "property.image_delete_previewed",
   "property.image_removed",
+  "property.image_restored",
   "property.published",
   "property.price_recommendation_feedback",
   "property.price_training_dataset_viewed",

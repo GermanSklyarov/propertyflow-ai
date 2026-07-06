@@ -160,6 +160,18 @@ export class PropertyImagesService {
     return image;
   }
 
+  async restoreImage(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const image = await this.images.restore(tenantId, propertyId, imageId);
+
+    if (!image) {
+      throw new NotFoundException("Deleted property image not found");
+    }
+
+    return image;
+  }
+
   private async ensurePropertyExists(tenantId: string, propertyId: string): Promise<void> {
     const property = await this.properties.findById(tenantId, propertyId);
 

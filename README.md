@@ -87,6 +87,7 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/:propertyId/images`
 - `POST /properties/:propertyId/images/:imageId/delete-preview`
 - `DELETE /properties/:propertyId/images/:imageId`
+- `POST /properties/:propertyId/images/:imageId/restore`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
 - `PATCH /properties/:propertyId/status`
@@ -236,6 +237,7 @@ Current protected routes:
 - `POST /properties/:propertyId/images`
 - `POST /properties/:propertyId/images/:imageId/delete-preview`
 - `DELETE /properties/:propertyId/images/:imageId`
+- `POST /properties/:propertyId/images/:imageId/restore`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
 - `GET /properties/:propertyId/price-recommendation`
@@ -277,6 +279,7 @@ Audit log v1 records these actions:
 - `property.image_added`
 - `property.image_delete_previewed`
 - `property.image_removed`
+- `property.image_restored`
 - `property.published`
 - `property.price_recommendation_feedback`
 - `property.price_training_dataset_viewed`
@@ -343,7 +346,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `POST /properties/:propertyId/images/upload-url` returns a MinIO/S3 presigned `PUT` URL for direct browser uploads. `POST /properties/:propertyId/images/confirm-upload` stores the uploaded object in the listing gallery with bucket/object metadata and enqueues `properties.images.analyze` by default.
 
-`GET /properties/:propertyId/images`, `POST /properties/:propertyId/images`, and `DELETE /properties/:propertyId/images/:imageId` manage the listing photo gallery with ordered image URLs, optional captions, audit/realtime events, and search reindexing. Destructive image deletion is guarded: clients must first call `POST /properties/:propertyId/images/:imageId/delete-preview`, show/verify the exact image, then pass the short-lived `confirmationToken` to `DELETE /properties/:propertyId/images/:imageId`. Direct URL insertion remains useful for imports and partner feeds. Image analysis can be disabled per add/confirm request with `analyzeImage: false`.
+`GET /properties/:propertyId/images`, `POST /properties/:propertyId/images`, and `DELETE /properties/:propertyId/images/:imageId` manage the listing photo gallery with ordered image URLs, optional captions, audit/realtime events, and search reindexing. Destructive image deletion is guarded: clients must first call `POST /properties/:propertyId/images/:imageId/delete-preview`, show/verify the exact image, then pass the short-lived `confirmationToken` to `DELETE /properties/:propertyId/images/:imageId`. Deletes are soft-deletes and managers/admins can restore a removed image with `POST /properties/:propertyId/images/:imageId/restore`. Direct URL insertion remains useful for imports and partner feeds. Image analysis can be disabled per add/confirm request with `analyzeImage: false`.
 
 `POST /properties/:propertyId/ai-assets/descriptions/:assetId/review` and `POST /properties/:propertyId/ai-assets/image-analysis/:assetId/review` approve or reject AI outputs before publication.
 

@@ -91,6 +91,19 @@ export class InMemoryPropertyImagesRepository implements PropertyImagesRepositor
     return image;
   }
 
+  async restore(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
+    const image = (this.images.get(this.key(tenantId, propertyId)) ?? []).find(
+      (item) => item.id === imageId && item.deletedAt
+    );
+
+    if (!image) {
+      return null;
+    }
+
+    image.deletedAt = undefined;
+    return image;
+  }
+
   private key(tenantId: string, propertyId: string): string {
     return `${tenantId}:${propertyId}`;
   }

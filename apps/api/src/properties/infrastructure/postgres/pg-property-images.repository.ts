@@ -186,6 +186,21 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async restore(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
+    const result = await this.pool.query<PropertyImageRow>(
+      `
+        update property_images
+        set deleted_at = null
+        where tenant_id = $1 and property_id = $2 and id = $3
+          and deleted_at is not null
+        returning id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
+      `,
+      [tenantId, propertyId, imageId]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   private toSnapshot(row: PropertyImageRow): PropertyImageSnapshot {
     return {
       id: row.id,

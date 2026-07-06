@@ -678,6 +678,46 @@ export class PropertiesController {
     return image;
   }
 
+  @Post(":propertyId/images/:imageId/restore")
+  @Roles("manager", "admin")
+  async restoreImage(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("imageId") imageId: string
+  ): Promise<PropertyImageSnapshot> {
+    const image = await this.propertyImages.restoreImage(tenantId, propertyId, imageId);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.image_restored",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        imageId: image.id,
+        imageUrl: image.imageUrl,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.images_updated", {
+      propertyId,
+      action: "restored",
+      imageId: image.id,
+      imageUrl: image.imageUrl
+    });
+
+    return image;
+  }
+
   @Post(":propertyId/ai-assets/descriptions/:assetId/review")
   @Roles("agent", "broker", "manager", "admin")
   async reviewDescriptionAsset(
