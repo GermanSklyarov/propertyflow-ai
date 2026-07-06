@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { AuditEventSnapshot } from "@propertyflow/contracts";
+import type { AuditEventSnapshot, ListAuditEventsRequest } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { AuditRepository, RecordAuditEventInput } from "../../domain/audit.repository.js";
@@ -19,6 +19,45 @@ interface AuditEventRow {
 @Injectable()
 export class PgAuditRepository implements AuditRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+
+  async list(tenantId: string, request: ListAuditEventsRequest): Promise<AuditEventSnapshot[]> {
+    const clauses = ["tenant_id = $1"];
+    const values: unknown[] = [tenantId];
+    const limit = Math.min(Math.max(request.limit ?? 50, 1), 100);
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (request.action) {
+      clauses.push(`action = ${addValue(request.action)}`);
+    }
+
+    if (request.resourceType) {
+      clauses.push(`resource_type = ${addValue(request.resourceType)}`);
+    }
+
+    if (request.resourceId) {
+      clauses.push(`resource_id = ${addValue(request.resourceId)}`);
+    }
+
+    if (request.userId) {
+      clauses.push(`user_id = ${addValue(request.userId)}`);
+    }
+
+    const result = await this.pool.query<AuditEventRow>(
+      `
+        select *
+        from audit_events
+        where ${clauses.join(" and ")}
+        order by created_at desc
+        limit ${addValue(limit)}
+      `,
+      values
+    );
+
+    return result.rows.map((row) => this.toSnapshot(row));
+  }
 
   async record(input: RecordAuditEventInput): Promise<AuditEventSnapshot> {
     const result = await this.pool.query<AuditEventRow>(
@@ -76,4 +115,3 @@ export class PgAuditRepository implements AuditRepository {
     };
   }
 }
-

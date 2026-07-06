@@ -94,6 +94,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /leads/agents`
 - `PATCH /leads/:leadId/assign`
 - `GET /analytics/dashboard`
+- `GET /audit/events`
 - `POST /chat`
 - `POST /concierge/advise`
 - `GET /concierge/analytics`
@@ -199,6 +200,7 @@ Routes with write or workspace-sensitive behavior also require dev RBAC headers:
 Current protected routes:
 
 - `POST /chat`
+- `GET /audit/events`
 - `POST /concierge/advise`
 - `GET /concierge/analytics`
 - `GET /concierge/model-registry`
@@ -278,6 +280,8 @@ Audit log v1 records these actions:
 - `lead.created`
 - `lead.assigned`
 - `job.enqueued`
+
+`GET /audit/events` returns tenant-scoped audit events for manager/admin review, with optional `action`, `resourceType`, `resourceId`, `userId`, and `limit` filters.
 
 `GET /properties` supports the first PostgreSQL-backed structured search filters:
 

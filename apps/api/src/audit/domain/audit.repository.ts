@@ -1,4 +1,4 @@
-import type { AuditEventSnapshot } from "@propertyflow/contracts";
+import type { AuditEventSnapshot, ListAuditEventsRequest } from "@propertyflow/contracts";
 
 export const AUDIT_REPOSITORY = Symbol("AUDIT_REPOSITORY");
 
@@ -13,6 +13,6 @@ export interface RecordAuditEventInput {
 }
 
 export interface AuditRepository {
+  list(tenantId: string, request: ListAuditEventsRequest): Promise<AuditEventSnapshot[]>;
   record(input: RecordAuditEventInput): Promise<AuditEventSnapshot>;
 }
-

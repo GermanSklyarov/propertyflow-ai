@@ -85,6 +85,20 @@ export interface AuditEventSnapshot {
   createdAt: string;
 }
 
+export interface ListAuditEventsRequest {
+  action?: AuditAction;
+  resourceType?: AuditEventSnapshot["resourceType"];
+  resourceId?: string;
+  userId?: string;
+  limit?: number;
+}
+
+export interface AuditEventListResponse {
+  items: AuditEventSnapshot[];
+  total: number;
+  filters: ListAuditEventsRequest;
+}
+
 export type SearchEventSource = "structured" | "indexed" | "ai";
 
 export interface PublicApiKeySnapshot {
