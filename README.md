@@ -156,7 +156,7 @@ Realtime v1 emits:
 - `lead.assigned`
 - `event`
 
-Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs through `POST /jobs`, and the worker processes them from the shared `propertyflow.jobs` queue.
+Background jobs v1 use BullMQ with Redis. The API enqueues tenant-aware jobs through `POST /jobs`, and the worker processes them from the shared `propertyflow.jobs` queue. Direct job enqueueing is guarded by a job policy layer that checks the caller role, validates the payload against the selected job name, and rejects mismatched requests before they reach BullMQ.
 
 `GET /jobs` returns tenant-scoped task monitoring data from BullMQ. It supports `states=waiting,active,completed,failed` and `limit=50`.
 
@@ -168,6 +168,7 @@ Supported job names:
 
 - `knowledge.chunks.embed`
 - `knowledge.documents.ingest`
+- `concierge.model.train`
 - `pricing.model.train`
 - `properties.import`
 - `properties.ai_description.generate`
