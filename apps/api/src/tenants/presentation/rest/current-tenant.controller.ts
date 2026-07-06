@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Inject, Patch, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { RequestUser, TenantSnapshot } from "@propertyflow/contracts";
+import type { RequestUser, TenantSnapshot, TenantUsageResponse } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -39,6 +39,12 @@ export class CurrentTenantController {
     });
 
     return tenant;
+  }
+
+  @Get("current/usage")
+  @Roles("broker", "manager", "admin")
+  usage(@Tenant() tenant: TenantSnapshot): Promise<TenantUsageResponse> {
+    return this.tenants.getUsage(tenant.id);
   }
 
   @Patch("current/settings")

@@ -3,7 +3,7 @@ import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { PropertySearchResponse, PublicApiKeySnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../../properties/domain/property.repository.js";
-import { SearchPropertiesDto } from "../../../properties/presentation/rest/search-properties.dto.js";
+import { SearchPropertiesDto, toPropertySearchRequest } from "../../../properties/presentation/rest/search-properties.dto.js";
 import { PublicApiKey } from "./public-api-key.decorator.js";
 import { PublicApiKeyGuard } from "./public-api-key.guard.js";
 
@@ -20,7 +20,7 @@ export class PublicPropertiesController {
     @PublicApiKey() apiKey: PublicApiKeySnapshot,
     @Query() query: SearchPropertiesDto
   ): Promise<PropertySearchResponse> {
-    const filters = query.toSearchRequest();
+    const filters = toPropertySearchRequest(query);
     const items = (await this.properties.search(apiKey.tenantId, filters)).filter(
       (property) => property.status === "available"
     );

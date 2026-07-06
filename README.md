@@ -131,6 +131,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/:propertyId/status-history`
 - `GET /properties/:propertyId`
 - `GET /tenants/current`
+- `GET /tenants/current/usage`
 - `PATCH /tenants/current/settings`
 - `GET /public/v1/properties`
 - `GET /public/v1/properties/:propertyId`
@@ -247,6 +248,7 @@ Current protected routes:
 - `GET /jobs`
 - `POST /jobs`
 - `GET /tenants/current`
+- `GET /tenants/current/usage`
 - `PATCH /tenants/current/settings`
 
 Audit log v1 records these actions:
@@ -393,7 +395,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 - gross and net yield;
 - confidence, label, summary, and warnings.
 
-`GET /tenants/current` returns the active tenant workspace, branding, status, primary market, custom domain state, subscription plan, and usage limits for the supplied `x-tenant-id`. `PATCH /tenants/current/settings` lets managers/admins update branding, primary market, and custom domain; a new custom domain is marked `pending-verification`.
+`GET /tenants/current` returns the active tenant workspace, branding, status, primary market, custom domain state, subscription plan, and usage limits for the supplied `x-tenant-id`. `GET /tenants/current/usage` returns current-month usage versus plan limits for properties, active users, AI-credit events, and public API requests. `PATCH /tenants/current/settings` lets managers/admins update branding, primary market, and custom domain; a new custom domain is marked `pending-verification`.
 
 `GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, search volume, average search latency, searches by source, top search queries, attributed leads, search-to-lead conversion rate, lead attribution by search source/query, basic conversion rate, AI Concierge adoption, Concierge lead conversion, feedback quality, recommendation areas, and training label coverage.
 

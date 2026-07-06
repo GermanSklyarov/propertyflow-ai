@@ -4,6 +4,8 @@ import { PublicApiKeyService } from "../../application/public-api-key.service.js
 
 interface PublicApiRequest {
   headers: Record<string, string | string[] | undefined>;
+  method?: string;
+  url?: string;
   publicApiKey?: PublicApiKeySnapshot;
 }
 
@@ -27,6 +29,7 @@ export class PublicApiKeyGuard implements CanActivate {
     }
 
     request.publicApiKey = apiKey;
+    await this.apiKeys.recordUsage(apiKey, `${request.method ?? "GET"} ${request.url ?? "unknown"}`);
 
     return true;
   }

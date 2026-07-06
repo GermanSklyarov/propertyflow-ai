@@ -390,6 +390,18 @@ insert into api_keys (
 
 create index if not exists idx_api_keys_tenant_status on api_keys (tenant_id, status);
 
+create table if not exists tenant_usage_events (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  event_type text not null,
+  quantity integer not null default 1,
+  metadata jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_tenant_usage_events_tenant_type_created
+  on tenant_usage_events (tenant_id, event_type, created_at desc);
+
 create table if not exists leads (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

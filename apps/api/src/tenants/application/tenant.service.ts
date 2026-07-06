@@ -1,5 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import type { TenantSnapshot, TenantUsageMetric, TenantUsageResponse, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
 
 @Injectable()
@@ -26,6 +26,32 @@ export class TenantService {
     return tenant;
   }
 
+  async getUsage(tenantId: string): Promise<TenantUsageResponse> {
+    const tenant = await this.getActiveTenantOrThrow(tenantId);
+    const now = new Date();
+    const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+    const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+    const usage = await this.tenants.getUsage(tenantId, periodStart, periodEnd);
+
+    return {
+      tenantId,
+      subscriptionPlan: tenant.subscriptionPlan,
+      periodStart: periodStart.toISOString(),
+      periodEnd: periodEnd.toISOString(),
+      items: [
+        this.toUsageMetric("properties", usage.properties, tenant.limits.properties),
+        this.toUsageMetric("agents", usage.agents, tenant.limits.agents),
+        this.toUsageMetric("aiCreditsMonthly", usage.aiCreditsMonthly, tenant.limits.aiCreditsMonthly),
+        this.toUsageMetric(
+          "publicApiRequestsMonthly",
+          usage.publicApiRequestsMonthly,
+          tenant.limits.publicApiRequestsMonthly
+        )
+      ],
+      generatedAt: now.toISOString()
+    };
+  }
+
   async updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot> {
     const tenant = await this.tenants.updateSettings(tenantId, request);
 
@@ -34,5 +60,15 @@ export class TenantService {
     }
 
     return tenant;
+  }
+
+  private toUsageMetric(key: TenantUsageMetric["key"], used: number, limit: number): TenantUsageMetric {
+    return {
+      key,
+      used,
+      limit,
+      remaining: Math.max(limit - used, 0),
+      utilizationRate: limit > 0 ? Math.round((used / limit) * 10_000) / 100 : 0
+    };
   }
 }

@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import type { PublicApiKeySnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
@@ -44,6 +45,37 @@ export class PgPublicApiKeyRepository implements PublicApiKeyRepository {
     );
   }
 
+  async recordUsage(tenantId: string, apiKeyId: string, route: string): Promise<void> {
+    await this.pool.query(
+      `
+        insert into tenant_usage_events (
+          id,
+          tenant_id,
+          event_type,
+          quantity,
+          metadata,
+          created_at
+        ) values (
+          $1,
+          $2,
+          'public-api.request',
+          1,
+          $3,
+          $4
+        )
+      `,
+      [
+        randomUUID(),
+        tenantId,
+        JSON.stringify({
+          apiKeyId,
+          route
+        }),
+        new Date().toISOString()
+      ]
+    );
+  }
+
   private toSnapshot(row: PublicApiKeyRow): PublicApiKeySnapshot {
     return {
       id: row.id,
@@ -57,4 +89,3 @@ export class PgPublicApiKeyRepository implements PublicApiKeyRepository {
     };
   }
 }
-

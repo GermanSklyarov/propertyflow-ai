@@ -41,6 +41,25 @@ export interface UpdateTenantSettingsRequest {
   };
 }
 
+export type TenantUsageMetricKey = "properties" | "agents" | "aiCreditsMonthly" | "publicApiRequestsMonthly";
+
+export interface TenantUsageMetric {
+  key: TenantUsageMetricKey;
+  used: number;
+  limit: number;
+  remaining: number;
+  utilizationRate: number;
+}
+
+export interface TenantUsageResponse {
+  tenantId: string;
+  subscriptionPlan: TenantSnapshot["subscriptionPlan"];
+  periodStart: string;
+  periodEnd: string;
+  items: TenantUsageMetric[];
+  generatedAt: string;
+}
+
 export type UserRole = "agent" | "broker" | "manager" | "admin";
 
 export interface RequestUser {

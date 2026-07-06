@@ -3,7 +3,7 @@ import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/
 import type { Pool } from "pg";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { TenantRepository } from "../../domain/tenant.repository.js";
+import type { TenantRepository, TenantUsageRawMetrics } from "../../domain/tenant.repository.js";
 
 interface TenantRow {
   id: string;
@@ -22,6 +22,10 @@ interface TenantRow {
   updated_at: Date;
 }
 
+interface CountRow {
+  count: string;
+}
+
 @Injectable()
 export class PgTenantRepository implements TenantRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -38,6 +42,55 @@ export class PgTenantRepository implements TenantRepository {
     );
 
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
+  async getUsage(tenantId: string, periodStart: Date, periodEnd: Date): Promise<TenantUsageRawMetrics> {
+    const [properties, agents, aiCreditsMonthly, publicApiRequestsMonthly] = await Promise.all([
+      this.count("select count(*) from properties where tenant_id = $1", [tenantId]),
+      this.count("select count(*) from tenant_users where tenant_id = $1 and status = 'active'", [tenantId]),
+      this.count(
+        `
+          select count(*)
+          from audit_events
+          where tenant_id = $1
+            and created_at >= $2
+            and created_at < $3
+            and action = any($4)
+        `,
+        [
+          tenantId,
+          periodStart.toISOString(),
+          periodEnd.toISOString(),
+          [
+            "chat.asked",
+            "concierge.advised",
+            "concierge.message_added",
+            "pricing.model_training_requested",
+            "property.ai_assistant",
+            "property.ai_search",
+            "property.price_recommended"
+          ]
+        ]
+      ),
+      this.count(
+        `
+          select coalesce(sum(quantity), 0) as count
+          from tenant_usage_events
+          where tenant_id = $1
+            and event_type = 'public-api.request'
+            and created_at >= $2
+            and created_at < $3
+        `,
+        [tenantId, periodStart.toISOString(), periodEnd.toISOString()]
+      )
+    ]);
+
+    return {
+      properties,
+      agents,
+      aiCreditsMonthly,
+      publicApiRequestsMonthly
+    };
   }
 
   async updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot | null> {
@@ -96,5 +149,10 @@ export class PgTenantRepository implements TenantRepository {
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
     };
+  }
+
+  private async count(sql: string, values: unknown[]): Promise<number> {
+    const result = await this.pool.query<CountRow>(sql, values);
+    return Number(result.rows[0]?.count ?? 0);
   }
 }

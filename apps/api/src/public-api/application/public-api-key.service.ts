@@ -20,5 +20,8 @@ export class PublicApiKeyService {
 
     return apiKey;
   }
-}
 
+  async recordUsage(apiKey: PublicApiKeySnapshot, route: string): Promise<void> {
+    await this.apiKeys.recordUsage(apiKey.tenantId, apiKey.id, route);
+  }
+}
