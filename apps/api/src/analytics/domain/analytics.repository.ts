@@ -19,6 +19,16 @@ export interface TenantAnalyticsRawMetrics {
   topSearchQueries: CountByBucket[];
   leadsByAttributedSearchSource: CountByBucket[];
   topLeadSearchQueries: CountByBucket[];
+  conciergeSessions: number;
+  conciergeAwaitingInputSessions: number;
+  conciergeRecommendedSessions: number;
+  conciergeLeads: number;
+  conciergeFeedbackCount: number;
+  conciergePositiveFeedbackCount: number;
+  conciergeTrainingDatasetRows: number;
+  conciergeTrainingLabeledRows: number;
+  conciergeRecommendationsByArea: CountByBucket[];
+  conciergeFeedbackByRating: CountByBucket[];
 }
 
 export interface AnalyticsRepository {

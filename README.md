@@ -252,7 +252,9 @@ Audit log v1 records these actions:
 - `concierge.feedback_submitted`
 - `concierge.lead_created`
 - `concierge.message_added`
+- `concierge.model_training_requested`
 - `concierge.session_created`
+- `concierge.training_dataset_viewed`
 - `knowledge.document_created`
 - `knowledge.document_embedding_requested`
 - `knowledge.document_ingestion_requested`
@@ -386,7 +388,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `GET /tenants/current` returns the active tenant workspace, branding, status, and primary market for the supplied `x-tenant-id`.
 
-`GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, search volume, average search latency, searches by source, top search queries, attributed leads, search-to-lead conversion rate, lead attribution by search source/query, and basic conversion rate.
+`GET /analytics/dashboard` returns tenant dashboard metrics: property counts, lead counts, unassigned leads, leads by source/status, search volume, average search latency, searches by source, top search queries, attributed leads, search-to-lead conversion rate, lead attribution by search source/query, basic conversion rate, AI Concierge adoption, Concierge lead conversion, feedback quality, recommendation areas, and training label coverage.
 
 Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`.
 

@@ -957,6 +957,17 @@ export interface TenantDashboardMetrics {
   topSearchQueries: CountByBucket[];
   leadsByAttributedSearchSource: CountByBucket[];
   topLeadSearchQueries: CountByBucket[];
+  conciergeSessions: number;
+  conciergeAwaitingInputSessions: number;
+  conciergeRecommendedSessions: number;
+  conciergeLeads: number;
+  conciergeLeadConversionRate: number;
+  conciergeFeedbackCount: number;
+  conciergePositiveFeedbackRate: number;
+  conciergeTrainingDatasetRows: number;
+  conciergeTrainingLabelCoverageRate: number;
+  conciergeRecommendationsByArea: CountByBucket[];
+  conciergeFeedbackByRating: CountByBucket[];
   generatedAt: string;
 }
 

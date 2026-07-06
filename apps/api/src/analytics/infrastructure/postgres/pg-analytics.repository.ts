@@ -34,7 +34,17 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       searchesBySource,
       topSearchQueries,
       leadsByAttributedSearchSource,
-      topLeadSearchQueries
+      topLeadSearchQueries,
+      conciergeSessions,
+      conciergeAwaitingInputSessions,
+      conciergeRecommendedSessions,
+      conciergeLeads,
+      conciergeFeedbackCount,
+      conciergePositiveFeedbackCount,
+      conciergeTrainingDatasetRows,
+      conciergeTrainingLabeledRows,
+      conciergeRecommendationsByArea,
+      conciergeFeedbackByRating
     ] = await Promise.all([
       this.count("select count(*) from properties where tenant_id = $1", [tenantId]),
       this.count("select count(*) from properties where tenant_id = $1 and status = 'available'", [tenantId]),
@@ -67,6 +77,50 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.bucket(
         "select attribution_search_query as bucket, count(*) from leads where tenant_id = $1 and attribution_search_query is not null group by attribution_search_query order by count(*) desc, attribution_search_query asc limit 10",
         [tenantId]
+      ),
+      this.count("select count(*) from concierge_sessions where tenant_id = $1", [tenantId]),
+      this.count("select count(*) from concierge_sessions where tenant_id = $1 and status = 'awaiting-input'", [tenantId]),
+      this.count("select count(*) from concierge_sessions where tenant_id = $1 and status = 'recommended'", [tenantId]),
+      this.count("select count(*) from leads where tenant_id = $1 and source = 'ai-concierge'", [tenantId]),
+      this.count("select count(*) from concierge_feedback where tenant_id = $1", [tenantId]),
+      this.count("select count(*) from concierge_feedback where tenant_id = $1 and rating = 'positive'", [tenantId]),
+      this.count("select count(*) from concierge_sessions where tenant_id = $1 and status = 'recommended'", [tenantId]),
+      this.count(
+        `
+          select count(distinct session.id)
+          from concierge_sessions session
+          left join concierge_feedback feedback
+            on feedback.tenant_id = session.tenant_id
+            and feedback.session_id = session.id
+          left join leads lead
+            on lead.tenant_id = session.tenant_id
+            and lead.source = 'ai-concierge'
+            and lead.attribution_search_event_id = session.id
+          where session.tenant_id = $1
+            and session.status = 'recommended'
+            and (
+              feedback.rating is not null
+              or feedback.selected_property_id is not null
+              or lead.id is not null
+            )
+        `,
+        [tenantId]
+      ),
+      this.bucket(
+        `
+          select session.latest_response->'areaRecommendation'->>'area' as bucket, count(*)
+          from concierge_sessions session
+          where session.tenant_id = $1
+            and session.latest_response->'areaRecommendation'->>'area' is not null
+          group by bucket
+          order by count(*) desc, bucket asc
+          limit 10
+        `,
+        [tenantId]
+      ),
+      this.bucket(
+        "select rating as bucket, count(*) from concierge_feedback where tenant_id = $1 group by rating order by count(*) desc, rating asc",
+        [tenantId]
       )
     ]);
 
@@ -86,7 +140,17 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       searchesBySource,
       topSearchQueries,
       leadsByAttributedSearchSource,
-      topLeadSearchQueries
+      topLeadSearchQueries,
+      conciergeSessions,
+      conciergeAwaitingInputSessions,
+      conciergeRecommendedSessions,
+      conciergeLeads,
+      conciergeFeedbackCount,
+      conciergePositiveFeedbackCount,
+      conciergeTrainingDatasetRows,
+      conciergeTrainingLabeledRows,
+      conciergeRecommendationsByArea,
+      conciergeFeedbackByRating
     };
   }
 
