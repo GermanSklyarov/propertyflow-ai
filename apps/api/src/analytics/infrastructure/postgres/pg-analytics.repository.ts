@@ -250,7 +250,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
     const limitValues = [...values, boundedLimit];
     const limitPlaceholder = `$${limitValues.length}`;
     const securityEventsSql = this.securityEventsSql();
-    const [itemsResult, total, bySeverity, byKind] = await Promise.all([
+    const [itemsResult, total, bySeverity, byKind, byAcknowledgement] = await Promise.all([
       this.pool.query<SecurityEventRow>(
         `
           select *
@@ -288,6 +288,18 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
           order by count(*) desc, kind asc
         `,
         values
+      ),
+      this.bucket(
+        `
+          select
+            case when acknowledged_at is null then 'unacknowledged' else 'acknowledged' end as bucket,
+            count(*)
+          from (${securityEventsSql}) security_events
+          ${filterSql}
+          group by bucket
+          order by count(*) desc, bucket asc
+        `,
+        values
       )
     ]);
 
@@ -296,7 +308,8 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       summary: {
         total,
         bySeverity,
-        byKind
+        byKind,
+        byAcknowledgement
       }
     };
   }
@@ -494,6 +507,14 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
 
     if (request.userId) {
       filters.push(`user_id = ${addValue(request.userId)}`);
+    }
+
+    if (request.acknowledgement === "acknowledged") {
+      filters.push("acknowledged_at is not null");
+    }
+
+    if (request.acknowledgement === "unacknowledged") {
+      filters.push("acknowledged_at is null");
     }
 
     return {

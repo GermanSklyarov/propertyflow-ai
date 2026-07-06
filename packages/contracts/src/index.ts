@@ -1047,6 +1047,7 @@ export type TenantSecurityEventKind =
   | "image-removed";
 
 export type TenantSecurityEventSeverity = "info" | "warning" | "critical";
+export type TenantSecurityEventAcknowledgementFilter = "all" | "acknowledged" | "unacknowledged";
 
 export interface TenantSecurityEventSnapshot {
   id: string;
@@ -1080,6 +1081,7 @@ export interface TenantSecurityEventsRequest {
   kind?: TenantSecurityEventKind;
   severity?: TenantSecurityEventSeverity;
   userId?: string;
+  acknowledgement?: TenantSecurityEventAcknowledgementFilter;
   limit?: number;
 }
 
@@ -1087,6 +1089,7 @@ export interface TenantSecurityEventsSummary {
   total: number;
   bySeverity: CountByBucket[];
   byKind: CountByBucket[];
+  byAcknowledgement: CountByBucket[];
 }
 
 export interface AcknowledgeSecurityEventRequest {
