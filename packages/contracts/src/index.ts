@@ -422,6 +422,20 @@ export interface ConciergeSessionListResponse {
   filters: ListConciergeSessionsRequest;
 }
 
+export interface ConciergeAnalyticsResponse {
+  tenantId: string;
+  totalSessions: number;
+  awaitingInputSessions: number;
+  recommendedSessions: number;
+  convertedLeads: number;
+  recommendationRate: number;
+  leadConversionRate: number;
+  sessionsByPurpose: CountByBucket[];
+  sessionsByMarket: CountByBucket[];
+  recommendedAreas: CountByBucket[];
+  generatedAt: string;
+}
+
 export type KnowledgeDocumentKind = "article" | "neighborhood" | "relocation" | "legal" | "investment" | "faq";
 
 export interface KnowledgeDocumentSnapshot {

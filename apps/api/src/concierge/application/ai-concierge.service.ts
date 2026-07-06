@@ -1,6 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   AddConciergeSessionMessageRequest,
+  ConciergeAnalyticsResponse,
   ConciergeAreaRecommendation,
   ConciergeProfile,
   ConciergePropertyRecommendation,
@@ -44,6 +45,15 @@ interface ConciergeMessageRow {
   response?: ConciergeResponse;
   profile?: ConciergeProfile;
   created_at: Date;
+}
+
+interface CountRow {
+  count: string;
+}
+
+interface BucketRow {
+  bucket: string | null;
+  count: string;
 }
 
 @Injectable()
@@ -262,6 +272,92 @@ export class AiConciergeService {
     );
   }
 
+  async getAnalytics(tenantId: string, request: ListConciergeSessionsRequest): Promise<ConciergeAnalyticsResponse> {
+    const sessionClauses = ["tenant_id = $1"];
+    const sessionValues: unknown[] = [tenantId];
+    const addSessionValue = (value: unknown): string => {
+      sessionValues.push(value);
+      return `$${sessionValues.length}`;
+    };
+
+    if (request.userId) {
+      sessionClauses.push(`user_id = ${addSessionValue(request.userId)}`);
+    }
+
+    const whereSessions = sessionClauses.join(" and ");
+    const [
+      totalSessions,
+      awaitingInputSessions,
+      recommendedSessions,
+      convertedLeads,
+      sessionsByPurpose,
+      sessionsByMarket,
+      recommendedAreas
+    ] = await Promise.all([
+      this.count(`select count(*) from concierge_sessions where ${whereSessions}`, sessionValues),
+      this.count(`select count(*) from concierge_sessions where ${whereSessions} and status = 'awaiting-input'`, sessionValues),
+      this.count(`select count(*) from concierge_sessions where ${whereSessions} and status = 'recommended'`, sessionValues),
+      this.count(
+        `
+          select count(*)
+          from leads
+          where tenant_id = $1
+            and source = 'ai-concierge'
+            and attribution_search_event_id is not null
+            ${request.userId ? "and assigned_agent_id = $2" : ""}
+        `,
+        request.userId ? [tenantId, request.userId] : [tenantId]
+      ),
+      this.bucket(
+        `
+          select profile ->> 'purpose' as bucket, count(*)
+          from concierge_sessions
+          where ${whereSessions} and profile ->> 'purpose' is not null
+          group by bucket
+          order by count(*) desc, bucket asc
+          limit 10
+        `,
+        sessionValues
+      ),
+      this.bucket(
+        `
+          select profile ->> 'market' as bucket, count(*)
+          from concierge_sessions
+          where ${whereSessions} and profile ->> 'market' is not null
+          group by bucket
+          order by count(*) desc, bucket asc
+          limit 10
+        `,
+        sessionValues
+      ),
+      this.bucket(
+        `
+          select latest_response #>> '{areaRecommendation,area}' as bucket, count(*)
+          from concierge_sessions
+          where ${whereSessions} and latest_response #>> '{areaRecommendation,area}' is not null
+          group by bucket
+          order by count(*) desc, bucket asc
+          limit 10
+        `,
+        sessionValues
+      )
+    ]);
+
+    return {
+      tenantId,
+      totalSessions,
+      awaitingInputSessions,
+      recommendedSessions,
+      convertedLeads,
+      recommendationRate: totalSessions > 0 ? Math.round((recommendedSessions / totalSessions) * 10_000) / 100 : 0,
+      leadConversionRate: totalSessions > 0 ? Math.round((convertedLeads / totalSessions) * 10_000) / 100 : 0,
+      sessionsByPurpose,
+      sessionsByMarket,
+      recommendedAreas,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
   private async findSession(tenantId: string, sessionId: string): Promise<ConciergeSessionSnapshot> {
     const result = await this.pool.query<ConciergeSessionRow>(
       `
@@ -336,6 +432,22 @@ export class AiConciergeService {
       profile: row.profile,
       createdAt: row.created_at.toISOString()
     };
+  }
+
+  private async count(sql: string, values: unknown[]): Promise<number> {
+    const result = await this.pool.query<CountRow>(sql, values);
+    return Number(result.rows[0]?.count ?? 0);
+  }
+
+  private async bucket(sql: string, values: unknown[]) {
+    const result = await this.pool.query<BucketRow>(sql, values);
+
+    return result.rows
+      .filter((row) => row.bucket)
+      .map((row) => ({
+        bucket: row.bucket!,
+        count: Number(row.count)
+      }));
   }
 
   private buildLeadMessage(session: ConciergeSessionSnapshot): string {

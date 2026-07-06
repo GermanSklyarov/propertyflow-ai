@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
+  ConciergeAnalyticsResponse,
   ConciergeResponse,
   ConciergeSessionDetailResponse,
   ConciergeSessionListResponse,
@@ -96,6 +97,19 @@ export class ConciergeController {
     @Query() query: ListConciergeSessionsDto
   ): Promise<ConciergeSessionListResponse> {
     return this.concierge.listSessions(tenantId, {
+      ...query,
+      userId: user.role === "agent" ? user.id : query.userId
+    });
+  }
+
+  @Get("analytics")
+  @Roles("agent", "broker", "manager", "admin")
+  getAnalytics(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListConciergeSessionsDto
+  ): Promise<ConciergeAnalyticsResponse> {
+    return this.concierge.getAnalytics(tenantId, {
       ...query,
       userId: user.role === "agent" ? user.id : query.userId
     });
