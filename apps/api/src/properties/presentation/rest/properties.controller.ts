@@ -26,6 +26,7 @@ import type {
   RentalYieldSummary,
   RunListingAssistantResponse,
   SavedPropertySearchListResponse,
+  SavedPropertySearchMatchesResponse,
   SavedPropertySearchSnapshot,
   UpdatePropertyPriceResponse
 } from "@propertyflow/contracts";
@@ -246,6 +247,41 @@ export class PropertiesController {
     });
 
     return savedSearch;
+  }
+
+  @Get("saved-searches/:searchId/matches")
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearchMatches(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string
+  ): Promise<SavedPropertySearchMatchesResponse> {
+    const startedAt = Date.now();
+    const result = await this.savedSearches.getMatches(tenantId, searchId, user);
+
+    await this.searchObservability.record({
+      tenantId,
+      source: "structured",
+      query: result.savedSearch.naturalLanguageQuery,
+      filters: result.filters,
+      totalResults: result.total,
+      latencyMs: Date.now() - startedAt
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.matches_viewed",
+      resourceType: "search",
+      resourceId: result.savedSearch.id,
+      metadata: {
+        title: result.savedSearch.title,
+        filters: result.filters,
+        total: result.total
+      }
+    });
+
+    return result;
   }
 
   @Delete("saved-searches/:searchId")

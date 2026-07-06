@@ -35,6 +35,7 @@ const auditActions = [
   "property.status_changed",
   "saved_search.created",
   "saved_search.deleted",
+  "saved_search.matches_viewed",
   "saved_search.viewed",
   "tenant.current_viewed",
   "lead.created",

@@ -110,6 +110,7 @@ export type AuditAction =
   | "property.status_changed"
   | "saved_search.created"
   | "saved_search.deleted"
+  | "saved_search.matches_viewed"
   | "saved_search.viewed"
   | "tenant.current_viewed"
   | "tenant.settings_updated"
@@ -391,6 +392,11 @@ export interface CreateSavedPropertySearchRequest {
 export interface SavedPropertySearchListResponse {
   items: SavedPropertySearchSnapshot[];
   total: number;
+}
+
+export interface SavedPropertySearchMatchesResponse extends PropertySearchResponse {
+  savedSearch: SavedPropertySearchSnapshot;
+  generatedAt: string;
 }
 
 export interface AiChatRequest {

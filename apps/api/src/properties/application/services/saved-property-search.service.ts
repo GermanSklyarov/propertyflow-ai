@@ -4,6 +4,7 @@ import type {
   PropertySearchRequest,
   RequestUser,
   SavedPropertySearchListResponse,
+  SavedPropertySearchMatchesResponse,
   SavedPropertySearchSnapshot
 } from "@propertyflow/contracts";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
@@ -75,6 +76,23 @@ export class SavedPropertySearchService {
     }
 
     return search;
+  }
+
+  async getMatches(
+    tenantId: string,
+    searchId: string,
+    user: RequestUser
+  ): Promise<SavedPropertySearchMatchesResponse> {
+    const savedSearch = await this.getById(tenantId, searchId, user);
+    const items = await this.properties.search(tenantId, savedSearch.filters);
+
+    return {
+      savedSearch,
+      items,
+      total: items.length,
+      filters: savedSearch.filters,
+      generatedAt: new Date().toISOString()
+    };
   }
 
   async delete(tenantId: string, searchId: string, user: RequestUser): Promise<SavedPropertySearchSnapshot> {
