@@ -114,6 +114,26 @@ create index if not exists idx_properties_tenant_market on properties (tenant_id
 create index if not exists idx_properties_location on properties using gist (location);
 create index if not exists idx_properties_price_amount on properties (price_amount);
 
+create table if not exists saved_property_searches (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  user_id text,
+  title text not null,
+  natural_language_query text,
+  locale text,
+  purpose text,
+  filters jsonb not null default '{}',
+  match_count integer not null default 0,
+  notifications_enabled boolean not null default false,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+create index if not exists idx_saved_property_searches_tenant_user
+  on saved_property_searches (tenant_id, user_id, created_at desc);
+create index if not exists idx_saved_property_searches_tenant_created
+  on saved_property_searches (tenant_id, created_at desc);
+
 create table if not exists property_images (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

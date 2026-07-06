@@ -26,17 +26,20 @@ import { PropertyImagesService } from "./application/services/property-images.se
 import { PropertyPublicationService } from "./application/services/property-publication.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
+import { SavedPropertySearchService } from "./application/services/saved-property-search.service.js";
 import { PRICE_RECOMMENDATION_FEEDBACK_REPOSITORY } from "./domain/price-recommendation-feedback.repository.js";
 import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
 import { PROPERTY_IMAGES_REPOSITORY } from "./domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
 import { PROPERTY_STATUS_HISTORY_REPOSITORY } from "./domain/property-status-history.repository.js";
+import { SAVED_PROPERTY_SEARCH_REPOSITORY } from "./domain/saved-property-search.repository.js";
 import { createPropertySearchClient, PROPERTY_SEARCH_CLIENT } from "./infrastructure/opensearch/property-search-client.js";
 import { PgPropertyAiAssetsRepository } from "./infrastructure/postgres/pg-property-ai-assets.repository.js";
 import { PgPropertyImagesRepository } from "./infrastructure/postgres/pg-property-images.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
 import { PgPropertyStatusHistoryRepository } from "./infrastructure/postgres/pg-property-status-history.repository.js";
 import { PgPriceRecommendationFeedbackRepository } from "./infrastructure/postgres/pg-price-recommendation-feedback.repository.js";
+import { PgSavedPropertySearchRepository } from "./infrastructure/postgres/pg-saved-property-search.repository.js";
 import { PropertiesController } from "./presentation/rest/properties.controller.js";
 
 const commandHandlers = [CreatePropertyHandler];
@@ -73,6 +76,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     PropertyImagesService,
     PropertyPublicationService,
     RentalYieldService,
+    SavedPropertySearchService,
     {
       provide: PROPERTY_REPOSITORY,
       useClass: PgPropertyRepository
@@ -96,6 +100,10 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     {
       provide: PRICE_RECOMMENDATION_FEEDBACK_REPOSITORY,
       useClass: PgPriceRecommendationFeedbackRepository
+    },
+    {
+      provide: SAVED_PROPERTY_SEARCH_REPOSITORY,
+      useClass: PgSavedPropertySearchRepository
     }
   ],
   exports: [

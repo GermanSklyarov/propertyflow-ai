@@ -108,6 +108,9 @@ export type AuditAction =
   | "property.price_recommended"
   | "property.price_updated"
   | "property.status_changed"
+  | "saved_search.created"
+  | "saved_search.deleted"
+  | "saved_search.viewed"
   | "tenant.current_viewed"
   | "tenant.settings_updated"
   | "lead.created"
@@ -358,6 +361,35 @@ export interface NaturalLanguageSearchResponse {
 
 export interface NaturalLanguagePropertySearchResponse extends NaturalLanguageSearchResponse {
   items: PropertySnapshot[];
+  total: number;
+}
+
+export interface SavedPropertySearchSnapshot {
+  id: string;
+  tenantId: string;
+  userId?: string;
+  title: string;
+  naturalLanguageQuery?: string;
+  locale?: NaturalLanguageSearchRequest["locale"];
+  purpose?: PropertyPurpose;
+  filters: PropertySearchRequest;
+  matchCount: number;
+  notificationsEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSavedPropertySearchRequest {
+  title: string;
+  naturalLanguageQuery?: string;
+  locale?: NaturalLanguageSearchRequest["locale"];
+  purpose?: PropertyPurpose;
+  filters?: PropertySearchRequest;
+  notificationsEnabled?: boolean;
+}
+
+export interface SavedPropertySearchListResponse {
+  items: SavedPropertySearchSnapshot[];
   total: number;
 }
 

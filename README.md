@@ -88,6 +88,10 @@ The API starts with a tenant-aware property inventory slice:
 - `POST /properties/:propertyId/images/:imageId/delete-preview`
 - `DELETE /properties/:propertyId/images/:imageId`
 - `POST /properties/:propertyId/images/:imageId/restore`
+- `POST /properties/saved-searches`
+- `GET /properties/saved-searches`
+- `GET /properties/saved-searches/:searchId`
+- `DELETE /properties/saved-searches/:searchId`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
 - `PATCH /properties/:propertyId/status`
@@ -243,6 +247,10 @@ Current protected routes:
 - `POST /properties/:propertyId/images/:imageId/delete-preview`
 - `DELETE /properties/:propertyId/images/:imageId`
 - `POST /properties/:propertyId/images/:imageId/restore`
+- `POST /properties/saved-searches`
+- `GET /properties/saved-searches`
+- `GET /properties/saved-searches/:searchId`
+- `DELETE /properties/saved-searches/:searchId`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
 - `GET /properties/:propertyId/price-recommendation`
@@ -293,6 +301,9 @@ Audit log v1 records these actions:
 - `property.price_recommended`
 - `property.price_updated`
 - `property.status_changed`
+- `saved_search.created`
+- `saved_search.deleted`
+- `saved_search.viewed`
 - `tenant.current_viewed`
 - `tenant.settings_updated`
 - `lead.created`
@@ -347,6 +358,8 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
   ]
 }
 ```
+
+`POST /properties/saved-searches` saves a structured or natural-language search for the current user. Natural-language searches are interpreted into filters before saving, and the snapshot stores `matchCount`, `notificationsEnabled`, the original query, and filters. Agents see their own saved searches; broker/manager/admin roles can review tenant-level saved searches through `GET /properties/saved-searches`.
 
 `POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`. Image analysis jobs support `imageUrls` and optional matching `imageIds` for gallery-linked AI assets. The response includes `actionPolicy`, an explicit AI action allowlist decision for requested actions: background draft generation can be `allowed`, mutating actions such as applying AI output require human confirmation, and destructive actions such as `property.image.delete` are `blocked` so agents must use the guarded delete-preview plus confirmation-token flow.
 

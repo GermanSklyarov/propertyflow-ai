@@ -25,6 +25,8 @@ import type {
   PropertyStatusHistoryResponse,
   RentalYieldSummary,
   RunListingAssistantResponse,
+  SavedPropertySearchListResponse,
+  SavedPropertySearchSnapshot,
   UpdatePropertyPriceResponse
 } from "@propertyflow/contracts";
 import type { RequestUser } from "@propertyflow/contracts";
@@ -56,12 +58,14 @@ import { PropertyComparisonService } from "../../application/services/property-c
 import { PropertyImagesService } from "../../application/services/property-images.service.js";
 import { PropertyPublicationService } from "../../application/services/property-publication.service.js";
 import { RentalYieldService } from "../../application/services/rental-yield.service.js";
+import { SavedPropertySearchService } from "../../application/services/saved-property-search.service.js";
 import { AddPropertyImageDto } from "./add-property-image.dto.js";
 import { ConfirmPropertyImageDeleteDto } from "./confirm-property-image-delete.dto.js";
 import { ConfirmPropertyImageUploadDto } from "./confirm-property-image-upload.dto.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { CreatePropertyImageUploadDto } from "./create-property-image-upload.dto.js";
+import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
@@ -112,6 +116,8 @@ export class PropertiesController {
     private readonly publication: PropertyPublicationService,
     @Inject(RentalYieldService)
     private readonly rentalYield: RentalYieldService,
+    @Inject(SavedPropertySearchService)
+    private readonly savedSearches: SavedPropertySearchService,
     @Inject(AuditService)
     private readonly audit: AuditService,
     @Inject(JobQueueService)
@@ -180,6 +186,90 @@ export class PropertiesController {
     });
 
     return result;
+  }
+
+  @Post("saved-searches")
+  @Roles("agent", "broker", "manager", "admin")
+  async createSavedSearch(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: CreateSavedPropertySearchDto
+  ): Promise<SavedPropertySearchSnapshot> {
+    const savedSearch = await this.savedSearches.create(tenantId, user, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.created",
+      resourceType: "search",
+      resourceId: savedSearch.id,
+      metadata: {
+        title: savedSearch.title,
+        naturalLanguageQuery: savedSearch.naturalLanguageQuery,
+        filters: savedSearch.filters,
+        matchCount: savedSearch.matchCount,
+        notificationsEnabled: savedSearch.notificationsEnabled
+      }
+    });
+
+    return savedSearch;
+  }
+
+  @Get("saved-searches")
+  @Roles("agent", "broker", "manager", "admin")
+  listSavedSearches(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser
+  ): Promise<SavedPropertySearchListResponse> {
+    return this.savedSearches.list(tenantId, user);
+  }
+
+  @Get("saved-searches/:searchId")
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearch(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string
+  ): Promise<SavedPropertySearchSnapshot> {
+    const savedSearch = await this.savedSearches.getById(tenantId, searchId, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.viewed",
+      resourceType: "search",
+      resourceId: savedSearch.id,
+      metadata: {
+        title: savedSearch.title,
+        matchCount: savedSearch.matchCount
+      }
+    });
+
+    return savedSearch;
+  }
+
+  @Delete("saved-searches/:searchId")
+  @Roles("agent", "broker", "manager", "admin")
+  async deleteSavedSearch(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string
+  ): Promise<SavedPropertySearchSnapshot> {
+    const savedSearch = await this.savedSearches.delete(tenantId, searchId, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.deleted",
+      resourceType: "search",
+      resourceId: savedSearch.id,
+      metadata: {
+        title: savedSearch.title,
+        matchCount: savedSearch.matchCount
+      }
+    });
+
+    return savedSearch;
   }
 
   @Get("search-index")

@@ -110,15 +110,15 @@ export class NaturalLanguagePropertySearchService {
   }
 
   private detectMarket(query: string): ThailandMarket | undefined {
-    const markets: Array<[ThailandMarket, RegExp]> = [
-      ["pattaya", /\b(pattaya|паттайя|паттайе|паттайи)\b/],
-      ["phuket", /\b(phuket|пхукет|пхукете|пхукета)\b/],
-      ["bangkok", /\b(bangkok|бангкок|бангкоке|бангкока)\b/],
-      ["hua-hin", /\b(hua hin|hua-hin|хуахин|хуа хин)\b/],
-      ["koh-samui", /\b(koh samui|samui|koh-samui|самуи|ко самуи)\b/]
+    const markets: Array<[ThailandMarket, string[]]> = [
+      ["pattaya", ["pattaya", "паттай"]],
+      ["phuket", ["phuket", "пхукет"]],
+      ["bangkok", ["bangkok", "бангкок"]],
+      ["hua-hin", ["hua hin", "hua-hin", "хуахин", "хуа хин"]],
+      ["koh-samui", ["koh samui", "samui", "koh-samui", "самуи", "ко самуи"]]
     ];
 
-    return markets.find(([, pattern]) => pattern.test(query))?.[0];
+    return markets.find(([, aliases]) => aliases.some((alias) => query.includes(alias)))?.[0];
   }
 
   private detectMaxPriceThb(query: string): number | undefined {
