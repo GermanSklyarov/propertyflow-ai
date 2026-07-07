@@ -69,6 +69,7 @@ import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { CreatePropertyImageUploadDto } from "./create-property-image-upload.dto.js";
 import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto.js";
+import { CreateSavedSearchAlertDigestJobDto } from "./create-saved-search-alert-digest-job.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
@@ -249,6 +250,40 @@ export class PropertiesController {
     });
 
     return result;
+  }
+
+  @Post("saved-searches/alerts/digest-job")
+  @ApiOperation({ summary: "Enqueue a saved-search alert digest job for the current user" })
+  @Roles("agent", "broker", "manager", "admin")
+  async createSavedSearchAlertDigestJob(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: CreateSavedSearchAlertDigestJobDto
+  ): Promise<BackgroundJobSnapshot> {
+    const job = await this.jobs.enqueue("saved_search.alerts.digest", {
+      tenantId,
+      requestedByUserId: user.id,
+      scope: "user",
+      userId: user.id,
+      dryRun: payload.dryRun ?? true,
+      limit: payload.limit
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.alert_digest_requested",
+      resourceType: "job",
+      resourceId: job.id,
+      metadata: {
+        name: job.name,
+        scope: "user",
+        dryRun: payload.dryRun ?? true,
+        limit: payload.limit
+      }
+    });
+
+    return job;
   }
 
   @Get("saved-searches/:searchId")

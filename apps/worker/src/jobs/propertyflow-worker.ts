@@ -9,10 +9,12 @@ import {
   type KnowledgeChunkEmbeddingJobPayload,
   type KnowledgeDocumentIngestJobPayload,
   type PricingModelTrainJobPayload,
+  type PropertySearchRequest,
   type PropertyAiDescriptionJobPayload,
   type PropertyImageAnalysisJobPayload,
   type PropertyImportJobPayload,
   type PropertySearchIndexJobPayload,
+  type SavedSearchAlertDigestJobPayload,
   PROPERTYFLOW_JOBS_QUEUE
 } from "@propertyflow/contracts";
 import { loadAppConfig } from "@propertyflow/config";
@@ -40,6 +42,13 @@ type PropertyAiDescriptionJob = Job<
 >;
 type PropertyImageAnalysisJob = Job<PropertyImageAnalysisJobPayload, unknown, "properties.images.analyze">;
 type PropertySearchIndexJob = Job<PropertySearchIndexJobPayload, unknown, "properties.search.index">;
+type SavedSearchAlertDigestJob = Job<SavedSearchAlertDigestJobPayload, unknown, "saved_search.alerts.digest">;
+
+interface SavedSearchAlertRow {
+  id: string;
+  title: string;
+  filters: PropertySearchRequest;
+}
 
 export class PropertyflowWorker {
   private readonly pool: Pool;
@@ -115,6 +124,8 @@ export class PropertyflowWorker {
         return this.generatePropertyDescription(job as PropertyAiDescriptionJob);
       case "properties.images.analyze":
         return this.analyzePropertyImages(job as PropertyImageAnalysisJob);
+      case "saved_search.alerts.digest":
+        return this.buildSavedSearchAlertDigest(job as SavedSearchAlertDigestJob);
       case "properties.search.index":
         return this.indexProperty(job as PropertySearchIndexJob);
       default:
@@ -435,6 +446,115 @@ export class PropertyflowWorker {
       indexed: true,
       searchableTextLength: document.searchableText.length
     };
+  }
+
+  private async buildSavedSearchAlertDigest(job: SavedSearchAlertDigestJob): Promise<Record<string, unknown>> {
+    const clauses = ["tenant_id = $1", "notifications_enabled = true"];
+    const values: unknown[] = [job.data.tenantId];
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (job.data.scope === "user") {
+      clauses.push(`user_id = ${addValue(job.data.userId)}`);
+    }
+
+    const limit = Math.min(Math.max(job.data.limit ?? 50, 1), 100);
+    const searches = await this.pool.query<SavedSearchAlertRow>(
+      `
+        select id, title, filters
+        from saved_property_searches
+        where ${clauses.join(" and ")}
+        order by updated_at desc
+        limit ${addValue(limit)}
+      `,
+      values
+    );
+
+    let totalCandidates = 0;
+    const items = [];
+
+    for (const search of searches.rows) {
+      const currentMatchCount = await this.countPropertyMatches(job.data.tenantId, search.filters);
+      totalCandidates += currentMatchCount;
+      items.push({
+        savedSearchId: search.id,
+        title: search.title,
+        currentMatchCount
+      });
+    }
+
+    return {
+      tenantId: job.data.tenantId,
+      scope: job.data.scope,
+      userId: job.data.userId,
+      dryRun: job.data.dryRun ?? true,
+      totalAlerts: items.length,
+      totalCandidates,
+      items,
+      delivered: job.data.dryRun === false ? 0 : undefined,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  private async countPropertyMatches(tenantId: string, filters: PropertySearchRequest): Promise<number> {
+    const clauses = ["tenant_id = $1"];
+    const values: unknown[] = [tenantId];
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (filters.market) {
+      clauses.push(`market = ${addValue(filters.market)}`);
+    }
+
+    if (filters.minPriceThb !== undefined) {
+      clauses.push(`price_currency = 'THB' and price_amount >= ${addValue(filters.minPriceThb)}`);
+    }
+
+    if (filters.maxPriceThb !== undefined) {
+      clauses.push(`price_currency = 'THB' and price_amount <= ${addValue(filters.maxPriceThb)}`);
+    }
+
+    if (filters.minBedrooms !== undefined) {
+      clauses.push(`bedrooms >= ${addValue(filters.minBedrooms)}`);
+    }
+
+    if (filters.minBathrooms !== undefined) {
+      clauses.push(`bathrooms >= ${addValue(filters.minBathrooms)}`);
+    }
+
+    if (filters.minAreaSqm !== undefined) {
+      clauses.push(`area_sqm >= ${addValue(filters.minAreaSqm)}`);
+    }
+
+    if (filters.maxBeachDistanceMeters !== undefined) {
+      clauses.push(`beach_distance_meters <= ${addValue(filters.maxBeachDistanceMeters)}`);
+    }
+
+    if (filters.requiredAmenities?.length) {
+      clauses.push(`amenities @> ${addValue(filters.requiredAmenities)}::text[]`);
+    }
+
+    if (filters.near && filters.radiusMeters !== undefined) {
+      const longitude = addValue(filters.near.longitude);
+      const latitude = addValue(filters.near.latitude);
+      const radius = addValue(filters.radiusMeters);
+      clauses.push(`st_dwithin(location, st_setsrid(st_makepoint(${longitude}, ${latitude}), 4326)::geography, ${radius})`);
+    }
+
+    const result = await this.pool.query<{ count: string }>(
+      `
+        select count(*) as count
+        from properties
+        where ${clauses.join(" and ")}
+      `,
+      values
+    );
+
+    return Number(result.rows[0]?.count ?? 0);
   }
 
   private chunkKnowledgeDocument(title: string, body: string): string[] {

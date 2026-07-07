@@ -9,7 +9,8 @@ import type {
   PropertyAiDescriptionJobPayload,
   PropertyImageAnalysisJobPayload,
   PropertyImportJobPayload,
-  PropertySearchIndexJobPayload
+  PropertySearchIndexJobPayload,
+  SavedSearchAlertDigestJobPayload
 } from "@propertyflow/contracts";
 import { Type } from "class-transformer";
 import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
@@ -22,6 +23,7 @@ const jobNames = [
   "properties.import",
   "properties.ai_description.generate",
   "properties.images.analyze",
+  "saved_search.alerts.digest",
   "properties.search.index"
 ] as const satisfies readonly BackgroundJobName[];
 
@@ -41,6 +43,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
       { $ref: "#/components/schemas/PricingModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyAiDescriptionPayloadDto" },
       { $ref: "#/components/schemas/PropertyImageAnalysisPayloadDto" },
+      { $ref: "#/components/schemas/SavedSearchAlertDigestPayloadDto" },
       { $ref: "#/components/schemas/PropertySearchIndexPayloadDto" }
     ]
   })
@@ -52,6 +55,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
     | PropertyImportPayloadDto
     | PropertyAiDescriptionPayloadDto
     | PropertyImageAnalysisPayloadDto
+    | SavedSearchAlertDigestPayloadDto
     | PropertySearchIndexPayloadDto;
 }
 
@@ -209,6 +213,34 @@ export class PropertySearchIndexPayloadDto implements PropertySearchIndexJobPayl
   @ApiProperty({ enum: ["created", "updated", "manual"] })
   @IsIn(["created", "updated", "manual"])
   reason!: "created" | "updated" | "manual";
+}
+
+export class SavedSearchAlertDigestPayloadDto implements SavedSearchAlertDigestJobPayload {
+  tenantId!: string;
+
+  requestedByUserId?: string;
+
+  @ApiProperty({ enum: ["user", "tenant"] })
+  @IsIn(["user", "tenant"])
+  scope!: SavedSearchAlertDigestJobPayload["scope"];
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  userId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsBoolean()
+  dryRun?: boolean;
+
+  @ApiProperty({ required: false, minimum: 1, maximum: 100 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
 }
 
 export function withTenantJobContext(

@@ -111,6 +111,7 @@ export type AuditAction =
   | "saved_search.created"
   | "saved_search.deleted"
   | "saved_search.alerts_viewed"
+  | "saved_search.alert_digest_requested"
   | "saved_search.matches_viewed"
   | "saved_search.notifications_updated"
   | "saved_search.recommendations_viewed"
@@ -1235,6 +1236,7 @@ export type BackgroundJobName =
   | "properties.import"
   | "properties.ai_description.generate"
   | "properties.images.analyze"
+  | "saved_search.alerts.digest"
   | "properties.search.index";
 
 export interface BackgroundJobBasePayload {
@@ -1289,11 +1291,19 @@ export interface ConciergeModelTrainJobPayload extends BackgroundJobBasePayload 
   dryRun?: boolean;
 }
 
+export interface SavedSearchAlertDigestJobPayload extends BackgroundJobBasePayload {
+  scope: "user" | "tenant";
+  userId?: string;
+  dryRun?: boolean;
+  limit?: number;
+}
+
 export type BackgroundJobPayload =
   | ConciergeModelTrainJobPayload
   | KnowledgeChunkEmbeddingJobPayload
   | KnowledgeDocumentIngestJobPayload
   | PricingModelTrainJobPayload
+  | SavedSearchAlertDigestJobPayload
   | PropertyImportJobPayload
   | PropertyAiDescriptionJobPayload
   | PropertyImageAnalysisJobPayload

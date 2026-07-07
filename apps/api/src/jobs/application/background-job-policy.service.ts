@@ -16,6 +16,7 @@ const minimumRoleByJob: Record<BackgroundJobName, UserRole> = {
   "properties.import": "broker",
   "properties.ai_description.generate": "broker",
   "properties.images.analyze": "broker",
+  "saved_search.alerts.digest": "broker",
   "properties.search.index": "broker"
 };
 
@@ -25,6 +26,7 @@ const searchIndexReasons = ["created", "updated", "manual"] as const;
 const embeddingProviders = ["local-hash", "openai", "anthropic", "gemini"] as const;
 const pricingAlgorithms = ["baseline-refresh", "catboost", "lightgbm"] as const;
 const conciergeAlgorithms = ["baseline-refresh", "llm-reranker", "learning-to-rank"] as const;
+const alertDigestScopes = ["user", "tenant"] as const;
 
 @Injectable()
 export class BackgroundJobPolicyService {
@@ -86,6 +88,15 @@ export class BackgroundJobPolicyService {
           payload.imageIds.length !== payload.imageUrls.length
         ) {
           throw new BadRequestException("imageIds must match imageUrls length when provided");
+        }
+        return;
+      case "saved_search.alerts.digest":
+        this.requireEnum(payload, "scope", alertDigestScopes);
+        this.optionalString(payload, "userId");
+        this.optionalBoolean(payload, "dryRun");
+        this.optionalInteger(payload, "limit", 1, 100);
+        if (payload.scope === "user" && !payload.userId) {
+          throw new BadRequestException("userId is required for user-scoped saved search alert digests");
         }
         return;
       case "properties.search.index":
