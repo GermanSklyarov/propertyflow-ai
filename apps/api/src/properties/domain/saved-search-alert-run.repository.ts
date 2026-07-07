@@ -10,4 +10,5 @@ export interface ListSavedSearchAlertRunsRequest {
 
 export interface SavedSearchAlertRunRepository {
   list(request: ListSavedSearchAlertRunsRequest): Promise<SavedSearchAlertRunSnapshot[]>;
+  findById(tenantId: string, runId: string): Promise<SavedSearchAlertRunSnapshot | null>;
 }

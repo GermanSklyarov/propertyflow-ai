@@ -26,6 +26,7 @@ import type {
   RentalYieldSummary,
   RunListingAssistantResponse,
   SavedSearchAlertRunListResponse,
+  SavedSearchAlertRunSnapshot,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -276,6 +277,32 @@ export class PropertiesController {
     });
 
     return result;
+  }
+
+  @Get("saved-searches/alerts/runs/:runId")
+  @ApiOperation({ summary: "Get one saved-search alert digest run" })
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearchAlertRun(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("runId") runId: string
+  ): Promise<SavedSearchAlertRunSnapshot> {
+    const run = await this.savedSearches.getAlertRunById(tenantId, runId, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.alert_run_viewed",
+      resourceType: "search",
+      resourceId: run.id,
+      metadata: {
+        status: run.status,
+        totalAlerts: run.totalAlerts,
+        totalCandidates: run.totalCandidates
+      }
+    });
+
+    return run;
   }
 
   @Post("saved-searches/alerts/digest-job")

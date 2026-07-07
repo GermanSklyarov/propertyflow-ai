@@ -92,6 +92,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/saved-searches`
 - `GET /properties/saved-searches/alerts`
 - `GET /properties/saved-searches/alerts/runs`
+- `GET /properties/saved-searches/alerts/runs/:runId`
 - `POST /properties/saved-searches/alerts/digest-job`
 - `GET /properties/saved-searches/:searchId`
 - `GET /properties/saved-searches/:searchId/matches`
@@ -258,6 +259,7 @@ Current protected routes:
 - `GET /properties/saved-searches`
 - `GET /properties/saved-searches/alerts`
 - `GET /properties/saved-searches/alerts/runs`
+- `GET /properties/saved-searches/alerts/runs/:runId`
 - `POST /properties/saved-searches/alerts/digest-job`
 - `GET /properties/saved-searches/:searchId`
 - `GET /properties/saved-searches/:searchId/matches`
@@ -318,6 +320,7 @@ Audit log v1 records these actions:
 - `saved_search.deleted`
 - `saved_search.alerts_viewed`
 - `saved_search.alert_digest_requested`
+- `saved_search.alert_run_viewed`
 - `saved_search.alert_runs_viewed`
 - `saved_search.matches_viewed`
 - `saved_search.notifications_updated`
@@ -378,7 +381,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 }
 ```
 
-`POST /properties/saved-searches` saves a structured or natural-language search for the current user. Natural-language searches are interpreted into filters before saving, and the snapshot stores `matchCount`, `notificationsEnabled`, the original query, and filters. Agents see their own saved searches; broker/manager/admin roles can review tenant-level saved searches through `GET /properties/saved-searches`. `GET /properties/saved-searches/alerts` returns enabled saved-search alerts with current match counts and top recommendations, which gives notification workers a ready digest shape. `POST /properties/saved-searches/alerts/digest-job` enqueues `saved_search.alerts.digest` for the current user's enabled alerts, and the worker stores each completed digest in `saved_search_alert_runs`. `GET /properties/saved-searches/alerts/runs` returns recent digest runs for agent and manager dashboards. `GET /properties/saved-searches/:searchId/matches` reruns the saved filters and returns current matching listings for recommendation and notification workflows. `GET /properties/saved-searches/:searchId/recommendations` ranks the current matches and explains the top options with reasons and tradeoffs. `PATCH /properties/saved-searches/:searchId/notifications` enables or disables saved-search alerts without changing the search filters.
+`POST /properties/saved-searches` saves a structured or natural-language search for the current user. Natural-language searches are interpreted into filters before saving, and the snapshot stores `matchCount`, `notificationsEnabled`, the original query, and filters. Agents see their own saved searches; broker/manager/admin roles can review tenant-level saved searches through `GET /properties/saved-searches`. `GET /properties/saved-searches/alerts` returns enabled saved-search alerts with current match counts and top recommendations, which gives notification workers a ready digest shape. `POST /properties/saved-searches/alerts/digest-job` enqueues `saved_search.alerts.digest` for the current user's enabled alerts, and the worker stores each completed digest in `saved_search_alert_runs`. `GET /properties/saved-searches/alerts/runs` returns recent digest runs for agent and manager dashboards; `GET /properties/saved-searches/alerts/runs/:runId` returns one run with its saved-search item breakdown. `GET /properties/saved-searches/:searchId/matches` reruns the saved filters and returns current matching listings for recommendation and notification workflows. `GET /properties/saved-searches/:searchId/recommendations` ranks the current matches and explains the top options with reasons and tradeoffs. `PATCH /properties/saved-searches/:searchId/notifications` enables or disables saved-search alerts without changing the search filters.
 
 `POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`. Image analysis jobs support `imageUrls` and optional matching `imageIds` for gallery-linked AI assets. The response includes `actionPolicy`, an explicit AI action allowlist decision for requested actions: background draft generation can be `allowed`, mutating actions such as applying AI output require human confirmation, and destructive actions such as `property.image.delete` are `blocked` so agents must use the guarded delete-preview plus confirmation-token flow.
 

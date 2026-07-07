@@ -52,6 +52,20 @@ export class PgSavedSearchAlertRunRepository implements SavedSearchAlertRunRepos
     return result.rows.map((row) => this.toSnapshot(row));
   }
 
+  async findById(tenantId: string, runId: string): Promise<SavedSearchAlertRunSnapshot | null> {
+    const result = await this.pool.query<SavedSearchAlertRunRow>(
+      `
+        select *
+        from saved_search_alert_runs
+        where tenant_id = $1 and id = $2
+        limit 1
+      `,
+      [tenantId, runId]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   private toSnapshot(row: SavedSearchAlertRunRow): SavedSearchAlertRunSnapshot {
     return {
       id: row.id,

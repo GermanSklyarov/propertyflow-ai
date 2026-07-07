@@ -4,6 +4,7 @@ import type {
   PropertySearchRequest,
   RequestUser,
   SavedSearchAlertRunListResponse,
+  SavedSearchAlertRunSnapshot,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -117,6 +118,16 @@ export class SavedPropertySearchService {
     };
   }
 
+  async getAlertRunById(tenantId: string, runId: string, user: RequestUser): Promise<SavedSearchAlertRunSnapshot> {
+    const run = await this.alertRuns.findById(tenantId, runId);
+
+    if (!run || !this.canAccessAlertRun(user, run)) {
+      throw new NotFoundException("Saved search alert run not found");
+    }
+
+    return run;
+  }
+
   async getById(tenantId: string, searchId: string, user: RequestUser): Promise<SavedPropertySearchSnapshot> {
     const search = await this.savedSearches.findById(tenantId, searchId);
 
@@ -201,6 +212,10 @@ export class SavedPropertySearchService {
 
   private canAccess(user: RequestUser, search: SavedPropertySearchSnapshot): boolean {
     return user.role !== "agent" || search.userId === user.id;
+  }
+
+  private canAccessAlertRun(user: RequestUser, run: SavedSearchAlertRunSnapshot): boolean {
+    return user.role !== "agent" || run.userId === user.id;
   }
 
   private normalizeFilters(filters: PropertySearchRequest): PropertySearchRequest {
