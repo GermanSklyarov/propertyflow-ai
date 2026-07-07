@@ -3,6 +3,7 @@ import type {
   CreateSavedPropertySearchRequest,
   PropertySearchRequest,
   RequestUser,
+  SavedSearchAlertRunListResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -16,12 +17,17 @@ import {
   SAVED_PROPERTY_SEARCH_REPOSITORY,
   type SavedPropertySearchRepository
 } from "../../domain/saved-property-search.repository.js";
+import {
+  SAVED_SEARCH_ALERT_RUN_REPOSITORY,
+  type SavedSearchAlertRunRepository
+} from "../../domain/saved-search-alert-run.repository.js";
 import { NaturalLanguagePropertySearchService } from "./natural-language-property-search.service.js";
 
 @Injectable()
 export class SavedPropertySearchService {
   constructor(
     @Inject(SAVED_PROPERTY_SEARCH_REPOSITORY) private readonly savedSearches: SavedPropertySearchRepository,
+    @Inject(SAVED_SEARCH_ALERT_RUN_REPOSITORY) private readonly alertRuns: SavedSearchAlertRunRepository,
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(NaturalLanguagePropertySearchService) private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService
   ) {}
@@ -95,6 +101,19 @@ export class SavedPropertySearchService {
       items,
       total: items.length,
       generatedAt: new Date().toISOString()
+    };
+  }
+
+  async listAlertRuns(tenantId: string, user: RequestUser, limit?: number): Promise<SavedSearchAlertRunListResponse> {
+    const items = await this.alertRuns.list({
+      tenantId,
+      userId: this.userScope(user),
+      limit
+    });
+
+    return {
+      items,
+      total: items.length
     };
   }
 

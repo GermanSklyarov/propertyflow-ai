@@ -112,6 +112,7 @@ export type AuditAction =
   | "saved_search.deleted"
   | "saved_search.alerts_viewed"
   | "saved_search.alert_digest_requested"
+  | "saved_search.alert_runs_viewed"
   | "saved_search.matches_viewed"
   | "saved_search.notifications_updated"
   | "saved_search.recommendations_viewed"
@@ -412,6 +413,31 @@ export interface SavedPropertySearchAlertsResponse {
   items: SavedPropertySearchAlertItem[];
   total: number;
   generatedAt: string;
+}
+
+export interface SavedSearchAlertRunItem {
+  savedSearchId: string;
+  title: string;
+  currentMatchCount: number;
+}
+
+export interface SavedSearchAlertRunSnapshot {
+  id: string;
+  tenantId: string;
+  requestedByUserId?: string;
+  scope: "user" | "tenant";
+  userId?: string;
+  dryRun: boolean;
+  status: "completed" | "failed";
+  totalAlerts: number;
+  totalCandidates: number;
+  items: SavedSearchAlertRunItem[];
+  createdAt: string;
+}
+
+export interface SavedSearchAlertRunListResponse {
+  items: SavedSearchAlertRunSnapshot[];
+  total: number;
 }
 
 export interface SavedPropertySearchMatchesResponse extends PropertySearchResponse {

@@ -25,6 +25,7 @@ import type {
   PropertyStatusHistoryResponse,
   RentalYieldSummary,
   RunListingAssistantResponse,
+  SavedSearchAlertRunListResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -71,6 +72,7 @@ import { CreatePropertyImageUploadDto } from "./create-property-image-upload.dto
 import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto.js";
 import { CreateSavedSearchAlertDigestJobDto } from "./create-saved-search-alert-digest-job.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
+import { ListSavedSearchAlertRunsDto } from "./list-saved-search-alert-runs.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
@@ -246,6 +248,30 @@ export class PropertiesController {
       metadata: {
         total: result.total,
         savedSearchIds: result.items.map((item) => item.savedSearch.id)
+      }
+    });
+
+    return result;
+  }
+
+  @Get("saved-searches/alerts/runs")
+  @ApiOperation({ summary: "List saved-search alert digest runs" })
+  @Roles("agent", "broker", "manager", "admin")
+  async listSavedSearchAlertRuns(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListSavedSearchAlertRunsDto
+  ): Promise<SavedSearchAlertRunListResponse> {
+    const result = await this.savedSearches.listAlertRuns(tenantId, user, query.limit);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.alert_runs_viewed",
+      resourceType: "search",
+      metadata: {
+        total: result.total,
+        limit: query.limit
       }
     });
 

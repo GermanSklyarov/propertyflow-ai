@@ -485,6 +485,8 @@ export class PropertyflowWorker {
       });
     }
 
+    await this.saveSavedSearchAlertRun(job, "completed", items.length, totalCandidates, items);
+
     return {
       tenantId: job.data.tenantId,
       scope: job.data.scope,
@@ -496,6 +498,57 @@ export class PropertyflowWorker {
       delivered: job.data.dryRun === false ? 0 : undefined,
       generatedAt: new Date().toISOString()
     };
+  }
+
+  private async saveSavedSearchAlertRun(
+    job: SavedSearchAlertDigestJob,
+    status: "completed" | "failed",
+    totalAlerts: number,
+    totalCandidates: number,
+    items: Array<{ savedSearchId: string; title: string; currentMatchCount: number }>
+  ): Promise<void> {
+    await this.pool.query(
+      `
+        insert into saved_search_alert_runs (
+          id,
+          tenant_id,
+          requested_by_user_id,
+          scope,
+          user_id,
+          dry_run,
+          status,
+          total_alerts,
+          total_candidates,
+          items,
+          created_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11
+        )
+      `,
+      [
+        crypto.randomUUID(),
+        job.data.tenantId,
+        job.data.requestedByUserId ?? null,
+        job.data.scope,
+        job.data.userId ?? null,
+        job.data.dryRun ?? true,
+        status,
+        totalAlerts,
+        totalCandidates,
+        JSON.stringify(items),
+        new Date().toISOString()
+      ]
+    );
   }
 
   private async countPropertyMatches(tenantId: string, filters: PropertySearchRequest): Promise<number> {

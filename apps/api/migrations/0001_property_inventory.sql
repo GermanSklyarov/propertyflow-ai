@@ -134,6 +134,25 @@ create index if not exists idx_saved_property_searches_tenant_user
 create index if not exists idx_saved_property_searches_tenant_created
   on saved_property_searches (tenant_id, created_at desc);
 
+create table if not exists saved_search_alert_runs (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  requested_by_user_id text,
+  scope text not null,
+  user_id text,
+  dry_run boolean not null default true,
+  status text not null,
+  total_alerts integer not null default 0,
+  total_candidates integer not null default 0,
+  items jsonb not null default '[]',
+  created_at timestamptz not null
+);
+
+create index if not exists idx_saved_search_alert_runs_tenant_created
+  on saved_search_alert_runs (tenant_id, created_at desc);
+create index if not exists idx_saved_search_alert_runs_tenant_user_created
+  on saved_search_alert_runs (tenant_id, user_id, created_at desc);
+
 create table if not exists property_images (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,
