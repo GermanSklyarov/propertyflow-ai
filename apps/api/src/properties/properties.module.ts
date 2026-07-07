@@ -3,6 +3,7 @@ import { CqrsModule } from "@nestjs/cqrs";
 import { AuditModule } from "../audit/audit.module.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { JobsModule } from "../jobs/jobs.module.js";
+import { LeadsModule } from "../leads/leads.module.js";
 import { RealtimeModule } from "../realtime/realtime.module.js";
 import { SearchObservabilityModule } from "../search-observability/search-observability.module.js";
 import { AuthModule } from "../shared/auth/auth.module.js";
@@ -54,6 +55,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     CqrsModule,
     DatabaseModule,
     JobsModule,
+    LeadsModule,
     RealtimeModule,
     SearchObservabilityModule,
     StorageModule,

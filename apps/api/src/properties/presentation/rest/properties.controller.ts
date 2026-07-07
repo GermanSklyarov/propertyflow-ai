@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type {
@@ -8,6 +8,7 @@ import type {
   IndexedPropertySearchResponse,
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
+  LeadSnapshot,
   PricingModelRegistryResponse,
   PricingTrainingDatasetResponse,
   PropertyAiAssets,
@@ -39,6 +40,7 @@ import type { RequestUser } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
+import { LeadService } from "../../../leads/application/lead.service.js";
 import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
 import { SearchObservabilityService } from "../../../search-observability/application/search-observability.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
@@ -69,6 +71,7 @@ import { AddPropertyImageDto } from "./add-property-image.dto.js";
 import { ConfirmPropertyImageDeleteDto } from "./confirm-property-image-delete.dto.js";
 import { ConfirmPropertyImageUploadDto } from "./confirm-property-image-upload.dto.js";
 import { ComparePropertiesDto } from "./compare-properties.dto.js";
+import { CreateLeadFromSavedSearchDto } from "./create-lead-from-saved-search.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { CreatePropertyImageUploadDto } from "./create-property-image-upload.dto.js";
 import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto.js";
@@ -131,6 +134,8 @@ export class PropertiesController {
     private readonly audit: AuditService,
     @Inject(JobQueueService)
     private readonly jobs: JobQueueService,
+    @Inject(LeadService)
+    private readonly leads: LeadService,
     @Inject(RealtimePublisherService)
     private readonly realtime: RealtimePublisherService,
     @Inject(SearchObservabilityService)
@@ -489,6 +494,57 @@ export class PropertiesController {
     });
 
     return savedSearch;
+  }
+
+  @Post("saved-searches/:searchId/lead")
+  @ApiOperation({ summary: "Create a CRM lead from a saved search" })
+  @Roles("agent", "broker", "manager", "admin")
+  async createLeadFromSavedSearch(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string,
+    @Body() payload: CreateLeadFromSavedSearchDto
+  ): Promise<LeadSnapshot> {
+    const matches = await this.savedSearches.getMatches(tenantId, searchId, user);
+    const recommendations = await this.savedSearches.getRecommendations(tenantId, searchId, user);
+    const selectedPropertyId = payload.propertyId ?? recommendations.recommendations[0]?.property.id;
+
+    if (selectedPropertyId && !matches.items.some((property) => property.id === selectedPropertyId)) {
+      throw new BadRequestException("propertyId must belong to the saved search matches");
+    }
+
+    const lead = await this.leads.create(
+      tenantId,
+      {
+        propertyId: selectedPropertyId,
+        source: "agent",
+        contactName: payload.contactName,
+        contactEmail: payload.contactEmail,
+        contactPhone: payload.contactPhone,
+        preferredLocale: payload.preferredLocale ?? matches.savedSearch.locale,
+        assignedAgentId: payload.assignedAgentId ?? user.id,
+        message: payload.message ?? this.buildSavedSearchLeadMessage(matches.savedSearch.title, selectedPropertyId),
+        attributionSearchEventId: matches.savedSearch.id,
+        attributionSearchQuery: matches.savedSearch.naturalLanguageQuery ?? matches.savedSearch.title,
+        attributionSearchSource: "structured"
+      },
+      user
+    );
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.lead_created",
+      resourceType: "search",
+      resourceId: matches.savedSearch.id,
+      metadata: {
+        leadId: lead.id,
+        propertyId: lead.propertyId,
+        title: matches.savedSearch.title
+      }
+    });
+
+    return lead;
   }
 
   @Delete("saved-searches/:searchId")
@@ -1288,5 +1344,11 @@ export class PropertiesController {
   @Get(":propertyId")
   get(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<PropertySnapshot> {
     return this.queryBus.execute(new GetPropertyQuery(tenantId, propertyId));
+  }
+
+  private buildSavedSearchLeadMessage(savedSearchTitle: string, propertyId?: string): string {
+    const propertyContext = propertyId ? ` Selected property: ${propertyId}.` : "";
+
+    return `Lead created from saved search "${savedSearchTitle}".${propertyContext}`;
   }
 }
