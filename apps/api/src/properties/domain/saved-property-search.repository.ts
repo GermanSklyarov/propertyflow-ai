@@ -18,5 +18,10 @@ export interface SavedPropertySearchRepository {
   save(input: SavePropertySearchInput): Promise<SavedPropertySearchSnapshot>;
   list(tenantId: string, userId?: string): Promise<SavedPropertySearchSnapshot[]>;
   findById(tenantId: string, searchId: string): Promise<SavedPropertySearchSnapshot | null>;
+  updateNotifications(
+    tenantId: string,
+    searchId: string,
+    notificationsEnabled: boolean
+  ): Promise<SavedPropertySearchSnapshot | null>;
   delete(tenantId: string, searchId: string): Promise<SavedPropertySearchSnapshot | null>;
 }

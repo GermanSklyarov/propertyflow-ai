@@ -76,6 +76,7 @@ import { SearchPropertiesDto, toPropertySearchRequest } from "./search-propertie
 import { SubmitPriceRecommendationFeedbackDto } from "./submit-price-recommendation-feedback.dto.js";
 import { TrainPricingModelDto } from "./train-pricing-model.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
+import { UpdateSavedPropertySearchNotificationsDto } from "./update-saved-property-search-notifications.dto.js";
 import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
 
 @Controller("properties")
@@ -320,6 +321,37 @@ export class PropertiesController {
     });
 
     return result;
+  }
+
+  @Patch("saved-searches/:searchId/notifications")
+  @ApiOperation({ summary: "Enable or disable notifications for a saved search" })
+  @Roles("agent", "broker", "manager", "admin")
+  async updateSavedSearchNotifications(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string,
+    @Body() payload: UpdateSavedPropertySearchNotificationsDto
+  ): Promise<SavedPropertySearchSnapshot> {
+    const savedSearch = await this.savedSearches.updateNotifications(
+      tenantId,
+      searchId,
+      user,
+      payload.notificationsEnabled
+    );
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.notifications_updated",
+      resourceType: "search",
+      resourceId: savedSearch.id,
+      metadata: {
+        title: savedSearch.title,
+        notificationsEnabled: savedSearch.notificationsEnabled
+      }
+    });
+
+    return savedSearch;
   }
 
   @Delete("saved-searches/:searchId")

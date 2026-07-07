@@ -93,6 +93,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /properties/saved-searches/:searchId`
 - `GET /properties/saved-searches/:searchId/matches`
 - `GET /properties/saved-searches/:searchId/recommendations`
+- `PATCH /properties/saved-searches/:searchId/notifications`
 - `DELETE /properties/saved-searches/:searchId`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
@@ -254,6 +255,7 @@ Current protected routes:
 - `GET /properties/saved-searches/:searchId`
 - `GET /properties/saved-searches/:searchId/matches`
 - `GET /properties/saved-searches/:searchId/recommendations`
+- `PATCH /properties/saved-searches/:searchId/notifications`
 - `DELETE /properties/saved-searches/:searchId`
 - `POST /properties/:propertyId/publish`
 - `PATCH /properties/:propertyId/price`
@@ -308,6 +310,7 @@ Audit log v1 records these actions:
 - `saved_search.created`
 - `saved_search.deleted`
 - `saved_search.matches_viewed`
+- `saved_search.notifications_updated`
 - `saved_search.recommendations_viewed`
 - `saved_search.viewed`
 - `tenant.current_viewed`
@@ -365,7 +368,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 }
 ```
 
-`POST /properties/saved-searches` saves a structured or natural-language search for the current user. Natural-language searches are interpreted into filters before saving, and the snapshot stores `matchCount`, `notificationsEnabled`, the original query, and filters. Agents see their own saved searches; broker/manager/admin roles can review tenant-level saved searches through `GET /properties/saved-searches`. `GET /properties/saved-searches/:searchId/matches` reruns the saved filters and returns current matching listings for recommendation and notification workflows. `GET /properties/saved-searches/:searchId/recommendations` ranks the current matches and explains the top options with reasons and tradeoffs.
+`POST /properties/saved-searches` saves a structured or natural-language search for the current user. Natural-language searches are interpreted into filters before saving, and the snapshot stores `matchCount`, `notificationsEnabled`, the original query, and filters. Agents see their own saved searches; broker/manager/admin roles can review tenant-level saved searches through `GET /properties/saved-searches`. `GET /properties/saved-searches/:searchId/matches` reruns the saved filters and returns current matching listings for recommendation and notification workflows. `GET /properties/saved-searches/:searchId/recommendations` ranks the current matches and explains the top options with reasons and tradeoffs. `PATCH /properties/saved-searches/:searchId/notifications` enables or disables saved-search alerts without changing the search filters.
 
 `POST /properties/:propertyId/ai-assistant` starts admin automation jobs for listing descriptions and image analysis. It can enqueue `properties.ai_description.generate` and `properties.images.analyze`, then those jobs are visible through `GET /jobs`. Image analysis jobs support `imageUrls` and optional matching `imageIds` for gallery-linked AI assets. The response includes `actionPolicy`, an explicit AI action allowlist decision for requested actions: background draft generation can be `allowed`, mutating actions such as applying AI output require human confirmation, and destructive actions such as `property.image.delete` are `blocked` so agents must use the guarded delete-preview plus confirmation-token flow.
 

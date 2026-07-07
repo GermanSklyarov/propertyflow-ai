@@ -111,6 +111,7 @@ export type AuditAction =
   | "saved_search.created"
   | "saved_search.deleted"
   | "saved_search.matches_viewed"
+  | "saved_search.notifications_updated"
   | "saved_search.recommendations_viewed"
   | "saved_search.viewed"
   | "tenant.current_viewed"
@@ -388,6 +389,10 @@ export interface CreateSavedPropertySearchRequest {
   purpose?: PropertyPurpose;
   filters?: PropertySearchRequest;
   notificationsEnabled?: boolean;
+}
+
+export interface UpdateSavedPropertySearchNotificationsRequest {
+  notificationsEnabled: boolean;
 }
 
 export interface SavedPropertySearchListResponse {

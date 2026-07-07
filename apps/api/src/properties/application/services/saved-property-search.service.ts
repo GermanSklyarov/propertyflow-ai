@@ -118,6 +118,27 @@ export class SavedPropertySearchService {
     };
   }
 
+  async updateNotifications(
+    tenantId: string,
+    searchId: string,
+    user: RequestUser,
+    notificationsEnabled: boolean
+  ): Promise<SavedPropertySearchSnapshot> {
+    const existing = await this.savedSearches.findById(tenantId, searchId);
+
+    if (!existing || !this.canAccess(user, existing)) {
+      throw new NotFoundException("Saved search not found");
+    }
+
+    const updated = await this.savedSearches.updateNotifications(tenantId, searchId, notificationsEnabled);
+
+    if (!updated) {
+      throw new NotFoundException("Saved search not found");
+    }
+
+    return updated;
+  }
+
   async delete(tenantId: string, searchId: string, user: RequestUser): Promise<SavedPropertySearchSnapshot> {
     const existing = await this.savedSearches.findById(tenantId, searchId);
 

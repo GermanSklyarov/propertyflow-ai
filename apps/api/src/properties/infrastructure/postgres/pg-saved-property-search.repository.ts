@@ -113,6 +113,25 @@ export class PgSavedPropertySearchRepository implements SavedPropertySearchRepos
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async updateNotifications(
+    tenantId: string,
+    searchId: string,
+    notificationsEnabled: boolean
+  ): Promise<SavedPropertySearchSnapshot | null> {
+    const result = await this.pool.query<SavedPropertySearchRow>(
+      `
+        update saved_property_searches
+        set notifications_enabled = $3,
+            updated_at = $4
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, searchId, notificationsEnabled, new Date().toISOString()]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async delete(tenantId: string, searchId: string): Promise<SavedPropertySearchSnapshot | null> {
     const result = await this.pool.query<SavedPropertySearchRow>(
       `
