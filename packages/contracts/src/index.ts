@@ -1263,6 +1263,8 @@ export interface TenantDashboardMetrics {
   conciergeRecommendedSessions: number;
   conciergeLeads: number;
   conciergeLeadConversionRate: number;
+  savedSearchLeads: number;
+  savedSearchLeadConversionRate: number;
   conciergeFeedbackCount: number;
   conciergePositiveFeedbackRate: number;
   conciergeTrainingDatasetRows: number;

@@ -30,6 +30,8 @@ export interface TenantAnalyticsRawMetrics {
   conciergeAwaitingInputSessions: number;
   conciergeRecommendedSessions: number;
   conciergeLeads: number;
+  savedSearches: number;
+  savedSearchLeads: number;
   conciergeFeedbackCount: number;
   conciergePositiveFeedbackCount: number;
   conciergeTrainingDatasetRows: number;
