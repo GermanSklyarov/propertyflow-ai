@@ -1,6 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   CreateSavedPropertySearchRequest,
+  ListSavedSearchOpportunitiesRequest,
   PropertySearchRequest,
   RequestUser,
   SavedSearchAlertAnalyticsResponse,
@@ -169,7 +170,14 @@ export class SavedPropertySearchService {
     };
   }
 
-  async listOpportunities(tenantId: string, user: RequestUser): Promise<SavedSearchOpportunitiesResponse> {
+  async listOpportunities(
+    tenantId: string,
+    user: RequestUser,
+    request: ListSavedSearchOpportunitiesRequest = {}
+  ): Promise<SavedSearchOpportunitiesResponse> {
+    const limit = Math.min(Math.max(request.limit ?? 10, 1), 50);
+    const minScore = Math.min(Math.max(request.minScore ?? 0, 0), 100);
+    const includeConverted = request.includeConverted ?? true;
     const funnelRows = await this.savedSearches.listLeadFunnel(tenantId, this.userScope(user));
     const items = await Promise.all(
       funnelRows.map(async (row) => {
@@ -193,8 +201,10 @@ export class SavedPropertySearchService {
 
     const rankedItems = items
       .filter((item) => item.currentMatchCount > 0)
+      .filter((item) => item.opportunityScore >= minScore)
+      .filter((item) => includeConverted || item.leadCount === 0)
       .sort((left, right) => right.opportunityScore - left.opportunityScore)
-      .slice(0, 10);
+      .slice(0, limit);
 
     return {
       items: rankedItems,

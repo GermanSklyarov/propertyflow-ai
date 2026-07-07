@@ -484,6 +484,12 @@ export interface SavedSearchLeadFunnelResponse {
   generatedAt: string;
 }
 
+export interface ListSavedSearchOpportunitiesRequest {
+  limit?: number;
+  minScore?: number;
+  includeConverted?: boolean;
+}
+
 export interface SavedSearchOpportunityItem {
   savedSearch: SavedPropertySearchSnapshot;
   currentMatchCount: number;

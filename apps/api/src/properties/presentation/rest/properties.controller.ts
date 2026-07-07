@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
-import { ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiHeader, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type {
   AiAdvisorSummary,
   BackgroundJobSnapshot,
@@ -82,6 +82,7 @@ import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto
 import { CreateSavedSearchAlertDigestJobDto } from "./create-saved-search-alert-digest-job.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { ListSavedSearchAlertRunsDto } from "./list-saved-search-alert-runs.dto.js";
+import { ListSavedSearchOpportunitiesDto } from "./list-saved-search-opportunities.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
@@ -299,6 +300,9 @@ export class PropertiesController {
 
   @Get("saved-searches/opportunities")
   @ApiOperation({ summary: "Return saved-search follow-up opportunities" })
+  @ApiQuery({ name: "limit", required: false, type: Number, minimum: 1, maximum: 50 })
+  @ApiQuery({ name: "minScore", required: false, type: Number, minimum: 0, maximum: 100 })
+  @ApiQuery({ name: "includeConverted", required: false, type: Boolean })
   @ApiOkResponse({
     schema: {
       type: "object",
@@ -328,9 +332,10 @@ export class PropertiesController {
   @Roles("agent", "broker", "manager", "admin")
   async listSavedSearchOpportunities(
     @TenantId() tenantId: string,
-    @CurrentUser() user: RequestUser
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListSavedSearchOpportunitiesDto
   ): Promise<SavedSearchOpportunitiesResponse> {
-    const result = await this.savedSearches.listOpportunities(tenantId, user);
+    const result = await this.savedSearches.listOpportunities(tenantId, user, query);
 
     await this.audit.record({
       tenantId,
@@ -339,6 +344,9 @@ export class PropertiesController {
       resourceType: "search",
       metadata: {
         total: result.total,
+        limit: query.limit,
+        minScore: query.minScore,
+        includeConverted: query.includeConverted,
         savedSearchIds: result.items.map((item) => item.savedSearch.id)
       }
     });
