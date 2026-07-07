@@ -111,6 +111,7 @@ export type AuditAction =
   | "saved_search.created"
   | "saved_search.deleted"
   | "saved_search.matches_viewed"
+  | "saved_search.recommendations_viewed"
   | "saved_search.viewed"
   | "tenant.current_viewed"
   | "tenant.settings_updated"
@@ -396,6 +397,20 @@ export interface SavedPropertySearchListResponse {
 
 export interface SavedPropertySearchMatchesResponse extends PropertySearchResponse {
   savedSearch: SavedPropertySearchSnapshot;
+  generatedAt: string;
+}
+
+export interface SavedPropertySearchRecommendation {
+  property: PropertySnapshot;
+  score: number;
+  reasons: string[];
+  tradeoffs: string[];
+}
+
+export interface SavedPropertySearchRecommendationsResponse {
+  savedSearch: SavedPropertySearchSnapshot;
+  recommendations: SavedPropertySearchRecommendation[];
+  totalCandidates: number;
   generatedAt: string;
 }
 

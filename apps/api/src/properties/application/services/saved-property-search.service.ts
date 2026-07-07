@@ -5,8 +5,11 @@ import type {
   RequestUser,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
+  SavedPropertySearchRecommendation,
+  SavedPropertySearchRecommendationsResponse,
   SavedPropertySearchSnapshot
 } from "@propertyflow/contracts";
+import type { PropertyPurpose, PropertySnapshot } from "@propertyflow/domain";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 import {
   SAVED_PROPERTY_SEARCH_REPOSITORY,
@@ -95,6 +98,26 @@ export class SavedPropertySearchService {
     };
   }
 
+  async getRecommendations(
+    tenantId: string,
+    searchId: string,
+    user: RequestUser
+  ): Promise<SavedPropertySearchRecommendationsResponse> {
+    const savedSearch = await this.getById(tenantId, searchId, user);
+    const candidates = await this.properties.search(tenantId, savedSearch.filters);
+    const recommendations = candidates
+      .map((property) => this.scoreRecommendation(property, savedSearch.filters, savedSearch.purpose))
+      .sort((left, right) => right.score - left.score)
+      .slice(0, 5);
+
+    return {
+      savedSearch,
+      recommendations,
+      totalCandidates: candidates.length,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
   async delete(tenantId: string, searchId: string, user: RequestUser): Promise<SavedPropertySearchSnapshot> {
     const existing = await this.savedSearches.findById(tenantId, searchId);
 
@@ -127,5 +150,153 @@ export class SavedPropertySearchService {
         return true;
       })
     ) as PropertySearchRequest;
+  }
+
+  private scoreRecommendation(
+    property: PropertySnapshot,
+    filters: PropertySearchRequest,
+    purpose?: PropertyPurpose
+  ): SavedPropertySearchRecommendation {
+    const reasons: string[] = [];
+    const tradeoffs: string[] = [];
+    let score = 45;
+
+    if (property.status === "available") {
+      score += 8;
+      reasons.push("Listing is currently available.");
+    } else {
+      tradeoffs.push(`Listing status is ${property.status}.`);
+    }
+
+    if (filters.market && property.market === filters.market) {
+      score += 10;
+      reasons.push(`Matches the requested ${filters.market} market.`);
+    }
+
+    if (filters.maxPriceThb) {
+      const budgetRatio = property.price.amount / filters.maxPriceThb;
+      if (budgetRatio <= 0.9) {
+        score += 10;
+        reasons.push("Price leaves room under the requested budget.");
+      } else {
+        score += 5;
+        reasons.push("Price fits the requested budget.");
+      }
+    }
+
+    if (filters.minBedrooms && property.bedrooms >= filters.minBedrooms) {
+      score += 7;
+      reasons.push(`Has ${property.bedrooms} bedrooms for the requested layout.`);
+    }
+
+    if (filters.minBathrooms && property.bathrooms >= filters.minBathrooms) {
+      score += 4;
+      reasons.push(`Has ${property.bathrooms} bathrooms.`);
+    }
+
+    if (filters.minAreaSqm && property.areaSqm >= filters.minAreaSqm) {
+      score += 6;
+      reasons.push(`${property.areaSqm} sqm meets the requested minimum area.`);
+    }
+
+    if (filters.maxBeachDistanceMeters) {
+      if (property.beachDistanceMeters === undefined) {
+        tradeoffs.push("Beach distance is not available.");
+      } else if (property.beachDistanceMeters <= filters.maxBeachDistanceMeters) {
+        score += 8;
+        reasons.push("Beach distance matches the requested walking range.");
+      }
+    }
+
+    const requiredAmenities = filters.requiredAmenities ?? [];
+    if (requiredAmenities.length) {
+      const propertyAmenities = new Set(property.amenities.map((amenity) => amenity.toLowerCase()));
+      const matchedAmenities = requiredAmenities.filter((amenity) => propertyAmenities.has(amenity.toLowerCase()));
+      const missingAmenities = requiredAmenities.filter((amenity) => !propertyAmenities.has(amenity.toLowerCase()));
+
+      if (matchedAmenities.length) {
+        score += Math.min(10, matchedAmenities.length * 3);
+        reasons.push(`Matches amenities: ${matchedAmenities.join(", ")}.`);
+      }
+
+      if (missingAmenities.length) {
+        tradeoffs.push(`Missing requested amenities: ${missingAmenities.join(", ")}.`);
+      }
+    }
+
+    score += this.scorePurposeFit(property, purpose, reasons, tradeoffs);
+
+    if (!reasons.length) {
+      reasons.push("Matches the saved search filters.");
+    }
+
+    return {
+      property,
+      score: Math.max(0, Math.min(100, score)),
+      reasons,
+      tradeoffs
+    };
+  }
+
+  private scorePurposeFit(
+    property: PropertySnapshot,
+    purpose: PropertyPurpose | undefined,
+    reasons: string[],
+    tradeoffs: string[]
+  ): number {
+    if (!purpose) {
+      return 0;
+    }
+
+    if (purpose === "investment") {
+      let score = 0;
+
+      if (property.monthlyRentEstimate) {
+        score += 8;
+        reasons.push("Has a rental estimate for investment analysis.");
+      } else {
+        tradeoffs.push("Rental estimate is not available yet.");
+      }
+
+      if (property.maintenanceFeeMonthly) {
+        score += 4;
+        reasons.push("Maintenance fee is available for ownership cost planning.");
+      }
+
+      return score;
+    }
+
+    if (purpose === "family") {
+      const hasFamilyLayout = property.bedrooms >= 2 && property.areaSqm >= 50;
+
+      if (hasFamilyLayout) {
+        reasons.push("Layout is more comfortable for a family.");
+        return 10;
+      }
+
+      tradeoffs.push("Layout may be compact for a family.");
+      return 0;
+    }
+
+    if (purpose === "relocation") {
+      const hasRelocationSignals = property.amenities.some((amenity) =>
+        ["coworking", "gym", "parking", "pool"].includes(amenity.toLowerCase())
+      );
+
+      if (hasRelocationSignals) {
+        reasons.push("Amenities support day-to-day relocation comfort.");
+        return 8;
+      }
+
+      tradeoffs.push("Relocation lifestyle amenities are limited in the listing data.");
+      return 0;
+    }
+
+    if (property.beachDistanceMeters !== undefined && property.beachDistanceMeters <= 1000) {
+      reasons.push("Good lifestyle fit with beach access nearby.");
+      return 8;
+    }
+
+    return 0;
   }
 }

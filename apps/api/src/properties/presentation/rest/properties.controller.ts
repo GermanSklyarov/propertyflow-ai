@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
-import { ApiHeader, ApiTags } from "@nestjs/swagger";
+import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type {
   AiAdvisorSummary,
   BackgroundJobSnapshot,
@@ -27,6 +27,7 @@ import type {
   RunListingAssistantResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
+  SavedPropertySearchRecommendationsResponse,
   SavedPropertySearchSnapshot,
   UpdatePropertyPriceResponse
 } from "@propertyflow/contracts";
@@ -250,6 +251,7 @@ export class PropertiesController {
   }
 
   @Get("saved-searches/:searchId/matches")
+  @ApiOperation({ summary: "Return current property matches for a saved search" })
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchMatches(
     @TenantId() tenantId: string,
@@ -278,6 +280,42 @@ export class PropertiesController {
         title: result.savedSearch.title,
         filters: result.filters,
         total: result.total
+      }
+    });
+
+    return result;
+  }
+
+  @Get("saved-searches/:searchId/recommendations")
+  @ApiOperation({ summary: "Rank saved search matches with reasons and tradeoffs" })
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearchRecommendations(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string
+  ): Promise<SavedPropertySearchRecommendationsResponse> {
+    const startedAt = Date.now();
+    const result = await this.savedSearches.getRecommendations(tenantId, searchId, user);
+
+    await this.searchObservability.record({
+      tenantId,
+      source: "structured",
+      query: result.savedSearch.naturalLanguageQuery,
+      filters: result.savedSearch.filters,
+      totalResults: result.totalCandidates,
+      latencyMs: Date.now() - startedAt
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.recommendations_viewed",
+      resourceType: "search",
+      resourceId: result.savedSearch.id,
+      metadata: {
+        title: result.savedSearch.title,
+        totalCandidates: result.totalCandidates,
+        recommendedPropertyIds: result.recommendations.map((recommendation) => recommendation.property.id)
       }
     });
 
