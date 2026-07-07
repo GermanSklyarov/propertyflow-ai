@@ -500,9 +500,17 @@ export interface SavedSearchOpportunityItem {
   topRecommendation?: SavedPropertySearchRecommendation;
 }
 
+export interface SavedSearchOpportunitiesSummary {
+  openOpportunities: number;
+  hotOpportunities: number;
+  unconvertedOpportunities: number;
+  averageOpportunityScore: number;
+}
+
 export interface SavedSearchOpportunitiesResponse {
   items: SavedSearchOpportunityItem[];
   total: number;
+  summary: SavedSearchOpportunitiesSummary;
   generatedAt: string;
 }
 

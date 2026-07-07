@@ -203,12 +203,18 @@ export class SavedPropertySearchService {
       .filter((item) => item.currentMatchCount > 0)
       .filter((item) => item.opportunityScore >= minScore)
       .filter((item) => includeConverted || item.leadCount === 0)
-      .sort((left, right) => right.opportunityScore - left.opportunityScore)
-      .slice(0, limit);
+      .sort((left, right) => right.opportunityScore - left.opportunityScore);
+    const scoreTotal = rankedItems.reduce((sum, item) => sum + item.opportunityScore, 0);
 
     return {
-      items: rankedItems,
+      items: rankedItems.slice(0, limit),
       total: rankedItems.length,
+      summary: {
+        openOpportunities: rankedItems.length,
+        hotOpportunities: rankedItems.filter((item) => item.opportunityScore >= 80).length,
+        unconvertedOpportunities: rankedItems.filter((item) => item.leadCount === 0).length,
+        averageOpportunityScore: rankedItems.length ? Number((scoreTotal / rankedItems.length).toFixed(2)) : 0
+      },
       generatedAt: new Date().toISOString()
     };
   }

@@ -324,9 +324,19 @@ export class PropertiesController {
           }
         },
         total: { type: "number", example: 3 },
+        summary: {
+          type: "object",
+          properties: {
+            openOpportunities: { type: "number", example: 12 },
+            hotOpportunities: { type: "number", example: 4 },
+            unconvertedOpportunities: { type: "number", example: 7 },
+            averageOpportunityScore: { type: "number", example: 76.5 }
+          },
+          required: ["openOpportunities", "hotOpportunities", "unconvertedOpportunities", "averageOpportunityScore"]
+        },
         generatedAt: { type: "string", format: "date-time" }
       },
-      required: ["items", "total", "generatedAt"]
+      required: ["items", "total", "summary", "generatedAt"]
     }
   })
   @Roles("agent", "broker", "manager", "admin")
@@ -344,6 +354,7 @@ export class PropertiesController {
       resourceType: "search",
       metadata: {
         total: result.total,
+        summary: result.summary,
         limit: query.limit,
         minScore: query.minScore,
         includeConverted: query.includeConverted,
