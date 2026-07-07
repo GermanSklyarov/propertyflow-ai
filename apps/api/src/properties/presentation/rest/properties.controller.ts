@@ -25,6 +25,7 @@ import type {
   PropertyStatusHistoryResponse,
   RentalYieldSummary,
   RunListingAssistantResponse,
+  SavedSearchAlertAnalyticsResponse,
   SavedSearchAlertRunListResponse,
   SavedSearchAlertRunSnapshot,
   SavedPropertySearchAlertsResponse,
@@ -249,6 +250,30 @@ export class PropertiesController {
       metadata: {
         total: result.total,
         savedSearchIds: result.items.map((item) => item.savedSearch.id)
+      }
+    });
+
+    return result;
+  }
+
+  @Get("saved-searches/alerts/analytics")
+  @ApiOperation({ summary: "Return saved-search alert dashboard analytics" })
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearchAlertAnalytics(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser
+  ): Promise<SavedSearchAlertAnalyticsResponse> {
+    const result = await this.savedSearches.getAlertAnalytics(tenantId, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.alert_analytics_viewed",
+      resourceType: "search",
+      metadata: {
+        enabledAlerts: result.enabledAlerts,
+        recentRuns: result.recentRuns,
+        totalCandidates: result.totalCandidates
       }
     });
 

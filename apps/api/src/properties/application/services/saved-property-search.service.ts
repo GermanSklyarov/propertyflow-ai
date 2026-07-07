@@ -3,6 +3,7 @@ import type {
   CreateSavedPropertySearchRequest,
   PropertySearchRequest,
   RequestUser,
+  SavedSearchAlertAnalyticsResponse,
   SavedSearchAlertRunListResponse,
   SavedSearchAlertRunSnapshot,
   SavedPropertySearchAlertsResponse,
@@ -115,6 +116,33 @@ export class SavedPropertySearchService {
     return {
       items,
       total: items.length
+    };
+  }
+
+  async getAlertAnalytics(tenantId: string, user: RequestUser): Promise<SavedSearchAlertAnalyticsResponse> {
+    const userId = this.userScope(user);
+    const [savedSearches, recentRuns] = await Promise.all([
+      this.savedSearches.list(tenantId, userId),
+      this.alertRuns.list({
+        tenantId,
+        userId,
+        limit: 20
+      })
+    ]);
+    const completedRuns = recentRuns.filter((run) => run.status === "completed").length;
+    const failedRuns = recentRuns.filter((run) => run.status === "failed").length;
+    const totalCandidates = recentRuns.reduce((sum, run) => sum + run.totalCandidates, 0);
+
+    return {
+      totalSavedSearches: savedSearches.length,
+      enabledAlerts: savedSearches.filter((search) => search.notificationsEnabled).length,
+      recentRuns: recentRuns.length,
+      completedRuns,
+      failedRuns,
+      totalCandidates,
+      averageCandidatesPerRun: recentRuns.length ? Number((totalCandidates / recentRuns.length).toFixed(2)) : 0,
+      lastRun: recentRuns[0],
+      generatedAt: new Date().toISOString()
     };
   }
 
