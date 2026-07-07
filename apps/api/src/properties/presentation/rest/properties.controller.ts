@@ -31,6 +31,7 @@ import type {
   SavedSearchAlertRunListResponse,
   SavedSearchAlertRunSnapshot,
   SavedSearchLeadFunnelResponse,
+  SavedSearchOpportunitiesResponse,
   SavedSearchLeadAnalyticsResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
@@ -290,6 +291,55 @@ export class PropertiesController {
         totalSavedSearches: result.totalSavedSearches,
         savedSearchLeads: result.savedSearchLeads,
         topSavedSearchIds: result.topSavedSearches.map((item) => item.savedSearch.id)
+      }
+    });
+
+    return result;
+  }
+
+  @Get("saved-searches/opportunities")
+  @ApiOperation({ summary: "Return saved-search follow-up opportunities" })
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              savedSearch: { type: "object" },
+              currentMatchCount: { type: "number", example: 4 },
+              leadCount: { type: "number", example: 0 },
+              opportunityScore: { type: "number", example: 87 },
+              reason: { type: "string" },
+              latestLeadAt: { type: "string", format: "date-time" },
+              topRecommendation: { type: "object" }
+            },
+            required: ["savedSearch", "currentMatchCount", "leadCount", "opportunityScore", "reason"]
+          }
+        },
+        total: { type: "number", example: 3 },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: ["items", "total", "generatedAt"]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  async listSavedSearchOpportunities(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser
+  ): Promise<SavedSearchOpportunitiesResponse> {
+    const result = await this.savedSearches.listOpportunities(tenantId, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.opportunities_viewed",
+      resourceType: "search",
+      metadata: {
+        total: result.total,
+        savedSearchIds: result.items.map((item) => item.savedSearch.id)
       }
     });
 

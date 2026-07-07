@@ -7,6 +7,7 @@ import type {
   SavedSearchAlertRunListResponse,
   SavedSearchAlertRunSnapshot,
   SavedSearchLeadFunnelResponse,
+  SavedSearchOpportunitiesResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -164,6 +165,40 @@ export class SavedPropertySearchService {
         conversionRate: row.leadCount > 0 ? 100 : 0,
         latestLeadAt: row.latestLeadAt
       })),
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async listOpportunities(tenantId: string, user: RequestUser): Promise<SavedSearchOpportunitiesResponse> {
+    const funnelRows = await this.savedSearches.listLeadFunnel(tenantId, this.userScope(user));
+    const items = await Promise.all(
+      funnelRows.map(async (row) => {
+        const candidates = await this.properties.search(tenantId, row.savedSearch.filters);
+        const topRecommendation = candidates
+          .map((property) => this.scoreRecommendation(property, row.savedSearch.filters, row.savedSearch.purpose))
+          .sort((left, right) => right.score - left.score)[0];
+        const opportunityScore = this.scoreOpportunity(candidates.length, row.leadCount, topRecommendation?.score ?? 0);
+
+        return {
+          savedSearch: row.savedSearch,
+          currentMatchCount: candidates.length,
+          leadCount: row.leadCount,
+          opportunityScore,
+          reason: this.describeOpportunity(candidates.length, row.leadCount, topRecommendation?.score ?? 0),
+          latestLeadAt: row.latestLeadAt,
+          topRecommendation
+        };
+      })
+    );
+
+    const rankedItems = items
+      .filter((item) => item.currentMatchCount > 0)
+      .sort((left, right) => right.opportunityScore - left.opportunityScore)
+      .slice(0, 10);
+
+    return {
+      items: rankedItems,
+      total: rankedItems.length,
       generatedAt: new Date().toISOString()
     };
   }
@@ -368,6 +403,26 @@ export class SavedPropertySearchService {
       reasons,
       tradeoffs
     };
+  }
+
+  private scoreOpportunity(currentMatchCount: number, leadCount: number, topRecommendationScore: number): number {
+    const matchScore = Math.min(35, currentMatchCount * 7);
+    const leadGapScore = leadCount === 0 ? 35 : Math.max(0, 20 - leadCount * 5);
+    const recommendationScore = Math.round(topRecommendationScore * 0.3);
+
+    return Math.max(0, Math.min(100, matchScore + leadGapScore + recommendationScore));
+  }
+
+  private describeOpportunity(currentMatchCount: number, leadCount: number, topRecommendationScore: number): string {
+    if (leadCount === 0 && currentMatchCount > 0) {
+      return `No saved-search leads yet, with ${currentMatchCount} current matches ready for follow-up.`;
+    }
+
+    if (topRecommendationScore >= 80) {
+      return `Strong top recommendation and ${currentMatchCount} current matches.`;
+    }
+
+    return `${currentMatchCount} current matches and ${leadCount} saved-search leads.`;
   }
 
   private scorePurposeFit(
