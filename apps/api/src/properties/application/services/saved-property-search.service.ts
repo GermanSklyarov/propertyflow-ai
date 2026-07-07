@@ -3,6 +3,7 @@ import type {
   CreateSavedPropertySearchRequest,
   PropertySearchRequest,
   RequestUser,
+  SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
   SavedPropertySearchRecommendation,
@@ -68,6 +69,32 @@ export class SavedPropertySearchService {
     return {
       items,
       total: items.length
+    };
+  }
+
+  async listAlerts(tenantId: string, user: RequestUser): Promise<SavedPropertySearchAlertsResponse> {
+    const savedSearches = await this.savedSearches.list(tenantId, this.userScope(user));
+    const enabledSearches = savedSearches.filter((search) => search.notificationsEnabled);
+    const items = await Promise.all(
+      enabledSearches.map(async (savedSearch) => {
+        const candidates = await this.properties.search(tenantId, savedSearch.filters);
+        const recommendations = candidates
+          .map((property) => this.scoreRecommendation(property, savedSearch.filters, savedSearch.purpose))
+          .sort((left, right) => right.score - left.score)
+          .slice(0, 3);
+
+        return {
+          savedSearch,
+          currentMatchCount: candidates.length,
+          recommendations
+        };
+      })
+    );
+
+    return {
+      items,
+      total: items.length,
+      generatedAt: new Date().toISOString()
     };
   }
 
