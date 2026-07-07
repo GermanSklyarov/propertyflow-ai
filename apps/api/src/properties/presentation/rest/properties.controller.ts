@@ -8,6 +8,7 @@ import type {
   IndexedPropertySearchResponse,
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
+  LeadListResponse,
   LeadSnapshot,
   PricingModelRegistryResponse,
   PricingTrainingDatasetResponse,
@@ -545,6 +546,32 @@ export class PropertiesController {
     });
 
     return lead;
+  }
+
+  @Get("saved-searches/:searchId/leads")
+  @ApiOperation({ summary: "List CRM leads attributed to a saved search" })
+  @Roles("agent", "broker", "manager", "admin")
+  async listSavedSearchLeads(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string
+  ): Promise<LeadListResponse> {
+    const savedSearch = await this.savedSearches.getById(tenantId, searchId, user);
+    const result = await this.leads.listByAttribution(tenantId, savedSearch.id);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.leads_viewed",
+      resourceType: "search",
+      resourceId: savedSearch.id,
+      metadata: {
+        title: savedSearch.title,
+        total: result.total
+      }
+    });
+
+    return result;
   }
 
   @Delete("saved-searches/:searchId")

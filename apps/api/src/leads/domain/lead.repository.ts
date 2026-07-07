@@ -9,5 +9,6 @@ export interface CreateLeadInput extends CreateLeadRequest {
 export interface LeadRepository {
   create(input: CreateLeadInput): Promise<LeadSnapshot>;
   listUnassigned(tenantId: string): Promise<LeadSnapshot[]>;
+  listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]>;
   assign(tenantId: string, leadId: string, assignedAgentId: string): Promise<LeadSnapshot | null>;
 }

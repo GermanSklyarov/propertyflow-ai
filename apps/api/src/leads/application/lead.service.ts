@@ -52,6 +52,15 @@ export class LeadService {
     };
   }
 
+  async listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadListResponse> {
+    const items = await this.leads.listByAttribution(tenantId, attributionSearchEventId);
+
+    return {
+      items,
+      total: items.length
+    };
+  }
+
   async assign(tenantId: string, leadId: string, assignedAgentId: string, user: RequestUser): Promise<LeadSnapshot> {
     await this.users.getActiveAssignableUser(tenantId, assignedAgentId);
 
