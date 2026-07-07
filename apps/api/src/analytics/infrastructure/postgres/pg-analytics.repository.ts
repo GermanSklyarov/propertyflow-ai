@@ -71,6 +71,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       conciergeLeads,
       savedSearches,
       savedSearchLeads,
+      savedSearchOpenOpportunities,
       conciergeFeedbackCount,
       conciergePositiveFeedbackCount,
       conciergeTrainingDatasetRows,
@@ -122,6 +123,21 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.count("select count(*) from leads where tenant_id = $1 and source = 'ai-concierge'", [tenantId]),
       this.count("select count(*) from saved_property_searches where tenant_id = $1", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and source = 'saved-search'", [tenantId]),
+      this.count(
+        `
+          select count(*)
+          from saved_property_searches search
+          where search.tenant_id = $1
+            and not exists (
+              select 1
+              from leads lead
+              where lead.tenant_id = search.tenant_id
+                and lead.source = 'saved-search'
+                and lead.attribution_search_event_id = search.id
+            )
+        `,
+        [tenantId]
+      ),
       this.count("select count(*) from concierge_feedback where tenant_id = $1", [tenantId]),
       this.count("select count(*) from concierge_feedback where tenant_id = $1 and rating = 'positive'", [tenantId]),
       this.count("select count(*) from concierge_sessions where tenant_id = $1 and status = 'recommended'", [tenantId]),
@@ -232,6 +248,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       conciergeLeads,
       savedSearches,
       savedSearchLeads,
+      savedSearchOpenOpportunities,
       conciergeFeedbackCount,
       conciergePositiveFeedbackCount,
       conciergeTrainingDatasetRows,

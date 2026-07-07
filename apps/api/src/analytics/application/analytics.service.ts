@@ -24,7 +24,6 @@ export class AnalyticsService {
       imageRemovals,
       rejectedJobsByName,
       blockedAiActionsByName,
-      savedSearches,
       ...publicMetrics
     } = metrics;
     const closedLeads = metrics.wonLeads + metrics.lostLeads;
@@ -38,7 +37,11 @@ export class AnalyticsService {
       conciergeLeadConversionRate:
         metrics.conciergeSessions > 0 ? Math.round((metrics.conciergeLeads / metrics.conciergeSessions) * 10_000) / 100 : 0,
       savedSearchLeadConversionRate:
-        savedSearches > 0 ? Math.round((metrics.savedSearchLeads / savedSearches) * 10_000) / 100 : 0,
+        metrics.savedSearches > 0 ? Math.round((metrics.savedSearchLeads / metrics.savedSearches) * 10_000) / 100 : 0,
+      savedSearchFollowUpCompletionRate:
+        metrics.savedSearches > 0
+          ? Math.round(((metrics.savedSearches - metrics.savedSearchOpenOpportunities) / metrics.savedSearches) * 10_000) / 100
+          : 0,
       conciergePositiveFeedbackRate:
         metrics.conciergeFeedbackCount > 0
           ? Math.round((conciergePositiveFeedbackCount / metrics.conciergeFeedbackCount) * 10_000) / 100

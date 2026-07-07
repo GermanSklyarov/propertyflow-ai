@@ -1310,8 +1310,11 @@ export interface TenantDashboardMetrics {
   conciergeRecommendedSessions: number;
   conciergeLeads: number;
   conciergeLeadConversionRate: number;
+  savedSearches: number;
   savedSearchLeads: number;
   savedSearchLeadConversionRate: number;
+  savedSearchOpenOpportunities: number;
+  savedSearchFollowUpCompletionRate: number;
   conciergeFeedbackCount: number;
   conciergePositiveFeedbackRate: number;
   conciergeTrainingDatasetRows: number;
