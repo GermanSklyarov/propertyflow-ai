@@ -1107,7 +1107,7 @@ export interface RentalYieldSummary {
 
 export type LeadStatus = "new" | "contacted" | "qualified" | "lost" | "won";
 
-export type LeadSource = "website" | "public-api" | "agent" | "ai-chat" | "ai-concierge";
+export type LeadSource = "website" | "public-api" | "agent" | "ai-chat" | "ai-concierge" | "saved-search";
 
 export interface CreateLeadRequest {
   propertyId?: string;

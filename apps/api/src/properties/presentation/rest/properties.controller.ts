@@ -519,7 +519,7 @@ export class PropertiesController {
       tenantId,
       {
         propertyId: selectedPropertyId,
-        source: "agent",
+        source: "saved-search",
         contactName: payload.contactName,
         contactEmail: payload.contactEmail,
         contactPhone: payload.contactPhone,
