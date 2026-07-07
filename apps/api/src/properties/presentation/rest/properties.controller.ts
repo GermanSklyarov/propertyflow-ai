@@ -30,6 +30,7 @@ import type {
   SavedSearchAlertAnalyticsResponse,
   SavedSearchAlertRunListResponse,
   SavedSearchAlertRunSnapshot,
+  SavedSearchLeadAnalyticsResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -546,6 +547,32 @@ export class PropertiesController {
     });
 
     return lead;
+  }
+
+  @Get("saved-searches/:searchId/leads/analytics")
+  @ApiOperation({ summary: "Return lead conversion analytics for a saved search" })
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearchLeadAnalytics(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string
+  ): Promise<SavedSearchLeadAnalyticsResponse> {
+    const savedSearch = await this.savedSearches.getById(tenantId, searchId, user);
+    const result = await this.leads.getAttributionAnalytics(tenantId, savedSearch.id);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.lead_analytics_viewed",
+      resourceType: "search",
+      resourceId: savedSearch.id,
+      metadata: {
+        title: savedSearch.title,
+        totalLeads: result.totalLeads
+      }
+    });
+
+    return result;
   }
 
   @Get("saved-searches/:searchId/leads")

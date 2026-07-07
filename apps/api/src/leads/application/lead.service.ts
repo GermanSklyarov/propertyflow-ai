@@ -1,5 +1,12 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { CreateLeadRequest, LeadListResponse, LeadSnapshot, RequestUser } from "@propertyflow/contracts";
+import type {
+  CreateLeadRequest,
+  LeadListResponse,
+  LeadSnapshot,
+  LeadStatus,
+  RequestUser,
+  SavedSearchLeadAnalyticsResponse
+} from "@propertyflow/contracts";
 import { AuditService } from "../../audit/application/audit.service.js";
 import { RealtimePublisherService } from "../../realtime/application/realtime-publisher.service.js";
 import { UserService } from "../../users/application/user.service.js";
@@ -58,6 +65,25 @@ export class LeadService {
     return {
       items,
       total: items.length
+    };
+  }
+
+  async getAttributionAnalytics(
+    tenantId: string,
+    attributionSearchEventId: string
+  ): Promise<SavedSearchLeadAnalyticsResponse> {
+    const items = await this.leads.listByAttribution(tenantId, attributionSearchEventId);
+    const statuses: LeadStatus[] = ["new", "contacted", "qualified", "lost", "won"];
+
+    return {
+      savedSearchId: attributionSearchEventId,
+      totalLeads: items.length,
+      leadsByStatus: statuses.map((status) => ({
+        status,
+        count: items.filter((lead) => lead.status === status).length
+      })),
+      latestLead: items[0],
+      generatedAt: new Date().toISOString()
     };
   }
 

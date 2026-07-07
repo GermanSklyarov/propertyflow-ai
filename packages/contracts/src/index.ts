@@ -116,6 +116,7 @@ export type AuditAction =
   | "saved_search.alert_runs_viewed"
   | "saved_search.alert_analytics_viewed"
   | "saved_search.lead_created"
+  | "saved_search.lead_analytics_viewed"
   | "saved_search.leads_viewed"
   | "saved_search.matches_viewed"
   | "saved_search.notifications_updated"
@@ -1148,6 +1149,19 @@ export interface AssignLeadRequest {
 export interface LeadListResponse {
   items: LeadSnapshot[];
   total: number;
+}
+
+export interface LeadStatusSummary {
+  status: LeadStatus;
+  count: number;
+}
+
+export interface SavedSearchLeadAnalyticsResponse {
+  savedSearchId: string;
+  totalLeads: number;
+  leadsByStatus: LeadStatusSummary[];
+  latestLead?: LeadSnapshot;
+  generatedAt: string;
 }
 
 export interface CountByBucket {
