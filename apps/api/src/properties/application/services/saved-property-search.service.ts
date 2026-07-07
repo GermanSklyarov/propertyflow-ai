@@ -6,6 +6,7 @@ import type {
   SavedSearchAlertAnalyticsResponse,
   SavedSearchAlertRunListResponse,
   SavedSearchAlertRunSnapshot,
+  SavedSearchLeadFunnelResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -142,6 +143,27 @@ export class SavedPropertySearchService {
       totalCandidates,
       averageCandidatesPerRun: recentRuns.length ? Number((totalCandidates / recentRuns.length).toFixed(2)) : 0,
       lastRun: recentRuns[0],
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async getLeadFunnel(tenantId: string, user: RequestUser): Promise<SavedSearchLeadFunnelResponse> {
+    const rows = await this.savedSearches.listLeadFunnel(tenantId, this.userScope(user));
+    const savedSearchLeads = rows.reduce((sum, row) => sum + row.leadCount, 0);
+    const totalSavedSearches = rows.length;
+
+    return {
+      totalSavedSearches,
+      savedSearchLeads,
+      savedSearchLeadConversionRate: totalSavedSearches
+        ? Math.round((savedSearchLeads / totalSavedSearches) * 10_000) / 100
+        : 0,
+      topSavedSearches: rows.slice(0, 10).map((row) => ({
+        savedSearch: row.savedSearch,
+        leadCount: row.leadCount,
+        conversionRate: row.leadCount > 0 ? 100 : 0,
+        latestLeadAt: row.latestLeadAt
+      })),
       generatedAt: new Date().toISOString()
     };
   }

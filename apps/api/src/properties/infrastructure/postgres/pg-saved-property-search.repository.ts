@@ -3,6 +3,7 @@ import type { PropertySearchRequest, SavedPropertySearchSnapshot } from "@proper
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type {
+  SavedPropertySearchLeadFunnelRow,
   SavedPropertySearchRepository,
   SavePropertySearchInput
 } from "../../domain/saved-property-search.repository.js";
@@ -20,6 +21,11 @@ interface SavedPropertySearchRow {
   notifications_enabled: boolean;
   created_at: Date;
   updated_at: Date;
+}
+
+interface SavedPropertySearchLeadFunnelSqlRow extends SavedPropertySearchRow {
+  lead_count: string;
+  latest_lead_at: Date | null;
 }
 
 @Injectable()
@@ -98,6 +104,40 @@ export class PgSavedPropertySearchRepository implements SavedPropertySearchRepos
     );
 
     return result.rows.map((row) => this.toSnapshot(row));
+  }
+
+  async listLeadFunnel(tenantId: string, userId?: string): Promise<SavedPropertySearchLeadFunnelRow[]> {
+    const values: unknown[] = [tenantId];
+    const userFilter = userId ? "and search.user_id = $2" : "";
+
+    if (userId) {
+      values.push(userId);
+    }
+
+    const result = await this.pool.query<SavedPropertySearchLeadFunnelSqlRow>(
+      `
+        select
+          search.*,
+          count(lead.id) as lead_count,
+          max(lead.created_at) as latest_lead_at
+        from saved_property_searches search
+        left join leads lead
+          on lead.tenant_id = search.tenant_id
+          and lead.source = 'saved-search'
+          and lead.attribution_search_event_id = search.id
+        where search.tenant_id = $1
+          ${userFilter}
+        group by search.id
+        order by count(lead.id) desc, max(lead.created_at) desc nulls last, search.created_at desc
+      `,
+      values
+    );
+
+    return result.rows.map((row) => ({
+      savedSearch: this.toSnapshot(row),
+      leadCount: Number(row.lead_count),
+      latestLeadAt: row.latest_lead_at?.toISOString()
+    }));
   }
 
   async findById(tenantId: string, searchId: string): Promise<SavedPropertySearchSnapshot | null> {

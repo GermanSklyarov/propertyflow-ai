@@ -117,6 +117,7 @@ export type AuditAction =
   | "saved_search.alert_analytics_viewed"
   | "saved_search.lead_created"
   | "saved_search.lead_analytics_viewed"
+  | "saved_search.lead_funnel_viewed"
   | "saved_search.leads_viewed"
   | "saved_search.matches_viewed"
   | "saved_search.notifications_updated"
@@ -464,6 +465,21 @@ export interface SavedSearchAlertAnalyticsResponse {
   totalCandidates: number;
   averageCandidatesPerRun: number;
   lastRun?: SavedSearchAlertRunSnapshot;
+  generatedAt: string;
+}
+
+export interface SavedSearchLeadFunnelItem {
+  savedSearch: SavedPropertySearchSnapshot;
+  leadCount: number;
+  conversionRate: number;
+  latestLeadAt?: string;
+}
+
+export interface SavedSearchLeadFunnelResponse {
+  totalSavedSearches: number;
+  savedSearchLeads: number;
+  savedSearchLeadConversionRate: number;
+  topSavedSearches: SavedSearchLeadFunnelItem[];
   generatedAt: string;
 }
 

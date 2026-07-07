@@ -1,6 +1,6 @@
 import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
-import { ApiHeader, ApiOperation, ApiTags } from "@nestjs/swagger";
+import { ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type {
   AiAdvisorSummary,
   BackgroundJobSnapshot,
@@ -30,6 +30,7 @@ import type {
   SavedSearchAlertAnalyticsResponse,
   SavedSearchAlertRunListResponse,
   SavedSearchAlertRunSnapshot,
+  SavedSearchLeadFunnelResponse,
   SavedSearchLeadAnalyticsResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
@@ -238,6 +239,61 @@ export class PropertiesController {
     @CurrentUser() user: RequestUser
   ): Promise<SavedPropertySearchListResponse> {
     return this.savedSearches.list(tenantId, user);
+  }
+
+  @Get("saved-searches/lead-analytics")
+  @ApiOperation({ summary: "Return saved-search lead conversion funnel" })
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        totalSavedSearches: { type: "number", example: 12 },
+        savedSearchLeads: { type: "number", example: 5 },
+        savedSearchLeadConversionRate: { type: "number", example: 41.67 },
+        topSavedSearches: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              savedSearch: { type: "object" },
+              leadCount: { type: "number", example: 2 },
+              conversionRate: { type: "number", example: 100 },
+              latestLeadAt: { type: "string", format: "date-time" }
+            },
+            required: ["savedSearch", "leadCount", "conversionRate"]
+          }
+        },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: [
+        "totalSavedSearches",
+        "savedSearchLeads",
+        "savedSearchLeadConversionRate",
+        "topSavedSearches",
+        "generatedAt"
+      ]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearchLeadFunnel(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser
+  ): Promise<SavedSearchLeadFunnelResponse> {
+    const result = await this.savedSearches.getLeadFunnel(tenantId, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.lead_funnel_viewed",
+      resourceType: "search",
+      metadata: {
+        totalSavedSearches: result.totalSavedSearches,
+        savedSearchLeads: result.savedSearchLeads,
+        topSavedSearchIds: result.topSavedSearches.map((item) => item.savedSearch.id)
+      }
+    });
+
+    return result;
   }
 
   @Get("saved-searches/alerts")

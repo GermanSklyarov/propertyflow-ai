@@ -64,7 +64,7 @@ export class KnowledgeChunkEmbeddingPayloadDto implements KnowledgeChunkEmbeddin
 
   requestedByUserId?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: String })
   @IsOptional()
   @IsString()
   documentId?: string;
@@ -73,18 +73,18 @@ export class KnowledgeChunkEmbeddingPayloadDto implements KnowledgeChunkEmbeddin
   @IsIn(["local-hash", "openai", "anthropic", "gemini"])
   provider!: KnowledgeChunkEmbeddingJobPayload["provider"];
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   @IsString()
   model!: string;
 
-  @ApiProperty({ minimum: 1, maximum: 4096 })
+  @ApiProperty({ type: Number, minimum: 1, maximum: 4096 })
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(4096)
   dimensions!: number;
 
-  @ApiProperty({ required: false, minimum: 1, maximum: 500 })
+  @ApiProperty({ required: false, type: Number, minimum: 1, maximum: 500 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -98,7 +98,7 @@ export class KnowledgeDocumentIngestPayloadDto implements KnowledgeDocumentInges
 
   requestedByUserId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   @IsString()
   documentId!: string;
 
@@ -112,7 +112,7 @@ export class ConciergeModelTrainPayloadDto implements ConciergeModelTrainJobPayl
 
   requestedByUserId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   @IsString()
   modelVersion!: string;
 
@@ -120,7 +120,7 @@ export class ConciergeModelTrainPayloadDto implements ConciergeModelTrainJobPayl
   @IsIn(["baseline-refresh", "llm-reranker", "learning-to-rank"])
   algorithm!: ConciergeModelTrainJobPayload["algorithm"];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: Boolean })
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
@@ -131,7 +131,7 @@ export class PricingModelTrainPayloadDto implements PricingModelTrainJobPayload 
 
   requestedByUserId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   @IsString()
   modelVersion!: string;
 
@@ -139,7 +139,7 @@ export class PricingModelTrainPayloadDto implements PricingModelTrainJobPayload 
   @IsIn(["baseline-refresh", "catboost", "lightgbm"])
   algorithm!: PricingModelTrainJobPayload["algorithm"];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: Boolean })
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
@@ -154,12 +154,12 @@ export class PropertyImportPayloadDto implements PropertyImportJobPayload {
   @IsIn(["csv", "json", "partner-api"])
   source!: "csv" | "json" | "partner-api";
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: String })
   @IsOptional()
   @IsString()
   objectUrl?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: Boolean })
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
@@ -170,7 +170,7 @@ export class PropertyAiDescriptionPayloadDto implements PropertyAiDescriptionJob
 
   requestedByUserId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   @IsString()
   propertyId!: string;
 
@@ -185,16 +185,16 @@ export class PropertyImageAnalysisPayloadDto implements PropertyImageAnalysisJob
 
   requestedByUserId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   @IsString()
   propertyId!: string;
 
-  @ApiProperty({ isArray: true })
+  @ApiProperty({ type: [String] })
   @IsArray()
   @IsString({ each: true })
   imageUrls!: string[];
 
-  @ApiProperty({ required: false, isArray: true })
+  @ApiProperty({ required: false, type: [String] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -206,7 +206,7 @@ export class PropertySearchIndexPayloadDto implements PropertySearchIndexJobPayl
 
   requestedByUserId?: string;
 
-  @ApiProperty()
+  @ApiProperty({ type: String })
   @IsString()
   propertyId!: string;
 
@@ -224,17 +224,17 @@ export class SavedSearchAlertDigestPayloadDto implements SavedSearchAlertDigestJ
   @IsIn(["user", "tenant"])
   scope!: SavedSearchAlertDigestJobPayload["scope"];
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: String })
   @IsOptional()
   @IsString()
   userId?: string;
 
-  @ApiProperty({ required: false })
+  @ApiProperty({ required: false, type: Boolean })
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
 
-  @ApiProperty({ required: false, minimum: 1, maximum: 100 })
+  @ApiProperty({ required: false, type: Number, minimum: 1, maximum: 100 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()

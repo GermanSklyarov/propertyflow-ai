@@ -14,9 +14,16 @@ export interface SavePropertySearchInput {
   notificationsEnabled: boolean;
 }
 
+export interface SavedPropertySearchLeadFunnelRow {
+  savedSearch: SavedPropertySearchSnapshot;
+  leadCount: number;
+  latestLeadAt?: string;
+}
+
 export interface SavedPropertySearchRepository {
   save(input: SavePropertySearchInput): Promise<SavedPropertySearchSnapshot>;
   list(tenantId: string, userId?: string): Promise<SavedPropertySearchSnapshot[]>;
+  listLeadFunnel(tenantId: string, userId?: string): Promise<SavedPropertySearchLeadFunnelRow[]>;
   findById(tenantId: string, searchId: string): Promise<SavedPropertySearchSnapshot | null>;
   updateNotifications(
     tenantId: string,
