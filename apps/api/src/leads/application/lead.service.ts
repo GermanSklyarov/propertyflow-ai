@@ -1,6 +1,8 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
+  CreateLeadNoteRequest,
   CreateLeadRequest,
+  LeadNotesResponse,
   LeadListResponse,
   LeadSnapshot,
   LeadStatus,
@@ -166,6 +168,59 @@ export class LeadService {
     };
   }
 
+  async createNote(
+    tenantId: string,
+    leadId: string,
+    request: CreateLeadNoteRequest,
+    user: RequestUser
+  ): Promise<LeadNotesResponse["items"][number]> {
+    const lead = await this.getVisibleLead(tenantId, leadId, user);
+    const noteText = request.note.trim();
+
+    if (noteText.length < 2) {
+      throw new BadRequestException("Lead note must contain at least 2 non-whitespace characters");
+    }
+
+    const note = await this.leads.createNote({
+      tenantId,
+      leadId,
+      note: noteText,
+      user
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "lead.note_added",
+      resourceType: "lead",
+      resourceId: lead.id,
+      metadata: {
+        propertyId: lead.propertyId,
+        assignedAgentId: lead.assignedAgentId
+      }
+    });
+
+    this.realtime.publish(tenantId, "lead.note_added", {
+      leadId: lead.id,
+      noteId: note.id,
+      propertyId: lead.propertyId,
+      assignedAgentId: lead.assignedAgentId
+    });
+
+    return note;
+  }
+
+  async listNotes(tenantId: string, leadId: string, user: RequestUser): Promise<LeadNotesResponse> {
+    await this.getVisibleLead(tenantId, leadId, user);
+    const items = await this.leads.listNotes(tenantId, leadId);
+
+    return {
+      leadId,
+      items,
+      total: items.length
+    };
+  }
+
   async updateStatus(tenantId: string, leadId: string, status: LeadStatus, user: RequestUser): Promise<LeadSnapshot> {
     const currentLead = await this.leads.findById(tenantId, leadId);
 
@@ -217,6 +272,16 @@ export class LeadService {
       status: lead.status,
       user
     });
+
+    return lead;
+  }
+
+  private async getVisibleLead(tenantId: string, leadId: string, user: RequestUser): Promise<LeadSnapshot> {
+    const lead = await this.leads.findById(tenantId, leadId);
+
+    if (!lead || (user.role === "agent" && lead.assignedAgentId !== user.id)) {
+      throw new NotFoundException("Lead not found");
+    }
 
     return lead;
   }

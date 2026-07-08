@@ -517,3 +517,16 @@ create index if not exists idx_lead_status_events_lead
   on lead_status_events (tenant_id, lead_id, created_at);
 create index if not exists idx_lead_status_events_status
   on lead_status_events (tenant_id, status, created_at desc);
+
+create table if not exists lead_notes (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  lead_id uuid not null references leads(id) on delete cascade,
+  note text not null,
+  created_by_user_id text,
+  created_by_user_role text,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_lead_notes_lead
+  on lead_notes (tenant_id, lead_id, created_at desc);

@@ -1,8 +1,19 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { LeadSnapshot, LeadStatus, LeadStatusEventSnapshot, ListLeadsRequest } from "@propertyflow/contracts";
+import type {
+  LeadNoteSnapshot,
+  LeadSnapshot,
+  LeadStatus,
+  LeadStatusEventSnapshot,
+  ListLeadsRequest
+} from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { CreateLeadInput, LeadRepository, RecordLeadStatusEventInput } from "../../domain/lead.repository.js";
+import type {
+  CreateLeadInput,
+  CreateLeadNoteInput,
+  LeadRepository,
+  RecordLeadStatusEventInput
+} from "../../domain/lead.repository.js";
 
 interface LeadRow {
   id: string;
@@ -31,6 +42,16 @@ interface LeadStatusEventRow {
   status: LeadStatus;
   changed_by_user_id: string | null;
   changed_by_user_role: LeadStatusEventSnapshot["changedByUserRole"] | null;
+  created_at: Date;
+}
+
+interface LeadNoteRow {
+  id: string;
+  tenant_id: string;
+  lead_id: string;
+  note: string;
+  created_by_user_id: string | null;
+  created_by_user_role: LeadNoteSnapshot["createdByUserRole"] | null;
   created_at: Date;
 }
 
@@ -128,6 +149,48 @@ export class PgLeadRepository implements LeadRepository {
     );
 
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
+  async createNote(input: CreateLeadNoteInput): Promise<LeadNoteSnapshot> {
+    const result = await this.pool.query<LeadNoteRow>(
+      `
+        insert into lead_notes (
+          id,
+          tenant_id,
+          lead_id,
+          note,
+          created_by_user_id,
+          created_by_user_role,
+          created_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7
+        )
+        returning id, tenant_id, lead_id, note, created_by_user_id, created_by_user_role, created_at
+      `,
+      [crypto.randomUUID(), input.tenantId, input.leadId, input.note, input.user.id, input.user.role, new Date().toISOString()]
+    );
+
+    return this.toNoteSnapshot(result.rows[0]);
+  }
+
+  async listNotes(tenantId: string, leadId: string): Promise<LeadNoteSnapshot[]> {
+    const result = await this.pool.query<LeadNoteRow>(
+      `
+        select id, tenant_id, lead_id, note, created_by_user_id, created_by_user_role, created_at
+        from lead_notes
+        where tenant_id = $1 and lead_id = $2
+        order by created_at desc
+      `,
+      [tenantId, leadId]
+    );
+
+    return result.rows.map((row) => this.toNoteSnapshot(row));
   }
 
   async recordStatusEvent(input: RecordLeadStatusEventInput): Promise<LeadStatusEventSnapshot> {
@@ -272,6 +335,18 @@ export class PgLeadRepository implements LeadRepository {
       attributionSearchSource: row.attribution_search_source ?? undefined,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
+    };
+  }
+
+  private toNoteSnapshot(row: LeadNoteRow): LeadNoteSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      leadId: row.lead_id,
+      note: row.note,
+      createdByUserId: row.created_by_user_id ?? undefined,
+      createdByUserRole: row.created_by_user_role ?? undefined,
+      createdAt: row.created_at.toISOString()
     };
   }
 

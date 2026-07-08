@@ -129,6 +129,7 @@ export type AuditAction =
   | "tenant.settings_updated"
   | "lead.created"
   | "lead.assigned"
+  | "lead.note_added"
   | "lead.status_changed"
   | "job.enqueued"
   | "job.enqueue_rejected";
@@ -1200,6 +1201,26 @@ export interface UpdateLeadStatusRequest {
   status: LeadStatus;
 }
 
+export interface CreateLeadNoteRequest {
+  note: string;
+}
+
+export interface LeadNoteSnapshot {
+  id: string;
+  tenantId: string;
+  leadId: string;
+  note: string;
+  createdByUserId?: string;
+  createdByUserRole?: UserRole;
+  createdAt: string;
+}
+
+export interface LeadNotesResponse {
+  leadId: string;
+  items: LeadNoteSnapshot[];
+  total: number;
+}
+
 export interface LeadStatusEventSnapshot {
   id: string;
   tenantId: string;
@@ -1398,6 +1419,7 @@ export type RealtimeEventType =
   | "property.status_changed"
   | "lead.created"
   | "lead.assigned"
+  | "lead.note_added"
   | "lead.status_changed"
   | "security.event_detected"
   | "security.event_acknowledged";

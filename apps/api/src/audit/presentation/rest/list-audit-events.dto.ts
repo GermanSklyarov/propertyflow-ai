@@ -53,6 +53,7 @@ const auditActions = [
   "tenant.current_viewed",
   "lead.created",
   "lead.assigned",
+  "lead.note_added",
   "lead.status_changed",
   "job.enqueued",
   "job.enqueue_rejected"

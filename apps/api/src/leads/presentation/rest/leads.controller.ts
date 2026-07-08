@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } f
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   LeadListResponse,
+  LeadNotesResponse,
   LeadSnapshot,
   LeadStatusHistoryResponse,
   RequestUser,
@@ -17,6 +18,7 @@ import { UserService } from "../../../users/application/user.service.js";
 import { LeadService } from "../../application/lead.service.js";
 import { AssignLeadDto } from "./assign-lead.dto.js";
 import { CreateLeadDto } from "./create-lead.dto.js";
+import { CreateLeadNoteDto } from "./create-lead-note.dto.js";
 import { ListLeadsDto } from "./list-leads.dto.js";
 import { UpdateLeadStatusDto } from "./update-lead-status.dto.js";
 
@@ -71,6 +73,27 @@ export class LeadsController {
     @Param("leadId") leadId: string
   ): Promise<LeadStatusHistoryResponse> {
     return this.leads.getStatusHistory(tenantId, leadId);
+  }
+
+  @Post(":leadId/notes")
+  @Roles("agent", "broker", "manager", "admin")
+  createNote(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string,
+    @Body() payload: CreateLeadNoteDto
+  ): Promise<LeadNotesResponse["items"][number]> {
+    return this.leads.createNote(tenantId, leadId, payload, user);
+  }
+
+  @Get(":leadId/notes")
+  @Roles("agent", "broker", "manager", "admin")
+  listNotes(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string
+  ): Promise<LeadNotesResponse> {
+    return this.leads.listNotes(tenantId, leadId, user);
   }
 
   @Patch(":leadId/assign")

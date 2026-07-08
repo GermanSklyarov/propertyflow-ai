@@ -1,5 +1,6 @@
 import type {
   CreateLeadRequest,
+  LeadNoteSnapshot,
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
@@ -21,9 +22,18 @@ export interface RecordLeadStatusEventInput {
   user?: RequestUser;
 }
 
+export interface CreateLeadNoteInput {
+  tenantId: string;
+  leadId: string;
+  note: string;
+  user: RequestUser;
+}
+
 export interface LeadRepository {
   create(input: CreateLeadInput): Promise<LeadSnapshot>;
   findById(tenantId: string, leadId: string): Promise<LeadSnapshot | null>;
+  createNote(input: CreateLeadNoteInput): Promise<LeadNoteSnapshot>;
+  listNotes(tenantId: string, leadId: string): Promise<LeadNoteSnapshot[]>;
   recordStatusEvent(input: RecordLeadStatusEventInput): Promise<LeadStatusEventSnapshot>;
   listStatusEvents(tenantId: string, leadId: string): Promise<LeadStatusEventSnapshot[]>;
   list(tenantId: string, request?: ListLeadsRequest): Promise<LeadSnapshot[]>;
