@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   CreateLeadRequest,
   LeadListResponse,
@@ -14,6 +14,14 @@ import { LEAD_REPOSITORY, type LeadRepository } from "../domain/lead.repository.
 
 @Injectable()
 export class LeadService {
+  private readonly statusTransitions: Record<LeadStatus, LeadStatus[]> = {
+    new: ["contacted", "qualified", "lost"],
+    contacted: ["qualified", "lost"],
+    qualified: ["won", "lost"],
+    lost: [],
+    won: []
+  };
+
   constructor(
     @Inject(LEAD_REPOSITORY) private readonly leads: LeadRepository,
     @Inject(AuditService) private readonly audit: AuditService,
@@ -117,6 +125,20 @@ export class LeadService {
   }
 
   async updateStatus(tenantId: string, leadId: string, status: LeadStatus, user: RequestUser): Promise<LeadSnapshot> {
+    const currentLead = await this.leads.findById(tenantId, leadId);
+
+    if (!currentLead) {
+      throw new NotFoundException("Lead not found");
+    }
+
+    if (currentLead.status === status) {
+      return currentLead;
+    }
+
+    if (!this.statusTransitions[currentLead.status].includes(status)) {
+      throw new BadRequestException(`Cannot move lead from ${currentLead.status} to ${status}`);
+    }
+
     const lead = await this.leads.updateStatus(tenantId, leadId, status);
 
     if (!lead) {
@@ -130,6 +152,7 @@ export class LeadService {
       resourceType: "lead",
       resourceId: lead.id,
       metadata: {
+        previousStatus: currentLead.status,
         status,
         propertyId: lead.propertyId,
         source: lead.source,
@@ -139,6 +162,7 @@ export class LeadService {
 
     this.realtime.publish(tenantId, "lead.status_changed", {
       leadId: lead.id,
+      previousStatus: currentLead.status,
       status: lead.status,
       propertyId: lead.propertyId,
       assignedAgentId: lead.assignedAgentId

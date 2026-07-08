@@ -106,6 +106,19 @@ export class PgLeadRepository implements LeadRepository {
     return result.rows.map((row) => this.toSnapshot(row));
   }
 
+  async findById(tenantId: string, leadId: string): Promise<LeadSnapshot | null> {
+    const result = await this.pool.query<LeadRow>(
+      `
+        select *
+        from leads
+        where tenant_id = $1 and id = $2
+      `,
+      [tenantId, leadId]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]> {
     const result = await this.pool.query<LeadRow>(
       `
