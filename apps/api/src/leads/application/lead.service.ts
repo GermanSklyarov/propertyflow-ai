@@ -4,6 +4,7 @@ import type {
   CreateLeadRequest,
   LeadListResponse,
   LeadNotesResponse,
+  LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadStatus,
   LeadStatusHistoryResponse,
@@ -80,19 +81,27 @@ export class LeadService {
   }
 
   async list(tenantId: string, request: ListLeadsRequest, user: RequestUser): Promise<LeadListResponse> {
-    const scopedRequest =
-      user.role === "agent"
-        ? {
-            ...request,
-            assignedAgentId: user.id,
-            unassigned: false
-          }
-        : request;
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
     const items = await this.leads.list(tenantId, scopedRequest);
 
     return {
       items,
       total: items.length
+    };
+  }
+
+  async getQueueSummary(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadQueueSummaryResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const summary = await this.leads.getQueueSummary(tenantId, scopedRequest);
+
+    return {
+      ...summary,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
     };
   }
 
@@ -331,5 +340,17 @@ export class LeadService {
     }
 
     return lead;
+  }
+
+  private scopeLeadQueueRequest(request: ListLeadsRequest, user: RequestUser): ListLeadsRequest {
+    if (user.role !== "agent") {
+      return request;
+    }
+
+    return {
+      ...request,
+      assignedAgentId: user.id,
+      unassigned: false
+    };
   }
 }

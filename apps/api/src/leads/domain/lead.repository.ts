@@ -2,6 +2,7 @@ import type {
   CreateLeadRequest,
   LeadNoteSnapshot,
   LeadPriority,
+  LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
@@ -43,6 +44,7 @@ export interface LeadRepository {
   recordStatusEvent(input: RecordLeadStatusEventInput): Promise<LeadStatusEventSnapshot>;
   listStatusEvents(tenantId: string, leadId: string): Promise<LeadStatusEventSnapshot[]>;
   list(tenantId: string, request?: ListLeadsRequest): Promise<LeadSnapshot[]>;
+  getQueueSummary(tenantId: string, request?: ListLeadsRequest): Promise<Omit<LeadQueueSummaryResponse, "filters" | "generatedAt">>;
   listUnassigned(tenantId: string): Promise<LeadSnapshot[]>;
   listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]>;
   assign(tenantId: string, leadId: string, assignedAgentId: string): Promise<LeadSnapshot | null>;

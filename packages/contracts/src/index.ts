@@ -1263,6 +1263,21 @@ export interface LeadListResponse {
   total: number;
 }
 
+export interface LeadQueueSummaryResponse {
+  total: number;
+  open: number;
+  assigned: number;
+  unassigned: number;
+  overdueFollowUps: number;
+  dueSoonFollowUps: number;
+  highPriority: number;
+  byStatus: CountByBucket[];
+  byPriority: CountByBucket[];
+  bySource: CountByBucket[];
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export interface LeadStatusSummary {
   status: LeadStatus;
   count: number;

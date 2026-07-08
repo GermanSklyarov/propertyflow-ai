@@ -1,7 +1,9 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  CountByBucket,
   LeadNoteSnapshot,
   LeadPriority,
+  LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
@@ -57,6 +59,19 @@ interface LeadNoteRow {
   created_by_user_id: string | null;
   created_by_user_role: LeadNoteSnapshot["createdByUserRole"] | null;
   created_at: Date;
+}
+
+interface LeadQueueSummaryRow {
+  total: string;
+  open: string;
+  assigned: string;
+  unassigned: string;
+  overdue_follow_ups: string;
+  due_soon_follow_ups: string;
+  high_priority: string;
+  by_status: CountByBucket[];
+  by_priority: CountByBucket[];
+  by_source: CountByBucket[];
 }
 
 @Injectable()
@@ -283,6 +298,87 @@ export class PgLeadRepository implements LeadRepository {
     );
 
     return result.rows.map((row) => this.toSnapshot(row));
+  }
+
+  async getQueueSummary(
+    tenantId: string,
+    request: ListLeadsRequest = {}
+  ): Promise<Omit<LeadQueueSummaryResponse, "filters" | "generatedAt">> {
+    const result = await this.pool.query<LeadQueueSummaryRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        )
+        select
+          count(*) as total,
+          count(*) filter (where status in ('new', 'contacted', 'qualified')) as open,
+          count(*) filter (where assigned_agent_id is not null) as assigned,
+          count(*) filter (where assigned_agent_id is null) as unassigned,
+          count(*) filter (where next_follow_up_at is not null and next_follow_up_at < now()) as overdue_follow_ups,
+          count(*) filter (
+            where next_follow_up_at is not null
+              and next_follow_up_at >= now()
+              and next_follow_up_at <= now() + interval '24 hours'
+          ) as due_soon_follow_ups,
+          count(*) filter (where priority = 'high') as high_priority,
+          coalesce((
+            select jsonb_agg(jsonb_build_object('bucket', row.status, 'count', row.count) order by row.count desc, row.status asc)
+            from (
+              select status, count(*)::int as count
+              from filtered
+              group by status
+            ) row
+          ), '[]'::jsonb) as by_status,
+          coalesce((
+            select jsonb_agg(jsonb_build_object('bucket', row.priority, 'count', row.count) order by row.count desc, row.priority asc)
+            from (
+              select priority, count(*)::int as count
+              from filtered
+              group by priority
+            ) row
+          ), '[]'::jsonb) as by_priority,
+          coalesce((
+            select jsonb_agg(jsonb_build_object('bucket', row.source, 'count', row.count) order by row.count desc, row.source asc)
+            from (
+              select source, count(*)::int as count
+              from filtered
+              group by source
+            ) row
+          ), '[]'::jsonb) as by_source
+        from filtered
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null
+      ]
+    );
+    const row = result.rows[0];
+
+    return {
+      total: Number(row.total),
+      open: Number(row.open),
+      assigned: Number(row.assigned),
+      unassigned: Number(row.unassigned),
+      overdueFollowUps: Number(row.overdue_follow_ups),
+      dueSoonFollowUps: Number(row.due_soon_follow_ups),
+      highPriority: Number(row.high_priority),
+      byStatus: row.by_status,
+      byPriority: row.by_priority,
+      bySource: row.by_source
+    };
   }
 
   async listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]> {
