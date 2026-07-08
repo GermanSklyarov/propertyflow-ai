@@ -37,7 +37,9 @@ export class AnalyticsService {
       conciergeLeadConversionRate:
         metrics.conciergeSessions > 0 ? Math.round((metrics.conciergeLeads / metrics.conciergeSessions) * 10_000) / 100 : 0,
       savedSearchLeadConversionRate:
-        metrics.savedSearches > 0 ? Math.round((metrics.savedSearchLeads / metrics.savedSearches) * 10_000) / 100 : 0,
+        metrics.savedSearches > 0
+          ? Math.round((metrics.savedSearchConvertedSearches / metrics.savedSearches) * 10_000) / 100
+          : 0,
       savedSearchFollowUpCompletionRate:
         metrics.savedSearches > 0
           ? Math.round(((metrics.savedSearches - metrics.savedSearchOpenOpportunities) / metrics.savedSearches) * 10_000) / 100

@@ -72,6 +72,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       conciergeLeads,
       savedSearches,
       savedSearchLeads,
+      savedSearchConvertedSearches,
       savedSearchOpenOpportunities,
       savedSearchMatchedProperties,
       savedSearchLeadCoveredMatches,
@@ -126,6 +127,18 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.count("select count(*) from leads where tenant_id = $1 and source = 'ai-concierge'", [tenantId]),
       this.count("select count(*) from saved_property_searches where tenant_id = $1", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and source = 'saved-search'", [tenantId]),
+      this.count(
+        `
+          select count(distinct search.id)
+          from saved_property_searches search
+          join leads lead
+            on lead.tenant_id = search.tenant_id
+            and lead.source = 'saved-search'
+            and lead.attribution_search_event_id = search.id
+          where search.tenant_id = $1
+        `,
+        [tenantId]
+      ),
       this.count(
         `
           select count(*)
@@ -287,6 +300,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       conciergeLeads,
       savedSearches,
       savedSearchLeads,
+      savedSearchConvertedSearches,
       savedSearchOpenOpportunities,
       savedSearchMatchedProperties,
       savedSearchLeadCoveredMatches,

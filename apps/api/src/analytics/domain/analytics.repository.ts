@@ -32,6 +32,7 @@ export interface TenantAnalyticsRawMetrics {
   conciergeLeads: number;
   savedSearches: number;
   savedSearchLeads: number;
+  savedSearchConvertedSearches: number;
   savedSearchOpenOpportunities: number;
   savedSearchMatchedProperties: number;
   savedSearchLeadCoveredMatches: number;

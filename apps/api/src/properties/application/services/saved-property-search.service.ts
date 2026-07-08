@@ -153,12 +153,14 @@ export class SavedPropertySearchService {
     const rows = await this.savedSearches.listLeadFunnel(tenantId, this.userScope(user));
     const savedSearchLeads = rows.reduce((sum, row) => sum + row.leadCount, 0);
     const totalSavedSearches = rows.length;
+    const convertedSavedSearches = rows.filter((row) => row.leadCount > 0).length;
 
     return {
       totalSavedSearches,
       savedSearchLeads,
+      convertedSavedSearches,
       savedSearchLeadConversionRate: totalSavedSearches
-        ? Math.round((savedSearchLeads / totalSavedSearches) * 10_000) / 100
+        ? Math.round((convertedSavedSearches / totalSavedSearches) * 10_000) / 100
         : 0,
       topSavedSearches: rows.slice(0, 10).map((row) => ({
         savedSearch: row.savedSearch,

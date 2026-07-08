@@ -480,6 +480,7 @@ export interface SavedSearchLeadFunnelItem {
 export interface SavedSearchLeadFunnelResponse {
   totalSavedSearches: number;
   savedSearchLeads: number;
+  convertedSavedSearches: number;
   savedSearchLeadConversionRate: number;
   topSavedSearches: SavedSearchLeadFunnelItem[];
   generatedAt: string;
@@ -1332,6 +1333,7 @@ export interface TenantDashboardMetrics {
   conciergeLeadConversionRate: number;
   savedSearches: number;
   savedSearchLeads: number;
+  savedSearchConvertedSearches: number;
   savedSearchLeadConversionRate: number;
   savedSearchOpenOpportunities: number;
   savedSearchFollowUpCompletionRate: number;

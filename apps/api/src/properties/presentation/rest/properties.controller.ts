@@ -253,6 +253,7 @@ export class PropertiesController {
       properties: {
         totalSavedSearches: { type: "number", example: 12 },
         savedSearchLeads: { type: "number", example: 5 },
+        convertedSavedSearches: { type: "number", example: 4 },
         savedSearchLeadConversionRate: { type: "number", example: 41.67 },
         topSavedSearches: {
           type: "array",
@@ -272,6 +273,7 @@ export class PropertiesController {
       required: [
         "totalSavedSearches",
         "savedSearchLeads",
+        "convertedSavedSearches",
         "savedSearchLeadConversionRate",
         "topSavedSearches",
         "generatedAt"
