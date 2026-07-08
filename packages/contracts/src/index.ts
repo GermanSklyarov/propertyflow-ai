@@ -1318,6 +1318,20 @@ export interface LeadQualitySignalsResponse {
   generatedAt: string;
 }
 
+export interface LeadQualityActionItem {
+  lead: LeadSnapshot;
+  issueTypes: LeadQualityIssueType[];
+  score: number;
+  recommendation: string;
+}
+
+export interface LeadQualityActionsResponse {
+  items: LeadQualityActionItem[];
+  total: number;
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export interface LeadStatusSummary {
   status: LeadStatus;
   count: number;

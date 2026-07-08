@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   CountByBucket,
+  LeadQualityActionItem,
   LeadNoteSnapshot,
   LeadPriority,
   LeadQualitySignalsResponse,
@@ -83,6 +84,15 @@ interface LeadQualitySignalsRow {
   unassigned: string;
   missing_follow_up: string;
   stale_new_leads: string;
+}
+
+interface LeadQualityActionRow extends LeadRow {
+  missing_contact_info: boolean;
+  missing_property: boolean;
+  unassigned: boolean;
+  missing_follow_up: boolean;
+  stale_new_lead: boolean;
+  score: string;
 }
 
 interface LeadTimelineRow {
@@ -547,6 +557,59 @@ export class PgLeadRepository implements LeadRepository {
     };
   }
 
+  async listQualityActions(tenantId: string, request: ListLeadsRequest = {}): Promise<LeadQualityActionItem[]> {
+    const result = await this.pool.query<LeadQualityActionRow>(
+      `
+        with filtered as (
+          select
+            *,
+            coalesce(nullif(contact_email, ''), nullif(contact_phone, '')) is null as missing_contact_info,
+            property_id is null as missing_property,
+            assigned_agent_id is null as unassigned,
+            status in ('new', 'contacted', 'qualified') and next_follow_up_at is null as missing_follow_up,
+            status = 'new' and created_at < now() - interval '48 hours' as stale_new_lead
+          from leads
+          where tenant_id = $1
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        )
+        select
+          *,
+          (
+            case when missing_contact_info then 5 else 0 end
+            + case when unassigned then 4 else 0 end
+            + case when stale_new_lead then 3 else 0 end
+            + case when missing_follow_up then 2 else 0 end
+            + case when missing_property then 1 else 0 end
+          ) as score
+        from filtered
+        where missing_contact_info
+          or missing_property
+          or unassigned
+          or missing_follow_up
+          or stale_new_lead
+        order by score desc, created_at asc
+        limit $8
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
+        request.limit ?? 20
+      ]
+    );
+
+    return result.rows.map((row) => this.toQualityAction(row));
+  }
+
   async listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]> {
     const result = await this.pool.query<LeadRow>(
       `
@@ -670,6 +733,43 @@ export class PgLeadRepository implements LeadRepository {
       payload: row.payload,
       createdAt: row.created_at.toISOString()
     };
+  }
+
+  private toQualityAction(row: LeadQualityActionRow): LeadQualityActionItem {
+    const issueTypes = [
+      row.missing_contact_info ? "missing-contact-info" : undefined,
+      row.missing_property ? "missing-property" : undefined,
+      row.unassigned ? "unassigned" : undefined,
+      row.missing_follow_up ? "missing-follow-up" : undefined,
+      row.stale_new_lead ? "stale-new-lead" : undefined
+    ].filter((issue): issue is LeadQualityActionItem["issueTypes"][number] => issue !== undefined);
+
+    return {
+      lead: this.toSnapshot(row),
+      issueTypes,
+      score: Number(row.score),
+      recommendation: this.qualityRecommendation(issueTypes)
+    };
+  }
+
+  private qualityRecommendation(issueTypes: LeadQualityActionItem["issueTypes"]): string {
+    if (issueTypes.includes("missing-contact-info")) {
+      return "Add an email or phone number before the lead can be followed up.";
+    }
+
+    if (issueTypes.includes("unassigned")) {
+      return "Assign the lead to an agent so ownership is clear.";
+    }
+
+    if (issueTypes.includes("stale-new-lead")) {
+      return "Contact the lead or move it to the next CRM status.";
+    }
+
+    if (issueTypes.includes("missing-follow-up")) {
+      return "Schedule the next follow-up to keep the lead moving.";
+    }
+
+    return "Link a property to make the lead context easier to act on.";
   }
 
   private toStatusEventSnapshot(row: LeadStatusEventRow): LeadStatusEventSnapshot {
