@@ -27,6 +27,7 @@ import { PropertyImagesService } from "./application/services/property-images.se
 import { PropertyPublicationService } from "./application/services/property-publication.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
+import { SavedSearchLeadCoverageService } from "./application/services/saved-search-lead-coverage.service.js";
 import { SavedPropertySearchService } from "./application/services/saved-property-search.service.js";
 import { PRICE_RECOMMENDATION_FEEDBACK_REPOSITORY } from "./domain/price-recommendation-feedback.repository.js";
 import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
@@ -80,6 +81,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     PropertyImagesService,
     PropertyPublicationService,
     RentalYieldService,
+    SavedSearchLeadCoverageService,
     SavedPropertySearchService,
     {
       provide: PROPERTY_REPOSITORY,
