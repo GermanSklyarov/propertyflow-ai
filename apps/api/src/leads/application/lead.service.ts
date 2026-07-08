@@ -2,14 +2,15 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from "@nes
 import type {
   CreateLeadNoteRequest,
   CreateLeadRequest,
-  LeadNotesResponse,
   LeadListResponse,
+  LeadNotesResponse,
   LeadSnapshot,
   LeadStatus,
   LeadStatusHistoryResponse,
   ListLeadsRequest,
   RequestUser,
-  SavedSearchLeadAnalyticsResponse
+  SavedSearchLeadAnalyticsResponse,
+  UpdateLeadFollowUpRequest
 } from "@propertyflow/contracts";
 import { AuditService } from "../../audit/application/audit.service.js";
 import { RealtimePublisherService } from "../../realtime/application/realtime-publisher.service.js";
@@ -219,6 +220,52 @@ export class LeadService {
       items,
       total: items.length
     };
+  }
+
+  async updateFollowUp(
+    tenantId: string,
+    leadId: string,
+    request: UpdateLeadFollowUpRequest,
+    user: RequestUser
+  ): Promise<LeadSnapshot> {
+    const currentLead = await this.getVisibleLead(tenantId, leadId, user);
+
+    if (request.priority === undefined && request.nextFollowUpAt === undefined) {
+      throw new BadRequestException("Provide priority or nextFollowUpAt");
+    }
+
+    const lead = await this.leads.updateFollowUp(tenantId, leadId, {
+      priority: request.priority,
+      nextFollowUpAt: request.nextFollowUpAt
+    });
+
+    if (!lead) {
+      throw new NotFoundException("Lead not found");
+    }
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "lead.follow_up_updated",
+      resourceType: "lead",
+      resourceId: lead.id,
+      metadata: {
+        previousPriority: currentLead.priority,
+        priority: lead.priority,
+        previousNextFollowUpAt: currentLead.nextFollowUpAt,
+        nextFollowUpAt: lead.nextFollowUpAt,
+        assignedAgentId: lead.assignedAgentId
+      }
+    });
+
+    this.realtime.publish(tenantId, "lead.follow_up_updated", {
+      leadId: lead.id,
+      priority: lead.priority,
+      nextFollowUpAt: lead.nextFollowUpAt,
+      assignedAgentId: lead.assignedAgentId
+    });
+
+    return lead;
   }
 
   async updateStatus(tenantId: string, leadId: string, status: LeadStatus, user: RequestUser): Promise<LeadSnapshot> {

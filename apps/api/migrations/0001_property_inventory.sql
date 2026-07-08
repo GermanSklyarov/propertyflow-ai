@@ -487,6 +487,8 @@ create table if not exists leads (
   attribution_search_event_id uuid,
   attribution_search_query text,
   attribution_search_source text,
+  priority text not null default 'medium',
+  next_follow_up_at timestamptz,
   created_at timestamptz not null,
   updated_at timestamptz not null
 );
@@ -494,6 +496,8 @@ create table if not exists leads (
 alter table leads add column if not exists attribution_search_event_id uuid;
 alter table leads add column if not exists attribution_search_query text;
 alter table leads add column if not exists attribution_search_source text;
+alter table leads add column if not exists priority text not null default 'medium';
+alter table leads add column if not exists next_follow_up_at timestamptz;
 
 create index if not exists idx_leads_tenant_status on leads (tenant_id, status);
 create index if not exists idx_leads_tenant_property on leads (tenant_id, property_id);
@@ -501,6 +505,7 @@ create index if not exists idx_leads_tenant_created on leads (tenant_id, created
 create index if not exists idx_leads_tenant_assigned_agent on leads (tenant_id, assigned_agent_id);
 create index if not exists idx_leads_tenant_attribution_source on leads (tenant_id, attribution_search_source);
 create index if not exists idx_leads_tenant_attribution_query on leads (tenant_id, attribution_search_query);
+create index if not exists idx_leads_tenant_follow_up on leads (tenant_id, next_follow_up_at, priority);
 
 create table if not exists lead_status_events (
   id uuid primary key,

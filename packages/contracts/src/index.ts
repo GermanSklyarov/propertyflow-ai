@@ -130,6 +130,7 @@ export type AuditAction =
   | "lead.created"
   | "lead.assigned"
   | "lead.note_added"
+  | "lead.follow_up_updated"
   | "lead.status_changed"
   | "job.enqueued"
   | "job.enqueue_rejected";
@@ -1160,6 +1161,8 @@ export type LeadStatus = "new" | "contacted" | "qualified" | "lost" | "won";
 
 export type LeadSource = "website" | "public-api" | "agent" | "ai-chat" | "ai-concierge" | "saved-search";
 
+export type LeadPriority = "low" | "medium" | "high";
+
 export interface CreateLeadRequest {
   propertyId?: string;
   source: LeadSource;
@@ -1189,6 +1192,8 @@ export interface LeadSnapshot {
   attributionSearchEventId?: string;
   attributionSearchQuery?: string;
   attributionSearchSource?: SearchEventSource;
+  priority?: LeadPriority;
+  nextFollowUpAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -1199,6 +1204,11 @@ export interface AssignLeadRequest {
 
 export interface UpdateLeadStatusRequest {
   status: LeadStatus;
+}
+
+export interface UpdateLeadFollowUpRequest {
+  priority?: LeadPriority;
+  nextFollowUpAt?: string | null;
 }
 
 export interface CreateLeadNoteRequest {
@@ -1243,6 +1253,8 @@ export interface ListLeadsRequest {
   source?: LeadSource;
   assignedAgentId?: string;
   unassigned?: boolean;
+  priority?: LeadPriority;
+  followUpDueBefore?: string;
   limit?: number;
 }
 
@@ -1420,6 +1432,7 @@ export type RealtimeEventType =
   | "lead.created"
   | "lead.assigned"
   | "lead.note_added"
+  | "lead.follow_up_updated"
   | "lead.status_changed"
   | "security.event_detected"
   | "security.event_acknowledged";

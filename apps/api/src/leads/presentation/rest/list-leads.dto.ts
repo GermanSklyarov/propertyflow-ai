@@ -1,7 +1,7 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { IsBoolean, IsEnum, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
-import type { LeadSource, LeadStatus, ListLeadsRequest } from "@propertyflow/contracts";
+import { IsBoolean, IsEnum, IsInt, IsISO8601, IsOptional, IsString, Max, Min } from "class-validator";
+import type { LeadPriority, LeadSource, LeadStatus, ListLeadsRequest } from "@propertyflow/contracts";
 
 const leadStatuses = ["new", "contacted", "qualified", "lost", "won"] as const satisfies readonly LeadStatus[];
 const leadSources = [
@@ -12,6 +12,7 @@ const leadSources = [
   "ai-concierge",
   "saved-search"
 ] as const satisfies readonly LeadSource[];
+const leadPriorities = ["low", "medium", "high"] as const satisfies readonly LeadPriority[];
 
 export class ListLeadsDto implements ListLeadsRequest {
   @ApiProperty({ required: false, enum: leadStatuses })
@@ -40,6 +41,16 @@ export class ListLeadsDto implements ListLeadsRequest {
   })
   @IsBoolean()
   unassigned?: boolean;
+
+  @ApiProperty({ required: false, enum: leadPriorities })
+  @IsOptional()
+  @IsEnum(leadPriorities)
+  priority?: LeadPriority;
+
+  @ApiProperty({ required: false, format: "date-time" })
+  @IsOptional()
+  @IsISO8601()
+  followUpDueBefore?: string;
 
   @ApiProperty({ required: false, minimum: 1, maximum: 100 })
   @IsOptional()

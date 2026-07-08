@@ -20,6 +20,7 @@ import { AssignLeadDto } from "./assign-lead.dto.js";
 import { CreateLeadDto } from "./create-lead.dto.js";
 import { CreateLeadNoteDto } from "./create-lead-note.dto.js";
 import { ListLeadsDto } from "./list-leads.dto.js";
+import { UpdateLeadFollowUpDto } from "./update-lead-follow-up.dto.js";
 import { UpdateLeadStatusDto } from "./update-lead-status.dto.js";
 
 @ApiTags("leads")
@@ -94,6 +95,17 @@ export class LeadsController {
     @Param("leadId") leadId: string
   ): Promise<LeadNotesResponse> {
     return this.leads.listNotes(tenantId, leadId, user);
+  }
+
+  @Patch(":leadId/follow-up")
+  @Roles("agent", "broker", "manager", "admin")
+  updateFollowUp(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string,
+    @Body() payload: UpdateLeadFollowUpDto
+  ): Promise<LeadSnapshot> {
+    return this.leads.updateFollowUp(tenantId, leadId, payload, user);
   }
 
   @Patch(":leadId/assign")

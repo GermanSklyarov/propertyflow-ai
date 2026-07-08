@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   LeadNoteSnapshot,
+  LeadPriority,
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
@@ -12,7 +13,8 @@ import type {
   CreateLeadInput,
   CreateLeadNoteInput,
   LeadRepository,
-  RecordLeadStatusEventInput
+  RecordLeadStatusEventInput,
+  UpdateLeadFollowUpInput
 } from "../../domain/lead.repository.js";
 
 interface LeadRow {
@@ -30,6 +32,8 @@ interface LeadRow {
   attribution_search_event_id: string | null;
   attribution_search_query: string | null;
   attribution_search_source: LeadSnapshot["attributionSearchSource"] | null;
+  priority: LeadPriority;
+  next_follow_up_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -78,6 +82,8 @@ export class PgLeadRepository implements LeadRepository {
           attribution_search_event_id,
           attribution_search_query,
           attribution_search_source,
+          priority,
+          next_follow_up_at,
           created_at,
           updated_at
         ) values (
@@ -96,7 +102,10 @@ export class PgLeadRepository implements LeadRepository {
           $12,
           $13,
           $14,
-          $15
+          'medium',
+          null,
+          $15,
+          $16
         )
         returning *
       `,
@@ -256,8 +265,10 @@ export class PgLeadRepository implements LeadRepository {
           and ($3::text is null or source = $3)
           and ($4::text is null or assigned_agent_id = $4)
           and ($5::boolean = false or assigned_agent_id is null)
-        order by updated_at desc, created_at desc
-        limit $6
+          and ($6::text is null or priority = $6)
+          and ($7::timestamptz is null or next_follow_up_at <= $7)
+        order by next_follow_up_at asc nulls last, updated_at desc, created_at desc
+        limit $8
       `,
       [
         tenantId,
@@ -265,6 +276,8 @@ export class PgLeadRepository implements LeadRepository {
         request.source ?? null,
         request.assignedAgentId ?? null,
         request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
         request.limit ?? 50
       ]
     );
@@ -302,6 +315,37 @@ export class PgLeadRepository implements LeadRepository {
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async updateFollowUp(
+    tenantId: string,
+    leadId: string,
+    input: UpdateLeadFollowUpInput
+  ): Promise<LeadSnapshot | null> {
+    const shouldUpdateNextFollowUp = input.nextFollowUpAt !== undefined;
+    const result = await this.pool.query<LeadRow>(
+      `
+        update leads
+        set next_follow_up_at = case
+              when $3::boolean then $4::timestamptz
+              else next_follow_up_at
+            end,
+            priority = coalesce($5::text, priority),
+            updated_at = $6
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [
+        tenantId,
+        leadId,
+        shouldUpdateNextFollowUp,
+        input.nextFollowUpAt ?? null,
+        input.priority ?? null,
+        new Date().toISOString()
+      ]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async updateStatus(tenantId: string, leadId: string, status: LeadStatus): Promise<LeadSnapshot | null> {
     const result = await this.pool.query<LeadRow>(
       `
@@ -333,6 +377,8 @@ export class PgLeadRepository implements LeadRepository {
       attributionSearchEventId: row.attribution_search_event_id ?? undefined,
       attributionSearchQuery: row.attribution_search_query ?? undefined,
       attributionSearchSource: row.attribution_search_source ?? undefined,
+      priority: row.priority,
+      nextFollowUpAt: row.next_follow_up_at?.toISOString(),
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
     };
