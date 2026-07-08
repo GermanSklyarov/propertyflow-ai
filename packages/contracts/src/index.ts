@@ -1231,6 +1231,17 @@ export interface LeadNotesResponse {
   total: number;
 }
 
+export interface ApplyLeadQualityFollowUpRequest {
+  nextFollowUpAt: string;
+  priority?: LeadPriority;
+  note?: string;
+}
+
+export interface ApplyLeadQualityFollowUpResponse {
+  lead: LeadSnapshot;
+  note?: LeadNoteSnapshot;
+}
+
 export type LeadTimelineEventType = "created" | "assigned" | "follow-up-updated" | "note" | "status-changed";
 
 export interface LeadTimelineEventSnapshot {

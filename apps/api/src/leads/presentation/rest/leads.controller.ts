@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
+  ApplyLeadQualityFollowUpResponse,
   LeadListResponse,
   LeadNotesResponse,
   LeadQualityActionsResponse,
@@ -20,6 +21,7 @@ import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { UserService } from "../../../users/application/user.service.js";
 import { LeadService } from "../../application/lead.service.js";
+import { ApplyLeadQualityFollowUpDto } from "./apply-lead-quality-follow-up.dto.js";
 import { AssignLeadDto } from "./assign-lead.dto.js";
 import { CreateLeadDto } from "./create-lead.dto.js";
 import { CreateLeadNoteDto } from "./create-lead-note.dto.js";
@@ -99,6 +101,17 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadQualityActionsResponse> {
     return this.leads.listQualityActions(tenantId, query, user);
+  }
+
+  @Post(":leadId/quality-actions/follow-up")
+  @Roles("agent", "broker", "manager", "admin")
+  applyQualityFollowUpAction(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string,
+    @Body() payload: ApplyLeadQualityFollowUpDto
+  ): Promise<ApplyLeadQualityFollowUpResponse> {
+    return this.leads.applyQualityFollowUpAction(tenantId, leadId, payload, user);
   }
 
   @Get(":leadId/status-history")

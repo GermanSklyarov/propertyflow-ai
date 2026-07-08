@@ -149,11 +149,10 @@ export class PgLeadRepository implements LeadRepository {
           $11,
           $12,
           $13,
-          $14,
           'medium',
           null,
-          $15,
-          $16
+          $14,
+          $15
         )
         returning *
       `,
