@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiHeader, ApiTags } from "@nestjs/swagger";
+import { ApiHeader, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type { AcknowledgeSecurityEventResponse, RequestUser, TenantDashboardMetrics, TenantSecurityEventsResponse } from "@propertyflow/contracts";
 import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
@@ -11,6 +11,15 @@ import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { AnalyticsService } from "../../application/analytics.service.js";
 import { AcknowledgeSecurityEventDto } from "./acknowledge-security-event.dto.js";
 import { ListSecurityEventsDto } from "./list-security-events.dto.js";
+
+const countByBucketItemSchema = {
+  type: "object",
+  properties: {
+    bucket: { type: "string", example: "saved-search" },
+    count: { type: "number", example: 8 }
+  },
+  required: ["bucket", "count"]
+};
 
 @ApiTags("analytics")
 @ApiHeader({ name: "x-tenant-id", required: true })
@@ -25,6 +34,128 @@ export class AnalyticsController {
   ) {}
 
   @Get("dashboard")
+  @ApiOperation({ summary: "Return tenant dashboard metrics" })
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        tenantId: { type: "string", example: "demo-agency" },
+        totalProperties: { type: "number", example: 42 },
+        availableProperties: { type: "number", example: 31 },
+        totalLeads: { type: "number", example: 18 },
+        newLeads: { type: "number", example: 5 },
+        unassignedLeads: { type: "number", example: 2 },
+        wonLeads: { type: "number", example: 4 },
+        lostLeads: { type: "number", example: 3 },
+        conversionRate: { type: "number", example: 57.14 },
+        totalSearches: { type: "number", example: 120 },
+        attributedLeads: { type: "number", example: 16 },
+        searchToLeadConversionRate: { type: "number", example: 13.33 },
+        averageSearchLatencyMs: { type: "number", example: 82 },
+        leadsBySource: { type: "array", items: countByBucketItemSchema },
+        leadsByStatus: { type: "array", items: countByBucketItemSchema },
+        searchesBySource: { type: "array", items: countByBucketItemSchema },
+        topSearchQueries: { type: "array", items: countByBucketItemSchema },
+        leadsByAttributedSearchSource: { type: "array", items: countByBucketItemSchema },
+        topLeadSearchQueries: { type: "array", items: countByBucketItemSchema },
+        conciergeSessions: { type: "number", example: 9 },
+        conciergeAwaitingInputSessions: { type: "number", example: 2 },
+        conciergeRecommendedSessions: { type: "number", example: 7 },
+        conciergeLeads: { type: "number", example: 3 },
+        conciergeLeadConversionRate: { type: "number", example: 33.33 },
+        savedSearches: { type: "number", example: 12 },
+        savedSearchLeads: { type: "number", example: 8 },
+        savedSearchConvertedSearches: { type: "number", example: 5 },
+        savedSearchLeadConversionRate: { type: "number", example: 41.67 },
+        savedSearchOpenOpportunities: { type: "number", example: 3 },
+        savedSearchFollowUpCompletionRate: { type: "number", example: 75 },
+        savedSearchMatchedProperties: { type: "number", example: 64 },
+        savedSearchLeadCoveredMatches: { type: "number", example: 14 },
+        savedSearchLeadCoverageRate: { type: "number", example: 21.88 },
+        conciergeFeedbackCount: { type: "number", example: 6 },
+        conciergePositiveFeedbackRate: { type: "number", example: 83.33 },
+        conciergeTrainingDatasetRows: { type: "number", example: 7 },
+        conciergeTrainingLabelCoverageRate: { type: "number", example: 71.43 },
+        conciergeRecommendationsByArea: {
+          type: "array",
+          items: countByBucketItemSchema
+        },
+        conciergeFeedbackByRating: {
+          type: "array",
+          items: countByBucketItemSchema
+        },
+        security: {
+          type: "object",
+          properties: {
+            rejectedJobEnqueues: { type: "number", example: 2 },
+            blockedAiActions: { type: "number", example: 1 },
+            imageDeletePreviews: { type: "number", example: 4 },
+            imageRemovals: { type: "number", example: 2 },
+            rejectedJobsByName: {
+              type: "array",
+              items: countByBucketItemSchema
+            },
+            blockedAiActionsByName: {
+              type: "array",
+              items: countByBucketItemSchema
+            }
+          },
+          required: [
+            "rejectedJobEnqueues",
+            "blockedAiActions",
+            "imageDeletePreviews",
+            "imageRemovals",
+            "rejectedJobsByName",
+            "blockedAiActionsByName"
+          ]
+        },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: [
+        "tenantId",
+        "totalProperties",
+        "availableProperties",
+        "totalLeads",
+        "newLeads",
+        "unassignedLeads",
+        "wonLeads",
+        "lostLeads",
+        "conversionRate",
+        "totalSearches",
+        "attributedLeads",
+        "searchToLeadConversionRate",
+        "averageSearchLatencyMs",
+        "leadsBySource",
+        "leadsByStatus",
+        "searchesBySource",
+        "topSearchQueries",
+        "leadsByAttributedSearchSource",
+        "topLeadSearchQueries",
+        "conciergeSessions",
+        "conciergeAwaitingInputSessions",
+        "conciergeRecommendedSessions",
+        "conciergeLeads",
+        "conciergeLeadConversionRate",
+        "savedSearches",
+        "savedSearchLeads",
+        "savedSearchConvertedSearches",
+        "savedSearchLeadConversionRate",
+        "savedSearchOpenOpportunities",
+        "savedSearchFollowUpCompletionRate",
+        "savedSearchMatchedProperties",
+        "savedSearchLeadCoveredMatches",
+        "savedSearchLeadCoverageRate",
+        "conciergeFeedbackCount",
+        "conciergePositiveFeedbackRate",
+        "conciergeTrainingDatasetRows",
+        "conciergeTrainingLabelCoverageRate",
+        "conciergeRecommendationsByArea",
+        "conciergeFeedbackByRating",
+        "security",
+        "generatedAt"
+      ]
+    }
+  })
   @Roles("broker", "manager", "admin")
   dashboard(@TenantId() tenantId: string): Promise<TenantDashboardMetrics> {
     return this.analytics.getDashboard(tenantId);
