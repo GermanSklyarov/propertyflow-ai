@@ -7,6 +7,7 @@ import type {
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
+  LeadTimelineEventSnapshot,
   ListLeadsRequest
 } from "@propertyflow/contracts";
 import type { Pool } from "pg";
@@ -72,6 +73,18 @@ interface LeadQueueSummaryRow {
   by_status: CountByBucket[];
   by_priority: CountByBucket[];
   by_source: CountByBucket[];
+}
+
+interface LeadTimelineRow {
+  id: string;
+  tenant_id: string;
+  lead_id: string;
+  type: LeadTimelineEventSnapshot["type"];
+  title: string;
+  actor_user_id: string | null;
+  actor_user_role: LeadTimelineEventSnapshot["actorUserRole"] | null;
+  payload: Record<string, unknown>;
+  created_at: Date;
 }
 
 @Injectable()
@@ -215,6 +228,79 @@ export class PgLeadRepository implements LeadRepository {
     );
 
     return result.rows.map((row) => this.toNoteSnapshot(row));
+  }
+
+  async listTimeline(tenantId: string, leadId: string): Promise<LeadTimelineEventSnapshot[]> {
+    const result = await this.pool.query<LeadTimelineRow>(
+      `
+        select *
+        from (
+          select
+            note.id,
+            note.tenant_id,
+            note.lead_id::text as lead_id,
+            'note'::text as type,
+            'Note added'::text as title,
+            note.created_by_user_id as actor_user_id,
+            note.created_by_user_role as actor_user_role,
+            jsonb_build_object('note', note.note) as payload,
+            note.created_at
+          from lead_notes note
+          where note.tenant_id = $1 and note.lead_id = $2::uuid
+
+          union all
+
+          select
+            event.id,
+            event.tenant_id,
+            event.lead_id::text as lead_id,
+            'status-changed'::text as type,
+            case
+              when event.previous_status is null then 'Lead created'
+              else 'Status changed'
+            end as title,
+            event.changed_by_user_id as actor_user_id,
+            event.changed_by_user_role as actor_user_role,
+            jsonb_build_object(
+              'previousStatus', event.previous_status,
+              'status', event.status
+            ) as payload,
+            event.created_at
+          from lead_status_events event
+          where event.tenant_id = $1 and event.lead_id = $2::uuid
+
+          union all
+
+          select
+            audit.id,
+            audit.tenant_id,
+            audit.resource_id as lead_id,
+            case audit.action
+              when 'lead.created' then 'created'
+              when 'lead.assigned' then 'assigned'
+              when 'lead.follow_up_updated' then 'follow-up-updated'
+            end as type,
+            case audit.action
+              when 'lead.created' then 'Lead created'
+              when 'lead.assigned' then 'Lead assigned'
+              when 'lead.follow_up_updated' then 'Follow-up updated'
+            end as title,
+            audit.user_id as actor_user_id,
+            audit.user_role as actor_user_role,
+            audit.metadata as payload,
+            audit.created_at
+          from audit_events audit
+          where audit.tenant_id = $1
+            and audit.resource_type = 'lead'
+            and audit.resource_id = $2::text
+            and audit.action in ('lead.created', 'lead.assigned', 'lead.follow_up_updated')
+        ) timeline
+        order by created_at desc
+      `,
+      [tenantId, leadId]
+    );
+
+    return result.rows.map((row) => this.toTimelineSnapshot(row));
   }
 
   async recordStatusEvent(input: RecordLeadStatusEventInput): Promise<LeadStatusEventSnapshot> {
@@ -488,6 +574,20 @@ export class PgLeadRepository implements LeadRepository {
       note: row.note,
       createdByUserId: row.created_by_user_id ?? undefined,
       createdByUserRole: row.created_by_user_role ?? undefined,
+      createdAt: row.created_at.toISOString()
+    };
+  }
+
+  private toTimelineSnapshot(row: LeadTimelineRow): LeadTimelineEventSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      leadId: row.lead_id,
+      type: row.type,
+      title: row.title,
+      actorUserId: row.actor_user_id ?? undefined,
+      actorUserRole: row.actor_user_role ?? undefined,
+      payload: row.payload,
       createdAt: row.created_at.toISOString()
     };
   }

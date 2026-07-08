@@ -8,6 +8,7 @@ import type {
   LeadSnapshot,
   LeadStatus,
   LeadStatusHistoryResponse,
+  LeadTimelineResponse,
   ListLeadsRequest,
   RequestUser,
   SavedSearchLeadAnalyticsResponse,
@@ -223,6 +224,17 @@ export class LeadService {
   async listNotes(tenantId: string, leadId: string, user: RequestUser): Promise<LeadNotesResponse> {
     await this.getVisibleLead(tenantId, leadId, user);
     const items = await this.leads.listNotes(tenantId, leadId);
+
+    return {
+      leadId,
+      items,
+      total: items.length
+    };
+  }
+
+  async getTimeline(tenantId: string, leadId: string, user: RequestUser): Promise<LeadTimelineResponse> {
+    await this.getVisibleLead(tenantId, leadId, user);
+    const items = await this.leads.listTimeline(tenantId, leadId);
 
     return {
       leadId,

@@ -6,6 +6,7 @@ import type {
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
+  LeadTimelineEventSnapshot,
   ListLeadsRequest,
   RequestUser
 } from "@propertyflow/contracts";
@@ -41,6 +42,7 @@ export interface LeadRepository {
   findById(tenantId: string, leadId: string): Promise<LeadSnapshot | null>;
   createNote(input: CreateLeadNoteInput): Promise<LeadNoteSnapshot>;
   listNotes(tenantId: string, leadId: string): Promise<LeadNoteSnapshot[]>;
+  listTimeline(tenantId: string, leadId: string): Promise<LeadTimelineEventSnapshot[]>;
   recordStatusEvent(input: RecordLeadStatusEventInput): Promise<LeadStatusEventSnapshot>;
   listStatusEvents(tenantId: string, leadId: string): Promise<LeadStatusEventSnapshot[]>;
   list(tenantId: string, request?: ListLeadsRequest): Promise<LeadSnapshot[]>;

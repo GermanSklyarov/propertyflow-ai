@@ -6,6 +6,7 @@ import type {
   LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadStatusHistoryResponse,
+  LeadTimelineResponse,
   RequestUser,
   TenantUserSnapshot
 } from "@propertyflow/contracts";
@@ -106,6 +107,16 @@ export class LeadsController {
     @Param("leadId") leadId: string
   ): Promise<LeadNotesResponse> {
     return this.leads.listNotes(tenantId, leadId, user);
+  }
+
+  @Get(":leadId/timeline")
+  @Roles("agent", "broker", "manager", "admin")
+  getTimeline(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string
+  ): Promise<LeadTimelineResponse> {
+    return this.leads.getTimeline(tenantId, leadId, user);
   }
 
   @Patch(":leadId/follow-up")

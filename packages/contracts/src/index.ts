@@ -1231,6 +1231,26 @@ export interface LeadNotesResponse {
   total: number;
 }
 
+export type LeadTimelineEventType = "created" | "assigned" | "follow-up-updated" | "note" | "status-changed";
+
+export interface LeadTimelineEventSnapshot {
+  id: string;
+  tenantId: string;
+  leadId: string;
+  type: LeadTimelineEventType;
+  title: string;
+  actorUserId?: string;
+  actorUserRole?: UserRole;
+  payload: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface LeadTimelineResponse {
+  leadId: string;
+  items: LeadTimelineEventSnapshot[];
+  total: number;
+}
+
 export interface LeadStatusEventSnapshot {
   id: string;
   tenantId: string;
