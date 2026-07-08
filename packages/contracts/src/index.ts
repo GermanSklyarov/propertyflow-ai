@@ -1233,6 +1233,7 @@ export interface SavedSearchLeadCoverageResponse {
   items: SavedSearchLeadCoverageItem[];
   returnedItems: number;
   filteredMatches: number;
+  hasMore: boolean;
   totalMatches: number;
   coveredMatches: number;
   uncoveredMatches: number;

@@ -770,6 +770,7 @@ export class PropertiesController {
         },
         returnedItems: { type: "number", example: 10 },
         filteredMatches: { type: "number", example: 21 },
+        hasMore: { type: "boolean", example: true },
         totalMatches: { type: "number", example: 12 },
         coveredMatches: { type: "number", example: 5 },
         uncoveredMatches: { type: "number", example: 7 },
@@ -781,6 +782,7 @@ export class PropertiesController {
         "items",
         "returnedItems",
         "filteredMatches",
+        "hasMore",
         "totalMatches",
         "coveredMatches",
         "uncoveredMatches",
@@ -807,6 +809,7 @@ export class PropertiesController {
       metadata: {
         title: result.savedSearch.title,
         filteredMatches: result.filteredMatches,
+        hasMore: result.hasMore,
         totalMatches: result.totalMatches,
         coveredMatches: result.coveredMatches,
         uncoveredMatches: result.uncoveredMatches,

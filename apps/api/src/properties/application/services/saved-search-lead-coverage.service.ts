@@ -60,6 +60,7 @@ export class SavedSearchLeadCoverageService {
       items: filteredItems,
       returnedItems: filteredItems.length,
       filteredMatches: filteredMatches.length,
+      hasMore: filteredMatches.length > filteredItems.length,
       totalMatches,
       coveredMatches,
       uncoveredMatches: totalMatches - coveredMatches,
