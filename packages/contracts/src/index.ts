@@ -1298,6 +1298,26 @@ export interface LeadQueueSummaryResponse {
   generatedAt: string;
 }
 
+export type LeadQualityIssueType =
+  | "missing-contact-info"
+  | "missing-property"
+  | "unassigned"
+  | "missing-follow-up"
+  | "stale-new-lead";
+
+export interface LeadQualitySignalsResponse {
+  total: number;
+  issueCount: number;
+  missingContactInfo: number;
+  missingProperty: number;
+  unassigned: number;
+  missingFollowUp: number;
+  staleNewLeads: number;
+  byIssue: CountByBucket[];
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export interface LeadStatusSummary {
   status: LeadStatus;
   count: number;

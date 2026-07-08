@@ -3,6 +3,7 @@ import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   LeadListResponse,
   LeadNotesResponse,
+  LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadStatusHistoryResponse,
@@ -77,6 +78,16 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadQueueSummaryResponse> {
     return this.leads.getQueueSummary(tenantId, query, user);
+  }
+
+  @Get("quality")
+  @Roles("agent", "broker", "manager", "admin")
+  getQualitySignals(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadQualitySignalsResponse> {
+    return this.leads.getQualitySignals(tenantId, query, user);
   }
 
   @Get(":leadId/status-history")

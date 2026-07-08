@@ -4,6 +4,7 @@ import type {
   CreateLeadRequest,
   LeadListResponse,
   LeadNotesResponse,
+  LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadStatus,
@@ -101,6 +102,21 @@ export class LeadService {
 
     return {
       ...summary,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async getQualitySignals(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadQualitySignalsResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const signals = await this.leads.getQualitySignals(tenantId, scopedRequest);
+
+    return {
+      ...signals,
       filters: scopedRequest,
       generatedAt: new Date().toISOString()
     };

@@ -114,6 +114,7 @@ The API starts with a tenant-aware property inventory slice:
 - `GET /leads/unassigned`
 - `GET /leads/agents`
 - `GET /leads/queue-summary`
+- `GET /leads/quality`
 - `GET /leads/:leadId/status-history`
 - `GET /leads/:leadId/timeline`
 - `GET /leads/:leadId/notes`
@@ -299,6 +300,7 @@ Current protected routes:
 - `GET /leads/unassigned`
 - `GET /leads/agents`
 - `GET /leads/queue-summary`
+- `GET /leads/quality`
 - `GET /leads/:leadId/status-history`
 - `GET /leads/:leadId/timeline`
 - `GET /leads/:leadId/notes`
@@ -484,7 +486,7 @@ Text search matches `title`, `address`, `description`, and `searchableText`, ret
 
 `GET /analytics/security-events` returns a manager/admin security feed normalized from audit events, including rejected job enqueue attempts, blocked AI actions, image delete previews, and confirmed image removals. It supports `kind`, `severity`, `userId`, `acknowledgement`, and `limit` filters for investigation workflows, and includes a `summary` with total matches plus severity/kind/acknowledgement buckets for the active filters. `POST /analytics/security-events/:eventId/acknowledge` marks a security event as handled with an optional note. Rejected job enqueue attempts and blocked AI actions emit realtime `security.event_detected` events; acknowledgements emit `security.event_acknowledged`.
 
-Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`. Lead sources include `website`, `public-api`, `agent`, `ai-chat`, `ai-concierge`, and `saved-search`. `GET /leads` returns the CRM work queue with `status`, `source`, `assignedAgentId`, `unassigned`, `priority`, `followUpDueBefore`, and `limit` filters; agents are scoped to their own assigned leads, while broker, manager, and admin roles can review the tenant queue. `GET /leads/queue-summary` returns the same scoped queue as counters by status, priority, source, assignment state, overdue follow-ups, due-soon follow-ups, and high-priority leads. `PATCH /leads/:leadId/follow-up` updates lead priority and the next follow-up timestamp for agent task planning. `POST /leads/:leadId/notes` and `GET /leads/:leadId/notes` let agents and managers keep a conversation timeline on the lead; agent access is limited to assigned leads. `GET /leads/:leadId/timeline` combines lead creation, assignment, follow-up updates, notes, and status changes into one CRM activity feed. `PATCH /leads/:leadId/status` moves a lead through `new`, `contacted`, `qualified`, `lost`, and `won` with guarded transitions, then records audit, realtime, and status-history events for CRM dashboards. `GET /leads/:leadId/status-history` returns the lead status timeline with previous status, new status, actor, role, and timestamp.
+Lead intake supports optional search attribution fields: `attributionSearchEventId`, `attributionSearchQuery`, and `attributionSearchSource`. Lead sources include `website`, `public-api`, `agent`, `ai-chat`, `ai-concierge`, and `saved-search`. `GET /leads` returns the CRM work queue with `status`, `source`, `assignedAgentId`, `unassigned`, `priority`, `followUpDueBefore`, and `limit` filters; agents are scoped to their own assigned leads, while broker, manager, and admin roles can review the tenant queue. `GET /leads/queue-summary` returns the same scoped queue as counters by status, priority, source, assignment state, overdue follow-ups, due-soon follow-ups, and high-priority leads. `GET /leads/quality` returns queue data-quality signals for missing contact info, missing property links, unassigned leads, missing follow-ups, and stale new leads. `PATCH /leads/:leadId/follow-up` updates lead priority and the next follow-up timestamp for agent task planning. `POST /leads/:leadId/notes` and `GET /leads/:leadId/notes` let agents and managers keep a conversation timeline on the lead; agent access is limited to assigned leads. `GET /leads/:leadId/timeline` combines lead creation, assignment, follow-up updates, notes, and status changes into one CRM activity feed. `PATCH /leads/:leadId/status` moves a lead through `new`, `contacted`, `qualified`, `lost`, and `won` with guarded transitions, then records audit, realtime, and status-history events for CRM dashboards. `GET /leads/:leadId/status-history` returns the lead status timeline with previous status, new status, actor, role, and timestamp.
 
 Public API v1 uses the `x-api-key` header. It is read-only for properties and supports lead intake. Successful requests are counted against `publicApiRequestsMonthly`; once the tenant reaches its monthly limit the API returns `429 Public API monthly request limit exceeded`. Local development seeds this demo key:
 

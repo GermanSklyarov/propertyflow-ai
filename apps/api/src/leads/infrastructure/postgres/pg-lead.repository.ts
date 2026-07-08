@@ -3,6 +3,7 @@ import type {
   CountByBucket,
   LeadNoteSnapshot,
   LeadPriority,
+  LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadStatus,
@@ -73,6 +74,15 @@ interface LeadQueueSummaryRow {
   by_status: CountByBucket[];
   by_priority: CountByBucket[];
   by_source: CountByBucket[];
+}
+
+interface LeadQualitySignalsRow {
+  total: string;
+  missing_contact_info: string;
+  missing_property: string;
+  unassigned: string;
+  missing_follow_up: string;
+  stale_new_leads: string;
 }
 
 interface LeadTimelineRow {
@@ -464,6 +474,76 @@ export class PgLeadRepository implements LeadRepository {
       byStatus: row.by_status,
       byPriority: row.by_priority,
       bySource: row.by_source
+    };
+  }
+
+  async getQualitySignals(
+    tenantId: string,
+    request: ListLeadsRequest = {}
+  ): Promise<Omit<LeadQualitySignalsResponse, "filters" | "generatedAt">> {
+    const result = await this.pool.query<LeadQualitySignalsRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        )
+        select
+          count(*) as total,
+          count(*) filter (
+            where coalesce(nullif(contact_email, ''), nullif(contact_phone, '')) is null
+          ) as missing_contact_info,
+          count(*) filter (where property_id is null) as missing_property,
+          count(*) filter (where assigned_agent_id is null) as unassigned,
+          count(*) filter (
+            where status in ('new', 'contacted', 'qualified')
+              and next_follow_up_at is null
+          ) as missing_follow_up,
+          count(*) filter (
+            where status = 'new'
+              and created_at < now() - interval '48 hours'
+          ) as stale_new_leads
+        from filtered
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null
+      ]
+    );
+    const row = result.rows[0];
+    const missingContactInfo = Number(row.missing_contact_info);
+    const missingProperty = Number(row.missing_property);
+    const unassigned = Number(row.unassigned);
+    const missingFollowUp = Number(row.missing_follow_up);
+    const staleNewLeads = Number(row.stale_new_leads);
+    const byIssue: CountByBucket[] = [
+      { bucket: "missing-contact-info", count: missingContactInfo },
+      { bucket: "missing-property", count: missingProperty },
+      { bucket: "unassigned", count: unassigned },
+      { bucket: "missing-follow-up", count: missingFollowUp },
+      { bucket: "stale-new-lead", count: staleNewLeads }
+    ].filter((item) => item.count > 0);
+
+    return {
+      total: Number(row.total),
+      issueCount: byIssue.reduce((sum, item) => sum + item.count, 0),
+      missingContactInfo,
+      missingProperty,
+      unassigned,
+      missingFollowUp,
+      staleNewLeads,
+      byIssue
     };
   }
 
