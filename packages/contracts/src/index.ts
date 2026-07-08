@@ -1232,6 +1232,7 @@ export interface SavedSearchLeadCoverageResponse {
   savedSearch: SavedPropertySearchSnapshot;
   items: SavedSearchLeadCoverageItem[];
   returnedItems: number;
+  filteredMatches: number;
   totalMatches: number;
   coveredMatches: number;
   uncoveredMatches: number;

@@ -52,12 +52,14 @@ export class SavedSearchLeadCoverageService {
     });
     const coveredMatches = items.filter((item) => item.hasLead).length;
     const totalMatches = items.length;
-    const filteredItems = this.sortItems(items, sort).filter((item) => !onlyUncovered || !item.hasLead).slice(0, limit);
+    const filteredMatches = this.sortItems(items, sort).filter((item) => !onlyUncovered || !item.hasLead);
+    const filteredItems = filteredMatches.slice(0, limit);
 
     return {
       savedSearch: matches.savedSearch,
       items: filteredItems,
       returnedItems: filteredItems.length,
+      filteredMatches: filteredMatches.length,
       totalMatches,
       coveredMatches,
       uncoveredMatches: totalMatches - coveredMatches,
