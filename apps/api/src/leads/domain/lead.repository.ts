@@ -1,4 +1,4 @@
-import type { CreateLeadRequest, LeadSnapshot } from "@propertyflow/contracts";
+import type { CreateLeadRequest, LeadSnapshot, LeadStatus } from "@propertyflow/contracts";
 
 export const LEAD_REPOSITORY = Symbol("LEAD_REPOSITORY");
 
@@ -11,4 +11,5 @@ export interface LeadRepository {
   listUnassigned(tenantId: string): Promise<LeadSnapshot[]>;
   listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]>;
   assign(tenantId: string, leadId: string, assignedAgentId: string): Promise<LeadSnapshot | null>;
+  updateStatus(tenantId: string, leadId: string, status: LeadStatus): Promise<LeadSnapshot | null>;
 }

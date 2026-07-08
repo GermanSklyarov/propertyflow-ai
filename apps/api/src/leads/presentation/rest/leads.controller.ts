@@ -11,6 +11,7 @@ import { UserService } from "../../../users/application/user.service.js";
 import { LeadService } from "../../application/lead.service.js";
 import { AssignLeadDto } from "./assign-lead.dto.js";
 import { CreateLeadDto } from "./create-lead.dto.js";
+import { UpdateLeadStatusDto } from "./update-lead-status.dto.js";
 
 @ApiTags("leads")
 @ApiHeader({ name: "x-tenant-id", required: true })
@@ -55,5 +56,16 @@ export class LeadsController {
     @Body() payload: AssignLeadDto
   ): Promise<LeadSnapshot> {
     return this.leads.assign(tenantId, leadId, payload.assignedAgentId, user);
+  }
+
+  @Patch(":leadId/status")
+  @Roles("agent", "broker", "manager", "admin")
+  updateStatus(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string,
+    @Body() payload: UpdateLeadStatusDto
+  ): Promise<LeadSnapshot> {
+    return this.leads.updateStatus(tenantId, leadId, payload.status, user);
   }
 }

@@ -115,4 +115,35 @@ export class LeadService {
 
     return lead;
   }
+
+  async updateStatus(tenantId: string, leadId: string, status: LeadStatus, user: RequestUser): Promise<LeadSnapshot> {
+    const lead = await this.leads.updateStatus(tenantId, leadId, status);
+
+    if (!lead) {
+      throw new NotFoundException("Lead not found");
+    }
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "lead.status_changed",
+      resourceType: "lead",
+      resourceId: lead.id,
+      metadata: {
+        status,
+        propertyId: lead.propertyId,
+        source: lead.source,
+        assignedAgentId: lead.assignedAgentId
+      }
+    });
+
+    this.realtime.publish(tenantId, "lead.status_changed", {
+      leadId: lead.id,
+      status: lead.status,
+      propertyId: lead.propertyId,
+      assignedAgentId: lead.assignedAgentId
+    });
+
+    return lead;
+  }
 }

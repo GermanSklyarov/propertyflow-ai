@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { LeadSnapshot } from "@propertyflow/contracts";
+import type { LeadSnapshot, LeadStatus } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { CreateLeadInput, LeadRepository } from "../../domain/lead.repository.js";
@@ -131,6 +131,21 @@ export class PgLeadRepository implements LeadRepository {
         returning *
       `,
       [tenantId, leadId, assignedAgentId, new Date().toISOString()]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
+  async updateStatus(tenantId: string, leadId: string, status: LeadStatus): Promise<LeadSnapshot | null> {
+    const result = await this.pool.query<LeadRow>(
+      `
+        update leads
+        set status = $3,
+            updated_at = $4
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, leadId, status, new Date().toISOString()]
     );
 
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
