@@ -1222,9 +1222,15 @@ export interface SavedSearchLeadCoverageItem {
   leadsByStatus: LeadStatusSummary[];
 }
 
+export interface ListSavedSearchLeadCoverageRequest {
+  limit?: number;
+  onlyUncovered?: boolean;
+}
+
 export interface SavedSearchLeadCoverageResponse {
   savedSearch: SavedPropertySearchSnapshot;
   items: SavedSearchLeadCoverageItem[];
+  returnedItems: number;
   totalMatches: number;
   coveredMatches: number;
   uncoveredMatches: number;

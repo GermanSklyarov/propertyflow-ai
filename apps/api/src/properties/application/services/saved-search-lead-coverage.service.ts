@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type {
   LeadSnapshot,
   LeadStatus,
+  ListSavedSearchLeadCoverageRequest,
   RequestUser,
   SavedSearchLeadCoverageResponse
 } from "@propertyflow/contracts";
@@ -18,8 +19,11 @@ export class SavedSearchLeadCoverageService {
   async getCoverage(
     tenantId: string,
     searchId: string,
-    user: RequestUser
+    user: RequestUser,
+    request: ListSavedSearchLeadCoverageRequest = {}
   ): Promise<SavedSearchLeadCoverageResponse> {
+    const limit = Math.min(Math.max(request.limit ?? 100, 1), 100);
+    const onlyUncovered = request.onlyUncovered ?? false;
     const matches = await this.savedSearches.getMatches(tenantId, searchId, user);
     const leads = await this.leads.listByAttribution(tenantId, matches.savedSearch.id);
     const leadsByProperty = new Map<string, LeadSnapshot[]>();
@@ -47,10 +51,12 @@ export class SavedSearchLeadCoverageService {
     });
     const coveredMatches = items.filter((item) => item.hasLead).length;
     const totalMatches = items.length;
+    const filteredItems = items.filter((item) => !onlyUncovered || !item.hasLead).slice(0, limit);
 
     return {
       savedSearch: matches.savedSearch,
-      items,
+      items: filteredItems,
+      returnedItems: filteredItems.length,
       totalMatches,
       coveredMatches,
       uncoveredMatches: totalMatches - coveredMatches,

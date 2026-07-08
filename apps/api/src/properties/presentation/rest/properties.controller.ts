@@ -84,6 +84,7 @@ import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto
 import { CreateSavedSearchAlertDigestJobDto } from "./create-saved-search-alert-digest-job.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { ListSavedSearchAlertRunsDto } from "./list-saved-search-alert-runs.dto.js";
+import { ListSavedSearchLeadCoverageDto } from "./list-saved-search-lead-coverage.dto.js";
 import { ListSavedSearchOpportunitiesDto } from "./list-saved-search-opportunities.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
@@ -734,6 +735,8 @@ export class PropertiesController {
 
   @Get("saved-searches/:searchId/lead-coverage")
   @ApiOperation({ summary: "Show which saved-search matches already have CRM leads" })
+  @ApiQuery({ name: "limit", required: false, type: Number, minimum: 1, maximum: 100 })
+  @ApiQuery({ name: "onlyUncovered", required: false, type: Boolean })
   @ApiOkResponse({
     schema: {
       type: "object",
@@ -764,6 +767,7 @@ export class PropertiesController {
             required: ["property", "hasLead", "leadCount", "leadsByStatus"]
           }
         },
+        returnedItems: { type: "number", example: 10 },
         totalMatches: { type: "number", example: 12 },
         coveredMatches: { type: "number", example: 5 },
         uncoveredMatches: { type: "number", example: 7 },
@@ -773,6 +777,7 @@ export class PropertiesController {
       required: [
         "savedSearch",
         "items",
+        "returnedItems",
         "totalMatches",
         "coveredMatches",
         "uncoveredMatches",
@@ -785,9 +790,10 @@ export class PropertiesController {
   async getSavedSearchLeadCoverage(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
-    @Param("searchId") searchId: string
+    @Param("searchId") searchId: string,
+    @Query() query: ListSavedSearchLeadCoverageDto
   ): Promise<SavedSearchLeadCoverageResponse> {
-    const result = await this.savedSearchLeadCoverage.getCoverage(tenantId, searchId, user);
+    const result = await this.savedSearchLeadCoverage.getCoverage(tenantId, searchId, user, query);
 
     await this.audit.record({
       tenantId,
@@ -800,7 +806,9 @@ export class PropertiesController {
         totalMatches: result.totalMatches,
         coveredMatches: result.coveredMatches,
         uncoveredMatches: result.uncoveredMatches,
-        coverageRate: result.coverageRate
+        coverageRate: result.coverageRate,
+        limit: query.limit,
+        onlyUncovered: query.onlyUncovered
       }
     });
 
