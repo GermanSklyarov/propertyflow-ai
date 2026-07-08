@@ -8,6 +8,7 @@ import type {
 } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
+import { savedSearchFiltersMatchPropertySql } from "../../../properties/infrastructure/postgres/saved-search-filter-sql.js";
 import type {
   AnalyticsRepository,
   TenantAnalyticsRawMetrics,
@@ -139,54 +140,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
               select 1
               from properties property
               where property.tenant_id = search.tenant_id
-                and (
-                  not search.filters ? 'market'
-                  or property.market = search.filters->>'market'
-                )
-                and (
-                  not search.filters ? 'minPriceThb'
-                  or (property.price_currency = 'THB' and property.price_amount >= (search.filters->>'minPriceThb')::numeric)
-                )
-                and (
-                  not search.filters ? 'maxPriceThb'
-                  or (property.price_currency = 'THB' and property.price_amount <= (search.filters->>'maxPriceThb')::numeric)
-                )
-                and (
-                  not search.filters ? 'minBedrooms'
-                  or property.bedrooms >= (search.filters->>'minBedrooms')::integer
-                )
-                and (
-                  not search.filters ? 'minBathrooms'
-                  or property.bathrooms >= (search.filters->>'minBathrooms')::integer
-                )
-                and (
-                  not search.filters ? 'minAreaSqm'
-                  or property.area_sqm >= (search.filters->>'minAreaSqm')::numeric
-                )
-                and (
-                  not search.filters ? 'maxBeachDistanceMeters'
-                  or property.beach_distance_meters <= (search.filters->>'maxBeachDistanceMeters')::integer
-                )
-                and (
-                  not search.filters ? 'requiredAmenities'
-                  or property.amenities @> array(
-                    select jsonb_array_elements_text(search.filters->'requiredAmenities')
-                  )::text[]
-                )
-                and (
-                  not (search.filters ? 'near' and search.filters ? 'radiusMeters')
-                  or st_dwithin(
-                    property.location,
-                    st_setsrid(
-                      st_makepoint(
-                        (search.filters->'near'->>'longitude')::double precision,
-                        (search.filters->'near'->>'latitude')::double precision
-                      ),
-                      4326
-                    )::geography,
-                    (search.filters->>'radiusMeters')::double precision
-                  )
-                )
+                and ${savedSearchFiltersMatchPropertySql("search", "property")}
             )
         `,
         [tenantId]
