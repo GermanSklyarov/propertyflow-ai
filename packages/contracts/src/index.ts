@@ -117,6 +117,7 @@ export type AuditAction =
   | "saved_search.alert_analytics_viewed"
   | "saved_search.lead_created"
   | "saved_search.lead_analytics_viewed"
+  | "saved_search.lead_coverage_viewed"
   | "saved_search.lead_funnel_viewed"
   | "saved_search.leads_viewed"
   | "saved_search.matches_viewed"
@@ -1208,6 +1209,25 @@ export interface SavedSearchLeadAnalyticsResponse {
   totalLeads: number;
   leadsByStatus: LeadStatusSummary[];
   latestLead?: LeadSnapshot;
+  generatedAt: string;
+}
+
+export interface SavedSearchLeadCoverageItem {
+  property: PropertySnapshot;
+  hasLead: boolean;
+  leadCount: number;
+  latestLeadId?: string;
+  latestLeadAt?: string;
+  leadsByStatus: LeadStatusSummary[];
+}
+
+export interface SavedSearchLeadCoverageResponse {
+  savedSearch: SavedPropertySearchSnapshot;
+  items: SavedSearchLeadCoverageItem[];
+  totalMatches: number;
+  coveredMatches: number;
+  uncoveredMatches: number;
+  coverageRate: number;
   generatedAt: string;
 }
 

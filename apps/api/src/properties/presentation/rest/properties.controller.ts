@@ -9,6 +9,7 @@ import type {
   NaturalLanguagePropertySearchResponse,
   NeighborhoodIntelligence,
   LeadListResponse,
+  LeadStatus,
   LeadSnapshot,
   PricingModelRegistryResponse,
   PricingTrainingDatasetResponse,
@@ -33,6 +34,7 @@ import type {
   SavedSearchLeadFunnelResponse,
   SavedSearchOpportunitiesResponse,
   SavedSearchLeadAnalyticsResponse,
+  SavedSearchLeadCoverageResponse,
   SavedPropertySearchAlertsResponse,
   SavedPropertySearchListResponse,
   SavedPropertySearchMatchesResponse,
@@ -720,6 +722,116 @@ export class PropertiesController {
       metadata: {
         title: savedSearch.title,
         total: result.total
+      }
+    });
+
+    return result;
+  }
+
+  @Get("saved-searches/:searchId/lead-coverage")
+  @ApiOperation({ summary: "Show which saved-search matches already have CRM leads" })
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        savedSearch: { type: "object" },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              property: { type: "object" },
+              hasLead: { type: "boolean", example: true },
+              leadCount: { type: "number", example: 2 },
+              latestLeadId: { type: "string", example: "lead-123" },
+              latestLeadAt: { type: "string", example: "2026-07-08T09:30:00.000Z" },
+              leadsByStatus: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    status: { type: "string", example: "qualified" },
+                    count: { type: "number", example: 1 }
+                  },
+                  required: ["status", "count"]
+                }
+              }
+            },
+            required: ["property", "hasLead", "leadCount", "leadsByStatus"]
+          }
+        },
+        totalMatches: { type: "number", example: 12 },
+        coveredMatches: { type: "number", example: 5 },
+        uncoveredMatches: { type: "number", example: 7 },
+        coverageRate: { type: "number", example: 41.67 },
+        generatedAt: { type: "string" }
+      },
+      required: [
+        "savedSearch",
+        "items",
+        "totalMatches",
+        "coveredMatches",
+        "uncoveredMatches",
+        "coverageRate",
+        "generatedAt"
+      ]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  async getSavedSearchLeadCoverage(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("searchId") searchId: string
+  ): Promise<SavedSearchLeadCoverageResponse> {
+    const matches = await this.savedSearches.getMatches(tenantId, searchId, user);
+    const leads = await this.leads.listByAttribution(tenantId, matches.savedSearch.id);
+    const leadsByProperty = new Map<string, LeadSnapshot[]>();
+
+    for (const lead of leads.items) {
+      if (!lead.propertyId) {
+        continue;
+      }
+
+      leadsByProperty.set(lead.propertyId, [...(leadsByProperty.get(lead.propertyId) ?? []), lead]);
+    }
+
+    const items = matches.items.map((property) => {
+      const propertyLeads = leadsByProperty.get(property.id) ?? [];
+      const latestLead = [...propertyLeads].sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
+
+      return {
+        property,
+        hasLead: propertyLeads.length > 0,
+        leadCount: propertyLeads.length,
+        latestLeadId: latestLead?.id,
+        latestLeadAt: latestLead?.createdAt,
+        leadsByStatus: this.summarizeLeadStatuses(propertyLeads)
+      };
+    });
+    const coveredMatches = items.filter((item) => item.hasLead).length;
+    const totalMatches = items.length;
+    const result: SavedSearchLeadCoverageResponse = {
+      savedSearch: matches.savedSearch,
+      items,
+      totalMatches,
+      coveredMatches,
+      uncoveredMatches: totalMatches - coveredMatches,
+      coverageRate: totalMatches ? Math.round((coveredMatches / totalMatches) * 10_000) / 100 : 0,
+      generatedAt: new Date().toISOString()
+    };
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "saved_search.lead_coverage_viewed",
+      resourceType: "search",
+      resourceId: matches.savedSearch.id,
+      metadata: {
+        title: matches.savedSearch.title,
+        totalMatches: result.totalMatches,
+        coveredMatches: result.coveredMatches,
+        uncoveredMatches: result.uncoveredMatches,
+        coverageRate: result.coverageRate
       }
     });
 
@@ -1529,5 +1641,14 @@ export class PropertiesController {
     const propertyContext = propertyId ? ` Selected property: ${propertyId}.` : "";
 
     return `Lead created from saved search "${savedSearchTitle}".${propertyContext}`;
+  }
+
+  private summarizeLeadStatuses(leads: LeadSnapshot[]): { status: LeadStatus; count: number }[] {
+    const statuses: LeadStatus[] = ["new", "contacted", "qualified", "lost", "won"];
+
+    return statuses.map((status) => ({
+      status,
+      count: leads.filter((lead) => lead.status === status).length
+    }));
   }
 }
