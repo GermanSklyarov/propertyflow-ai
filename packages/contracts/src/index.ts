@@ -1225,6 +1225,7 @@ export interface SavedSearchLeadCoverageItem {
 export interface ListSavedSearchLeadCoverageRequest {
   limit?: number;
   onlyUncovered?: boolean;
+  sort?: "search-rank" | "uncovered-first" | "latest-lead";
 }
 
 export interface SavedSearchLeadCoverageResponse {

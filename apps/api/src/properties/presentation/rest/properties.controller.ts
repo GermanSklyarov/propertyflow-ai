@@ -737,6 +737,7 @@ export class PropertiesController {
   @ApiOperation({ summary: "Show which saved-search matches already have CRM leads" })
   @ApiQuery({ name: "limit", required: false, type: Number, minimum: 1, maximum: 100 })
   @ApiQuery({ name: "onlyUncovered", required: false, type: Boolean })
+  @ApiQuery({ name: "sort", required: false, enum: ["search-rank", "uncovered-first", "latest-lead"] })
   @ApiOkResponse({
     schema: {
       type: "object",
@@ -808,7 +809,8 @@ export class PropertiesController {
         uncoveredMatches: result.uncoveredMatches,
         coverageRate: result.coverageRate,
         limit: query.limit,
-        onlyUncovered: query.onlyUncovered
+        onlyUncovered: query.onlyUncovered,
+        sort: query.sort
       }
     });
 

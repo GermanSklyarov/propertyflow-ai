@@ -1,7 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Transform, Type } from "class-transformer";
-import { IsBoolean, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, Max, Min } from "class-validator";
 import type { ListSavedSearchLeadCoverageRequest } from "@propertyflow/contracts";
+
+const leadCoverageSorts = ["search-rank", "uncovered-first", "latest-lead"] as const;
 
 export class ListSavedSearchLeadCoverageDto implements ListSavedSearchLeadCoverageRequest {
   @ApiProperty({ required: false, minimum: 1, maximum: 100 })
@@ -23,4 +25,9 @@ export class ListSavedSearchLeadCoverageDto implements ListSavedSearchLeadCovera
   })
   @IsBoolean()
   onlyUncovered?: boolean;
+
+  @ApiProperty({ required: false, enum: leadCoverageSorts })
+  @IsOptional()
+  @IsIn(leadCoverageSorts)
+  sort?: ListSavedSearchLeadCoverageRequest["sort"];
 }
