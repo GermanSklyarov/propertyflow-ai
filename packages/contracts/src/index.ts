@@ -1335,6 +1335,9 @@ export interface TenantDashboardMetrics {
   savedSearchLeadConversionRate: number;
   savedSearchOpenOpportunities: number;
   savedSearchFollowUpCompletionRate: number;
+  savedSearchMatchedProperties: number;
+  savedSearchLeadCoveredMatches: number;
+  savedSearchLeadCoverageRate: number;
   conciergeFeedbackCount: number;
   conciergePositiveFeedbackRate: number;
   conciergeTrainingDatasetRows: number;

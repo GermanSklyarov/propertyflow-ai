@@ -42,6 +42,10 @@ export class AnalyticsService {
         metrics.savedSearches > 0
           ? Math.round(((metrics.savedSearches - metrics.savedSearchOpenOpportunities) / metrics.savedSearches) * 10_000) / 100
           : 0,
+      savedSearchLeadCoverageRate:
+        metrics.savedSearchMatchedProperties > 0
+          ? Math.round((metrics.savedSearchLeadCoveredMatches / metrics.savedSearchMatchedProperties) * 10_000) / 100
+          : 0,
       conciergePositiveFeedbackRate:
         metrics.conciergeFeedbackCount > 0
           ? Math.round((conciergePositiveFeedbackCount / metrics.conciergeFeedbackCount) * 10_000) / 100

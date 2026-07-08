@@ -73,6 +73,8 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       savedSearches,
       savedSearchLeads,
       savedSearchOpenOpportunities,
+      savedSearchMatchedProperties,
+      savedSearchLeadCoveredMatches,
       conciergeFeedbackCount,
       conciergePositiveFeedbackCount,
       conciergeTrainingDatasetRows,
@@ -141,6 +143,36 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
               from properties property
               where property.tenant_id = search.tenant_id
                 and ${savedSearchFiltersMatchPropertySql("search", "property")}
+            )
+        `,
+        [tenantId]
+      ),
+      this.count(
+        `
+          select count(*)
+          from saved_property_searches search
+          join properties property
+            on property.tenant_id = search.tenant_id
+            and ${savedSearchFiltersMatchPropertySql("search", "property")}
+          where search.tenant_id = $1
+        `,
+        [tenantId]
+      ),
+      this.count(
+        `
+          select count(*)
+          from saved_property_searches search
+          join properties property
+            on property.tenant_id = search.tenant_id
+            and ${savedSearchFiltersMatchPropertySql("search", "property")}
+          where search.tenant_id = $1
+            and exists (
+              select 1
+              from leads lead
+              where lead.tenant_id = search.tenant_id
+                and lead.source = 'saved-search'
+                and lead.attribution_search_event_id = search.id
+                and lead.property_id = property.id
             )
         `,
         [tenantId]
@@ -256,6 +288,8 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       savedSearches,
       savedSearchLeads,
       savedSearchOpenOpportunities,
+      savedSearchMatchedProperties,
+      savedSearchLeadCoveredMatches,
       conciergeFeedbackCount,
       conciergePositiveFeedbackCount,
       conciergeTrainingDatasetRows,
