@@ -1217,6 +1217,14 @@ export interface LeadStatusHistoryResponse {
   total: number;
 }
 
+export interface ListLeadsRequest {
+  status?: LeadStatus;
+  source?: LeadSource;
+  assignedAgentId?: string;
+  unassigned?: boolean;
+  limit?: number;
+}
+
 export interface LeadListResponse {
   items: LeadSnapshot[];
   total: number;

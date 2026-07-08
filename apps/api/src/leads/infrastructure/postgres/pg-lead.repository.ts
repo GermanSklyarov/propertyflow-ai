@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { LeadSnapshot, LeadStatus, LeadStatusEventSnapshot } from "@propertyflow/contracts";
+import type { LeadSnapshot, LeadStatus, LeadStatusEventSnapshot, ListLeadsRequest } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { CreateLeadInput, LeadRepository, RecordLeadStatusEventInput } from "../../domain/lead.repository.js";
@@ -181,6 +181,32 @@ export class PgLeadRepository implements LeadRepository {
     );
 
     return result.rows.map((row) => this.toStatusEventSnapshot(row));
+  }
+
+  async list(tenantId: string, request: ListLeadsRequest = {}): Promise<LeadSnapshot[]> {
+    const result = await this.pool.query<LeadRow>(
+      `
+        select *
+        from leads
+        where tenant_id = $1
+          and ($2::text is null or status = $2)
+          and ($3::text is null or source = $3)
+          and ($4::text is null or assigned_agent_id = $4)
+          and ($5::boolean = false or assigned_agent_id is null)
+        order by updated_at desc, created_at desc
+        limit $6
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.limit ?? 50
+      ]
+    );
+
+    return result.rows.map((row) => this.toSnapshot(row));
   }
 
   async listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]> {

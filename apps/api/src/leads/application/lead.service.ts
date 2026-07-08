@@ -5,6 +5,7 @@ import type {
   LeadSnapshot,
   LeadStatus,
   LeadStatusHistoryResponse,
+  ListLeadsRequest,
   RequestUser,
   SavedSearchLeadAnalyticsResponse
 } from "@propertyflow/contracts";
@@ -68,6 +69,23 @@ export class LeadService {
 
   async listUnassigned(tenantId: string): Promise<LeadListResponse> {
     const items = await this.leads.listUnassigned(tenantId);
+
+    return {
+      items,
+      total: items.length
+    };
+  }
+
+  async list(tenantId: string, request: ListLeadsRequest, user: RequestUser): Promise<LeadListResponse> {
+    const scopedRequest =
+      user.role === "agent"
+        ? {
+            ...request,
+            assignedAgentId: user.id,
+            unassigned: false
+          }
+        : request;
+    const items = await this.leads.list(tenantId, scopedRequest);
 
     return {
       items,

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   LeadListResponse,
@@ -17,6 +17,7 @@ import { UserService } from "../../../users/application/user.service.js";
 import { LeadService } from "../../application/lead.service.js";
 import { AssignLeadDto } from "./assign-lead.dto.js";
 import { CreateLeadDto } from "./create-lead.dto.js";
+import { ListLeadsDto } from "./list-leads.dto.js";
 import { UpdateLeadStatusDto } from "./update-lead-status.dto.js";
 
 @ApiTags("leads")
@@ -39,6 +40,16 @@ export class LeadsController {
     @Body() payload: CreateLeadDto
   ): Promise<LeadSnapshot> {
     return this.leads.create(tenantId, payload, user);
+  }
+
+  @Get()
+  @Roles("agent", "broker", "manager", "admin")
+  list(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadListResponse> {
+    return this.leads.list(tenantId, query, user);
   }
 
   @Get("unassigned")
