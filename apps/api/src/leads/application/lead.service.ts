@@ -4,6 +4,7 @@ import type {
   LeadListResponse,
   LeadSnapshot,
   LeadStatus,
+  LeadStatusHistoryResponse,
   RequestUser,
   SavedSearchLeadAnalyticsResponse
 } from "@propertyflow/contracts";
@@ -53,6 +54,13 @@ export class LeadService {
       propertyId: lead.propertyId,
       source: lead.source,
       assignedAgentId: lead.assignedAgentId
+    });
+
+    await this.leads.recordStatusEvent({
+      tenantId,
+      leadId: lead.id,
+      status: lead.status,
+      user
     });
 
     return lead;
@@ -124,6 +132,22 @@ export class LeadService {
     return lead;
   }
 
+  async getStatusHistory(tenantId: string, leadId: string): Promise<LeadStatusHistoryResponse> {
+    const lead = await this.leads.findById(tenantId, leadId);
+
+    if (!lead) {
+      throw new NotFoundException("Lead not found");
+    }
+
+    const items = await this.leads.listStatusEvents(tenantId, leadId);
+
+    return {
+      leadId,
+      items,
+      total: items.length
+    };
+  }
+
   async updateStatus(tenantId: string, leadId: string, status: LeadStatus, user: RequestUser): Promise<LeadSnapshot> {
     const currentLead = await this.leads.findById(tenantId, leadId);
 
@@ -166,6 +190,14 @@ export class LeadService {
       status: lead.status,
       propertyId: lead.propertyId,
       assignedAgentId: lead.assignedAgentId
+    });
+
+    await this.leads.recordStatusEvent({
+      tenantId,
+      leadId: lead.id,
+      previousStatus: currentLead.status,
+      status: lead.status,
+      user
     });
 
     return lead;

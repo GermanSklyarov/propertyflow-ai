@@ -1,8 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { LeadSnapshot, LeadStatus } from "@propertyflow/contracts";
+import type { LeadSnapshot, LeadStatus, LeadStatusEventSnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { CreateLeadInput, LeadRepository } from "../../domain/lead.repository.js";
+import type { CreateLeadInput, LeadRepository, RecordLeadStatusEventInput } from "../../domain/lead.repository.js";
 
 interface LeadRow {
   id: string;
@@ -21,6 +21,17 @@ interface LeadRow {
   attribution_search_source: LeadSnapshot["attributionSearchSource"] | null;
   created_at: Date;
   updated_at: Date;
+}
+
+interface LeadStatusEventRow {
+  id: string;
+  tenant_id: string;
+  lead_id: string;
+  previous_status: LeadStatus | null;
+  status: LeadStatus;
+  changed_by_user_id: string | null;
+  changed_by_user_role: LeadStatusEventSnapshot["changedByUserRole"] | null;
+  created_at: Date;
 }
 
 @Injectable()
@@ -119,6 +130,59 @@ export class PgLeadRepository implements LeadRepository {
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async recordStatusEvent(input: RecordLeadStatusEventInput): Promise<LeadStatusEventSnapshot> {
+    const result = await this.pool.query<LeadStatusEventRow>(
+      `
+        insert into lead_status_events (
+          id,
+          tenant_id,
+          lead_id,
+          previous_status,
+          status,
+          changed_by_user_id,
+          changed_by_user_role,
+          created_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8
+        )
+        returning id, tenant_id, lead_id, previous_status, status, changed_by_user_id, changed_by_user_role, created_at
+      `,
+      [
+        crypto.randomUUID(),
+        input.tenantId,
+        input.leadId,
+        input.previousStatus ?? null,
+        input.status,
+        input.user?.id ?? null,
+        input.user?.role ?? null,
+        new Date().toISOString()
+      ]
+    );
+
+    return this.toStatusEventSnapshot(result.rows[0]);
+  }
+
+  async listStatusEvents(tenantId: string, leadId: string): Promise<LeadStatusEventSnapshot[]> {
+    const result = await this.pool.query<LeadStatusEventRow>(
+      `
+        select id, tenant_id, lead_id, previous_status, status, changed_by_user_id, changed_by_user_role, created_at
+        from lead_status_events
+        where tenant_id = $1 and lead_id = $2
+        order by created_at asc
+      `,
+      [tenantId, leadId]
+    );
+
+    return result.rows.map((row) => this.toStatusEventSnapshot(row));
+  }
+
   async listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]> {
     const result = await this.pool.query<LeadRow>(
       `
@@ -182,6 +246,19 @@ export class PgLeadRepository implements LeadRepository {
       attributionSearchSource: row.attribution_search_source ?? undefined,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
+    };
+  }
+
+  private toStatusEventSnapshot(row: LeadStatusEventRow): LeadStatusEventSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      leadId: row.lead_id,
+      previousStatus: row.previous_status ?? undefined,
+      status: row.status,
+      changedByUserId: row.changed_by_user_id ?? undefined,
+      changedByUserRole: row.changed_by_user_role ?? undefined,
+      createdAt: row.created_at.toISOString()
     };
   }
 }

@@ -1,6 +1,12 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { LeadListResponse, LeadSnapshot, RequestUser, TenantUserSnapshot } from "@propertyflow/contracts";
+import type {
+  LeadListResponse,
+  LeadSnapshot,
+  LeadStatusHistoryResponse,
+  RequestUser,
+  TenantUserSnapshot
+} from "@propertyflow/contracts";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
@@ -45,6 +51,15 @@ export class LeadsController {
   @Roles("broker", "manager", "admin")
   listAgents(@TenantId() tenantId: string): Promise<TenantUserSnapshot[]> {
     return this.users.listAgents(tenantId);
+  }
+
+  @Get(":leadId/status-history")
+  @Roles("agent", "broker", "manager", "admin")
+  getStatusHistory(
+    @TenantId() tenantId: string,
+    @Param("leadId") leadId: string
+  ): Promise<LeadStatusHistoryResponse> {
+    return this.leads.getStatusHistory(tenantId, leadId);
   }
 
   @Patch(":leadId/assign")

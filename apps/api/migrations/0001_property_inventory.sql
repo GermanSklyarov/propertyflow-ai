@@ -501,3 +501,19 @@ create index if not exists idx_leads_tenant_created on leads (tenant_id, created
 create index if not exists idx_leads_tenant_assigned_agent on leads (tenant_id, assigned_agent_id);
 create index if not exists idx_leads_tenant_attribution_source on leads (tenant_id, attribution_search_source);
 create index if not exists idx_leads_tenant_attribution_query on leads (tenant_id, attribution_search_query);
+
+create table if not exists lead_status_events (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  lead_id uuid not null references leads(id) on delete cascade,
+  previous_status text,
+  status text not null,
+  changed_by_user_id text,
+  changed_by_user_role text,
+  created_at timestamptz not null
+);
+
+create index if not exists idx_lead_status_events_lead
+  on lead_status_events (tenant_id, lead_id, created_at);
+create index if not exists idx_lead_status_events_status
+  on lead_status_events (tenant_id, status, created_at desc);

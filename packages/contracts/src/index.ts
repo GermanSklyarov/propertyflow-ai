@@ -1200,6 +1200,23 @@ export interface UpdateLeadStatusRequest {
   status: LeadStatus;
 }
 
+export interface LeadStatusEventSnapshot {
+  id: string;
+  tenantId: string;
+  leadId: string;
+  previousStatus?: LeadStatus;
+  status: LeadStatus;
+  changedByUserId?: string;
+  changedByUserRole?: UserRole;
+  createdAt: string;
+}
+
+export interface LeadStatusHistoryResponse {
+  leadId: string;
+  items: LeadStatusEventSnapshot[];
+  total: number;
+}
+
 export interface LeadListResponse {
   items: LeadSnapshot[];
   total: number;
