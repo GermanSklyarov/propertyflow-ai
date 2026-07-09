@@ -1424,6 +1424,27 @@ export interface LeadQualitySignalsResponse {
   generatedAt: string;
 }
 
+export interface LeadQualityAgentPerformanceItem {
+  agentId: string;
+  total: number;
+  affectedLeads: number;
+  issueCount: number;
+  missingContactInfo: number;
+  missingProperty: number;
+  missingFollowUp: number;
+  staleNewLeads: number;
+  affectedRate: number;
+  healthScore: number;
+  byIssue: CountByBucket[];
+}
+
+export interface LeadQualityAgentPerformanceResponse {
+  items: LeadQualityAgentPerformanceItem[];
+  total: number;
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export interface LeadQualityActionItem {
   lead: LeadSnapshot;
   issueTypes: LeadQualityIssueType[];

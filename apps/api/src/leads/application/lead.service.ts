@@ -10,6 +10,7 @@ import type {
   CreateLeadRequest,
   LeadListResponse,
   LeadNotesResponse,
+  LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
@@ -190,6 +191,22 @@ export class LeadService {
 
     return {
       ...signals,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async getQualityAgentPerformance(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadQualityAgentPerformanceResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const items = await this.leads.getQualityAgentPerformance(tenantId, scopedRequest);
+
+    return {
+      items,
+      total: items.length,
       filters: scopedRequest,
       generatedAt: new Date().toISOString()
     };

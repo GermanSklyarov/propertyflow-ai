@@ -1,6 +1,7 @@
 import type {
   CreateLeadRequest,
   LeadNoteSnapshot,
+  LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
   LeadPriority,
   LeadQualitySignalsResponse,
@@ -67,6 +68,10 @@ export interface LeadRepository {
     tenantId: string,
     request?: ListLeadsRequest
   ): Promise<Omit<LeadQualitySignalsResponse, "filters" | "generatedAt">>;
+  getQualityAgentPerformance(
+    tenantId: string,
+    request?: ListLeadsRequest
+  ): Promise<LeadQualityAgentPerformanceResponse["items"]>;
   listQualityActions(tenantId: string, request?: ListLeadsRequest): Promise<LeadQualityActionsResponse["items"]>;
   listUnassigned(tenantId: string): Promise<LeadSnapshot[]>;
   listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]>;

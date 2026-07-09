@@ -1,11 +1,12 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiHeader, ApiTags } from "@nestjs/swagger";
+import { ApiHeader, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import type {
   ApplyLeadQualityAssignResponse,
   ApplyLeadQualityFollowUpResponse,
   ApplyLeadQualityStatusResponse,
   LeadListResponse,
   LeadNotesResponse,
+  LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
@@ -139,6 +140,69 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadQualitySignalsResponse> {
     return this.leads.getQualitySignals(tenantId, query, user);
+  }
+
+  @Get("quality/agents")
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              agentId: { type: "string", example: "agent-1" },
+              total: { type: "number", example: 12 },
+              affectedLeads: { type: "number", example: 5 },
+              issueCount: { type: "number", example: 8 },
+              missingContactInfo: { type: "number", example: 1 },
+              missingProperty: { type: "number", example: 2 },
+              missingFollowUp: { type: "number", example: 4 },
+              staleNewLeads: { type: "number", example: 1 },
+              affectedRate: { type: "number", example: 41.67 },
+              healthScore: { type: "number", example: 58.33 },
+              byIssue: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    bucket: { type: "string", example: "missing-follow-up" },
+                    count: { type: "number", example: 4 }
+                  },
+                  required: ["bucket", "count"]
+                }
+              }
+            },
+            required: [
+              "agentId",
+              "total",
+              "affectedLeads",
+              "issueCount",
+              "missingContactInfo",
+              "missingProperty",
+              "missingFollowUp",
+              "staleNewLeads",
+              "affectedRate",
+              "healthScore",
+              "byIssue"
+            ]
+          }
+        },
+        total: { type: "number", example: 3 },
+        filters: { type: "object" },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: ["items", "total", "filters", "generatedAt"]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  getQualityAgentPerformance(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadQualityAgentPerformanceResponse> {
+    return this.leads.getQualityAgentPerformance(tenantId, query, user);
   }
 
   @Get("quality-actions")
