@@ -44,6 +44,14 @@ interface SecurityEventRow {
   created_at: Date;
 }
 
+interface LeadSlaMetricsRow {
+  response_breached: string;
+  response_due_soon: string;
+  unassigned_breached: string;
+  overdue_follow_ups: string;
+  average_first_response_hours: string | null;
+}
+
 @Injectable()
 export class PgAnalyticsRepository implements AnalyticsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -55,6 +63,8 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       totalLeads,
       newLeads,
       unassignedLeads,
+      leadSlaMetrics,
+      leadSlaBreachedBySource,
       wonLeads,
       lostLeads,
       totalSearches,
@@ -94,6 +104,20 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       this.count("select count(*) from leads where tenant_id = $1", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'new'", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and assigned_agent_id is null", [tenantId]),
+      this.leadSlaMetrics(tenantId),
+      this.bucket(
+        `
+          select source as bucket, count(*)
+          from leads
+          where tenant_id = $1
+            and status = 'new'
+            and created_at <= now() - interval '4 hours'
+          group by source
+          order by count(*) desc, source asc
+          limit 10
+        `,
+        [tenantId]
+      ),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'won'", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'lost'", [tenantId]),
       this.count("select count(*) from search_events where tenant_id = $1", [tenantId]),
@@ -283,6 +307,12 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       totalLeads,
       newLeads,
       unassignedLeads,
+      leadSlaResponseBreached: leadSlaMetrics.responseBreached,
+      leadSlaResponseDueSoon: leadSlaMetrics.responseDueSoon,
+      leadSlaUnassignedBreached: leadSlaMetrics.unassignedBreached,
+      leadSlaOverdueFollowUps: leadSlaMetrics.overdueFollowUps,
+      leadSlaAverageFirstResponseHours: leadSlaMetrics.averageFirstResponseHours,
+      leadSlaBreachedBySource,
       wonLeads,
       lostLeads,
       totalSearches,
@@ -618,6 +648,67 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
   private async average(sql: string, values: unknown[]): Promise<number> {
     const result = await this.pool.query<CountRow>(sql, values);
     return Math.round(Number(result.rows[0]?.count ?? 0));
+  }
+
+  private async leadSlaMetrics(tenantId: string): Promise<{
+    responseBreached: number;
+    responseDueSoon: number;
+    unassignedBreached: number;
+    overdueFollowUps: number;
+    averageFirstResponseHours?: number;
+  }> {
+    const result = await this.pool.query<LeadSlaMetricsRow>(
+      `
+        with first_response as (
+          select
+            lead_id,
+            min(created_at) as first_response_at
+          from lead_status_events
+          where tenant_id = $1
+            and previous_status = 'new'
+            and status in ('contacted', 'qualified', 'lost', 'won')
+          group by lead_id
+        )
+        select
+          count(*) filter (
+            where lead.status = 'new'
+              and lead.created_at <= now() - interval '4 hours'
+          ) as response_breached,
+          count(*) filter (
+            where lead.status = 'new'
+              and lead.created_at <= now() - interval '3 hours'
+              and lead.created_at > now() - interval '4 hours'
+          ) as response_due_soon,
+          count(*) filter (
+            where lead.status = 'new'
+              and lead.assigned_agent_id is null
+              and lead.created_at <= now() - interval '4 hours'
+          ) as unassigned_breached,
+          count(*) filter (
+            where lead.status in ('new', 'contacted', 'qualified')
+              and lead.next_follow_up_at is not null
+              and lead.next_follow_up_at < now()
+          ) as overdue_follow_ups,
+          avg(extract(epoch from (response.first_response_at - lead.created_at)) / 3600)
+            filter (where response.first_response_at is not null) as average_first_response_hours
+        from leads lead
+        left join first_response response on response.lead_id = lead.id
+        where lead.tenant_id = $1
+      `,
+      [tenantId]
+    );
+    const row = result.rows[0];
+    const averageFirstResponseHours =
+      row.average_first_response_hours === null ? undefined : Number(row.average_first_response_hours);
+
+    return {
+      responseBreached: Number(row.response_breached),
+      responseDueSoon: Number(row.response_due_soon),
+      unassignedBreached: Number(row.unassigned_breached),
+      overdueFollowUps: Number(row.overdue_follow_ups),
+      averageFirstResponseHours:
+        averageFirstResponseHours === undefined ? undefined : Number(averageFirstResponseHours.toFixed(2))
+    };
   }
 
   private toSecurityEvent(row: SecurityEventRow): TenantSecurityEventSnapshot {

@@ -1560,6 +1560,12 @@ export interface TenantDashboardMetrics {
   totalLeads: number;
   newLeads: number;
   unassignedLeads: number;
+  leadSlaResponseBreached: number;
+  leadSlaResponseDueSoon: number;
+  leadSlaUnassignedBreached: number;
+  leadSlaOverdueFollowUps: number;
+  leadSlaAverageFirstResponseHours?: number;
+  leadSlaBreachedBySource: CountByBucket[];
   wonLeads: number;
   lostLeads: number;
   conversionRate: number;
