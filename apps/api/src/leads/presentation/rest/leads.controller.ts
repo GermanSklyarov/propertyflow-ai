@@ -272,6 +272,41 @@ export class LeadsController {
   }
 
   @Get("quality-actions")
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              lead: { type: "object" },
+              issueTypes: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: ["missing-contact-info", "missing-property", "unassigned", "missing-follow-up", "stale-new-lead"]
+                }
+              },
+              score: { type: "number", example: 7 },
+              recommendedAction: {
+                type: "string",
+                enum: ["add-contact-info", "assign-agent", "update-status", "schedule-follow-up", "link-property"],
+                example: "assign-agent"
+              },
+              recommendation: { type: "string", example: "Assign the lead to an agent so ownership is clear." }
+            },
+            required: ["lead", "issueTypes", "score", "recommendedAction", "recommendation"]
+          }
+        },
+        total: { type: "number", example: 10 },
+        filters: { type: "object" },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: ["items", "total", "filters", "generatedAt"]
+    }
+  })
   @Roles("agent", "broker", "manager", "admin")
   listQualityActions(
     @TenantId() tenantId: string,
