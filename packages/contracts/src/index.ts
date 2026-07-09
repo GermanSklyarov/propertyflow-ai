@@ -1411,6 +1411,13 @@ export type LeadQualityIssueType =
   | "missing-follow-up"
   | "stale-new-lead";
 
+export type LeadQualityRecommendedAction =
+  | "add-contact-info"
+  | "assign-agent"
+  | "update-status"
+  | "schedule-follow-up"
+  | "link-property";
+
 export interface LeadQualitySignalsResponse {
   total: number;
   issueCount: number;
@@ -1471,6 +1478,7 @@ export interface LeadQualityActionItem {
   lead: LeadSnapshot;
   issueTypes: LeadQualityIssueType[];
   score: number;
+  recommendedAction: LeadQualityRecommendedAction;
   recommendation: string;
 }
 

@@ -1243,6 +1243,7 @@ export class PgLeadRepository implements LeadRepository {
       lead: this.toSnapshot(row),
       issueTypes,
       score: Number(row.score),
+      recommendedAction: this.qualityRecommendedAction(issueTypes),
       recommendation: this.qualityRecommendation(issueTypes)
     };
   }
@@ -1406,6 +1407,26 @@ export class PgLeadRepository implements LeadRepository {
     }
 
     return "Link a property to make the lead context easier to act on.";
+  }
+
+  private qualityRecommendedAction(issueTypes: LeadQualityActionItem["issueTypes"]): LeadQualityActionItem["recommendedAction"] {
+    if (issueTypes.includes("missing-contact-info")) {
+      return "add-contact-info";
+    }
+
+    if (issueTypes.includes("unassigned")) {
+      return "assign-agent";
+    }
+
+    if (issueTypes.includes("stale-new-lead")) {
+      return "update-status";
+    }
+
+    if (issueTypes.includes("missing-follow-up")) {
+      return "schedule-follow-up";
+    }
+
+    return "link-property";
   }
 
   private toStatusEventSnapshot(row: LeadStatusEventRow): LeadStatusEventSnapshot {
