@@ -1,5 +1,7 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
+  ApplyLeadQualityAssignRequest,
+  ApplyLeadQualityAssignResponse,
   ApplyLeadQualityFollowUpRequest,
   ApplyLeadQualityFollowUpResponse,
   CreateLeadNoteRequest,
@@ -339,6 +341,23 @@ export class LeadService {
       },
       user
     );
+    const noteText = request.note?.trim();
+    const note =
+      noteText && noteText.length > 0 ? await this.createNote(tenantId, leadId, { note: noteText }, user) : undefined;
+
+    return {
+      lead,
+      note
+    };
+  }
+
+  async applyQualityAssignAction(
+    tenantId: string,
+    leadId: string,
+    request: ApplyLeadQualityAssignRequest,
+    user: RequestUser
+  ): Promise<ApplyLeadQualityAssignResponse> {
+    const lead = await this.assign(tenantId, leadId, request.assignedAgentId, user);
     const noteText = request.note?.trim();
     const note =
       noteText && noteText.length > 0 ? await this.createNote(tenantId, leadId, { note: noteText }, user) : undefined;

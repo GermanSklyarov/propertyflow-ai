@@ -1242,6 +1242,16 @@ export interface ApplyLeadQualityFollowUpResponse {
   note?: LeadNoteSnapshot;
 }
 
+export interface ApplyLeadQualityAssignRequest {
+  assignedAgentId: string;
+  note?: string;
+}
+
+export interface ApplyLeadQualityAssignResponse {
+  lead: LeadSnapshot;
+  note?: LeadNoteSnapshot;
+}
+
 export type LeadTimelineEventType = "created" | "assigned" | "follow-up-updated" | "note" | "status-changed";
 
 export interface LeadTimelineEventSnapshot {
