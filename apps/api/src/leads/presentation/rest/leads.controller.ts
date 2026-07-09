@@ -7,6 +7,7 @@ import type {
   ApplyLeadQualityLinkPropertyResponse,
   ApplyLeadQualityStatusResponse,
   LeadListResponse,
+  LeadConversionAgentPerformanceResponse,
   LeadNotesResponse,
   LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
@@ -135,6 +136,54 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadSlaSourcePerformanceResponse> {
     return this.leads.getSlaSourcePerformance(tenantId, query, user);
+  }
+
+  @Get("conversion/agents")
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              agentId: { type: "string", example: "agent-1" },
+              total: { type: "number", example: 18 },
+              open: { type: "number", example: 9 },
+              won: { type: "number", example: 6 },
+              lost: { type: "number", example: 3 },
+              conversionRate: { type: "number", example: 33.33 },
+              lossRate: { type: "number", example: 16.67 },
+              activeDealRate: { type: "number", example: 50 },
+              averageTimeToWinHours: { type: "number", example: 72.5 }
+            },
+            required: [
+              "agentId",
+              "total",
+              "open",
+              "won",
+              "lost",
+              "conversionRate",
+              "lossRate",
+              "activeDealRate"
+            ]
+          }
+        },
+        total: { type: "number", example: 3 },
+        filters: { type: "object" },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: ["items", "total", "filters", "generatedAt"]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  getConversionAgentPerformance(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadConversionAgentPerformanceResponse> {
+    return this.leads.getConversionAgentPerformance(tenantId, query, user);
   }
 
   @Get("quality")

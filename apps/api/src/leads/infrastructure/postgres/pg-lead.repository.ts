@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   CountByBucket,
+  LeadConversionAgentPerformanceItem,
   LeadQualityActionItem,
   LeadQualityAgentPerformanceItem,
   LeadQualitySourcePerformanceItem,
@@ -131,6 +132,15 @@ interface LeadSlaSourcePerformanceRow {
   response_breached: string;
   overdue_follow_ups: string;
   average_first_response_hours: string | null;
+}
+
+interface LeadConversionAgentPerformanceRow {
+  agent_id: string;
+  total: string;
+  open: string;
+  won: string;
+  lost: string;
+  average_time_to_win_hours: string | null;
 }
 
 interface LeadQualityActionRow extends LeadRow {
@@ -852,6 +862,65 @@ export class PgLeadRepository implements LeadRepository {
     return result.rows.map((row) => this.toSlaSourcePerformance(row));
   }
 
+  async getConversionAgentPerformance(
+    tenantId: string,
+    request: ListLeadsRequest = {}
+  ): Promise<LeadConversionAgentPerformanceItem[]> {
+    const result = await this.pool.query<LeadConversionAgentPerformanceRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and assigned_agent_id is not null
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        ),
+        won_events as (
+          select
+            lead_id,
+            min(created_at) as won_at
+          from lead_status_events
+          where tenant_id = $1
+            and status = 'won'
+          group by lead_id
+        )
+        select
+          lead.assigned_agent_id as agent_id,
+          count(*) as total,
+          count(*) filter (where lead.status in ('new', 'contacted', 'qualified')) as open,
+          count(*) filter (where lead.status = 'won') as won,
+          count(*) filter (where lead.status = 'lost') as lost,
+          avg(extract(epoch from (won.won_at - lead.created_at)) / 3600)
+            filter (where won.won_at is not null) as average_time_to_win_hours
+        from filtered lead
+        left join won_events won on won.lead_id = lead.id
+        group by lead.assigned_agent_id
+        order by
+          count(*) filter (where lead.status = 'won') desc,
+          count(*) desc,
+          lead.assigned_agent_id asc
+        limit $8
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
+        request.limit ?? 20
+      ]
+    );
+
+    return result.rows.map((row) => this.toConversionAgentPerformance(row));
+  }
+
   async getQualitySignals(
     tenantId: string,
     request: ListLeadsRequest = {}
@@ -1359,6 +1428,28 @@ export class PgLeadRepository implements LeadRepository {
       averageFirstResponseHours:
         averageFirstResponseHours === undefined ? undefined : Number(averageFirstResponseHours.toFixed(2)),
       breachRate: total === 0 ? 0 : Number((((responseBreached + overdueFollowUps) / total) * 100).toFixed(2))
+    };
+  }
+
+  private toConversionAgentPerformance(row: LeadConversionAgentPerformanceRow): LeadConversionAgentPerformanceItem {
+    const total = Number(row.total);
+    const open = Number(row.open);
+    const won = Number(row.won);
+    const lost = Number(row.lost);
+    const averageTimeToWinHours =
+      row.average_time_to_win_hours === null ? undefined : Number(row.average_time_to_win_hours);
+
+    return {
+      agentId: row.agent_id,
+      total,
+      open,
+      won,
+      lost,
+      conversionRate: total === 0 ? 0 : Number(((won / total) * 100).toFixed(2)),
+      lossRate: total === 0 ? 0 : Number(((lost / total) * 100).toFixed(2)),
+      activeDealRate: total === 0 ? 0 : Number(((open / total) * 100).toFixed(2)),
+      averageTimeToWinHours:
+        averageTimeToWinHours === undefined ? undefined : Number(averageTimeToWinHours.toFixed(2))
     };
   }
 

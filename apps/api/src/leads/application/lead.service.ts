@@ -13,6 +13,7 @@ import type {
   CreateLeadNoteRequest,
   CreateLeadRequest,
   LeadListResponse,
+  LeadConversionAgentPerformanceResponse,
   LeadNotesResponse,
   LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
@@ -183,6 +184,22 @@ export class LeadService {
       items,
       total: items.length,
       targetFirstResponseHours: 4,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async getConversionAgentPerformance(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadConversionAgentPerformanceResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const items = await this.leads.getConversionAgentPerformance(tenantId, scopedRequest);
+
+    return {
+      items,
+      total: items.length,
       filters: scopedRequest,
       generatedAt: new Date().toISOString()
     };
@@ -681,14 +698,30 @@ export class LeadService {
   }
 
   private scopeLeadQueueRequest(request: ListLeadsRequest, user: RequestUser): ListLeadsRequest {
+    const normalizedRequest = this.normalizeLeadQueueRequest(request);
+
     if (user.role !== "agent") {
-      return request;
+      return normalizedRequest;
     }
 
     return {
-      ...request,
+      ...normalizedRequest,
       assignedAgentId: user.id,
       unassigned: false
+    };
+  }
+
+  private normalizeLeadQueueRequest(request: ListLeadsRequest): ListLeadsRequest {
+    const rawLimit = request.limit as number | string | undefined;
+    const rawUnassigned = request.unassigned as boolean | string | undefined;
+
+    return {
+      ...request,
+      limit: rawLimit === undefined ? undefined : Number(rawLimit),
+      unassigned:
+        rawUnassigned === undefined || rawUnassigned === ""
+          ? undefined
+          : rawUnassigned === true || rawUnassigned === "true"
     };
   }
 }

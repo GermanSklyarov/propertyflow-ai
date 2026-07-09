@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Transform, Type } from "class-transformer";
+import { Transform } from "class-transformer";
 import { IsBoolean, IsEnum, IsInt, IsISO8601, IsOptional, IsString, Max, Min } from "class-validator";
 import type { LeadPriority, LeadSource, LeadStatus, ListLeadsRequest } from "@propertyflow/contracts";
 
@@ -54,7 +54,13 @@ export class ListLeadsDto implements ListLeadsRequest {
 
   @ApiProperty({ required: false, minimum: 1, maximum: 100 })
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }: { value: string | number | undefined }) => {
+    if (value === undefined || value === "") {
+      return undefined;
+    }
+
+    return Number(value);
+  })
   @IsInt()
   @Min(1)
   @Max(100)
