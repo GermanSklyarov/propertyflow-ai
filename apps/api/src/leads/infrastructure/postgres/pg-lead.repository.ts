@@ -25,6 +25,7 @@ import type {
   CreateLeadNoteInput,
   LeadRepository,
   RecordLeadStatusEventInput,
+  UpdateLeadContactInput,
   UpdateLeadFollowUpInput
 } from "../../domain/lead.repository.js";
 
@@ -366,11 +367,13 @@ export class PgLeadRepository implements LeadRepository {
             case audit.action
               when 'lead.created' then 'created'
               when 'lead.assigned' then 'assigned'
+              when 'lead.contact_updated' then 'contact-updated'
               when 'lead.follow_up_updated' then 'follow-up-updated'
             end as type,
             case audit.action
               when 'lead.created' then 'Lead created'
               when 'lead.assigned' then 'Lead assigned'
+              when 'lead.contact_updated' then 'Contact updated'
               when 'lead.follow_up_updated' then 'Follow-up updated'
             end as title,
             audit.user_id as actor_user_id,
@@ -381,7 +384,7 @@ export class PgLeadRepository implements LeadRepository {
           where audit.tenant_id = $1
             and audit.resource_type = 'lead'
             and audit.resource_id = $2::text
-            and audit.action in ('lead.created', 'lead.assigned', 'lead.follow_up_updated')
+            and audit.action in ('lead.created', 'lead.assigned', 'lead.contact_updated', 'lead.follow_up_updated')
         ) timeline
         order by created_at desc
       `,
@@ -1130,6 +1133,38 @@ export class PgLeadRepository implements LeadRepository {
         returning *
       `,
       [tenantId, leadId, assignedAgentId, new Date().toISOString()]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
+  async updateContact(tenantId: string, leadId: string, input: UpdateLeadContactInput): Promise<LeadSnapshot | null> {
+    const shouldUpdateEmail = input.contactEmail !== undefined;
+    const shouldUpdatePhone = input.contactPhone !== undefined;
+    const result = await this.pool.query<LeadRow>(
+      `
+        update leads
+        set contact_email = case
+              when $3::boolean then $4::text
+              else contact_email
+            end,
+            contact_phone = case
+              when $5::boolean then $6::text
+              else contact_phone
+            end,
+            updated_at = $7
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [
+        tenantId,
+        leadId,
+        shouldUpdateEmail,
+        input.contactEmail ?? null,
+        shouldUpdatePhone,
+        input.contactPhone ?? null,
+        new Date().toISOString()
+      ]
     );
 
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;

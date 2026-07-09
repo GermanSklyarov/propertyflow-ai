@@ -2,6 +2,8 @@ import { BadRequestException, Inject, Injectable, NotFoundException } from "@nes
 import type {
   ApplyLeadQualityAssignRequest,
   ApplyLeadQualityAssignResponse,
+  ApplyLeadQualityContactRequest,
+  ApplyLeadQualityContactResponse,
   ApplyLeadQualityFollowUpRequest,
   ApplyLeadQualityFollowUpResponse,
   ApplyLeadQualityStatusRequest,
@@ -460,6 +462,65 @@ export class LeadService {
     user: RequestUser
   ): Promise<ApplyLeadQualityAssignResponse> {
     const lead = await this.assign(tenantId, leadId, request.assignedAgentId, user);
+    const noteText = request.note?.trim();
+    const note =
+      noteText && noteText.length > 0 ? await this.createNote(tenantId, leadId, { note: noteText }, user) : undefined;
+
+    return {
+      lead,
+      note
+    };
+  }
+
+  async applyQualityContactAction(
+    tenantId: string,
+    leadId: string,
+    request: ApplyLeadQualityContactRequest,
+    user: RequestUser
+  ): Promise<ApplyLeadQualityContactResponse> {
+    const contactEmail = request.contactEmail?.trim();
+    const contactPhone = request.contactPhone?.trim();
+
+    if (!contactEmail && !contactPhone) {
+      throw new BadRequestException("At least one contact field is required");
+    }
+
+    const normalizedContactEmail = contactEmail && contactEmail.length > 0 ? contactEmail : undefined;
+    const normalizedContactPhone = contactPhone && contactPhone.length > 0 ? contactPhone : undefined;
+    const currentLead = await this.getVisibleLead(tenantId, leadId, user);
+    const lead = await this.leads.updateContact(tenantId, leadId, {
+      contactEmail: normalizedContactEmail,
+      contactPhone: normalizedContactPhone
+    });
+
+    if (!lead) {
+      throw new NotFoundException("Lead not found");
+    }
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "lead.contact_updated",
+      resourceType: "lead",
+      resourceId: lead.id,
+      metadata: {
+        propertyId: lead.propertyId,
+        assignedAgentId: lead.assignedAgentId,
+        previousContactEmailPresent: currentLead.contactEmail !== undefined,
+        previousContactPhonePresent: currentLead.contactPhone !== undefined,
+        contactEmailUpdated: normalizedContactEmail !== undefined,
+        contactPhoneUpdated: normalizedContactPhone !== undefined
+      }
+    });
+
+    this.realtime.publish(tenantId, "lead.contact_updated", {
+      leadId: lead.id,
+      propertyId: lead.propertyId,
+      assignedAgentId: lead.assignedAgentId,
+      contactEmailUpdated: normalizedContactEmail !== undefined,
+      contactPhoneUpdated: normalizedContactPhone !== undefined
+    });
+
     const noteText = request.note?.trim();
     const note =
       noteText && noteText.length > 0 ? await this.createNote(tenantId, leadId, { note: noteText }, user) : undefined;

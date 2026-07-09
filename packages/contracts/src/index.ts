@@ -130,6 +130,7 @@ export type AuditAction =
   | "lead.created"
   | "lead.assigned"
   | "lead.note_added"
+  | "lead.contact_updated"
   | "lead.follow_up_updated"
   | "lead.status_changed"
   | "job.enqueued"
@@ -1252,6 +1253,17 @@ export interface ApplyLeadQualityAssignResponse {
   note?: LeadNoteSnapshot;
 }
 
+export interface ApplyLeadQualityContactRequest {
+  contactEmail?: string;
+  contactPhone?: string;
+  note?: string;
+}
+
+export interface ApplyLeadQualityContactResponse {
+  lead: LeadSnapshot;
+  note?: LeadNoteSnapshot;
+}
+
 export interface ApplyLeadQualityStatusRequest {
   status: LeadStatus;
   note?: string;
@@ -1262,7 +1274,13 @@ export interface ApplyLeadQualityStatusResponse {
   note?: LeadNoteSnapshot;
 }
 
-export type LeadTimelineEventType = "created" | "assigned" | "follow-up-updated" | "note" | "status-changed";
+export type LeadTimelineEventType =
+  | "created"
+  | "assigned"
+  | "contact-updated"
+  | "follow-up-updated"
+  | "note"
+  | "status-changed";
 
 export interface LeadTimelineEventSnapshot {
   id: string;
@@ -1672,6 +1690,7 @@ export type RealtimeEventType =
   | "lead.created"
   | "lead.assigned"
   | "lead.note_added"
+  | "lead.contact_updated"
   | "lead.follow_up_updated"
   | "lead.status_changed"
   | "security.event_detected"

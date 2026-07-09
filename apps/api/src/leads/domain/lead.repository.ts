@@ -45,6 +45,11 @@ export interface UpdateLeadFollowUpInput {
   nextFollowUpAt?: string | null;
 }
 
+export interface UpdateLeadContactInput {
+  contactEmail?: string;
+  contactPhone?: string;
+}
+
 export interface LeadRepository {
   create(input: CreateLeadInput): Promise<LeadSnapshot>;
   findById(tenantId: string, leadId: string): Promise<LeadSnapshot | null>;
@@ -81,6 +86,7 @@ export interface LeadRepository {
   listUnassigned(tenantId: string): Promise<LeadSnapshot[]>;
   listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]>;
   assign(tenantId: string, leadId: string, assignedAgentId: string): Promise<LeadSnapshot | null>;
+  updateContact(tenantId: string, leadId: string, input: UpdateLeadContactInput): Promise<LeadSnapshot | null>;
   updateFollowUp(tenantId: string, leadId: string, input: UpdateLeadFollowUpInput): Promise<LeadSnapshot | null>;
   updateStatus(tenantId: string, leadId: string, status: LeadStatus): Promise<LeadSnapshot | null>;
 }

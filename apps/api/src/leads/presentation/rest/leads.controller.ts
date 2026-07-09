@@ -1,7 +1,8 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
-import { ApiHeader, ApiOkResponse, ApiTags } from "@nestjs/swagger";
+import { ApiBody, ApiCreatedResponse, ApiHeader, ApiOkResponse, ApiTags } from "@nestjs/swagger";
 import type {
   ApplyLeadQualityAssignResponse,
+  ApplyLeadQualityContactResponse,
   ApplyLeadQualityFollowUpResponse,
   ApplyLeadQualityStatusResponse,
   LeadListResponse,
@@ -30,6 +31,7 @@ import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { UserService } from "../../../users/application/user.service.js";
 import { LeadService } from "../../application/lead.service.js";
 import { ApplyLeadQualityAssignDto } from "./apply-lead-quality-assign.dto.js";
+import { ApplyLeadQualityContactDto } from "./apply-lead-quality-contact.dto.js";
 import { ApplyLeadQualityFollowUpDto } from "./apply-lead-quality-follow-up.dto.js";
 import { ApplyLeadQualityStatusDto } from "./apply-lead-quality-status.dto.js";
 import { AssignLeadDto } from "./assign-lead.dto.js";
@@ -336,6 +338,28 @@ export class LeadsController {
     @Body() payload: ApplyLeadQualityAssignDto
   ): Promise<ApplyLeadQualityAssignResponse> {
     return this.leads.applyQualityAssignAction(tenantId, leadId, payload, user);
+  }
+
+  @Post(":leadId/quality-actions/contact")
+  @ApiBody({ type: ApplyLeadQualityContactDto })
+  @ApiCreatedResponse({
+    schema: {
+      type: "object",
+      properties: {
+        lead: { type: "object" },
+        note: { type: "object" }
+      },
+      required: ["lead"]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  applyQualityContactAction(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string,
+    @Body() payload: ApplyLeadQualityContactDto
+  ): Promise<ApplyLeadQualityContactResponse> {
+    return this.leads.applyQualityContactAction(tenantId, leadId, payload, user);
   }
 
   @Post(":leadId/quality-actions/status")
