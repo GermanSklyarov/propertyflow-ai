@@ -4,6 +4,7 @@ import type {
   ApplyLeadQualityAssignResponse,
   ApplyLeadQualityContactResponse,
   ApplyLeadQualityFollowUpResponse,
+  ApplyLeadQualityLinkPropertyResponse,
   ApplyLeadQualityStatusResponse,
   LeadListResponse,
   LeadNotesResponse,
@@ -33,6 +34,7 @@ import { LeadService } from "../../application/lead.service.js";
 import { ApplyLeadQualityAssignDto } from "./apply-lead-quality-assign.dto.js";
 import { ApplyLeadQualityContactDto } from "./apply-lead-quality-contact.dto.js";
 import { ApplyLeadQualityFollowUpDto } from "./apply-lead-quality-follow-up.dto.js";
+import { ApplyLeadQualityLinkPropertyDto } from "./apply-lead-quality-link-property.dto.js";
 import { ApplyLeadQualityStatusDto } from "./apply-lead-quality-status.dto.js";
 import { AssignLeadDto } from "./assign-lead.dto.js";
 import { CreateLeadDto } from "./create-lead.dto.js";
@@ -360,6 +362,28 @@ export class LeadsController {
     @Body() payload: ApplyLeadQualityContactDto
   ): Promise<ApplyLeadQualityContactResponse> {
     return this.leads.applyQualityContactAction(tenantId, leadId, payload, user);
+  }
+
+  @Post(":leadId/quality-actions/link-property")
+  @ApiBody({ type: ApplyLeadQualityLinkPropertyDto })
+  @ApiCreatedResponse({
+    schema: {
+      type: "object",
+      properties: {
+        lead: { type: "object" },
+        note: { type: "object" }
+      },
+      required: ["lead"]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  applyQualityLinkPropertyAction(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string,
+    @Body() payload: ApplyLeadQualityLinkPropertyDto
+  ): Promise<ApplyLeadQualityLinkPropertyResponse> {
+    return this.leads.applyQualityLinkPropertyAction(tenantId, leadId, payload, user);
   }
 
   @Post(":leadId/quality-actions/status")

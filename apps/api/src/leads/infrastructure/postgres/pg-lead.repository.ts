@@ -369,12 +369,14 @@ export class PgLeadRepository implements LeadRepository {
               when 'lead.assigned' then 'assigned'
               when 'lead.contact_updated' then 'contact-updated'
               when 'lead.follow_up_updated' then 'follow-up-updated'
+              when 'lead.property_linked' then 'property-linked'
             end as type,
             case audit.action
               when 'lead.created' then 'Lead created'
               when 'lead.assigned' then 'Lead assigned'
               when 'lead.contact_updated' then 'Contact updated'
               when 'lead.follow_up_updated' then 'Follow-up updated'
+              when 'lead.property_linked' then 'Property linked'
             end as title,
             audit.user_id as actor_user_id,
             audit.user_role as actor_user_role,
@@ -384,7 +386,7 @@ export class PgLeadRepository implements LeadRepository {
           where audit.tenant_id = $1
             and audit.resource_type = 'lead'
             and audit.resource_id = $2::text
-            and audit.action in ('lead.created', 'lead.assigned', 'lead.contact_updated', 'lead.follow_up_updated')
+            and audit.action in ('lead.created', 'lead.assigned', 'lead.contact_updated', 'lead.follow_up_updated', 'lead.property_linked')
         ) timeline
         order by created_at desc
       `,
@@ -1165,6 +1167,21 @@ export class PgLeadRepository implements LeadRepository {
         input.contactPhone ?? null,
         new Date().toISOString()
       ]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
+  async updateProperty(tenantId: string, leadId: string, propertyId: string): Promise<LeadSnapshot | null> {
+    const result = await this.pool.query<LeadRow>(
+      `
+        update leads
+        set property_id = $3,
+            updated_at = $4
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, leadId, propertyId, new Date().toISOString()]
     );
 
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;

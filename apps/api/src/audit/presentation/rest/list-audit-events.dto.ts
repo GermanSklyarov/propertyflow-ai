@@ -56,6 +56,7 @@ const auditActions = [
   "lead.note_added",
   "lead.contact_updated",
   "lead.follow_up_updated",
+  "lead.property_linked",
   "lead.status_changed",
   "job.enqueued",
   "job.enqueue_rejected"

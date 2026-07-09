@@ -6,6 +6,8 @@ import type {
   ApplyLeadQualityContactResponse,
   ApplyLeadQualityFollowUpRequest,
   ApplyLeadQualityFollowUpResponse,
+  ApplyLeadQualityLinkPropertyRequest,
+  ApplyLeadQualityLinkPropertyResponse,
   ApplyLeadQualityStatusRequest,
   ApplyLeadQualityStatusResponse,
   CreateLeadNoteRequest,
@@ -31,6 +33,7 @@ import type {
   UpdateLeadFollowUpRequest
 } from "@propertyflow/contracts";
 import { AuditService } from "../../audit/application/audit.service.js";
+import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
 import { RealtimePublisherService } from "../../realtime/application/realtime-publisher.service.js";
 import { UserService } from "../../users/application/user.service.js";
 import { LEAD_REPOSITORY, type LeadRepository } from "../domain/lead.repository.js";
@@ -47,6 +50,7 @@ export class LeadService {
 
   constructor(
     @Inject(LEAD_REPOSITORY) private readonly leads: LeadRepository,
+    @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(UserService) private readonly users: UserService,
     @Inject(RealtimePublisherService) private readonly realtime: RealtimePublisherService
@@ -519,6 +523,73 @@ export class LeadService {
       assignedAgentId: lead.assignedAgentId,
       contactEmailUpdated: normalizedContactEmail !== undefined,
       contactPhoneUpdated: normalizedContactPhone !== undefined
+    });
+
+    const noteText = request.note?.trim();
+    const note =
+      noteText && noteText.length > 0 ? await this.createNote(tenantId, leadId, { note: noteText }, user) : undefined;
+
+    return {
+      lead,
+      note
+    };
+  }
+
+  async applyQualityLinkPropertyAction(
+    tenantId: string,
+    leadId: string,
+    request: ApplyLeadQualityLinkPropertyRequest,
+    user: RequestUser
+  ): Promise<ApplyLeadQualityLinkPropertyResponse> {
+    const propertyId = request.propertyId.trim();
+
+    if (propertyId.length === 0) {
+      throw new BadRequestException("propertyId is required");
+    }
+
+    const property = await this.properties.findById(tenantId, propertyId);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    const currentLead = await this.getVisibleLead(tenantId, leadId, user);
+
+    if (currentLead.propertyId === propertyId) {
+      const noteText = request.note?.trim();
+      const note =
+        noteText && noteText.length > 0 ? await this.createNote(tenantId, leadId, { note: noteText }, user) : undefined;
+
+      return {
+        lead: currentLead,
+        note
+      };
+    }
+
+    const lead = await this.leads.updateProperty(tenantId, leadId, propertyId);
+
+    if (!lead) {
+      throw new NotFoundException("Lead not found");
+    }
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "lead.property_linked",
+      resourceType: "lead",
+      resourceId: lead.id,
+      metadata: {
+        previousPropertyId: currentLead.propertyId,
+        propertyId: lead.propertyId,
+        assignedAgentId: lead.assignedAgentId
+      }
+    });
+
+    this.realtime.publish(tenantId, "lead.property_linked", {
+      leadId: lead.id,
+      previousPropertyId: currentLead.propertyId,
+      propertyId: lead.propertyId,
+      assignedAgentId: lead.assignedAgentId
     });
 
     const noteText = request.note?.trim();

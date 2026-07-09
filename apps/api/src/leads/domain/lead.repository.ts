@@ -87,6 +87,7 @@ export interface LeadRepository {
   listByAttribution(tenantId: string, attributionSearchEventId: string): Promise<LeadSnapshot[]>;
   assign(tenantId: string, leadId: string, assignedAgentId: string): Promise<LeadSnapshot | null>;
   updateContact(tenantId: string, leadId: string, input: UpdateLeadContactInput): Promise<LeadSnapshot | null>;
+  updateProperty(tenantId: string, leadId: string, propertyId: string): Promise<LeadSnapshot | null>;
   updateFollowUp(tenantId: string, leadId: string, input: UpdateLeadFollowUpInput): Promise<LeadSnapshot | null>;
   updateStatus(tenantId: string, leadId: string, status: LeadStatus): Promise<LeadSnapshot | null>;
 }
