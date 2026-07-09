@@ -9,6 +9,7 @@ import type {
   LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
   LeadQualitySignalsResponse,
+  LeadQualitySourcePerformanceResponse,
   LeadQueueSummaryResponse,
   LeadSlaAgentPerformanceResponse,
   LeadSlaBreachesResponse,
@@ -203,6 +204,71 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadQualityAgentPerformanceResponse> {
     return this.leads.getQualityAgentPerformance(tenantId, query, user);
+  }
+
+  @Get("quality/sources")
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              source: { type: "string", example: "ai-concierge" },
+              total: { type: "number", example: 18 },
+              affectedLeads: { type: "number", example: 7 },
+              issueCount: { type: "number", example: 11 },
+              missingContactInfo: { type: "number", example: 1 },
+              missingProperty: { type: "number", example: 3 },
+              unassigned: { type: "number", example: 2 },
+              missingFollowUp: { type: "number", example: 4 },
+              staleNewLeads: { type: "number", example: 1 },
+              affectedRate: { type: "number", example: 38.89 },
+              healthScore: { type: "number", example: 61.11 },
+              byIssue: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    bucket: { type: "string", example: "missing-property" },
+                    count: { type: "number", example: 3 }
+                  },
+                  required: ["bucket", "count"]
+                }
+              }
+            },
+            required: [
+              "source",
+              "total",
+              "affectedLeads",
+              "issueCount",
+              "missingContactInfo",
+              "missingProperty",
+              "unassigned",
+              "missingFollowUp",
+              "staleNewLeads",
+              "affectedRate",
+              "healthScore",
+              "byIssue"
+            ]
+          }
+        },
+        total: { type: "number", example: 4 },
+        filters: { type: "object" },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: ["items", "total", "filters", "generatedAt"]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  getQualitySourcePerformance(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadQualitySourcePerformanceResponse> {
+    return this.leads.getQualitySourcePerformance(tenantId, query, user);
   }
 
   @Get("quality-actions")

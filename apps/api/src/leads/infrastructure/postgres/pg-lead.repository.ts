@@ -3,6 +3,7 @@ import type {
   CountByBucket,
   LeadQualityActionItem,
   LeadQualityAgentPerformanceItem,
+  LeadQualitySourcePerformanceItem,
   LeadNoteSnapshot,
   LeadPriority,
   LeadQualitySignalsResponse,
@@ -147,6 +148,18 @@ interface LeadQualityAgentPerformanceRow {
   issue_count: string;
   missing_contact_info: string;
   missing_property: string;
+  missing_follow_up: string;
+  stale_new_leads: string;
+}
+
+interface LeadQualitySourcePerformanceRow {
+  source: LeadSnapshot["source"];
+  total: string;
+  affected_leads: string;
+  issue_count: string;
+  missing_contact_info: string;
+  missing_property: string;
+  unassigned: string;
   missing_follow_up: string;
   stale_new_leads: string;
 }
@@ -970,6 +983,75 @@ export class PgLeadRepository implements LeadRepository {
     return result.rows.map((row) => this.toQualityAgentPerformance(row));
   }
 
+  async getQualitySourcePerformance(
+    tenantId: string,
+    request: ListLeadsRequest = {}
+  ): Promise<LeadQualitySourcePerformanceItem[]> {
+    const result = await this.pool.query<LeadQualitySourcePerformanceRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        ),
+        classified as (
+          select
+            source,
+            coalesce(nullif(contact_email, ''), nullif(contact_phone, '')) is null as missing_contact_info,
+            property_id is null as missing_property,
+            assigned_agent_id is null as unassigned,
+            status in ('new', 'contacted', 'qualified') and next_follow_up_at is null as missing_follow_up,
+            status = 'new' and created_at < now() - interval '48 hours' as stale_new_lead
+          from filtered
+        )
+        select
+          source,
+          count(*) as total,
+          count(*) filter (
+            where missing_contact_info
+              or missing_property
+              or unassigned
+              or missing_follow_up
+              or stale_new_lead
+          ) as affected_leads,
+          sum(
+            missing_contact_info::int
+            + missing_property::int
+            + unassigned::int
+            + missing_follow_up::int
+            + stale_new_lead::int
+          ) as issue_count,
+          count(*) filter (where missing_contact_info) as missing_contact_info,
+          count(*) filter (where missing_property) as missing_property,
+          count(*) filter (where unassigned) as unassigned,
+          count(*) filter (where missing_follow_up) as missing_follow_up,
+          count(*) filter (where stale_new_lead) as stale_new_leads
+        from classified
+        group by source
+        order by affected_leads desc, issue_count desc, total desc, source asc
+        limit $8
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
+        request.limit ?? 20
+      ]
+    );
+
+    return result.rows.map((row) => this.toQualitySourcePerformance(row));
+  }
+
   async listQualityActions(tenantId: string, request: ListLeadsRequest = {}): Promise<LeadQualityActionItem[]> {
     const result = await this.pool.query<LeadQualityActionRow>(
       `
@@ -1249,6 +1331,39 @@ export class PgLeadRepository implements LeadRepository {
       issueCount: Number(row.issue_count),
       missingContactInfo,
       missingProperty,
+      missingFollowUp,
+      staleNewLeads,
+      affectedRate,
+      healthScore: Number((100 - affectedRate).toFixed(2)),
+      byIssue
+    };
+  }
+
+  private toQualitySourcePerformance(row: LeadQualitySourcePerformanceRow): LeadQualitySourcePerformanceItem {
+    const total = Number(row.total);
+    const affectedLeads = Number(row.affected_leads);
+    const missingContactInfo = Number(row.missing_contact_info);
+    const missingProperty = Number(row.missing_property);
+    const unassigned = Number(row.unassigned);
+    const missingFollowUp = Number(row.missing_follow_up);
+    const staleNewLeads = Number(row.stale_new_leads);
+    const byIssue: CountByBucket[] = [
+      { bucket: "missing-contact-info", count: missingContactInfo },
+      { bucket: "missing-property", count: missingProperty },
+      { bucket: "unassigned", count: unassigned },
+      { bucket: "missing-follow-up", count: missingFollowUp },
+      { bucket: "stale-new-lead", count: staleNewLeads }
+    ].filter((item) => item.count > 0);
+    const affectedRate = total === 0 ? 0 : Number(((affectedLeads / total) * 100).toFixed(2));
+
+    return {
+      source: row.source,
+      total,
+      affectedLeads,
+      issueCount: Number(row.issue_count),
+      missingContactInfo,
+      missingProperty,
+      unassigned,
       missingFollowUp,
       staleNewLeads,
       affectedRate,
