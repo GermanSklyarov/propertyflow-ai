@@ -9,6 +9,7 @@ import type {
   LeadQualityActionsResponse,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
+  LeadSlaResponse,
   LeadSnapshot,
   LeadStatusHistoryResponse,
   LeadTimelineResponse,
@@ -85,6 +86,16 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadQueueSummaryResponse> {
     return this.leads.getQueueSummary(tenantId, query, user);
+  }
+
+  @Get("sla")
+  @Roles("agent", "broker", "manager", "admin")
+  getSlaSummary(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadSlaResponse> {
+    return this.leads.getSlaSummary(tenantId, query, user);
   }
 
   @Get("quality")

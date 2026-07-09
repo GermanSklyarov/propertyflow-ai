@@ -6,6 +6,7 @@ import type {
   LeadPriority,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
+  LeadSlaResponse,
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
@@ -84,6 +85,16 @@ interface LeadQualitySignalsRow {
   unassigned: string;
   missing_follow_up: string;
   stale_new_leads: string;
+}
+
+interface LeadSlaSummaryRow {
+  total: string;
+  response_breached: string;
+  response_due_soon: string;
+  unassigned_breached: string;
+  overdue_follow_ups: string;
+  average_first_response_hours: string | null;
+  breached_by_source: CountByBucket[];
 }
 
 interface LeadQualityActionRow extends LeadRow {
@@ -483,6 +494,102 @@ export class PgLeadRepository implements LeadRepository {
       byStatus: row.by_status,
       byPriority: row.by_priority,
       bySource: row.by_source
+    };
+  }
+
+  async getSlaSummary(
+    tenantId: string,
+    request: ListLeadsRequest = {}
+  ): Promise<Omit<LeadSlaResponse, "filters" | "generatedAt">> {
+    const result = await this.pool.query<LeadSlaSummaryRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        ),
+        first_response as (
+          select
+            lead_id,
+            min(created_at) as first_response_at
+          from lead_status_events
+          where tenant_id = $1
+            and previous_status = 'new'
+            and status in ('contacted', 'qualified', 'lost', 'won')
+          group by lead_id
+        ),
+        enriched as (
+          select
+            lead.*,
+            response.first_response_at,
+            lead.status = 'new'
+              and lead.created_at <= now() - interval '4 hours' as response_breached,
+            lead.status = 'new'
+            and lead.created_at <= now() - interval '3 hours'
+              and lead.created_at > now() - interval '4 hours' as response_due_soon
+          from filtered lead
+          left join first_response response on response.lead_id = lead.id
+        ),
+        source_summary as (
+          select source, count(*) as source_breaches
+          from enriched
+          where response_breached
+          group by source
+        )
+        select
+          count(*) as total,
+          count(*) filter (where response_breached) as response_breached,
+          count(*) filter (where response_due_soon) as response_due_soon,
+          count(*) filter (where response_breached and assigned_agent_id is null) as unassigned_breached,
+          count(*) filter (
+            where status in ('new', 'contacted', 'qualified')
+              and next_follow_up_at is not null
+              and next_follow_up_at < now()
+          ) as overdue_follow_ups,
+          avg(extract(epoch from (first_response_at - created_at)) / 3600)
+            filter (where first_response_at is not null) as average_first_response_hours,
+          (
+            select coalesce(
+              jsonb_agg(
+                jsonb_build_object('bucket', source, 'count', source_breaches)
+                order by source_breaches desc, source
+              ),
+              '[]'::jsonb
+            )
+            from source_summary
+          ) as breached_by_source
+        from enriched
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null
+      ]
+    );
+    const row = result.rows[0];
+    const averageFirstResponseHours =
+      row.average_first_response_hours === null ? undefined : Number(row.average_first_response_hours);
+
+    return {
+      total: Number(row.total),
+      targetFirstResponseHours: 4,
+      responseBreached: Number(row.response_breached),
+      responseDueSoon: Number(row.response_due_soon),
+      unassignedBreached: Number(row.unassigned_breached),
+      overdueFollowUps: Number(row.overdue_follow_ups),
+      averageFirstResponseHours:
+        averageFirstResponseHours === undefined ? undefined : Number(averageFirstResponseHours.toFixed(2)),
+      breachedBySource: row.breached_by_source
     };
   }
 

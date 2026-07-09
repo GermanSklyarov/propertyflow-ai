@@ -1329,6 +1329,19 @@ export interface LeadQueueSummaryResponse {
   generatedAt: string;
 }
 
+export interface LeadSlaResponse {
+  total: number;
+  targetFirstResponseHours: number;
+  responseBreached: number;
+  responseDueSoon: number;
+  unassignedBreached: number;
+  overdueFollowUps: number;
+  averageFirstResponseHours?: number;
+  breachedBySource: CountByBucket[];
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export type LeadQualityIssueType =
   | "missing-contact-info"
   | "missing-property"
