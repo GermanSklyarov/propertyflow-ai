@@ -25,6 +25,7 @@ export interface TenantAnalyticsRawMetrics {
   leadQualityAffectedLeads: number;
   leadQualityByIssue: CountByBucket[];
   leadQualityAffectedBySource: CountByBucket[];
+  leadQualityAffectedByAgent: CountByBucket[];
   wonLeads: number;
   lostLeads: number;
   totalSearches: number;

@@ -76,6 +76,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       leadSlaBreachedBySource,
       leadQualityMetrics,
       leadQualityAffectedBySource,
+      leadQualityAffectedByAgent,
       wonLeads,
       lostLeads,
       totalSearches,
@@ -144,6 +145,24 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
             )
           group by source
           order by count(*) desc, source asc
+          limit 10
+        `,
+        [tenantId]
+      ),
+      this.bucket(
+        `
+          select coalesce(assigned_agent_id, 'unassigned') as bucket, count(*)
+          from leads
+          where tenant_id = $1
+            and (
+              coalesce(nullif(contact_email, ''), nullif(contact_phone, '')) is null
+              or property_id is null
+              or assigned_agent_id is null
+              or status in ('new', 'contacted', 'qualified') and next_follow_up_at is null
+              or status = 'new' and created_at < now() - interval '48 hours'
+            )
+          group by bucket
+          order by count(*) desc, bucket asc
           limit 10
         `,
         [tenantId]
@@ -347,6 +366,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       leadQualityAffectedLeads: leadQualityMetrics.affectedLeads,
       leadQualityByIssue: leadQualityMetrics.byIssue,
       leadQualityAffectedBySource,
+      leadQualityAffectedByAgent,
       wonLeads,
       lostLeads,
       totalSearches,

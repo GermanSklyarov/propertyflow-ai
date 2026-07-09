@@ -1616,6 +1616,7 @@ export interface TenantDashboardMetrics {
   leadQualityHealthScore: number;
   leadQualityByIssue: CountByBucket[];
   leadQualityAffectedBySource: CountByBucket[];
+  leadQualityAffectedByAgent: CountByBucket[];
   wonLeads: number;
   lostLeads: number;
   conversionRate: number;
