@@ -75,6 +75,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       leadSlaMetrics,
       leadSlaBreachedBySource,
       leadQualityMetrics,
+      leadQualityAffectedBySource,
       wonLeads,
       lostLeads,
       totalSearches,
@@ -129,6 +130,24 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
         [tenantId]
       ),
       this.leadQualityMetrics(tenantId),
+      this.bucket(
+        `
+          select source as bucket, count(*)
+          from leads
+          where tenant_id = $1
+            and (
+              coalesce(nullif(contact_email, ''), nullif(contact_phone, '')) is null
+              or property_id is null
+              or assigned_agent_id is null
+              or status in ('new', 'contacted', 'qualified') and next_follow_up_at is null
+              or status = 'new' and created_at < now() - interval '48 hours'
+            )
+          group by source
+          order by count(*) desc, source asc
+          limit 10
+        `,
+        [tenantId]
+      ),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'won'", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'lost'", [tenantId]),
       this.count("select count(*) from search_events where tenant_id = $1", [tenantId]),
@@ -327,6 +346,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       leadQualityIssueCount: leadQualityMetrics.issueCount,
       leadQualityAffectedLeads: leadQualityMetrics.affectedLeads,
       leadQualityByIssue: leadQualityMetrics.byIssue,
+      leadQualityAffectedBySource,
       wonLeads,
       lostLeads,
       totalSearches,
