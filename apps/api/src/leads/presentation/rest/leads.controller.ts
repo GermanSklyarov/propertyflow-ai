@@ -8,6 +8,7 @@ import type {
   ApplyLeadQualityStatusResponse,
   LeadListResponse,
   LeadConversionAgentPerformanceResponse,
+  LeadConversionSourcePerformanceResponse,
   LeadNotesResponse,
   LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
@@ -184,6 +185,58 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadConversionAgentPerformanceResponse> {
     return this.leads.getConversionAgentPerformance(tenantId, query, user);
+  }
+
+  @Get("conversion/sources")
+  @ApiOkResponse({
+    schema: {
+      type: "object",
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              source: {
+                type: "string",
+                enum: ["website", "public-api", "agent", "ai-chat", "ai-concierge", "saved-search"],
+                example: "ai-concierge"
+              },
+              total: { type: "number", example: 24 },
+              open: { type: "number", example: 11 },
+              won: { type: "number", example: 9 },
+              lost: { type: "number", example: 4 },
+              conversionRate: { type: "number", example: 37.5 },
+              lossRate: { type: "number", example: 16.67 },
+              activeDealRate: { type: "number", example: 45.83 },
+              averageTimeToWinHours: { type: "number", example: 68.25 }
+            },
+            required: [
+              "source",
+              "total",
+              "open",
+              "won",
+              "lost",
+              "conversionRate",
+              "lossRate",
+              "activeDealRate"
+            ]
+          }
+        },
+        total: { type: "number", example: 6 },
+        filters: { type: "object" },
+        generatedAt: { type: "string", format: "date-time" }
+      },
+      required: ["items", "total", "filters", "generatedAt"]
+    }
+  })
+  @Roles("agent", "broker", "manager", "admin")
+  getConversionSourcePerformance(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadConversionSourcePerformanceResponse> {
+    return this.leads.getConversionSourcePerformance(tenantId, query, user);
   }
 
   @Get("quality")

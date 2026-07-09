@@ -2,6 +2,7 @@ import type {
   CreateLeadRequest,
   LeadNoteSnapshot,
   LeadConversionAgentPerformanceResponse,
+  LeadConversionSourcePerformanceResponse,
   LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
   LeadPriority,
@@ -75,6 +76,10 @@ export interface LeadRepository {
     tenantId: string,
     request?: ListLeadsRequest
   ): Promise<LeadConversionAgentPerformanceResponse["items"]>;
+  getConversionSourcePerformance(
+    tenantId: string,
+    request?: ListLeadsRequest
+  ): Promise<LeadConversionSourcePerformanceResponse["items"]>;
   getQualitySignals(
     tenantId: string,
     request?: ListLeadsRequest

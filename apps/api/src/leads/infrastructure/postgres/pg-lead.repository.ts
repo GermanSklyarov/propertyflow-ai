@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import type {
   CountByBucket,
   LeadConversionAgentPerformanceItem,
+  LeadConversionSourcePerformanceItem,
   LeadQualityActionItem,
   LeadQualityAgentPerformanceItem,
   LeadQualitySourcePerformanceItem,
@@ -136,6 +137,15 @@ interface LeadSlaSourcePerformanceRow {
 
 interface LeadConversionAgentPerformanceRow {
   agent_id: string;
+  total: string;
+  open: string;
+  won: string;
+  lost: string;
+  average_time_to_win_hours: string | null;
+}
+
+interface LeadConversionSourcePerformanceRow {
+  source: LeadSnapshot["source"];
   total: string;
   open: string;
   won: string;
@@ -921,6 +931,64 @@ export class PgLeadRepository implements LeadRepository {
     return result.rows.map((row) => this.toConversionAgentPerformance(row));
   }
 
+  async getConversionSourcePerformance(
+    tenantId: string,
+    request: ListLeadsRequest = {}
+  ): Promise<LeadConversionSourcePerformanceItem[]> {
+    const result = await this.pool.query<LeadConversionSourcePerformanceRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        ),
+        won_events as (
+          select
+            lead_id,
+            min(created_at) as won_at
+          from lead_status_events
+          where tenant_id = $1
+            and status = 'won'
+          group by lead_id
+        )
+        select
+          lead.source,
+          count(*) as total,
+          count(*) filter (where lead.status in ('new', 'contacted', 'qualified')) as open,
+          count(*) filter (where lead.status = 'won') as won,
+          count(*) filter (where lead.status = 'lost') as lost,
+          avg(extract(epoch from (won.won_at - lead.created_at)) / 3600)
+            filter (where won.won_at is not null) as average_time_to_win_hours
+        from filtered lead
+        left join won_events won on won.lead_id = lead.id
+        group by lead.source
+        order by
+          count(*) filter (where lead.status = 'won') desc,
+          count(*) desc,
+          lead.source asc
+        limit $8
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
+        request.limit ?? 20
+      ]
+    );
+
+    return result.rows.map((row) => this.toConversionSourcePerformance(row));
+  }
+
   async getQualitySignals(
     tenantId: string,
     request: ListLeadsRequest = {}
@@ -1441,6 +1509,28 @@ export class PgLeadRepository implements LeadRepository {
 
     return {
       agentId: row.agent_id,
+      total,
+      open,
+      won,
+      lost,
+      conversionRate: total === 0 ? 0 : Number(((won / total) * 100).toFixed(2)),
+      lossRate: total === 0 ? 0 : Number(((lost / total) * 100).toFixed(2)),
+      activeDealRate: total === 0 ? 0 : Number(((open / total) * 100).toFixed(2)),
+      averageTimeToWinHours:
+        averageTimeToWinHours === undefined ? undefined : Number(averageTimeToWinHours.toFixed(2))
+    };
+  }
+
+  private toConversionSourcePerformance(row: LeadConversionSourcePerformanceRow): LeadConversionSourcePerformanceItem {
+    const total = Number(row.total);
+    const open = Number(row.open);
+    const won = Number(row.won);
+    const lost = Number(row.lost);
+    const averageTimeToWinHours =
+      row.average_time_to_win_hours === null ? undefined : Number(row.average_time_to_win_hours);
+
+    return {
+      source: row.source,
       total,
       open,
       won,

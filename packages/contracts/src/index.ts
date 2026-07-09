@@ -1453,6 +1453,25 @@ export interface LeadConversionAgentPerformanceResponse {
   generatedAt: string;
 }
 
+export interface LeadConversionSourcePerformanceItem {
+  source: LeadSource;
+  total: number;
+  open: number;
+  won: number;
+  lost: number;
+  conversionRate: number;
+  lossRate: number;
+  activeDealRate: number;
+  averageTimeToWinHours?: number;
+}
+
+export interface LeadConversionSourcePerformanceResponse {
+  items: LeadConversionSourcePerformanceItem[];
+  total: number;
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export type LeadQualityIssueType =
   | "missing-contact-info"
   | "missing-property"

@@ -14,6 +14,7 @@ import type {
   CreateLeadRequest,
   LeadListResponse,
   LeadConversionAgentPerformanceResponse,
+  LeadConversionSourcePerformanceResponse,
   LeadNotesResponse,
   LeadQualityAgentPerformanceResponse,
   LeadQualityActionsResponse,
@@ -196,6 +197,22 @@ export class LeadService {
   ): Promise<LeadConversionAgentPerformanceResponse> {
     const scopedRequest = this.scopeLeadQueueRequest(request, user);
     const items = await this.leads.getConversionAgentPerformance(tenantId, scopedRequest);
+
+    return {
+      items,
+      total: items.length,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async getConversionSourcePerformance(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadConversionSourcePerformanceResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const items = await this.leads.getConversionSourcePerformance(tenantId, scopedRequest);
 
     return {
       items,
