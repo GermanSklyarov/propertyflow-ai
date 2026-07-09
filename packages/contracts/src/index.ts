@@ -1342,6 +1342,29 @@ export interface LeadSlaResponse {
   generatedAt: string;
 }
 
+export type LeadSlaBreachType =
+  | "first-response-breached"
+  | "first-response-due-soon"
+  | "unassigned-response-breached"
+  | "follow-up-overdue";
+
+export interface LeadSlaBreachItem {
+  lead: LeadSnapshot;
+  breachTypes: LeadSlaBreachType[];
+  score: number;
+  ageHours: number;
+  followUpOverdueHours?: number;
+  recommendation: string;
+}
+
+export interface LeadSlaBreachesResponse {
+  items: LeadSlaBreachItem[];
+  total: number;
+  targetFirstResponseHours: number;
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export type LeadQualityIssueType =
   | "missing-contact-info"
   | "missing-property"

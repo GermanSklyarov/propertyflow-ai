@@ -6,6 +6,7 @@ import type {
   LeadPriority,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
+  LeadSlaBreachItem,
   LeadSlaResponse,
   LeadSnapshot,
   LeadStatus,
@@ -95,6 +96,16 @@ interface LeadSlaSummaryRow {
   overdue_follow_ups: string;
   average_first_response_hours: string | null;
   breached_by_source: CountByBucket[];
+}
+
+interface LeadSlaBreachRow extends LeadRow {
+  first_response_breached: boolean;
+  first_response_due_soon: boolean;
+  unassigned_response_breached: boolean;
+  follow_up_overdue: boolean;
+  age_hours: string;
+  follow_up_overdue_hours: string | null;
+  score: string;
 }
 
 interface LeadQualityActionRow extends LeadRow {
@@ -593,6 +604,73 @@ export class PgLeadRepository implements LeadRepository {
     };
   }
 
+  async listSlaBreaches(tenantId: string, request: ListLeadsRequest = {}): Promise<LeadSlaBreachItem[]> {
+    const result = await this.pool.query<LeadSlaBreachRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        ),
+        enriched as (
+          select
+            *,
+            status = 'new'
+              and created_at <= now() - interval '4 hours' as first_response_breached,
+            status = 'new'
+              and created_at <= now() - interval '3 hours'
+              and created_at > now() - interval '4 hours' as first_response_due_soon,
+            status = 'new'
+              and assigned_agent_id is null
+              and created_at <= now() - interval '4 hours' as unassigned_response_breached,
+            status in ('new', 'contacted', 'qualified')
+              and next_follow_up_at is not null
+              and next_follow_up_at < now() as follow_up_overdue,
+            extract(epoch from (now() - created_at)) / 3600 as age_hours,
+            case
+              when next_follow_up_at is not null and next_follow_up_at < now()
+                then extract(epoch from (now() - next_follow_up_at)) / 3600
+              else null
+            end as follow_up_overdue_hours
+          from filtered
+        )
+        select
+          *,
+          (
+            case when first_response_breached then 5 else 0 end
+            + case when follow_up_overdue then 4 else 0 end
+            + case when unassigned_response_breached then 3 else 0 end
+            + case when first_response_due_soon then 2 else 0 end
+          ) as score
+        from enriched
+        where first_response_breached
+          or first_response_due_soon
+          or unassigned_response_breached
+          or follow_up_overdue
+        order by score desc, created_at asc
+        limit $8
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
+        request.limit ?? 20
+      ]
+    );
+
+    return result.rows.map((row) => this.toSlaBreach(row));
+  }
+
   async getQualitySignals(
     tenantId: string,
     request: ListLeadsRequest = {}
@@ -856,6 +934,42 @@ export class PgLeadRepository implements LeadRepository {
       score: Number(row.score),
       recommendation: this.qualityRecommendation(issueTypes)
     };
+  }
+
+  private toSlaBreach(row: LeadSlaBreachRow): LeadSlaBreachItem {
+    const breachTypes = [
+      row.first_response_breached ? "first-response-breached" : undefined,
+      row.first_response_due_soon ? "first-response-due-soon" : undefined,
+      row.unassigned_response_breached ? "unassigned-response-breached" : undefined,
+      row.follow_up_overdue ? "follow-up-overdue" : undefined
+    ].filter((type): type is LeadSlaBreachItem["breachTypes"][number] => type !== undefined);
+    const followUpOverdueHours =
+      row.follow_up_overdue_hours === null ? undefined : Number(Number(row.follow_up_overdue_hours).toFixed(2));
+
+    return {
+      lead: this.toSnapshot(row),
+      breachTypes,
+      score: Number(row.score),
+      ageHours: Number(Number(row.age_hours).toFixed(2)),
+      followUpOverdueHours,
+      recommendation: this.slaRecommendation(breachTypes)
+    };
+  }
+
+  private slaRecommendation(breachTypes: LeadSlaBreachItem["breachTypes"]): string {
+    if (breachTypes.includes("unassigned-response-breached")) {
+      return "Assign the lead and contact them immediately.";
+    }
+
+    if (breachTypes.includes("first-response-breached")) {
+      return "Contact the lead now or move it to the next CRM status.";
+    }
+
+    if (breachTypes.includes("follow-up-overdue")) {
+      return "Complete the overdue follow-up or schedule the next touch.";
+    }
+
+    return "Contact the lead before the first-response SLA is breached.";
   }
 
   private qualityRecommendation(issueTypes: LeadQualityActionItem["issueTypes"]): string {

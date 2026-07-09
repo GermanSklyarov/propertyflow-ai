@@ -5,6 +5,7 @@ import type {
   LeadPriority,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
+  LeadSlaBreachesResponse,
   LeadSlaResponse,
   LeadSnapshot,
   LeadStatus,
@@ -51,6 +52,7 @@ export interface LeadRepository {
   list(tenantId: string, request?: ListLeadsRequest): Promise<LeadSnapshot[]>;
   getQueueSummary(tenantId: string, request?: ListLeadsRequest): Promise<Omit<LeadQueueSummaryResponse, "filters" | "generatedAt">>;
   getSlaSummary(tenantId: string, request?: ListLeadsRequest): Promise<Omit<LeadSlaResponse, "filters" | "generatedAt">>;
+  listSlaBreaches(tenantId: string, request?: ListLeadsRequest): Promise<LeadSlaBreachesResponse["items"]>;
   getQualitySignals(
     tenantId: string,
     request?: ListLeadsRequest

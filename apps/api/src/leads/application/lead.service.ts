@@ -13,6 +13,7 @@ import type {
   LeadQualityActionsResponse,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
+  LeadSlaBreachesResponse,
   LeadSlaResponse,
   LeadSnapshot,
   LeadStatus,
@@ -121,6 +122,23 @@ export class LeadService {
 
     return {
       ...summary,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async listSlaBreaches(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadSlaBreachesResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const items = await this.leads.listSlaBreaches(tenantId, scopedRequest);
+
+    return {
+      items,
+      total: items.length,
+      targetFirstResponseHours: 4,
       filters: scopedRequest,
       generatedAt: new Date().toISOString()
     };
