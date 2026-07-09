@@ -1252,6 +1252,16 @@ export interface ApplyLeadQualityAssignResponse {
   note?: LeadNoteSnapshot;
 }
 
+export interface ApplyLeadQualityStatusRequest {
+  status: LeadStatus;
+  note?: string;
+}
+
+export interface ApplyLeadQualityStatusResponse {
+  lead: LeadSnapshot;
+  note?: LeadNoteSnapshot;
+}
+
 export type LeadTimelineEventType = "created" | "assigned" | "follow-up-updated" | "note" | "status-changed";
 
 export interface LeadTimelineEventSnapshot {

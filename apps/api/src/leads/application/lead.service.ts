@@ -4,6 +4,8 @@ import type {
   ApplyLeadQualityAssignResponse,
   ApplyLeadQualityFollowUpRequest,
   ApplyLeadQualityFollowUpResponse,
+  ApplyLeadQualityStatusRequest,
+  ApplyLeadQualityStatusResponse,
   CreateLeadNoteRequest,
   CreateLeadRequest,
   LeadListResponse,
@@ -368,12 +370,25 @@ export class LeadService {
     };
   }
 
-  async updateStatus(tenantId: string, leadId: string, status: LeadStatus, user: RequestUser): Promise<LeadSnapshot> {
-    const currentLead = await this.leads.findById(tenantId, leadId);
+  async applyQualityStatusAction(
+    tenantId: string,
+    leadId: string,
+    request: ApplyLeadQualityStatusRequest,
+    user: RequestUser
+  ): Promise<ApplyLeadQualityStatusResponse> {
+    const lead = await this.updateStatus(tenantId, leadId, request.status, user);
+    const noteText = request.note?.trim();
+    const note =
+      noteText && noteText.length > 0 ? await this.createNote(tenantId, leadId, { note: noteText }, user) : undefined;
 
-    if (!currentLead) {
-      throw new NotFoundException("Lead not found");
-    }
+    return {
+      lead,
+      note
+    };
+  }
+
+  async updateStatus(tenantId: string, leadId: string, status: LeadStatus, user: RequestUser): Promise<LeadSnapshot> {
+    const currentLead = await this.getVisibleLead(tenantId, leadId, user);
 
     if (currentLead.status === status) {
       return currentLead;

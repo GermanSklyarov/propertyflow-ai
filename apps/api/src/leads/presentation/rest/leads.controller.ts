@@ -3,6 +3,7 @@ import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   ApplyLeadQualityAssignResponse,
   ApplyLeadQualityFollowUpResponse,
+  ApplyLeadQualityStatusResponse,
   LeadListResponse,
   LeadNotesResponse,
   LeadQualityActionsResponse,
@@ -24,6 +25,7 @@ import { UserService } from "../../../users/application/user.service.js";
 import { LeadService } from "../../application/lead.service.js";
 import { ApplyLeadQualityAssignDto } from "./apply-lead-quality-assign.dto.js";
 import { ApplyLeadQualityFollowUpDto } from "./apply-lead-quality-follow-up.dto.js";
+import { ApplyLeadQualityStatusDto } from "./apply-lead-quality-status.dto.js";
 import { AssignLeadDto } from "./assign-lead.dto.js";
 import { CreateLeadDto } from "./create-lead.dto.js";
 import { CreateLeadNoteDto } from "./create-lead-note.dto.js";
@@ -125,6 +127,17 @@ export class LeadsController {
     @Body() payload: ApplyLeadQualityAssignDto
   ): Promise<ApplyLeadQualityAssignResponse> {
     return this.leads.applyQualityAssignAction(tenantId, leadId, payload, user);
+  }
+
+  @Post(":leadId/quality-actions/status")
+  @Roles("agent", "broker", "manager", "admin")
+  applyQualityStatusAction(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("leadId") leadId: string,
+    @Body() payload: ApplyLeadQualityStatusDto
+  ): Promise<ApplyLeadQualityStatusResponse> {
+    return this.leads.applyQualityStatusAction(tenantId, leadId, payload, user);
   }
 
   @Get(":leadId/status-history")
