@@ -12,6 +12,7 @@ import type {
   LeadSlaAgentPerformanceResponse,
   LeadSlaBreachesResponse,
   LeadSlaResponse,
+  LeadSlaSourcePerformanceResponse,
   LeadSnapshot,
   LeadStatusHistoryResponse,
   LeadTimelineResponse,
@@ -118,6 +119,16 @@ export class LeadsController {
     @Query() query: ListLeadsDto
   ): Promise<LeadSlaAgentPerformanceResponse> {
     return this.leads.getSlaAgentPerformance(tenantId, query, user);
+  }
+
+  @Get("sla/sources")
+  @Roles("agent", "broker", "manager", "admin")
+  getSlaSourcePerformance(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Query() query: ListLeadsDto
+  ): Promise<LeadSlaSourcePerformanceResponse> {
+    return this.leads.getSlaSourcePerformance(tenantId, query, user);
   }
 
   @Get("quality")

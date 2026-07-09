@@ -8,6 +8,7 @@ import type {
   LeadSlaAgentPerformanceResponse,
   LeadSlaBreachesResponse,
   LeadSlaResponse,
+  LeadSlaSourcePerformanceResponse,
   LeadSnapshot,
   LeadStatus,
   LeadStatusEventSnapshot,
@@ -58,6 +59,10 @@ export interface LeadRepository {
     tenantId: string,
     request?: ListLeadsRequest
   ): Promise<LeadSlaAgentPerformanceResponse["items"]>;
+  getSlaSourcePerformance(
+    tenantId: string,
+    request?: ListLeadsRequest
+  ): Promise<LeadSlaSourcePerformanceResponse["items"]>;
   getQualitySignals(
     tenantId: string,
     request?: ListLeadsRequest

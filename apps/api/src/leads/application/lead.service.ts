@@ -16,6 +16,7 @@ import type {
   LeadSlaAgentPerformanceResponse,
   LeadSlaBreachesResponse,
   LeadSlaResponse,
+  LeadSlaSourcePerformanceResponse,
   LeadSnapshot,
   LeadStatus,
   LeadStatusHistoryResponse,
@@ -152,6 +153,23 @@ export class LeadService {
   ): Promise<LeadSlaAgentPerformanceResponse> {
     const scopedRequest = this.scopeLeadQueueRequest(request, user);
     const items = await this.leads.getSlaAgentPerformance(tenantId, scopedRequest);
+
+    return {
+      items,
+      total: items.length,
+      targetFirstResponseHours: 4,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async getSlaSourcePerformance(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadSlaSourcePerformanceResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const items = await this.leads.getSlaSourcePerformance(tenantId, scopedRequest);
 
     return {
       items,
