@@ -27,10 +27,16 @@ export class AnalyticsService {
       ...publicMetrics
     } = metrics;
     const closedLeads = metrics.wonLeads + metrics.lostLeads;
+    const leadSlaBreachRate =
+      metrics.totalLeads > 0 ? Math.round((metrics.leadSlaResponseBreached / metrics.totalLeads) * 10_000) / 100 : 0;
+    const leadSlaOverduePenalty =
+      metrics.totalLeads > 0 ? Math.round((metrics.leadSlaOverdueFollowUps / metrics.totalLeads) * 10_000) / 100 : 0;
 
     return {
       tenantId,
       ...publicMetrics,
+      leadSlaBreachRate,
+      leadSlaHealthScore: Math.max(0, Math.round((100 - leadSlaBreachRate - leadSlaOverduePenalty) * 100) / 100),
       conversionRate: closedLeads > 0 ? Math.round((metrics.wonLeads / closedLeads) * 10_000) / 100 : 0,
       searchToLeadConversionRate:
         metrics.totalSearches > 0 ? Math.round((metrics.attributedLeads / metrics.totalSearches) * 10_000) / 100 : 0,
