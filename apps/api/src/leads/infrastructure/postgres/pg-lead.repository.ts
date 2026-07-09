@@ -6,6 +6,7 @@ import type {
   LeadPriority,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
+  LeadSlaAgentPerformanceItem,
   LeadSlaBreachItem,
   LeadSlaResponse,
   LeadSnapshot,
@@ -106,6 +107,15 @@ interface LeadSlaBreachRow extends LeadRow {
   age_hours: string;
   follow_up_overdue_hours: string | null;
   score: string;
+}
+
+interface LeadSlaAgentPerformanceRow {
+  agent_id: string;
+  total: string;
+  open: string;
+  response_breached: string;
+  overdue_follow_ups: string;
+  average_first_response_hours: string | null;
 }
 
 interface LeadQualityActionRow extends LeadRow {
@@ -671,6 +681,70 @@ export class PgLeadRepository implements LeadRepository {
     return result.rows.map((row) => this.toSlaBreach(row));
   }
 
+  async getSlaAgentPerformance(
+    tenantId: string,
+    request: ListLeadsRequest = {}
+  ): Promise<LeadSlaAgentPerformanceItem[]> {
+    const result = await this.pool.query<LeadSlaAgentPerformanceRow>(
+      `
+        with filtered as (
+          select *
+          from leads
+          where tenant_id = $1
+            and assigned_agent_id is not null
+            and ($2::text is null or status = $2)
+            and ($3::text is null or source = $3)
+            and ($4::text is null or assigned_agent_id = $4)
+            and ($5::boolean = false or assigned_agent_id is null)
+            and ($6::text is null or priority = $6)
+            and ($7::timestamptz is null or next_follow_up_at <= $7)
+        ),
+        first_response as (
+          select
+            lead_id,
+            min(created_at) as first_response_at
+          from lead_status_events
+          where tenant_id = $1
+            and previous_status = 'new'
+            and status in ('contacted', 'qualified', 'lost', 'won')
+          group by lead_id
+        )
+        select
+          lead.assigned_agent_id as agent_id,
+          count(*) as total,
+          count(*) filter (where lead.status in ('new', 'contacted', 'qualified')) as open,
+          count(*) filter (
+            where lead.status = 'new'
+              and lead.created_at <= now() - interval '4 hours'
+          ) as response_breached,
+          count(*) filter (
+            where lead.status in ('new', 'contacted', 'qualified')
+              and lead.next_follow_up_at is not null
+              and lead.next_follow_up_at < now()
+          ) as overdue_follow_ups,
+          avg(extract(epoch from (response.first_response_at - lead.created_at)) / 3600)
+            filter (where response.first_response_at is not null) as average_first_response_hours
+        from filtered lead
+        left join first_response response on response.lead_id = lead.id
+        group by lead.assigned_agent_id
+        order by response_breached desc, overdue_follow_ups desc, open desc, agent_id asc
+        limit $8
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
+        request.limit ?? 20
+      ]
+    );
+
+    return result.rows.map((row) => this.toSlaAgentPerformance(row));
+  }
+
   async getQualitySignals(
     tenantId: string,
     request: ListLeadsRequest = {}
@@ -953,6 +1027,25 @@ export class PgLeadRepository implements LeadRepository {
       ageHours: Number(Number(row.age_hours).toFixed(2)),
       followUpOverdueHours,
       recommendation: this.slaRecommendation(breachTypes)
+    };
+  }
+
+  private toSlaAgentPerformance(row: LeadSlaAgentPerformanceRow): LeadSlaAgentPerformanceItem {
+    const total = Number(row.total);
+    const responseBreached = Number(row.response_breached);
+    const overdueFollowUps = Number(row.overdue_follow_ups);
+    const averageFirstResponseHours =
+      row.average_first_response_hours === null ? undefined : Number(row.average_first_response_hours);
+
+    return {
+      agentId: row.agent_id,
+      total,
+      open: Number(row.open),
+      responseBreached,
+      overdueFollowUps,
+      averageFirstResponseHours:
+        averageFirstResponseHours === undefined ? undefined : Number(averageFirstResponseHours.toFixed(2)),
+      breachRate: total === 0 ? 0 : Number((((responseBreached + overdueFollowUps) / total) * 100).toFixed(2))
     };
   }
 

@@ -13,6 +13,7 @@ import type {
   LeadQualityActionsResponse,
   LeadQualitySignalsResponse,
   LeadQueueSummaryResponse,
+  LeadSlaAgentPerformanceResponse,
   LeadSlaBreachesResponse,
   LeadSlaResponse,
   LeadSnapshot,
@@ -134,6 +135,23 @@ export class LeadService {
   ): Promise<LeadSlaBreachesResponse> {
     const scopedRequest = this.scopeLeadQueueRequest(request, user);
     const items = await this.leads.listSlaBreaches(tenantId, scopedRequest);
+
+    return {
+      items,
+      total: items.length,
+      targetFirstResponseHours: 4,
+      filters: scopedRequest,
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async getSlaAgentPerformance(
+    tenantId: string,
+    request: ListLeadsRequest,
+    user: RequestUser
+  ): Promise<LeadSlaAgentPerformanceResponse> {
+    const scopedRequest = this.scopeLeadQueueRequest(request, user);
+    const items = await this.leads.getSlaAgentPerformance(tenantId, scopedRequest);
 
     return {
       items,

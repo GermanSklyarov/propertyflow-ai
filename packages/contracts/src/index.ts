@@ -1365,6 +1365,24 @@ export interface LeadSlaBreachesResponse {
   generatedAt: string;
 }
 
+export interface LeadSlaAgentPerformanceItem {
+  agentId: string;
+  total: number;
+  open: number;
+  responseBreached: number;
+  overdueFollowUps: number;
+  averageFirstResponseHours?: number;
+  breachRate: number;
+}
+
+export interface LeadSlaAgentPerformanceResponse {
+  items: LeadSlaAgentPerformanceItem[];
+  total: number;
+  targetFirstResponseHours: number;
+  filters: ListLeadsRequest;
+  generatedAt: string;
+}
+
 export type LeadQualityIssueType =
   | "missing-contact-info"
   | "missing-property"
