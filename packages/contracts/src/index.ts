@@ -1568,6 +1568,10 @@ export interface TenantDashboardMetrics {
   leadSlaBreachedBySource: CountByBucket[];
   leadSlaBreachRate: number;
   leadSlaHealthScore: number;
+  leadQualityIssueCount: number;
+  leadQualityAffectedLeads: number;
+  leadQualityHealthScore: number;
+  leadQualityByIssue: CountByBucket[];
   wonLeads: number;
   lostLeads: number;
   conversionRate: number;

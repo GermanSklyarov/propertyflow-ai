@@ -21,6 +21,9 @@ export interface TenantAnalyticsRawMetrics {
   leadSlaOverdueFollowUps: number;
   leadSlaAverageFirstResponseHours?: number;
   leadSlaBreachedBySource: CountByBucket[];
+  leadQualityIssueCount: number;
+  leadQualityAffectedLeads: number;
+  leadQualityByIssue: CountByBucket[];
   wonLeads: number;
   lostLeads: number;
   totalSearches: number;

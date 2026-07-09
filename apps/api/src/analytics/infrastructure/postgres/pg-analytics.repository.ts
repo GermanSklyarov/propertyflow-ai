@@ -52,6 +52,15 @@ interface LeadSlaMetricsRow {
   average_first_response_hours: string | null;
 }
 
+interface LeadQualityMetricsRow {
+  affected_leads: string;
+  missing_contact_info: string;
+  missing_property: string;
+  unassigned: string;
+  missing_follow_up: string;
+  stale_new_leads: string;
+}
+
 @Injectable()
 export class PgAnalyticsRepository implements AnalyticsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
@@ -65,6 +74,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       unassignedLeads,
       leadSlaMetrics,
       leadSlaBreachedBySource,
+      leadQualityMetrics,
       wonLeads,
       lostLeads,
       totalSearches,
@@ -118,6 +128,7 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
         `,
         [tenantId]
       ),
+      this.leadQualityMetrics(tenantId),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'won'", [tenantId]),
       this.count("select count(*) from leads where tenant_id = $1 and status = 'lost'", [tenantId]),
       this.count("select count(*) from search_events where tenant_id = $1", [tenantId]),
@@ -313,6 +324,9 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       leadSlaOverdueFollowUps: leadSlaMetrics.overdueFollowUps,
       leadSlaAverageFirstResponseHours: leadSlaMetrics.averageFirstResponseHours,
       leadSlaBreachedBySource,
+      leadQualityIssueCount: leadQualityMetrics.issueCount,
+      leadQualityAffectedLeads: leadQualityMetrics.affectedLeads,
+      leadQualityByIssue: leadQualityMetrics.byIssue,
       wonLeads,
       lostLeads,
       totalSearches,
@@ -708,6 +722,55 @@ export class PgAnalyticsRepository implements AnalyticsRepository {
       overdueFollowUps: Number(row.overdue_follow_ups),
       averageFirstResponseHours:
         averageFirstResponseHours === undefined ? undefined : Number(averageFirstResponseHours.toFixed(2))
+    };
+  }
+
+  private async leadQualityMetrics(tenantId: string): Promise<{
+    issueCount: number;
+    affectedLeads: number;
+    byIssue: CountByBucket[];
+  }> {
+    const result = await this.pool.query<LeadQualityMetricsRow>(
+      `
+        select
+          count(*) filter (
+            where coalesce(nullif(contact_email, ''), nullif(contact_phone, '')) is null
+              or property_id is null
+              or assigned_agent_id is null
+              or status in ('new', 'contacted', 'qualified') and next_follow_up_at is null
+              or status = 'new' and created_at < now() - interval '48 hours'
+          ) as affected_leads,
+          count(*) filter (
+            where coalesce(nullif(contact_email, ''), nullif(contact_phone, '')) is null
+          ) as missing_contact_info,
+          count(*) filter (where property_id is null) as missing_property,
+          count(*) filter (where assigned_agent_id is null) as unassigned,
+          count(*) filter (
+            where status in ('new', 'contacted', 'qualified')
+              and next_follow_up_at is null
+          ) as missing_follow_up,
+          count(*) filter (
+            where status = 'new'
+              and created_at < now() - interval '48 hours'
+          ) as stale_new_leads
+        from leads
+        where tenant_id = $1
+      `,
+      [tenantId]
+    );
+    const row = result.rows[0];
+    const byIssue: CountByBucket[] = [
+      { bucket: "missing-contact-info", count: Number(row.missing_contact_info) },
+      { bucket: "missing-property", count: Number(row.missing_property) },
+      { bucket: "unassigned", count: Number(row.unassigned) },
+      { bucket: "missing-follow-up", count: Number(row.missing_follow_up) },
+      { bucket: "stale-new-lead", count: Number(row.stale_new_leads) }
+    ].filter((item) => item.count > 0);
+
+    return {
+      affectedLeads: Number(row.affected_leads),
+      issueCount: byIssue.reduce((sum, item) => sum + item.count, 0),
+      byIssue
     };
   }
 
