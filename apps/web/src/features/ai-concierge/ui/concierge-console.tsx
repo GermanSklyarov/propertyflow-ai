@@ -3,7 +3,7 @@
 import { ArrowRight, Loader2, MapPinned, Sparkles } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import type { ConciergeResponse } from "@propertyflow/contracts";
-import { askConcierge } from "../lib/propertyflow-api";
+import { askConcierge } from "../../../shared/api/propertyflow-client";
 
 const starterPrompts = [
   "Moving to Pattaya with family, remote work, quiet area, budget 3.5M THB",

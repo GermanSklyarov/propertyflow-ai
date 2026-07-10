@@ -1,3 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-propertyflow-bg: #f5f7f3;
+  --color-propertyflow-ink: #16211f;
+  --color-propertyflow-teal: #0f766e;
+  --color-propertyflow-coral: #d95c3f;
+  --color-propertyflow-gold: #c59a35;
+}
+
 :root {
   color-scheme: light;
   --bg: #f5f7f3;

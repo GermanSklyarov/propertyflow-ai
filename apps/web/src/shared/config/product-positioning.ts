@@ -3,4 +3,3 @@ export const productPositioning = {
   promise:
     "Describe the lifestyle, investment goal, or relocation plan. PropertyFlow turns it into search, advice, comparison, and next actions."
 };
-

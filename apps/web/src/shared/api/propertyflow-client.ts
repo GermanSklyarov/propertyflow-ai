@@ -1,8 +1,10 @@
 import type { ConciergeRequest, ConciergeResponse, PropertySearchResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { demoConciergeResponse, demoProperties } from "./demo-data";
+import { demoConciergeResponse } from "../../entities/concierge/model/demo-concierge-response";
+import { demoProperties } from "../../entities/property/model/demo-properties";
 
-const apiBaseUrl = process.env.PROPERTYFLOW_API_URL ?? process.env.NEXT_PUBLIC_PROPERTYFLOW_API_URL ?? "http://127.0.0.1:3001";
+const apiBaseUrl =
+  process.env.PROPERTYFLOW_API_URL ?? process.env.NEXT_PUBLIC_PROPERTYFLOW_API_URL ?? "http://127.0.0.1:3001";
 
 const demoHeaders = {
   "x-tenant-id": process.env.PROPERTYFLOW_TENANT_ID ?? "demo-agency",
