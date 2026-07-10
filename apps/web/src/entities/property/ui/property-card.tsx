@@ -2,25 +2,22 @@
 
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bath, BedDouble, Check, MapPin, Plus, Ruler, Waves } from "lucide-react";
+import { Bath, BedDouble, Check, MapPin, Plus, Ruler, Sparkles, Waves } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
-import { formatCompactThb } from "@shared/lib/format-money";
 import { useHasMounted } from "@shared/lib/use-has-mounted";
 import { propertyDetailQueryOptions } from "../api/property-queries";
 import { propertyImage } from "../lib/property-image";
+import { buildPropertyCardMeta } from "../model/property-card-meta";
 
 export function PropertyCard({ property, priority }: { property: PropertySnapshot; priority?: boolean }) {
   const hasMounted = useHasMounted();
   const queryClient = useQueryClient();
   const imageUrl = propertyImage(property, priority);
+  const meta = buildPropertyCardMeta(property);
   const isPersistedSelectedForCompare = useCompareSelectionStore((state) => state.isSelected(property.id));
   const toggleProperty = useCompareSelectionStore((state) => state.toggleProperty);
   const isSelectedForCompare = hasMounted ? isPersistedSelectedForCompare : false;
-  const yieldEstimate =
-    property.monthlyRentEstimate && property.price.amount > 0
-      ? ((property.monthlyRentEstimate.amount * 12) / property.price.amount) * 100
-      : undefined;
 
   function prefetchPropertyDetails() {
     void queryClient.prefetchQuery(propertyDetailQueryOptions(property.id));
@@ -42,7 +39,7 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
             loading={priority ? "eager" : "lazy"}
           />
           <span className="absolute left-3 top-3 bg-white/90 px-2.5 py-1.5 text-[0.76rem] font-black uppercase text-[var(--teal-dark)]">
-            {listingLabel(property.listingType)} · {property.market}
+            {meta.listingBadge}
           </span>
         </div>
         <div className="p-4 pb-3">
@@ -56,11 +53,15 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
             </div>
             <strong
               className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-[1.02rem] text-[var(--coral)] min-[761px]:max-w-[175px] min-[761px]:text-right"
-              title={primaryPrice(property)}
+              title={meta.priceLabel}
             >
-              {primaryPrice(property)}
+              {meta.priceLabel}
             </strong>
           </div>
+          <p className="mt-3 inline-flex min-h-[32px] max-w-full items-center gap-1.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-2.5 py-1.5 text-[0.78rem] font-black text-[var(--teal-dark)]">
+            <Sparkles size={14} />
+            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{meta.matchSignal}</span>
+          </p>
           <p className="my-3.5 line-clamp-3 min-h-[62px] overflow-hidden text-[0.92rem] leading-normal text-[#52615d]">
             {property.description}
           </p>
@@ -84,10 +85,10 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
           </div>
           <div className="mt-2.5 grid grid-cols-2 gap-1.5">
             <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[rgba(197,154,53,0.3)] bg-[rgba(197,154,53,0.12)] text-center text-[0.78rem] font-extrabold text-[#364642]">
-              {yieldEstimate ? `${yieldEstimate.toFixed(1)}% gross yield` : "Yield pending"}
+              {meta.yieldLabel}
             </span>
             <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-center text-[0.78rem] font-extrabold text-[#364642]">
-              {property.amenities.slice(0, 2).join(" / ")}
+              {meta.amenityLabel}
             </span>
           </div>
         </div>
@@ -110,24 +111,4 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
       </div>
     </article>
   );
-}
-
-function primaryPrice(property: PropertySnapshot) {
-  if (property.listingType === "rent" && property.rentalPriceMonthly) {
-    return `${formatCompactThb(property.rentalPriceMonthly.amount)}/mo`;
-  }
-
-  if (property.listingType === "sale_or_rent" && property.rentalPriceMonthly) {
-    return `${formatCompactThb(property.price.amount)} · ${formatCompactThb(property.rentalPriceMonthly.amount)}/mo`;
-  }
-
-  return formatCompactThb(property.price.amount);
-}
-
-function listingLabel(listingType: PropertySnapshot["listingType"]) {
-  if (listingType === "sale_or_rent") {
-    return "sale/rent";
-  }
-
-  return listingType;
 }
