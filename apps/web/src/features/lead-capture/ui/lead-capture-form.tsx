@@ -1,13 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
-import type { LeadSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { createWebsiteLead } from "@shared/api/propertyflow-client";
-import { leadCaptureSchema, type LeadCaptureFormValues, type LeadIntent } from "@features/lead-capture/model/lead-capture-schema";
+import { createWebsiteLeadMutationOptions } from "@entities/lead/api/lead-mutations";
+import {
+  leadCaptureSchema,
+  type LeadCaptureFormValues,
+  type LeadIntent
+} from "@features/lead-capture/model/lead-capture-schema";
 
 const leadIntents: Array<{ value: LeadIntent; label: string }> = [
   { value: "viewing", label: "Viewing" },
@@ -16,8 +20,8 @@ const leadIntents: Array<{ value: LeadIntent; label: string }> = [
 ];
 
 export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
-  const [lead, setLead] = useState<LeadSnapshot | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const leadMutation = useMutation(createWebsiteLeadMutationOptions());
+  const lead = leadMutation.data ?? null;
   const fallbackIntent: LeadIntent = property.listingType === "rent" ? "rental" : "viewing";
   const {
     formState: { errors },
@@ -55,19 +59,15 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
   }
 
   function submit(values: LeadCaptureFormValues) {
-    startTransition(async () => {
-      const nextLead = await createWebsiteLead({
-        propertyId: property.id,
-        contactName: values.contactName,
-        contactEmail: values.contactEmail || undefined,
-        contactPhone: values.contactPhone || undefined,
-        preferredLocale: "en",
-        attributionSearchSource: "ai",
-        attributionSearchQuery: `${values.intent}:${property.title}`,
-        message: values.message || defaultMessage(property, values.intent)
-      });
-
-      setLead(nextLead);
+    leadMutation.mutate({
+      propertyId: property.id,
+      contactName: values.contactName,
+      contactEmail: values.contactEmail || undefined,
+      contactPhone: values.contactPhone || undefined,
+      preferredLocale: "en",
+      attributionSearchSource: "ai",
+      attributionSearchQuery: `${values.intent}:${property.title}`,
+      message: values.message || defaultMessage(property, values.intent)
     });
   }
 
@@ -166,10 +166,10 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
 
         <button
           className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2.5 bg-[var(--teal)] px-4 py-3.5 font-black text-white transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--teal-dark)] hover:shadow-[0_14px_28px_rgba(37,50,46,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:bg-[var(--teal)] disabled:hover:shadow-none"
-          disabled={isPending}
+          disabled={leadMutation.isPending}
           type="submit"
         >
-          {isPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+          {leadMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
           <span>{actionLabel}</span>
         </button>
       </form>
