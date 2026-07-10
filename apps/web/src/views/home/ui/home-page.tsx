@@ -12,7 +12,7 @@ export async function HomePage() {
       <HomeHero properties={properties} />
       <MarketStrip />
       <PropertyFeed properties={properties} />
-      <CompareBand />
+      <CompareBand properties={properties} />
     </main>
   );
 }
