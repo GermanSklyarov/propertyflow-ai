@@ -1,8 +1,8 @@
 import { ArrowLeft, Bath, BedDouble, Building2, MapPin, Ruler, ShieldCheck, Sparkles, Waves, Wifi } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { propertyImage } from "../../../entities/property/lib/property-image";
-import { LeadCaptureForm } from "../../../features/lead-capture/ui/lead-capture-form";
-import { formatCompactThb } from "../../../shared/lib/format-money";
+import { propertyImage } from "@entities/property/lib/property-image";
+import { LeadCaptureForm } from "@features/lead-capture/ui/lead-capture-form";
+import { formatCompactThb } from "@shared/lib/format-money";
 
 export function PropertyDetailsPage({ property }: { property: PropertySnapshot }) {
   const yieldEstimate = grossYield(property);
