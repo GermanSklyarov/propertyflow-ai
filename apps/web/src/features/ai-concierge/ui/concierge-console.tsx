@@ -1,9 +1,15 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, Loader2, MapPinned, Sparkles } from "lucide-react";
-import { useMemo, useState, useTransition } from "react";
-import type { ConciergeResponse } from "@propertyflow/contracts";
-import { askConcierge } from "../../../shared/api/propertyflow-client";
+import { useMemo } from "react";
+import { useForm } from "react-hook-form";
+import { askConciergeMutationOptions } from "../../../entities/concierge/api/concierge-mutations";
+import {
+  conciergeRequestSchema,
+  type ConciergeRequestFormValues
+} from "../model/concierge-request-schema";
 
 const starterPrompts = [
   "Moving to Pattaya with family, remote work, quiet area, budget 3.5M THB",
@@ -13,9 +19,19 @@ const starterPrompts = [
 ];
 
 export function ConciergeConsole() {
-  const [message, setMessage] = useState(starterPrompts[0]);
-  const [response, setResponse] = useState<ConciergeResponse | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    setValue
+  } = useForm<ConciergeRequestFormValues>({
+    resolver: zodResolver(conciergeRequestSchema),
+    defaultValues: {
+      message: starterPrompts[0]
+    }
+  });
+  const conciergeMutation = useMutation(askConciergeMutationOptions());
+  const response = conciergeMutation.data ?? null;
 
   const primaryArea = response?.areaRecommendation;
   const recommendationTone = useMemo(() => {
@@ -26,21 +42,17 @@ export function ConciergeConsole() {
     return response.stage === "recommendation" ? "Recommendation" : "Intake";
   }, [response]);
 
-  function submit() {
-    startTransition(async () => {
-      const nextResponse = await askConcierge({
-        locale: "en",
-        message,
-        profile: {
-          market: "pattaya",
-          budgetThb: 3500000,
-          remoteWork: true,
-          purpose: "living",
-          prefersQuiet: true
-        }
-      });
-
-      setResponse(nextResponse);
+  function submit(values: ConciergeRequestFormValues) {
+    conciergeMutation.mutate({
+      locale: "en",
+      message: values.message,
+      profile: {
+        market: "pattaya",
+        budgetThb: 3500000,
+        remoteWork: true,
+        purpose: "living",
+        prefersQuiet: true
+      }
     });
   }
 
@@ -55,39 +67,45 @@ export function ConciergeConsole() {
         <span className="ml-auto font-bold text-[var(--muted)]">Concierge AI</span>
       </div>
 
-      <label className="mt-[22px] grid gap-2.5">
-        <span className="text-[0.86rem] font-bold text-[var(--muted)]">Describe the move, budget, or investment target</span>
-        <textarea
-          className="min-h-[126px] w-full resize-y border border-[var(--line)] bg-[var(--panel-strong)] p-4 leading-normal text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          rows={4}
-        />
-      </label>
+      <form onSubmit={handleSubmit(submit)}>
+        <label className="mt-[22px] grid gap-2.5">
+          <span className="text-[0.86rem] font-bold text-[var(--muted)]">
+            Describe the move, budget, or investment target
+          </span>
+          <textarea
+            className="min-h-[126px] w-full resize-y border border-[var(--line)] bg-[var(--panel-strong)] p-4 leading-normal text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
+            rows={4}
+            {...register("message")}
+          />
+        </label>
 
-      <div className="mt-4 grid gap-4">
-        <div className="flex flex-wrap gap-2">
-          {starterPrompts.map((prompt) => (
-            <button
-              className="cursor-pointer border border-[var(--line)] bg-white/70 px-2.5 py-2 text-[0.78rem] font-extrabold text-[var(--teal-dark)]"
-              key={prompt}
-              type="button"
-              onClick={() => setMessage(prompt)}
-            >
-              {prompt}
-            </button>
-          ))}
+        {errors.message ? (
+          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.message.message}</p>
+        ) : null}
+
+        <div className="mt-4 grid gap-4">
+          <div className="flex flex-wrap gap-2">
+            {starterPrompts.map((prompt) => (
+              <button
+                className="cursor-pointer border border-[var(--line)] bg-white/70 px-2.5 py-2 text-[0.78rem] font-extrabold text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)]"
+                key={prompt}
+                type="button"
+                onClick={() => setValue("message", prompt, { shouldDirty: true, shouldValidate: true })}
+              >
+                {prompt}
+              </button>
+            ))}
+          </div>
+          <button
+            className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 border-0 bg-[var(--teal)] px-4 py-3.5 font-black text-white transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--teal-dark)] hover:shadow-[0_14px_28px_rgba(37,50,46,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-wait disabled:opacity-75 disabled:hover:translate-y-0 disabled:hover:bg-[var(--teal)] disabled:hover:shadow-none"
+            type="submit"
+            disabled={conciergeMutation.isPending}
+          >
+            {conciergeMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
+            <span>Advise</span>
+          </button>
         </div>
-        <button
-          className="inline-flex w-full cursor-pointer items-center justify-center gap-2.5 border-0 bg-[var(--teal)] px-4 py-3.5 font-black text-white disabled:cursor-wait disabled:opacity-75"
-          type="button"
-          onClick={submit}
-          disabled={isPending}
-        >
-          {isPending ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
-          <span>Advise</span>
-        </button>
-      </div>
+      </form>
 
       <div className="mt-[22px] grid gap-3.5">
         <article className="grid grid-cols-[42px_1fr] gap-3.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] p-4">
