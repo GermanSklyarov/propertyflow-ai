@@ -1,7 +1,7 @@
 "use client";
 
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { useCompareSelectionStore } from "../../../features/property-compare/model/compare-selection-store";
+import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
 
 export function CompareBand({ properties }: { properties: PropertySnapshot[] }) {
   const selectedPropertyIds = useCompareSelectionStore((state) => state.selectedPropertyIds);
@@ -38,7 +38,7 @@ export function CompareBand({ properties }: { properties: PropertySnapshot[] }) 
         <span className="border-l-4 border-[var(--blue)] bg-white px-4 py-3.5 font-black">Family fit</span>
         {selectedProperties.length ? (
           <button
-            className="border border-[var(--line)] bg-white px-4 py-3 text-left text-[0.82rem] font-black text-[var(--teal-dark)]"
+            className="cursor-pointer border border-[var(--line)] bg-white px-4 py-3 text-left text-[0.82rem] font-black text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)]"
             onClick={clearSelection}
             type="button"
           >
