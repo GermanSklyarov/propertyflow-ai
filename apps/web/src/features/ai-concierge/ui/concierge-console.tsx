@@ -7,6 +7,7 @@ import { askConcierge } from "../../../shared/api/propertyflow-client";
 
 const starterPrompts = [
   "Moving to Pattaya with family, remote work, quiet area, budget 3.5M THB",
+  "Need to rent in Pattaya for 6 months, beach access, good internet, under 30k THB/month",
   "Investment condo in Pattaya above 6% yield near the beach",
   "Winter home close to Terminal 21, walkable cafes, reliable internet"
 ];

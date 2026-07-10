@@ -25,7 +25,7 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
               {property.address ?? property.market}
             </p>
           </div>
-          <strong>{primaryPrice(property)}</strong>
+          <strong title={primaryPrice(property)}>{primaryPrice(property)}</strong>
         </div>
         <p className="property-description">{property.description}</p>
         <div className="property-facts">

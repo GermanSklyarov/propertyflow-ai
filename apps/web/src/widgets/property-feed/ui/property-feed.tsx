@@ -1,6 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { PropertyCard } from "../../../entities/property/ui/property-card";
+import { ListingIntentFilter } from "../../../features/listing-intent-filter/ui/listing-intent-filter";
 
 export function PropertyFeed({ properties }: { properties: PropertySnapshot[] }) {
   const featured = properties[0];
@@ -17,11 +17,7 @@ export function PropertyFeed({ properties }: { properties: PropertySnapshot[] })
         </a>
       </div>
 
-      <div className="property-grid">
-        {properties.map((property, index) => (
-          <PropertyCard key={property.id} property={property} priority={index === 0} />
-        ))}
-      </div>
+      <ListingIntentFilter properties={properties} />
     </section>
   );
 }
