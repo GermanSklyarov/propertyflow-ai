@@ -30,6 +30,23 @@ export async function listFeaturedProperties(): Promise<PropertySnapshot[]> {
   }
 }
 
+export async function getPropertyById(propertyId: string): Promise<PropertySnapshot | undefined> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}`, {
+      headers: demoHeaders,
+      next: { revalidate: 30 }
+    });
+
+    if (!response.ok) {
+      return fallbackProperty(propertyId);
+    }
+
+    return normalizeProperty((await response.json()) as PropertySnapshot);
+  } catch {
+    return fallbackProperty(propertyId);
+  }
+}
+
 export async function askConcierge(request: ConciergeRequest): Promise<ConciergeResponse> {
   try {
     const response = await fetch(`${apiBaseUrl}/concierge/advise`, {
@@ -55,5 +72,27 @@ function normalizeProperty(property: PropertySnapshot): PropertySnapshot {
   return {
     ...property,
     listingType: property.listingType ?? "sale"
+  };
+}
+
+function fallbackProperty(propertyId: string): PropertySnapshot | undefined {
+  const exactMatch = demoProperties.find((property) => property.id === propertyId);
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  const template = demoProperties[0];
+
+  if (!template) {
+    return undefined;
+  }
+
+  return {
+    ...template,
+    id: propertyId,
+    title: "Property brief preview",
+    description:
+      "The live API is not available for this listing right now, so PropertyFlow is showing a safe demo brief with the same decision layout."
   };
 }

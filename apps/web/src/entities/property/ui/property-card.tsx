@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Bath, BedDouble, MapPin, Ruler, Waves } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatCompactThb } from "../../../shared/lib/format-money";
@@ -11,47 +12,63 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
       : undefined;
 
   return (
-    <article className="property-card">
-      <div className="property-image-wrap">
-        <img src={imageUrl} alt={property.title} loading={priority ? "eager" : "lazy"} />
-        <span className="market-pill">{listingLabel(property.listingType)} · {property.market}</span>
+    <Link
+      className="block overflow-hidden border border-[var(--line)] bg-[var(--panel-strong)] shadow-[0_16px_46px_rgba(37,50,46,0.1)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.36)] hover:shadow-[0_20px_56px_rgba(37,50,46,0.14)]"
+      href={`/properties/${property.id}`}
+    >
+      <div className="relative aspect-[1.35] bg-[#dbe3dc]">
+        <img className="block size-full object-cover" src={imageUrl} alt={property.title} loading={priority ? "eager" : "lazy"} />
+        <span className="absolute left-3 top-3 bg-white/90 px-2.5 py-1.5 text-[0.76rem] font-black uppercase text-[var(--teal-dark)]">
+          {listingLabel(property.listingType)} · {property.market}
+        </span>
       </div>
-      <div className="property-body">
-        <div className="property-title-row">
+      <div className="p-4">
+        <div className="grid gap-3 min-[761px]:flex min-[761px]:items-start min-[761px]:justify-between min-[761px]:gap-3.5">
           <div>
-            <h3>{property.title}</h3>
-            <p>
+            <h3 className="m-0 text-[1.08rem]">{property.title}</h3>
+            <p className="mt-1.5 flex items-center gap-1.5 text-[0.84rem] text-[var(--muted)]">
               <MapPin size={14} />
               {property.address ?? property.market}
             </p>
           </div>
-          <strong title={primaryPrice(property)}>{primaryPrice(property)}</strong>
+          <strong
+            className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-[1.02rem] text-[var(--coral)] min-[761px]:max-w-[175px] min-[761px]:text-right"
+            title={primaryPrice(property)}
+          >
+            {primaryPrice(property)}
+          </strong>
         </div>
-        <p className="property-description">{property.description}</p>
-        <div className="property-facts">
-          <span>
+        <p className="my-3.5 line-clamp-3 min-h-[62px] overflow-hidden text-[0.92rem] leading-normal text-[#52615d]">
+          {property.description}
+        </p>
+        <div className="grid grid-cols-2 gap-1.5 min-[761px]:grid-cols-4">
+          <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
             <BedDouble size={15} />
             {property.bedrooms}
           </span>
-          <span>
+          <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
             <Bath size={15} />
             {property.bathrooms}
           </span>
-          <span>
+          <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
             <Ruler size={15} />
             {property.areaSqm} sqm
           </span>
-          <span>
+          <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
             <Waves size={15} />
             {property.beachDistanceMeters ? `${property.beachDistanceMeters}m` : "nearby"}
           </span>
         </div>
-        <div className="signal-row">
-          <span>{yieldEstimate ? `${yieldEstimate.toFixed(1)}% gross yield` : "Yield pending"}</span>
-          <span>{property.amenities.slice(0, 2).join(" / ")}</span>
+        <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+          <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[rgba(197,154,53,0.3)] bg-[rgba(197,154,53,0.12)] text-center text-[0.78rem] font-extrabold text-[#364642]">
+            {yieldEstimate ? `${yieldEstimate.toFixed(1)}% gross yield` : "Yield pending"}
+          </span>
+          <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-center text-[0.78rem] font-extrabold text-[#364642]">
+            {property.amenities.slice(0, 2).join(" / ")}
+          </span>
         </div>
       </div>
-    </article>
+    </Link>
   );
 }
 

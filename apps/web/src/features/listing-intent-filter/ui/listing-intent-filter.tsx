@@ -54,31 +54,44 @@ export function ListingIntentFilter({ properties }: { properties: PropertySnapsh
   }, [properties]);
 
   return (
-    <div className="listing-intent-shell">
-      <div className="listing-intent-bar" aria-label="Listing intent">
+    <div className="grid gap-4">
+      <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-2 min-[1081px]:grid-cols-4" aria-label="Listing intent">
         {intentOptions.map((option) => {
           const Icon = option.icon;
           const count = countByIntent(properties, option.value);
+          const isActive = intent === option.value;
 
           return (
             <button
-              aria-pressed={intent === option.value}
-              className="intent-button"
+              aria-pressed={isActive}
+              className={`grid min-h-[46px] cursor-pointer grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 border px-3 py-2.5 text-left text-[var(--teal-dark)] ${
+                isActive
+                  ? "border-[rgba(15,118,110,0.55)] bg-[var(--teal)] text-white"
+                  : "border-[var(--line)] bg-white/70"
+              }`}
               key={option.value}
               onClick={() => setIntent(option.value)}
               type="button"
             >
               <Icon size={16} />
-              <span>{option.label}</span>
-              <strong>{count}</strong>
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[0.86rem] font-black">
+                {option.label}
+              </span>
+              <strong
+                className={`grid h-[26px] min-w-[26px] place-items-center text-[0.78rem] ${
+                  isActive ? "bg-white/20 text-white" : "bg-[#edf8f4] text-[var(--teal-dark)]"
+                }`}
+              >
+                {count}
+              </strong>
             </button>
           );
         })}
       </div>
 
-      <div className="intent-insight">
+      <div className="grid items-start gap-3.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-3.5 py-3 text-[0.9rem] leading-normal text-[#42524e] min-[761px]:flex min-[761px]:items-center min-[761px]:justify-between">
         <span>{intentCopy(intent)}</span>
-        <strong>
+        <strong className="text-[var(--teal-dark)] min-[761px]:whitespace-nowrap">
           {rentalBudget
             ? `${formatCompactThb(rentalBudget.min)}-${formatCompactThb(rentalBudget.max)}/mo rental band`
             : "Rental prices appear when agents publish rent listings"}
@@ -86,15 +99,17 @@ export function ListingIntentFilter({ properties }: { properties: PropertySnapsh
       </div>
 
       {filteredProperties.length ? (
-        <div className="property-grid">
+        <div className="grid grid-cols-1 gap-[18px] min-[761px]:grid-cols-2 min-[1081px]:grid-cols-3">
           {filteredProperties.map((property, index) => (
             <PropertyCard key={property.id} property={property} priority={index === 0} />
           ))}
         </div>
       ) : (
-        <div className="empty-listing-state">
-          <h3>No matching listings yet</h3>
-          <p>Keep the intent filter active and ask Concierge to broaden the area, budget, or lease length.</p>
+        <div className="border border-[var(--line)] bg-[var(--panel-strong)] p-7">
+          <h3 className="mb-2 mt-0 text-xl">No matching listings yet</h3>
+          <p className="m-0 max-w-[620px] leading-normal text-[var(--muted)]">
+            Keep the intent filter active and ask Concierge to broaden the area, budget, or lease length.
+          </p>
         </div>
       )}
     </div>
