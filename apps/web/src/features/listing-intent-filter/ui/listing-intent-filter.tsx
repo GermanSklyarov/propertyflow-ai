@@ -5,8 +5,8 @@ import { Building2, Home, KeyRound, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { PropertyCard } from "@entities/property/ui/property-card";
+import type { ListingIntent } from "@features/listing-intent-filter/model/listing-intent";
 import { formatCompactThb } from "@shared/lib/format-money";
-import type { ListingIntent } from "../model/listing-intent";
 
 const intentOptions: Array<{ value: ListingIntent; label: string; icon: typeof Building2 }> = [
   { value: "all", label: "All", icon: Building2 },
