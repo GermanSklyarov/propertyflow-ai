@@ -4,7 +4,9 @@ export type PropertyPurpose = "living" | "investment" | "relocation" | "family";
 
 export type PropertyKind = "condo" | "villa" | "townhouse" | "land" | "commercial";
 
-export type PropertyStatus = "draft" | "available" | "reserved" | "sold" | "archived";
+export type PropertyListingType = "sale" | "rent" | "sale_or_rent";
+
+export type PropertyStatus = "draft" | "available" | "reserved" | "sold" | "rented" | "archived";
 
 export type ThailandMarket = "pattaya" | "phuket" | "bangkok" | "hua-hin" | "koh-samui";
 
@@ -24,9 +26,11 @@ export interface PropertySnapshot {
   title: string;
   description?: string;
   kind: PropertyKind;
+  listingType: PropertyListingType;
   market: ThailandMarket;
   status: PropertyStatus;
   price: Money;
+  rentalPriceMonthly?: Money;
   location: GeoPoint;
   address?: string;
   bedrooms: number;

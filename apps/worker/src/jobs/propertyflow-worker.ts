@@ -563,12 +563,28 @@ export class PropertyflowWorker {
       clauses.push(`market = ${addValue(filters.market)}`);
     }
 
+    if (filters.listingType) {
+      clauses.push(`listing_type in (${addValue(filters.listingType)}, 'sale_or_rent')`);
+    }
+
     if (filters.minPriceThb !== undefined) {
       clauses.push(`price_currency = 'THB' and price_amount >= ${addValue(filters.minPriceThb)}`);
     }
 
     if (filters.maxPriceThb !== undefined) {
       clauses.push(`price_currency = 'THB' and price_amount <= ${addValue(filters.maxPriceThb)}`);
+    }
+
+    if (filters.minMonthlyRentThb !== undefined) {
+      clauses.push(
+        `rental_price_monthly_currency = 'THB' and rental_price_monthly_amount >= ${addValue(filters.minMonthlyRentThb)}`
+      );
+    }
+
+    if (filters.maxMonthlyRentThb !== undefined) {
+      clauses.push(
+        `rental_price_monthly_currency = 'THB' and rental_price_monthly_amount <= ${addValue(filters.maxMonthlyRentThb)}`
+      );
     }
 
     if (filters.minBedrooms !== undefined) {

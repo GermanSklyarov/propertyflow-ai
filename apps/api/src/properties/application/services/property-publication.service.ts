@@ -21,9 +21,10 @@ export interface PropertyStatusChangeResult {
 
 const allowedStatusTransitions: Record<PropertySnapshot["status"], PropertySnapshot["status"][]> = {
   draft: ["available", "archived"],
-  available: ["reserved", "sold", "archived"],
-  reserved: ["available", "sold", "archived"],
+  available: ["reserved", "sold", "rented", "archived"],
+  reserved: ["available", "sold", "rented", "archived"],
   sold: ["archived"],
+  rented: ["available", "archived"],
   archived: ["draft"]
 };
 

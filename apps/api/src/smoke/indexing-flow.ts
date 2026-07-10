@@ -18,9 +18,14 @@ const propertyPayload = {
   title: `Smoke Beach Condo ${token}`,
   description: `Automated indexing smoke test listing with token ${token}, sea view, beach access, pool, gym, and fiber internet.`,
   kind: "condo",
+  listingType: "sale_or_rent",
   market: "pattaya",
   price: {
     amount: 3_200_000,
+    currency: "THB"
+  },
+  rentalPriceMonthly: {
+    amount: 23_000,
     currency: "THB"
   },
   location: {

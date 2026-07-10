@@ -6,7 +6,7 @@ import {
   type IndexedPropertySearchResponse,
   PROPERTY_SEARCH_INDEX
 } from "@propertyflow/contracts";
-import type { Currency, PropertyKind, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
+import type { Currency, PropertyKind, PropertyListingType, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
 import { PROPERTY_SEARCH_CLIENT } from "../../infrastructure/opensearch/property-search-client.js";
 
 interface PropertySearchDocument {
@@ -15,10 +15,13 @@ interface PropertySearchDocument {
   title: string;
   description?: string;
   kind: PropertyKind;
+  listingType: PropertyListingType;
   market: ThailandMarket;
   status: PropertyStatus;
   priceAmount: number;
   priceCurrency: Currency;
+  rentalPriceMonthlyAmount?: number;
+  rentalPriceMonthlyCurrency?: Currency;
   location: {
     lat: number;
     lon: number;
@@ -122,6 +125,10 @@ export class IndexedPropertySearchService {
       filters.push({ term: { market: request.market } });
     }
 
+    if (request.listingType) {
+      filters.push({ terms: { listingType: [request.listingType, "sale_or_rent"] } });
+    }
+
     if (request.minPriceThb !== undefined || request.maxPriceThb !== undefined) {
       filters.push({ term: { priceCurrency: "THB" } });
       filters.push({
@@ -129,6 +136,18 @@ export class IndexedPropertySearchService {
           priceAmount: {
             gte: request.minPriceThb,
             lte: request.maxPriceThb
+          }
+        }
+      });
+    }
+
+    if (request.minMonthlyRentThb !== undefined || request.maxMonthlyRentThb !== undefined) {
+      filters.push({ term: { rentalPriceMonthlyCurrency: "THB" } });
+      filters.push({
+        range: {
+          rentalPriceMonthlyAmount: {
+            gte: request.minMonthlyRentThb,
+            lte: request.maxMonthlyRentThb
           }
         }
       });
@@ -188,11 +207,19 @@ function toSearchHit(hit: OpenSearchHit): IndexedPropertySearchHit {
     description: source.description,
     market: source.market,
     kind: source.kind,
+    listingType: source.listingType ?? "sale",
     status: source.status,
     price: {
       amount: source.priceAmount,
       currency: source.priceCurrency
     },
+    rentalPriceMonthly:
+      source.rentalPriceMonthlyAmount && source.rentalPriceMonthlyCurrency
+        ? {
+            amount: source.rentalPriceMonthlyAmount,
+            currency: source.rentalPriceMonthlyCurrency
+          }
+        : undefined,
     location: {
       latitude: source.location.lat,
       longitude: source.location.lon

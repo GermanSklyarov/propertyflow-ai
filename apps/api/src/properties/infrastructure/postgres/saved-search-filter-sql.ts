@@ -5,12 +5,30 @@ export function savedSearchFiltersMatchPropertySql(searchAlias: string, property
       or ${propertyAlias}.market = ${searchAlias}.filters->>'market'
     )
     and (
+      not ${searchAlias}.filters ? 'listingType'
+      or ${propertyAlias}.listing_type in (${searchAlias}.filters->>'listingType', 'sale_or_rent')
+    )
+    and (
       not ${searchAlias}.filters ? 'minPriceThb'
       or (${propertyAlias}.price_currency = 'THB' and ${propertyAlias}.price_amount >= (${searchAlias}.filters->>'minPriceThb')::numeric)
     )
     and (
       not ${searchAlias}.filters ? 'maxPriceThb'
       or (${propertyAlias}.price_currency = 'THB' and ${propertyAlias}.price_amount <= (${searchAlias}.filters->>'maxPriceThb')::numeric)
+    )
+    and (
+      not ${searchAlias}.filters ? 'minMonthlyRentThb'
+      or (
+        ${propertyAlias}.rental_price_monthly_currency = 'THB'
+        and ${propertyAlias}.rental_price_monthly_amount >= (${searchAlias}.filters->>'minMonthlyRentThb')::numeric
+      )
+    )
+    and (
+      not ${searchAlias}.filters ? 'maxMonthlyRentThb'
+      or (
+        ${propertyAlias}.rental_price_monthly_currency = 'THB'
+        and ${propertyAlias}.rental_price_monthly_amount <= (${searchAlias}.filters->>'maxMonthlyRentThb')::numeric
+      )
     )
     and (
       not ${searchAlias}.filters ? 'minBedrooms'

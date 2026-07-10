@@ -14,6 +14,7 @@ export class CreatePropertyHandler implements ICommandHandler<CreatePropertyComm
       id: crypto.randomUUID(),
       tenantId: command.tenantId,
       status: "draft",
+      listingType: command.payload.listingType ?? "sale",
       amenities: command.payload.amenities ?? [],
       createdAt: now,
       updatedAt: now,

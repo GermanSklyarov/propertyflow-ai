@@ -115,11 +115,27 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         return false;
       }
 
+      if (
+        filters.listingType &&
+        property.listingType !== filters.listingType &&
+        property.listingType !== "sale_or_rent"
+      ) {
+        return false;
+      }
+
       if (filters.minPriceThb && property.price.amount < filters.minPriceThb) {
         return false;
       }
 
       if (filters.maxPriceThb && property.price.amount > filters.maxPriceThb) {
+        return false;
+      }
+
+      if (filters.minMonthlyRentThb && (!property.rentalPriceMonthly || property.rentalPriceMonthly.amount < filters.minMonthlyRentThb)) {
+        return false;
+      }
+
+      if (filters.maxMonthlyRentThb && (!property.rentalPriceMonthly || property.rentalPriceMonthly.amount > filters.maxMonthlyRentThb)) {
         return false;
       }
 

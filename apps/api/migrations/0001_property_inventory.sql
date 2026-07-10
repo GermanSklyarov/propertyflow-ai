@@ -87,10 +87,13 @@ create table if not exists properties (
   title text not null,
   description text,
   kind text not null,
+  listing_type text not null default 'sale',
   market text not null,
   status text not null,
   price_amount numeric(14, 2) not null,
   price_currency text not null,
+  rental_price_monthly_amount numeric(14, 2),
+  rental_price_monthly_currency text,
   location geography(point, 4326) not null,
   latitude double precision not null,
   longitude double precision not null,
@@ -109,10 +112,16 @@ create table if not exists properties (
   updated_at timestamptz not null
 );
 
+alter table properties add column if not exists listing_type text not null default 'sale';
+alter table properties add column if not exists rental_price_monthly_amount numeric(14, 2);
+alter table properties add column if not exists rental_price_monthly_currency text;
+
 create index if not exists idx_properties_tenant_status on properties (tenant_id, status);
+create index if not exists idx_properties_tenant_listing_type on properties (tenant_id, listing_type);
 create index if not exists idx_properties_tenant_market on properties (tenant_id, market);
 create index if not exists idx_properties_location on properties using gist (location);
 create index if not exists idx_properties_price_amount on properties (price_amount);
+create index if not exists idx_properties_rental_price_monthly_amount on properties (rental_price_monthly_amount);
 
 create table if not exists saved_property_searches (
   id uuid primary key,

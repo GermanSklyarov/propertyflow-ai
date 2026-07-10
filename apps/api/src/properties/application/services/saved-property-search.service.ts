@@ -369,6 +369,17 @@ export class SavedPropertySearchService {
       }
     }
 
+    if (filters.maxMonthlyRentThb && property.rentalPriceMonthly) {
+      const rentRatio = property.rentalPriceMonthly.amount / filters.maxMonthlyRentThb;
+      if (rentRatio <= 0.9) {
+        score += 10;
+        reasons.push("Monthly rent leaves room under the requested rental budget.");
+      } else {
+        score += 5;
+        reasons.push("Monthly rent fits the requested rental budget.");
+      }
+    }
+
     if (filters.minBedrooms && property.bedrooms >= filters.minBedrooms) {
       score += 7;
       reasons.push(`Has ${property.bedrooms} bedrooms for the requested layout.`);

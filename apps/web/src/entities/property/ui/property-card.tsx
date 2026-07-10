@@ -14,7 +14,7 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
     <article className="property-card">
       <div className="property-image-wrap">
         <img src={imageUrl} alt={property.title} loading={priority ? "eager" : "lazy"} />
-        <span className="market-pill">{property.market}</span>
+        <span className="market-pill">{listingLabel(property.listingType)} · {property.market}</span>
       </div>
       <div className="property-body">
         <div className="property-title-row">
@@ -25,7 +25,7 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
               {property.address ?? property.market}
             </p>
           </div>
-          <strong>{formatCompactThb(property.price.amount)}</strong>
+          <strong>{primaryPrice(property)}</strong>
         </div>
         <p className="property-description">{property.description}</p>
         <div className="property-facts">
@@ -53,4 +53,24 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
       </div>
     </article>
   );
+}
+
+function primaryPrice(property: PropertySnapshot) {
+  if (property.listingType === "rent" && property.rentalPriceMonthly) {
+    return `${formatCompactThb(property.rentalPriceMonthly.amount)}/mo`;
+  }
+
+  if (property.listingType === "sale_or_rent" && property.rentalPriceMonthly) {
+    return `${formatCompactThb(property.price.amount)} · ${formatCompactThb(property.rentalPriceMonthly.amount)}/mo`;
+  }
+
+  return formatCompactThb(property.price.amount);
+}
+
+function listingLabel(listingType: PropertySnapshot["listingType"]) {
+  if (listingType === "sale_or_rent") {
+    return "sale/rent";
+  }
+
+  return listingType;
 }

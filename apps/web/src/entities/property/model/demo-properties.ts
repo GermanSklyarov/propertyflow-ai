@@ -8,9 +8,11 @@ export const demoProperties: PropertySnapshot[] = [
     description:
       "A high-floor sea-view condo near Wongamat beach with fiber internet, quiet surroundings, and strong winter rental demand.",
     kind: "condo",
+    listingType: "sale_or_rent",
     market: "pattaya",
     status: "available",
     price: { amount: 3250000, currency: "THB" },
+    rentalPriceMonthly: { amount: 26000, currency: "THB" },
     location: { latitude: 12.9606, longitude: 100.8875 },
     address: "Wongamat, Pattaya",
     bedrooms: 1,
@@ -31,9 +33,11 @@ export const demoProperties: PropertySnapshot[] = [
     description:
       "Compact city condo within walking distance of Terminal 21, restaurants, shopping, and transport links.",
     kind: "condo",
+    listingType: "rent",
     market: "pattaya",
     status: "available",
     price: { amount: 2850000, currency: "THB" },
+    rentalPriceMonthly: { amount: 22000, currency: "THB" },
     location: { latitude: 12.9478, longitude: 100.8892 },
     address: "North Pattaya",
     bedrooms: 1,
@@ -54,6 +58,7 @@ export const demoProperties: PropertySnapshot[] = [
     description:
       "Two-bedroom condo with a calmer neighborhood profile, large pool, nearby cafes, and easy beach access.",
     kind: "condo",
+    listingType: "sale",
     market: "pattaya",
     status: "available",
     price: { amount: 4600000, currency: "THB" },

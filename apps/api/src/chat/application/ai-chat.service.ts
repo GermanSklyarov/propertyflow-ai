@@ -197,15 +197,22 @@ export class AiChatService {
       ? `${property.beachDistanceMeters}m from the beach`
       : "beach distance is not specified";
 
-    return `${property.title} is a ${property.bedrooms}-bedroom ${property.kind} in ${property.market}, ${beach}, priced at ${property.price.amount} ${property.price.currency}.`;
+    const rentalPrice = property.rentalPriceMonthly
+      ? ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`
+      : "";
+
+    return `${property.title} is a ${property.bedrooms}-bedroom ${property.kind} in ${property.market}, ${beach}, listed for ${property.listingType}, priced at ${property.price.amount} ${property.price.currency}.${rentalPrice}`;
   }
 
   private shortPropertyLine(property: PropertySnapshot): string {
+    const rentalAsk = property.rentalPriceMonthly
+      ? `rental ask ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo`
+      : undefined;
     const rent = property.monthlyRentEstimate
       ? `estimated rent ${property.monthlyRentEstimate.amount} ${property.monthlyRentEstimate.currency}/mo`
       : "rent estimate missing";
 
-    return `${property.title} (${property.market}, ${property.price.amount} ${property.price.currency}, ${rent}).`;
+    return `${property.title} (${property.market}, ${property.listingType}, ${property.price.amount} ${property.price.currency}, ${rentalAsk ?? rent}).`;
   }
 
   private normalize(message: string): string {

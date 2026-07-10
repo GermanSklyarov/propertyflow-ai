@@ -2,6 +2,7 @@ import type {
   GeoPoint,
   Money,
   PropertyKind,
+  PropertyListingType,
   PropertyPurpose,
   PropertySnapshot,
   ThailandMarket
@@ -180,8 +181,10 @@ export interface CreatePropertyRequest {
   title: string;
   description?: string;
   kind: PropertyKind;
+  listingType?: PropertyListingType;
   market: ThailandMarket;
   price: Money;
+  rentalPriceMonthly?: Money;
   location: GeoPoint;
   address?: string;
   bedrooms: number;
@@ -298,8 +301,11 @@ export interface PropertyListResponse {
 
 export interface PropertySearchRequest {
   market?: ThailandMarket;
+  listingType?: PropertyListingType;
   minPriceThb?: number;
   maxPriceThb?: number;
+  minMonthlyRentThb?: number;
+  maxMonthlyRentThb?: number;
   minBedrooms?: number;
   minBathrooms?: number;
   minAreaSqm?: number;
@@ -330,8 +336,10 @@ export interface IndexedPropertySearchHit {
   description?: string;
   market: ThailandMarket;
   kind: PropertyKind;
+  listingType: PropertyListingType;
   status: PropertySnapshot["status"];
   price: Money;
+  rentalPriceMonthly?: Money;
   location: GeoPoint;
   address?: string;
   bedrooms: number;
@@ -359,8 +367,11 @@ export interface NaturalLanguageSearchRequest {
 
 export interface PropertySearchFilters {
   market?: ThailandMarket;
+  listingType?: PropertyListingType;
   minPriceThb?: number;
   maxPriceThb?: number;
+  minMonthlyRentThb?: number;
+  maxMonthlyRentThb?: number;
   minBedrooms?: number;
   minBathrooms?: number;
   minAreaSqm?: number;

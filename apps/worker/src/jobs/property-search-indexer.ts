@@ -1,7 +1,14 @@
 import { Client } from "@opensearch-project/opensearch";
 import type { Pool } from "pg";
 import { PROPERTY_SEARCH_INDEX } from "@propertyflow/contracts";
-import type { Currency, PropertyKind, PropertySnapshot, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
+import type {
+  Currency,
+  PropertyKind,
+  PropertyListingType,
+  PropertySnapshot,
+  PropertyStatus,
+  ThailandMarket
+} from "@propertyflow/domain";
 
 interface PropertyRow {
   id: string;
@@ -9,10 +16,13 @@ interface PropertyRow {
   title: string;
   description: string | null;
   kind: PropertyKind;
+  listing_type: PropertyListingType | null;
   market: ThailandMarket;
   status: PropertyStatus;
   price_amount: string;
   price_currency: Currency;
+  rental_price_monthly_amount: string | null;
+  rental_price_monthly_currency: Currency | null;
   latitude: number;
   longitude: number;
   address: string | null;
@@ -36,10 +46,13 @@ export interface PropertySearchDocument {
   title: string;
   description?: string;
   kind: PropertyKind;
+  listingType: PropertyListingType;
   market: ThailandMarket;
   status: PropertyStatus;
   priceAmount: number;
   priceCurrency: Currency;
+  rentalPriceMonthlyAmount?: number;
+  rentalPriceMonthlyCurrency?: Currency;
   location: {
     lat: number;
     lon: number;
@@ -107,12 +120,20 @@ export class PropertySearchIndexer {
       title: row.title,
       description: row.description ?? undefined,
       kind: row.kind,
+      listingType: row.listing_type ?? "sale",
       market: row.market,
       status: row.status,
       price: {
         amount: Number(row.price_amount),
         currency: row.price_currency
       },
+      rentalPriceMonthly:
+        row.rental_price_monthly_amount && row.rental_price_monthly_currency
+          ? {
+              amount: Number(row.rental_price_monthly_amount),
+              currency: row.rental_price_monthly_currency
+            }
+          : undefined,
       location: {
         latitude: Number(row.latitude),
         longitude: Number(row.longitude)
@@ -168,10 +189,13 @@ export class PropertySearchIndexer {
             title: { type: "text" },
             description: { type: "text" },
             kind: { type: "keyword" },
+            listingType: { type: "keyword" },
             market: { type: "keyword" },
             status: { type: "keyword" },
             priceAmount: { type: "double" },
             priceCurrency: { type: "keyword" },
+            rentalPriceMonthlyAmount: { type: "double" },
+            rentalPriceMonthlyCurrency: { type: "keyword" },
             location: { type: "geo_point" },
             address: { type: "text" },
             bedrooms: { type: "integer" },
@@ -199,10 +223,13 @@ function toSearchDocument(property: PropertySnapshot): PropertySearchDocument {
     title: property.title,
     description: property.description,
     kind: property.kind,
+    listingType: property.listingType,
     market: property.market,
     status: property.status,
     priceAmount: property.price.amount,
     priceCurrency: property.price.currency,
+    rentalPriceMonthlyAmount: property.rentalPriceMonthly?.amount,
+    rentalPriceMonthlyCurrency: property.rentalPriceMonthly?.currency,
     location: {
       lat: property.location.latitude,
       lon: property.location.longitude
@@ -222,6 +249,7 @@ function toSearchDocument(property: PropertySnapshot): PropertySearchDocument {
       property.address,
       property.market,
       property.kind,
+      property.listingType,
       ...property.amenities
     ]
       .filter(Boolean)

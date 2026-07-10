@@ -24,7 +24,7 @@ export async function listFeaturedProperties(): Promise<PropertySnapshot[]> {
     }
 
     const body = (await response.json()) as PropertySearchResponse;
-    return body.items.length > 0 ? body.items.slice(0, 6) : demoProperties;
+    return body.items.length > 0 ? body.items.slice(0, 6).map(normalizeProperty) : demoProperties;
   } catch {
     return demoProperties;
   }
@@ -49,4 +49,11 @@ export async function askConcierge(request: ConciergeRequest): Promise<Concierge
   } catch {
     return demoConciergeResponse;
   }
+}
+
+function normalizeProperty(property: PropertySnapshot): PropertySnapshot {
+  return {
+    ...property,
+    listingType: property.listingType ?? "sale"
+  };
 }

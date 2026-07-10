@@ -62,8 +62,17 @@ export class NaturalLanguagePropertySearchService {
       explanations.push(`market=${market}`);
     }
 
+    const listingType = this.detectListingType(normalized);
+    if (listingType) {
+      filters.listingType = listingType;
+      explanations.push(`listingType=${listingType}`);
+    }
+
     const maxPriceThb = this.detectMaxPriceThb(normalized);
-    if (maxPriceThb) {
+    if (maxPriceThb && listingType === "rent") {
+      filters.maxMonthlyRentThb = maxPriceThb;
+      explanations.push(`maxMonthlyRentThb=${maxPriceThb}`);
+    } else if (maxPriceThb) {
       filters.maxPriceThb = maxPriceThb;
       explanations.push(`maxPriceThb=${maxPriceThb}`);
     }
@@ -131,6 +140,25 @@ export class NaturalLanguagePropertySearchService {
     if (thbMatch?.[1]) {
       const amount = Number(thbMatch[1].replace(/[^\d]/g, ""));
       return Number.isFinite(amount) && amount > 0 ? amount : undefined;
+    }
+
+    return undefined;
+  }
+
+  private detectListingType(query: string): PropertySearchRequest["listingType"] | undefined {
+    const rentalIntent = /(снять|арендовать|аренда|rent|lease)/.test(query);
+    const saleIntent = /(купить|покуп|продаж|buy|purchase|sale)/.test(query);
+
+    if (rentalIntent && saleIntent) {
+      return "sale_or_rent";
+    }
+
+    if (rentalIntent) {
+      return "rent";
+    }
+
+    if (saleIntent) {
+      return "sale";
     }
 
     return undefined;

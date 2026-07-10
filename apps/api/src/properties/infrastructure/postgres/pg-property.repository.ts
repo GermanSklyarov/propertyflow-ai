@@ -1,7 +1,15 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
 import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
-import type { Currency, Money, PropertyKind, PropertySnapshot, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
+import type {
+  Currency,
+  Money,
+  PropertyKind,
+  PropertyListingType,
+  PropertySnapshot,
+  PropertyStatus,
+  ThailandMarket
+} from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { PropertyRepository } from "../../domain/property.repository.js";
 
@@ -11,10 +19,13 @@ interface PropertyRow {
   title: string;
   description: string | null;
   kind: PropertyKind;
+  listing_type: PropertyListingType | null;
   market: ThailandMarket;
   status: PropertyStatus;
   price_amount: string;
   price_currency: Currency;
+  rental_price_monthly_amount: string | null;
+  rental_price_monthly_currency: Currency | null;
   latitude: number;
   longitude: number;
   address: string | null;
@@ -52,10 +63,13 @@ export class PgPropertyRepository implements PropertyRepository {
           title,
           description,
           kind,
+          listing_type,
           market,
           status,
           price_amount,
           price_currency,
+          rental_price_monthly_amount,
+          rental_price_monthly_currency,
           location,
           latitude,
           longitude,
@@ -82,12 +96,12 @@ export class PgPropertyRepository implements PropertyRepository {
           $7,
           $8,
           $9,
-          st_setsrid(st_makepoint($10, $11), 4326)::geography,
-          $11,
           $10,
+          $11,
           $12,
-          $13,
+          st_setsrid(st_makepoint($13, $14), 4326)::geography,
           $14,
+          $13,
           $15,
           $16,
           $17,
@@ -97,7 +111,11 @@ export class PgPropertyRepository implements PropertyRepository {
           $21,
           $22,
           $23,
-          $24
+          $24,
+          $25,
+          $26,
+          $27,
+          $28
         )
         returning *
       `,
@@ -107,10 +125,13 @@ export class PgPropertyRepository implements PropertyRepository {
         property.title,
         property.description ?? null,
         property.kind,
+        property.listingType,
         property.market,
         property.status,
         property.price.amount,
         property.price.currency,
+        property.rentalPriceMonthly?.amount ?? null,
+        property.rentalPriceMonthly?.currency ?? null,
         property.location.longitude,
         property.location.latitude,
         property.address ?? null,
@@ -234,12 +255,28 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`market = ${addValue(filters.market)}`);
     }
 
+    if (filters.listingType) {
+      clauses.push(`listing_type in (${addValue(filters.listingType)}, 'sale_or_rent')`);
+    }
+
     if (filters.minPriceThb !== undefined) {
       clauses.push(`price_currency = 'THB' and price_amount >= ${addValue(filters.minPriceThb)}`);
     }
 
     if (filters.maxPriceThb !== undefined) {
       clauses.push(`price_currency = 'THB' and price_amount <= ${addValue(filters.maxPriceThb)}`);
+    }
+
+    if (filters.minMonthlyRentThb !== undefined) {
+      clauses.push(
+        `rental_price_monthly_currency = 'THB' and rental_price_monthly_amount >= ${addValue(filters.minMonthlyRentThb)}`
+      );
+    }
+
+    if (filters.maxMonthlyRentThb !== undefined) {
+      clauses.push(
+        `rental_price_monthly_currency = 'THB' and rental_price_monthly_amount <= ${addValue(filters.maxMonthlyRentThb)}`
+      );
     }
 
     if (filters.minBedrooms !== undefined) {
@@ -337,12 +374,14 @@ export class PgPropertyRepository implements PropertyRepository {
       title: row.title,
       description: row.description ?? undefined,
       kind: row.kind,
+      listingType: row.listing_type ?? "sale",
       market: row.market,
       status: row.status,
       price: {
         amount: Number(row.price_amount),
         currency: row.price_currency
       },
+      rentalPriceMonthly: this.optionalMoney(row.rental_price_monthly_amount, row.rental_price_monthly_currency),
       location: {
         latitude: row.latitude,
         longitude: row.longitude

@@ -11,10 +11,11 @@ import {
   ValidateNested
 } from "class-validator";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
-import type { Currency, PropertyKind, ThailandMarket } from "@propertyflow/domain";
+import type { Currency, PropertyKind, PropertyListingType, ThailandMarket } from "@propertyflow/domain";
 
 const currencies: Currency[] = ["THB", "USD", "EUR"];
 const propertyKinds: PropertyKind[] = ["condo", "villa", "townhouse", "land", "commercial"];
+const propertyListingTypes: PropertyListingType[] = ["sale", "rent", "sale_or_rent"];
 const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 
 class MoneyDto {
@@ -49,12 +50,21 @@ export class CreatePropertyDto implements CreatePropertyRequest {
   @IsIn(propertyKinds)
   kind!: PropertyKind;
 
+  @IsOptional()
+  @IsIn(propertyListingTypes)
+  listingType?: PropertyListingType;
+
   @IsIn(thailandMarkets)
   market!: ThailandMarket;
 
   @ValidateNested()
   @Type(() => MoneyDto)
   price!: MoneyDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MoneyDto)
+  rentalPriceMonthly?: MoneyDto;
 
   @ValidateNested()
   @Type(() => GeoPointDto)
@@ -100,4 +110,3 @@ export class CreatePropertyDto implements CreatePropertyRequest {
   @IsString({ each: true })
   amenities?: string[];
 }
-

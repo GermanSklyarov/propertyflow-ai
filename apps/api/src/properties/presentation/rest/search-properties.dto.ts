@@ -2,14 +2,19 @@ import { Transform, Type } from "class-transformer";
 import { BadRequestException } from "@nestjs/common";
 import { IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
 import type { PropertySearchRequest } from "@propertyflow/contracts";
-import type { ThailandMarket } from "@propertyflow/domain";
+import type { PropertyListingType, ThailandMarket } from "@propertyflow/domain";
 
 const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
+const propertyListingTypes: PropertyListingType[] = ["sale", "rent", "sale_or_rent"];
 
 export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> {
   @IsOptional()
   @IsIn(thailandMarkets)
   market?: ThailandMarket;
+
+  @IsOptional()
+  @IsIn(propertyListingTypes)
+  listingType?: PropertyListingType;
 
   @IsOptional()
   @Type(() => Number)
@@ -22,6 +27,18 @@ export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> 
   @IsInt()
   @Min(0)
   maxPriceThb?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  minMonthlyRentThb?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  maxMonthlyRentThb?: number;
 
   @IsOptional()
   @Type(() => Number)
@@ -106,8 +123,11 @@ export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySea
 
   const filters: PropertySearchRequest = {
     market: query.market,
+    listingType: query.listingType,
     minPriceThb: toOptionalNumber(query.minPriceThb),
     maxPriceThb: toOptionalNumber(query.maxPriceThb),
+    minMonthlyRentThb: toOptionalNumber(query.minMonthlyRentThb),
+    maxMonthlyRentThb: toOptionalNumber(query.maxMonthlyRentThb),
     minBedrooms: toOptionalNumber(query.minBedrooms),
     minBathrooms: toOptionalNumber(query.minBathrooms),
     minAreaSqm: toOptionalNumber(query.minAreaSqm),
