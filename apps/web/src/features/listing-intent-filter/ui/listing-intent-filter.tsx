@@ -5,7 +5,13 @@ import { Building2, Home, KeyRound, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { PropertyCard } from "@entities/property/ui/property-card";
-import type { ListingIntent } from "@features/listing-intent-filter/model/listing-intent";
+import {
+  countPropertiesByIntent,
+  filterPropertiesByIntent,
+  getRentalBudgetBand,
+  listingIntentCopy,
+  type ListingIntent
+} from "@features/listing-intent-filter/model/listing-intent";
 import { formatCompactThb } from "@shared/lib/format-money";
 
 const intentOptions: Array<{ value: ListingIntent; label: string; icon: typeof Building2 }> = [
@@ -30,36 +36,8 @@ export function ListingIntentFilter({
     setIntent(initialIntent);
   }, [initialIntent]);
 
-  const filteredProperties = useMemo(() => {
-    if (intent === "all") {
-      return properties;
-    }
-
-    if (intent === "rent") {
-      return properties.filter((property) => property.listingType === "rent" || property.listingType === "sale_or_rent");
-    }
-
-    if (intent === "sale") {
-      return properties.filter((property) => property.listingType === "sale" || property.listingType === "sale_or_rent");
-    }
-
-    return properties.filter((property) => property.listingType === intent);
-  }, [intent, properties]);
-
-  const rentalBudget = useMemo(() => {
-    const rentalPrices = properties
-      .map((property) => property.rentalPriceMonthly?.amount)
-      .filter((amount): amount is number => typeof amount === "number");
-
-    if (!rentalPrices.length) {
-      return undefined;
-    }
-
-    return {
-      min: Math.min(...rentalPrices),
-      max: Math.max(...rentalPrices)
-    };
-  }, [properties]);
+  const filteredProperties = useMemo(() => filterPropertiesByIntent(properties, intent), [intent, properties]);
+  const rentalBudget = useMemo(() => getRentalBudgetBand(properties), [properties]);
 
   function chooseIntent(nextIntent: ListingIntent) {
     const nextSearchParams = new URLSearchParams(window.location.search);
@@ -81,7 +59,7 @@ export function ListingIntentFilter({
       <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-2 min-[1081px]:grid-cols-4" aria-label="Listing intent">
         {intentOptions.map((option) => {
           const Icon = option.icon;
-          const count = countByIntent(properties, option.value);
+          const count = countPropertiesByIntent(properties, option.value);
           const isActive = intent === option.value;
 
           return (
@@ -113,7 +91,7 @@ export function ListingIntentFilter({
       </div>
 
       <div className="grid items-start gap-3.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-3.5 py-3 text-[0.9rem] leading-normal text-[#42524e] min-[761px]:flex min-[761px]:items-center min-[761px]:justify-between">
-        <span>{intentCopy(intent)}</span>
+        <span>{listingIntentCopy(intent)}</span>
         <strong className="text-[var(--teal-dark)] min-[761px]:whitespace-nowrap">
           {rentalBudget
             ? `${formatCompactThb(rentalBudget.min)}-${formatCompactThb(rentalBudget.max)}/mo rental band`
@@ -137,36 +115,4 @@ export function ListingIntentFilter({
       )}
     </div>
   );
-}
-
-function countByIntent(properties: PropertySnapshot[], intent: ListingIntent) {
-  if (intent === "all") {
-    return properties.length;
-  }
-
-  if (intent === "rent") {
-    return properties.filter((property) => property.listingType === "rent" || property.listingType === "sale_or_rent").length;
-  }
-
-  if (intent === "sale") {
-    return properties.filter((property) => property.listingType === "sale" || property.listingType === "sale_or_rent").length;
-  }
-
-  return properties.filter((property) => property.listingType === intent).length;
-}
-
-function intentCopy(intent: ListingIntent) {
-  if (intent === "rent") {
-    return "Rental mode highlights monthly ask, flexible move-in thinking, and lease-first conversations.";
-  }
-
-  if (intent === "sale") {
-    return "Buy mode prioritizes acquisition price, resale liquidity, and ownership economics.";
-  }
-
-  if (intent === "sale_or_rent") {
-    return "Dual listings are useful when an owner is open to either sale or lease strategy.";
-  }
-
-  return "Switch between purchase and rental intent without losing the AI-picked property context.";
 }
