@@ -1,4 +1,10 @@
-import type { ConciergeRequest, ConciergeResponse, PropertySearchResponse } from "@propertyflow/contracts";
+import type {
+  ConciergeRequest,
+  ConciergeResponse,
+  CreateLeadRequest,
+  LeadSnapshot,
+  PropertySearchResponse
+} from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { demoConciergeResponse } from "../../entities/concierge/model/demo-concierge-response";
 import { demoProperties } from "../../entities/property/model/demo-properties";
@@ -68,10 +74,56 @@ export async function askConcierge(request: ConciergeRequest): Promise<Concierge
   }
 }
 
+export async function createWebsiteLead(request: Omit<CreateLeadRequest, "source">): Promise<LeadSnapshot> {
+  const payload: CreateLeadRequest = {
+    ...request,
+    source: "website"
+  };
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/leads`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...demoHeaders
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      return demoLead(payload);
+    }
+
+    return (await response.json()) as LeadSnapshot;
+  } catch {
+    return demoLead(payload);
+  }
+}
+
 function normalizeProperty(property: PropertySnapshot): PropertySnapshot {
   return {
     ...property,
     listingType: property.listingType ?? "sale"
+  };
+}
+
+function demoLead(payload: CreateLeadRequest): LeadSnapshot {
+  const now = new Date().toISOString();
+
+  return {
+    id: `demo-lead-${Date.now()}`,
+    tenantId: demoHeaders["x-tenant-id"],
+    propertyId: payload.propertyId,
+    source: payload.source,
+    status: "new",
+    contactName: payload.contactName,
+    contactEmail: payload.contactEmail,
+    contactPhone: payload.contactPhone,
+    message: payload.message,
+    preferredLocale: payload.preferredLocale,
+    priority: "medium",
+    createdAt: now,
+    updatedAt: now
   };
 }
 

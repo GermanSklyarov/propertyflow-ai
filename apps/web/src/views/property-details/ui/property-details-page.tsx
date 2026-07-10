@@ -1,6 +1,7 @@
 import { ArrowLeft, Bath, BedDouble, Building2, MapPin, Ruler, ShieldCheck, Sparkles, Waves, Wifi } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { propertyImage } from "../../../entities/property/lib/property-image";
+import { LeadCaptureForm } from "../../../features/lead-capture/ui/lead-capture-form";
 import { formatCompactThb } from "../../../shared/lib/format-money";
 
 export function PropertyDetailsPage({ property }: { property: PropertySnapshot }) {
@@ -74,6 +75,8 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
         </div>
 
         <aside className="grid content-start gap-[18px]">
+          <LeadCaptureForm property={property} />
+
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
             <p className="section-kicker">Economics</p>
             <div className="mt-[18px] grid gap-2.5">
