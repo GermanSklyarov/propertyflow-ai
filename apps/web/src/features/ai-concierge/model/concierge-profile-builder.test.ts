@@ -23,6 +23,7 @@ describe("buildConciergeProfile", () => {
     expect(profile).toMatchObject({
       budgetThb: 30000,
       market: "pattaya",
+      purpose: "living",
       remoteWork: true
     });
   });
@@ -47,13 +48,18 @@ describe("buildConciergeProfile", () => {
 
 describe("buildConciergeRequest", () => {
   it("keeps the original message and attaches inferred profile", () => {
-    const request = buildConciergeRequest("Winter home close to Terminal 21, walkable cafes, reliable internet");
+    const request = buildConciergeRequest("Winter home close to Terminal 21, walkable cafes, reliable internet", {
+      hasCar: false,
+      prefersQuiet: false
+    });
 
     expect(request.message).toContain("Winter home");
     expect(request.locale).toBe("en");
     expect(request.profile).toMatchObject({
+      hasCar: false,
       market: "pattaya",
       purpose: "living",
+      prefersQuiet: false,
       remoteWork: true
     });
   });
@@ -64,9 +70,11 @@ describe("buildConciergeProfileChips", () => {
     expect(
       buildConciergeProfileChips({
         budgetThb: 3500000,
+        hasCar: false,
         hasChildren: true,
         market: "pattaya",
         purpose: "family",
+        prefersQuiet: false,
         remoteWork: true
       })
     ).toEqual([
@@ -74,7 +82,9 @@ describe("buildConciergeProfileChips", () => {
       { label: "Budget", value: "3.5M THB" },
       { label: "Purpose", value: "family" },
       { label: "Family", value: "children" },
-      { label: "Work", value: "remote" }
+      { label: "Work", value: "remote" },
+      { label: "Area", value: "lively ok" },
+      { label: "Mobility", value: "walkable" }
     ]);
   });
 });

@@ -3,8 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, Loader2, MapPinned, Sparkles } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
+import type { ConciergeProfile, ConciergeQuestion } from "@propertyflow/contracts";
 import { askConciergeMutationOptions } from "@entities/concierge/api/concierge-mutations";
 import {
   buildConciergeProfile,
@@ -24,6 +25,7 @@ const starterPrompts = [
 ];
 
 export function ConciergeConsole() {
+  const followUpRef = useRef<HTMLElement | null>(null);
   const {
     formState: { errors },
     handleSubmit,
@@ -36,13 +38,15 @@ export function ConciergeConsole() {
       message: starterPrompts[0]
     }
   });
+  const [profileOverride, setProfileOverride] = useState<ConciergeProfile>({});
   const conciergeMutation = useMutation(askConciergeMutationOptions());
   const response = conciergeMutation.data ?? null;
   const message = watch("message");
-  const inferredProfile = useMemo(() => buildConciergeProfile(message), [message]);
+  const inferredProfile = useMemo(() => ({ ...buildConciergeProfile(message), ...profileOverride }), [message, profileOverride]);
   const profileChips = useMemo(() => buildConciergeProfileChips(inferredProfile), [inferredProfile]);
 
   const primaryArea = response?.areaRecommendation;
+  const shouldShowFollowUp = response?.stage === "intake" && response.nextQuestions.length > 0;
   const recommendationTone = useMemo(() => {
     if (!response) {
       return "Ready";
@@ -52,8 +56,31 @@ export function ConciergeConsole() {
   }, [response]);
 
   function submit(values: ConciergeRequestFormValues) {
-    conciergeMutation.mutate(buildConciergeRequest(values.message));
+    conciergeMutation.mutate(buildConciergeRequest(values.message, profileOverride));
   }
+
+  function answerFollowUp(patch: ConciergeProfile) {
+    const nextProfileOverride = {
+      ...profileOverride,
+      ...patch
+    };
+
+    setProfileOverride(nextProfileOverride);
+    conciergeMutation.mutate(buildConciergeRequest(message, nextProfileOverride));
+  }
+
+  useEffect(() => {
+    if (!shouldShowFollowUp) {
+      return;
+    }
+
+    const animationFrame = window.requestAnimationFrame(() => {
+      followUpRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      followUpRef.current?.focus({ preventScroll: true });
+    });
+
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, [response?.id, shouldShowFollowUp]);
 
   return (
     <section
@@ -100,7 +127,10 @@ export function ConciergeConsole() {
                 className="cursor-pointer border border-[var(--line)] bg-white/70 px-2.5 py-2 text-[0.78rem] font-extrabold text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)]"
                 key={prompt}
                 type="button"
-                onClick={() => setValue("message", prompt, { shouldDirty: true, shouldValidate: true })}
+                onClick={() => {
+                  setProfileOverride({});
+                  setValue("message", prompt, { shouldDirty: true, shouldValidate: true });
+                }}
               >
                 {prompt}
               </button>
@@ -132,6 +162,38 @@ export function ConciergeConsole() {
           </div>
         </article>
 
+        {shouldShowFollowUp ? (
+          <section
+            aria-label="Concierge follow-up questions"
+            className="grid scroll-mt-6 gap-2.5 border border-[rgba(15,118,110,0.36)] bg-white/90 p-4 shadow-[0_18px_42px_rgba(15,118,110,0.14)] outline-none ring-4 ring-[rgba(15,118,110,0.08)]"
+            ref={followUpRef}
+            tabIndex={-1}
+          >
+            <p className="m-0 text-[0.78rem] font-extrabold uppercase tracking-[0.12em] text-[var(--coral)]">Quick follow-up</p>
+            {response.nextQuestions.map((question) => (
+              <article className="grid gap-2 border-b border-[var(--line)] pb-3 last:border-b-0 last:pb-0" key={question.id}>
+                <div>
+                  <h3 className="mb-1 mt-0 text-[0.98rem]">{question.question}</h3>
+                  <p className="m-0 text-[0.82rem] font-bold leading-normal text-[var(--muted)]">{question.reason}</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {followUpOptions(question).map((option) => (
+                    <button
+                      className="cursor-pointer border border-[var(--line)] bg-white px-2.5 py-2 text-[0.78rem] font-extrabold text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-wait disabled:opacity-70"
+                      disabled={conciergeMutation.isPending}
+                      key={option.label}
+                      onClick={() => answerFollowUp(option.patch)}
+                      type="button"
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </section>
+        ) : null}
+
         <div className="grid gap-2">
           {(primaryArea?.reasons ?? ["quiet beach access", "remote-work friendly buildings", "balanced rental demand"]).map(
             (reason) => (
@@ -148,4 +210,60 @@ export function ConciergeConsole() {
       </div>
     </section>
   );
+}
+
+function followUpOptions(question: ConciergeQuestion): Array<{ label: string; patch: ConciergeProfile }> {
+  if (question.id === "hasChildren") {
+    return [
+      { label: "Children will live here", patch: { hasChildren: true } },
+      { label: "Adults only", patch: { hasChildren: false } }
+    ];
+  }
+
+  if (question.id === "hasCar") {
+    return [
+      { label: "We will have a car", patch: { hasCar: true } },
+      { label: "Walkability matters", patch: { hasCar: false } }
+    ];
+  }
+
+  if (question.id === "remoteWork") {
+    return [
+      { label: "Remote work", patch: { remoteWork: true } },
+      { label: "Internet is not critical", patch: { remoteWork: false } }
+    ];
+  }
+
+  if (question.id === "purpose") {
+    return [
+      { label: "Living", patch: { purpose: "living" } },
+      { label: "Relocation", patch: { purpose: "relocation" } },
+      { label: "Investment", patch: { purpose: "investment" } }
+    ];
+  }
+
+  if (question.id === "prefersQuiet") {
+    return [
+      { label: "Quiet area", patch: { prefersQuiet: true } },
+      { label: "Lively is fine", patch: { prefersQuiet: false } }
+    ];
+  }
+
+  if (question.id === "budgetThb") {
+    return [
+      { label: "30k THB/month", patch: { budgetThb: 30000 } },
+      { label: "3.5M THB", patch: { budgetThb: 3500000 } },
+      { label: "5M THB", patch: { budgetThb: 5000000 } }
+    ];
+  }
+
+  if (question.id === "market") {
+    return [
+      { label: "Pattaya", patch: { market: "pattaya" } },
+      { label: "Phuket", patch: { market: "phuket" } },
+      { label: "Bangkok", patch: { market: "bangkok" } }
+    ];
+  }
+
+  return [];
 }

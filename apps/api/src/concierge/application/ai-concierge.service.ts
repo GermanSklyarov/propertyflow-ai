@@ -24,7 +24,7 @@ import type {
   ListConciergeSessionsRequest,
   SubmitConciergeFeedbackRequest
 } from "@propertyflow/contracts";
-import type { PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
+import type { PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../database/database.constants.js";
 import { LeadService } from "../../leads/application/lead.service.js";
@@ -763,6 +763,10 @@ export class AiConciergeService {
       profile.purpose = profile.purpose ?? "relocation";
     }
 
+    if (/(rent|lease|аренд)/.test(normalized)) {
+      profile.purpose = profile.purpose ?? "living";
+    }
+
     if (/(удален|remote|internet|интернет|online)/.test(normalized)) {
       profile.remoteWork = true;
     }
@@ -995,16 +999,67 @@ export class AiConciergeService {
     questions: ConciergeQuestion[],
     locale: ConciergeRequest["locale"]
   ): string {
-    const known = Object.entries(profile)
-      .filter(([, value]) => value !== undefined)
-      .map(([key, value]) => `${key}=${value}`)
-      .join(", ");
+    const known = this.describeProfile(profile, locale);
+    const questionText = questions.map((question) => question.question).join(" ");
 
     if (locale === "ru") {
-      return `Я понял вводные${known ? `: ${known}` : ""}. Чтобы дать район и объекты, уточню: ${questions.map((question) => question.question).join(" ")}`;
+      return known
+        ? `Я понял вводные: ${known}. Чтобы подобрать район и объекты точнее, уточню несколько деталей. ${questionText}`
+        : `Я задам несколько коротких вопросов, чтобы подобрать район и объекты точнее. ${questionText}`;
     }
 
-    return `I understood${known ? `: ${known}` : ""}. To recommend an area and listings, I need: ${questions.map((question) => question.question).join(" ")}`;
+    return known
+      ? `I have enough to start with ${known}. To recommend an area and listings more precisely, I need a few quick details. ${questionText}`
+      : `I need a few quick details before recommending an area and listings. ${questionText}`;
+  }
+
+  private describeProfile(profile: ConciergeProfile, locale: ConciergeRequest["locale"]): string {
+    const ru = locale === "ru";
+    const parts = [
+      profile.market ? (ru ? `рынок ${profile.market}` : `${profile.market} market`) : undefined,
+      profile.budgetThb ? (ru ? `бюджет до ${this.formatThb(profile.budgetThb)}` : `budget up to ${this.formatThb(profile.budgetThb)}`) : undefined,
+      profile.purpose ? (ru ? `цель: ${this.describePurpose(profile.purpose, locale)}` : `${this.describePurpose(profile.purpose, locale)} goal`) : undefined,
+      profile.hasChildren !== undefined ? (profile.hasChildren ? (ru ? "с детьми" : "children will live there") : ru ? "без детей" : "adults only") : undefined,
+      profile.hasCar !== undefined ? (profile.hasCar ? (ru ? "будет машина" : "you will have a car") : ru ? "важна пешая доступность" : "walkability matters") : undefined,
+      profile.remoteWork !== undefined ? (profile.remoteWork ? (ru ? "важна удаленная работа" : "remote work matters") : ru ? "интернет не критичен" : "internet is not critical") : undefined,
+      profile.prefersQuiet !== undefined ? (profile.prefersQuiet ? (ru ? "предпочитаете тишину" : "you prefer quiet") : ru ? "активный район допустим" : "a livelier area is fine") : undefined
+    ].filter(Boolean);
+
+    return parts.join(ru ? ", " : ", ");
+  }
+
+  private describePurpose(purpose: PropertyPurpose, locale: ConciergeRequest["locale"]): string {
+    if (locale === "ru") {
+      const labels: Record<PropertyPurpose, string> = {
+        family: "семья",
+        investment: "инвестиция",
+        living: "жизнь",
+        relocation: "переезд"
+      };
+
+      return labels[purpose];
+    }
+
+    const labels: Record<PropertyPurpose, string> = {
+      family: "family",
+      investment: "investment",
+      living: "living",
+      relocation: "relocation"
+    };
+
+    return labels[purpose];
+  }
+
+  private formatThb(amount: number): string {
+    if (amount >= 1_000_000) {
+      return `${Number.parseFloat((amount / 1_000_000).toFixed(1))}M THB`;
+    }
+
+    if (amount >= 1_000) {
+      return `${Math.round(amount / 1_000)}k THB`;
+    }
+
+    return `${amount} THB`;
   }
 
   private detectMarket(message: string): ThailandMarket | undefined {

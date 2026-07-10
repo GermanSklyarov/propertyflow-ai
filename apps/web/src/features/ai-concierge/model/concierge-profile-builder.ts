@@ -5,11 +5,14 @@ export type ConciergeProfileChip = {
   value: string;
 };
 
-export function buildConciergeRequest(message: string): ConciergeRequest {
+export function buildConciergeRequest(message: string, profileOverride: ConciergeProfile = {}): ConciergeRequest {
   return {
     locale: "en",
     message,
-    profile: buildConciergeProfile(message)
+    profile: {
+      ...buildConciergeProfile(message),
+      ...profileOverride
+    }
   };
 }
 
@@ -54,10 +57,10 @@ export function buildConciergeProfileChips(profile: ConciergeProfile): Concierge
     profile.market ? { label: "Market", value: profile.market } : undefined,
     profile.budgetThb ? { label: "Budget", value: formatBudget(profile.budgetThb) } : undefined,
     profile.purpose ? { label: "Purpose", value: profile.purpose } : undefined,
-    profile.hasChildren ? { label: "Family", value: "children" } : undefined,
-    profile.remoteWork ? { label: "Work", value: "remote" } : undefined,
-    profile.prefersQuiet ? { label: "Area", value: "quiet" } : undefined,
-    profile.hasCar ? { label: "Mobility", value: "car" } : undefined
+    profile.hasChildren !== undefined ? { label: "Family", value: profile.hasChildren ? "children" : "adults only" } : undefined,
+    profile.remoteWork !== undefined ? { label: "Work", value: profile.remoteWork ? "remote" : "not critical" } : undefined,
+    profile.prefersQuiet !== undefined ? { label: "Area", value: profile.prefersQuiet ? "quiet" : "lively ok" } : undefined,
+    profile.hasCar !== undefined ? { label: "Mobility", value: profile.hasCar ? "car" : "walkable" } : undefined
   ].filter((chip): chip is ConciergeProfileChip => Boolean(chip));
 }
 
@@ -98,7 +101,7 @@ function detectPurpose(normalizedMessage: string): ConciergeProfile["purpose"] |
     return "family";
   }
 
-  if (mentionsAny(normalizedMessage, ["living", "live", "winter", "жить", "зим"])) {
+  if (mentionsAny(normalizedMessage, ["living", "live", "winter", "rent", "lease", "жить", "зим", "аренд"])) {
     return "living";
   }
 
