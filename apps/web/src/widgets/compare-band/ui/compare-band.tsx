@@ -2,10 +2,13 @@
 
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
+import { useHasMounted } from "@shared/lib/use-has-mounted";
 
 export function CompareBand({ properties }: { properties: PropertySnapshot[] }) {
-  const selectedPropertyIds = useCompareSelectionStore((state) => state.selectedPropertyIds);
+  const hasMounted = useHasMounted();
+  const persistedSelectedPropertyIds = useCompareSelectionStore((state) => state.selectedPropertyIds);
   const clearSelection = useCompareSelectionStore((state) => state.clearSelection);
+  const selectedPropertyIds = hasMounted ? persistedSelectedPropertyIds : [];
   const selectedProperties = selectedPropertyIds
     .map((propertyId) => properties.find((property) => property.id === propertyId))
     .filter((property): property is PropertySnapshot => Boolean(property));

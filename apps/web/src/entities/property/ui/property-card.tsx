@@ -6,14 +6,17 @@ import { Bath, BedDouble, Check, MapPin, Plus, Ruler, Waves } from "lucide-react
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
 import { formatCompactThb } from "@shared/lib/format-money";
+import { useHasMounted } from "@shared/lib/use-has-mounted";
 import { propertyDetailQueryOptions } from "../api/property-queries";
 import { propertyImage } from "../lib/property-image";
 
 export function PropertyCard({ property, priority }: { property: PropertySnapshot; priority?: boolean }) {
+  const hasMounted = useHasMounted();
   const queryClient = useQueryClient();
   const imageUrl = propertyImage(property, priority);
-  const isSelectedForCompare = useCompareSelectionStore((state) => state.isSelected(property.id));
+  const isPersistedSelectedForCompare = useCompareSelectionStore((state) => state.isSelected(property.id));
   const toggleProperty = useCompareSelectionStore((state) => state.toggleProperty);
+  const isSelectedForCompare = hasMounted ? isPersistedSelectedForCompare : false;
   const yieldEstimate =
     property.monthlyRentEstimate && property.price.amount > 0
       ? ((property.monthlyRentEstimate.amount * 12) / property.price.amount) * 100
