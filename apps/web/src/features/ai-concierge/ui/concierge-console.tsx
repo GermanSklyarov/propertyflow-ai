@@ -7,6 +7,11 @@ import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { askConciergeMutationOptions } from "@entities/concierge/api/concierge-mutations";
 import {
+  buildConciergeProfile,
+  buildConciergeProfileChips,
+  buildConciergeRequest
+} from "@features/ai-concierge/model/concierge-profile-builder";
+import {
   conciergeRequestSchema,
   type ConciergeRequestFormValues
 } from "@features/ai-concierge/model/concierge-request-schema";
@@ -23,7 +28,8 @@ export function ConciergeConsole() {
     formState: { errors },
     handleSubmit,
     register,
-    setValue
+    setValue,
+    watch
   } = useForm<ConciergeRequestFormValues>({
     resolver: zodResolver(conciergeRequestSchema),
     defaultValues: {
@@ -32,6 +38,9 @@ export function ConciergeConsole() {
   });
   const conciergeMutation = useMutation(askConciergeMutationOptions());
   const response = conciergeMutation.data ?? null;
+  const message = watch("message");
+  const inferredProfile = useMemo(() => buildConciergeProfile(message), [message]);
+  const profileChips = useMemo(() => buildConciergeProfileChips(inferredProfile), [inferredProfile]);
 
   const primaryArea = response?.areaRecommendation;
   const recommendationTone = useMemo(() => {
@@ -43,17 +52,7 @@ export function ConciergeConsole() {
   }, [response]);
 
   function submit(values: ConciergeRequestFormValues) {
-    conciergeMutation.mutate({
-      locale: "en",
-      message: values.message,
-      profile: {
-        market: "pattaya",
-        budgetThb: 3500000,
-        remoteWork: true,
-        purpose: "living",
-        prefersQuiet: true
-      }
-    });
+    conciergeMutation.mutate(buildConciergeRequest(values.message));
   }
 
   return (
@@ -84,6 +83,17 @@ export function ConciergeConsole() {
         ) : null}
 
         <div className="mt-4 grid gap-4">
+          <div className="flex flex-wrap gap-2" aria-label="Inferred concierge profile">
+            {profileChips.map((chip) => (
+              <span
+                className="inline-flex min-h-[30px] items-center gap-1.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-2.5 py-1 text-[0.76rem] font-black text-[var(--teal-dark)]"
+                key={`${chip.label}-${chip.value}`}
+              >
+                <span className="text-[var(--muted)]">{chip.label}</span>
+                {chip.value}
+              </span>
+            ))}
+          </div>
           <div className="flex flex-wrap gap-2">
             {starterPrompts.map((prompt) => (
               <button
