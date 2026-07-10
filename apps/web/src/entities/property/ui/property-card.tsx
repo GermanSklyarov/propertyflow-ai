@@ -1,13 +1,16 @@
 "use client";
 
 import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
 import { Bath, BedDouble, Check, MapPin, Plus, Ruler, Waves } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { useCompareSelectionStore } from "../../../features/property-compare/model/compare-selection-store";
-import { formatCompactThb } from "../../../shared/lib/format-money";
+import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
+import { formatCompactThb } from "@shared/lib/format-money";
+import { propertyDetailQueryOptions } from "../api/property-queries";
 import { propertyImage } from "../lib/property-image";
 
 export function PropertyCard({ property, priority }: { property: PropertySnapshot; priority?: boolean }) {
+  const queryClient = useQueryClient();
   const imageUrl = propertyImage(property, priority);
   const isSelectedForCompare = useCompareSelectionStore((state) => state.isSelected(property.id));
   const toggleProperty = useCompareSelectionStore((state) => state.toggleProperty);
@@ -16,9 +19,18 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
       ? ((property.monthlyRentEstimate.amount * 12) / property.price.amount) * 100
       : undefined;
 
+  function prefetchPropertyDetails() {
+    void queryClient.prefetchQuery(propertyDetailQueryOptions(property.id));
+  }
+
   return (
     <article className="overflow-hidden border border-[var(--line)] bg-[var(--panel-strong)] shadow-[0_16px_46px_rgba(37,50,46,0.1)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.36)] hover:shadow-[0_20px_56px_rgba(37,50,46,0.14)]">
-      <Link className="block" href={`/properties/${property.id}`}>
+      <Link
+        className="block"
+        href={`/properties/${property.id}`}
+        onFocus={prefetchPropertyDetails}
+        onMouseEnter={prefetchPropertyDetails}
+      >
         <div className="relative aspect-[1.35] bg-[#dbe3dc]">
           <img
             className="block size-full object-cover"
