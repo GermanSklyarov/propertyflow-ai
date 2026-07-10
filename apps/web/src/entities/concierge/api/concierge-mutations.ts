@@ -1,6 +1,6 @@
 import { mutationOptions } from "@tanstack/react-query";
 import type { ConciergeRequest } from "@propertyflow/contracts";
-import { askConcierge } from "../../../shared/api/propertyflow-client";
+import { askConcierge } from "@shared/api/propertyflow-client";
 
 export function askConciergeMutationOptions() {
   return mutationOptions({

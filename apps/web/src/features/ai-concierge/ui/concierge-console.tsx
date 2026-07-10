@@ -5,11 +5,11 @@ import { useMutation } from "@tanstack/react-query";
 import { ArrowRight, Loader2, MapPinned, Sparkles } from "lucide-react";
 import { useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { askConciergeMutationOptions } from "../../../entities/concierge/api/concierge-mutations";
+import { askConciergeMutationOptions } from "@entities/concierge/api/concierge-mutations";
 import {
   conciergeRequestSchema,
   type ConciergeRequestFormValues
-} from "../model/concierge-request-schema";
+} from "@features/ai-concierge/model/concierge-request-schema";
 
 const starterPrompts = [
   "Moving to Pattaya with family, remote work, quiet area, budget 3.5M THB",

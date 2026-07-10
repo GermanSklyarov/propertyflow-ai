@@ -6,8 +6,8 @@ import { useMemo, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import type { LeadSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { createWebsiteLead } from "../../../shared/api/propertyflow-client";
-import { leadCaptureSchema, type LeadCaptureFormValues, type LeadIntent } from "../model/lead-capture-schema";
+import { createWebsiteLead } from "@shared/api/propertyflow-client";
+import { leadCaptureSchema, type LeadCaptureFormValues, type LeadIntent } from "@features/lead-capture/model/lead-capture-schema";
 
 const leadIntents: Array<{ value: LeadIntent; label: string }> = [
   { value: "viewing", label: "Viewing" },

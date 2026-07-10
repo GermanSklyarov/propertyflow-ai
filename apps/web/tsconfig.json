@@ -3,6 +3,7 @@
   "compilerOptions": {
     "composite": true,
     "allowJs": true,
+    "baseUrl": ".",
     "declaration": true,
     "emitDeclarationOnly": false,
     "incremental": true,
@@ -21,6 +22,35 @@
         "name": "next"
       }
     ],
+    "paths": {
+      "@app/*": [
+        "src/app/*"
+      ],
+      "@entities/*": [
+        "src/entities/*"
+      ],
+      "@features/*": [
+        "src/features/*"
+      ],
+      "@propertyflow/config": [
+        "../../packages/config/src/index.ts"
+      ],
+      "@propertyflow/contracts": [
+        "../../packages/contracts/src/index.ts"
+      ],
+      "@propertyflow/domain": [
+        "../../packages/domain/src/index.ts"
+      ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@views/*": [
+        "src/views/*"
+      ],
+      "@widgets/*": [
+        "src/widgets/*"
+      ]
+    },
     "resolveJsonModule": true
   },
   "include": [

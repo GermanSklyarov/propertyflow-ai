@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { AppProviders } from "../src/app/providers";
-import "../src/shared/styles/globals.css";
+import { AppProviders } from "@app/providers";
+import "@shared/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "PropertyFlow AI",
