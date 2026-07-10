@@ -1,18 +1,23 @@
-import { listFeaturedProperties } from "../../../shared/api/propertyflow-client";
-import { CompareBand } from "../../../widgets/compare-band/ui/compare-band";
-import { HomeHero } from "../../../widgets/home-hero/ui/home-hero";
-import { MarketStrip } from "../../../widgets/market-strip/ui/market-strip";
-import { PropertyFeed } from "../../../widgets/property-feed/ui/property-feed";
+import { HydrationBoundary, dehydrate } from "@tanstack/react-query";
+import { featuredPropertiesQueryOptions } from "@entities/property/api/property-queries";
+import { createPropertyFlowQueryClient } from "@shared/query/query-client";
+import { CompareBand } from "@widgets/compare-band/ui/compare-band";
+import { HomeHero } from "@widgets/home-hero/ui/home-hero";
+import { MarketStrip } from "@widgets/market-strip/ui/market-strip";
+import { PropertyFeed } from "@widgets/property-feed/ui/property-feed";
 
 export async function HomePage() {
-  const properties = await listFeaturedProperties();
+  const queryClient = createPropertyFlowQueryClient();
+  const properties = await queryClient.ensureQueryData(featuredPropertiesQueryOptions());
 
   return (
-    <main>
-      <HomeHero properties={properties} />
-      <MarketStrip />
-      <PropertyFeed properties={properties} />
-      <CompareBand properties={properties} />
-    </main>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <main>
+        <HomeHero properties={properties} />
+        <MarketStrip />
+        <PropertyFeed properties={properties} />
+        <CompareBand properties={properties} />
+      </main>
+    </HydrationBoundary>
   );
 }

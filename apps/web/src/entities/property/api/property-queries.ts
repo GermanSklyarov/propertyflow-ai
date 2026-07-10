@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getPropertyById, listFeaturedProperties } from "../../../shared/api/propertyflow-client";
-import { queryKeys } from "../../../shared/query/query-keys";
+import { getPropertyById, listFeaturedProperties } from "@shared/api/propertyflow-client";
+import { queryKeys } from "@shared/query/query-keys";
 
 export function featuredPropertiesQueryOptions() {
   return queryOptions({
