@@ -1,14 +1,12 @@
 import { ArrowLeft, Bath, BedDouble, Building2, MapPin, Ruler, ShieldCheck, Sparkles, Waves, Wifi } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { propertyImage } from "@entities/property/lib/property-image";
+import { buildPropertyBrief } from "@entities/property/model/property-brief";
 import { LeadCaptureForm } from "@features/lead-capture/ui/lead-capture-form";
 import { formatCompactThb } from "@shared/lib/format-money";
 
 export function PropertyDetailsPage({ property }: { property: PropertySnapshot }) {
-  const yieldEstimate = grossYield(property);
-  const annualRent = property.monthlyRentEstimate
-    ? property.monthlyRentEstimate.amount * 12
-    : undefined;
+  const brief = buildPropertyBrief(property);
 
   return (
     <main className="bg-[#f7f6ef]">
@@ -28,9 +26,9 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
             {property.address ?? property.market}
           </p>
           <div className="flex flex-wrap items-center gap-2.5">
-            <strong className="text-[clamp(1.5rem,2.4vw,2.4rem)] text-[#ffb199]">{primaryPrice(property)}</strong>
+            <strong className="text-[clamp(1.5rem,2.4vw,2.4rem)] text-[#ffb199]">{brief.primaryPrice}</strong>
             <span className="bg-white/10 px-2.5 py-2 text-[0.78rem] font-black uppercase text-white">
-              {listingLabel(property.listingType)}
+              {brief.listingLabel}
             </span>
           </div>
           <p className="m-0 max-w-[680px] text-[1.05rem] leading-relaxed text-white/75">{property.description}</p>
@@ -44,14 +42,14 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
               <div>
                 <p className="section-kicker">AI Summary</p>
                 <h2 className="mt-2 max-w-[720px] text-[clamp(1.55rem,2.8vw,2.7rem)] leading-tight">
-                  {summaryTitle(property)}
+                  {brief.summaryTitle}
                 </h2>
               </div>
               <Sparkles size={22} />
             </div>
             <div className="mt-[22px] grid grid-cols-1 gap-3 min-[761px]:grid-cols-2">
-              <BriefColumn title="Pros" items={pros(property)} tone="good" />
-              <BriefColumn title="Tradeoffs" items={tradeoffs(property)} tone="warn" />
+              <BriefColumn title="Pros" items={brief.pros} tone="good" />
+              <BriefColumn title="Tradeoffs" items={brief.tradeoffs} tone="warn" />
             </div>
           </section>
 
@@ -66,10 +64,10 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
               <MapPin size={22} />
             </div>
             <div className="mt-[18px] grid gap-2.5">
-              <ScoreRow label="Beach" value={scoreBeach(property)} />
+              <ScoreRow label="Beach" value={brief.beachScore} />
               <ScoreRow label="Restaurants" value={4} />
-              <ScoreRow label="Remote work" value={property.amenities.some((amenity) => amenity.includes("internet")) ? 5 : 3} />
-              <ScoreRow label="Quiet living" value={property.address?.toLowerCase().includes("jomtien") ? 5 : 4} />
+              <ScoreRow label="Remote work" value={brief.remoteWorkScore} />
+              <ScoreRow label="Quiet living" value={brief.quietLivingScore} />
             </div>
           </section>
         </div>
@@ -89,8 +87,8 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
                 label="Rent estimate"
                 value={property.monthlyRentEstimate ? `${formatCompactThb(property.monthlyRentEstimate.amount)}/mo` : "Pending"}
               />
-              <DetailMetric label="Gross yield" value={yieldEstimate ? `${yieldEstimate.toFixed(1)}%` : "Pending"} />
-              <DetailMetric label="Annual rent signal" value={annualRent ? formatCompactThb(annualRent) : "Pending"} />
+              <DetailMetric label="Gross yield" value={brief.grossYield ? `${brief.grossYield.toFixed(1)}%` : "Pending"} />
+              <DetailMetric label="Annual rent signal" value={brief.annualRentSignal ? formatCompactThb(brief.annualRentSignal) : "Pending"} />
             </div>
           </section>
 
@@ -127,7 +125,7 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
             <p className="section-kicker">Ask agent</p>
             <ul className="m-0 grid list-none gap-2.5 p-0">
-              {questions(property).map((question) => (
+              {brief.questions.map((question) => (
                 <li
                   className="inline-flex items-start gap-2 border border-[var(--line)] p-2.5 text-[0.86rem] font-extrabold leading-normal text-[#364642]"
                   key={question}
@@ -177,84 +175,4 @@ function ScoreRow({ label, value }: { label: string; value: number }) {
       </strong>
     </div>
   );
-}
-
-function primaryPrice(property: PropertySnapshot) {
-  if (property.listingType === "rent" && property.rentalPriceMonthly) {
-    return `${formatCompactThb(property.rentalPriceMonthly.amount)}/mo`;
-  }
-
-  if (property.listingType === "sale_or_rent" && property.rentalPriceMonthly) {
-    return `${formatCompactThb(property.price.amount)} or ${formatCompactThb(property.rentalPriceMonthly.amount)}/mo`;
-  }
-
-  return formatCompactThb(property.price.amount);
-}
-
-function listingLabel(listingType: PropertySnapshot["listingType"]) {
-  if (listingType === "sale_or_rent") {
-    return "Sale or rent";
-  }
-
-  return listingType === "rent" ? "For rent" : "For sale";
-}
-
-function grossYield(property: PropertySnapshot) {
-  if (!property.monthlyRentEstimate || property.price.amount <= 0) {
-    return undefined;
-  }
-
-  return ((property.monthlyRentEstimate.amount * 12) / property.price.amount) * 100;
-}
-
-function summaryTitle(property: PropertySnapshot) {
-  if (property.listingType === "rent") {
-    return "Strong short-stay base with simple monthly economics.";
-  }
-
-  if (property.listingType === "sale_or_rent") {
-    return "Flexible asset: usable for winter living, rent, or resale.";
-  }
-
-  return "Ownership case with rental-demand upside.";
-}
-
-function pros(property: PropertySnapshot) {
-  return [
-    property.beachDistanceMeters && property.beachDistanceMeters <= 600 ? "Beach access is comfortably walkable." : "Area fit can work with local transport.",
-    property.monthlyRentEstimate ? "Rental demand signal is available for ROI checks." : "Useful baseline for lifestyle search.",
-    property.amenities.slice(0, 2).join(" and ") || "Core property facts are ready for agent review."
-  ];
-}
-
-function tradeoffs(property: PropertySnapshot) {
-  return [
-    property.floor && property.floor > 18 ? "High floor should be checked for heat and lift wait times." : "View and street noise need on-site validation.",
-    property.maintenanceFeeMonthly ? "Maintenance fee should be included in net yield." : "Maintenance fee is not confirmed yet.",
-    property.listingType === "rent" ? "Lease terms, deposit, and utility policy still need confirmation." : "Final ownership costs depend on transfer and legal checks."
-  ];
-}
-
-function scoreBeach(property: PropertySnapshot) {
-  if (!property.beachDistanceMeters) {
-    return 3;
-  }
-
-  if (property.beachDistanceMeters <= 400) {
-    return 5;
-  }
-
-  if (property.beachDistanceMeters <= 900) {
-    return 4;
-  }
-
-  return 3;
-}
-
-function questions(property: PropertySnapshot) {
-  return [
-    property.listingType === "rent" ? "What lease length and deposit are acceptable?" : "What transfer fees and sinking fund apply?",
-    "Can the agent confirm noise level at night?",
-    "Are internet speed and building maintenance documents available?"
-  ];
 }
