@@ -1,12 +1,13 @@
 "use client";
 
+import { zodResolver } from "@hookform/resolvers/zod";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
+import { useForm } from "react-hook-form";
 import type { LeadSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { createWebsiteLead } from "../../../shared/api/propertyflow-client";
-
-type LeadIntent = "viewing" | "rental" | "investment";
+import { leadCaptureSchema, type LeadCaptureFormValues, type LeadIntent } from "../model/lead-capture-schema";
 
 const leadIntents: Array<{ value: LeadIntent; label: string }> = [
   { value: "viewing", label: "Viewing" },
@@ -15,16 +16,27 @@ const leadIntents: Array<{ value: LeadIntent; label: string }> = [
 ];
 
 export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
-  const [intent, setIntent] = useState<LeadIntent>(property.listingType === "rent" ? "rental" : "viewing");
-  const [contactName, setContactName] = useState("");
-  const [contactEmail, setContactEmail] = useState("");
-  const [contactPhone, setContactPhone] = useState("");
-  const [message, setMessage] = useState(defaultMessage(property, intent));
   const [lead, setLead] = useState<LeadSnapshot | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const fallbackIntent: LeadIntent = property.listingType === "rent" ? "rental" : "viewing";
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    setValue,
+    watch
+  } = useForm<LeadCaptureFormValues>({
+    resolver: zodResolver(leadCaptureSchema),
+    defaultValues: {
+      contactName: "",
+      contactEmail: "",
+      contactPhone: "",
+      intent: fallbackIntent,
+      message: defaultMessage(property, fallbackIntent)
+    }
+  });
 
-  const canSubmit = contactName.trim().length >= 2 && Boolean(contactEmail.trim() || contactPhone.trim());
+  const intent = watch("intent");
   const actionLabel = useMemo(() => {
     if (intent === "rental") {
       return "Request rent terms";
@@ -38,27 +50,21 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
   }, [intent]);
 
   function chooseIntent(nextIntent: LeadIntent) {
-    setIntent(nextIntent);
-    setMessage(defaultMessage(property, nextIntent));
+    setValue("intent", nextIntent, { shouldDirty: true, shouldValidate: true });
+    setValue("message", defaultMessage(property, nextIntent), { shouldDirty: true, shouldValidate: true });
   }
 
-  function submit() {
-    if (!canSubmit) {
-      setError("Add your name and at least one contact method.");
-      return;
-    }
-
-    setError(null);
+  function submit(values: LeadCaptureFormValues) {
     startTransition(async () => {
       const nextLead = await createWebsiteLead({
         propertyId: property.id,
-        contactName: contactName.trim(),
-        contactEmail: contactEmail.trim() || undefined,
-        contactPhone: contactPhone.trim() || undefined,
+        contactName: values.contactName,
+        contactEmail: values.contactEmail || undefined,
+        contactPhone: values.contactPhone || undefined,
         preferredLocale: "en",
         attributionSearchSource: "ai",
-        attributionSearchQuery: `${intent}:${property.title}`,
-        message: message.trim() || defaultMessage(property, intent)
+        attributionSearchQuery: `${values.intent}:${property.title}`,
+        message: values.message || defaultMessage(property, values.intent)
       });
 
       setLead(nextLead);
@@ -87,82 +93,86 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
       <p className="section-kicker">Next step</p>
       <h2 className="mb-4 mt-2 text-2xl leading-tight">Ask an agent to follow up.</h2>
 
-      <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-3">
-        {leadIntents.map((option) => {
-          const isActive = option.value === intent;
+      <form onSubmit={handleSubmit(submit)}>
+        <input type="hidden" {...register("intent")} />
 
-          return (
-            <button
-              aria-pressed={isActive}
-              className={`min-h-10 border px-3 py-2 text-left text-[0.82rem] font-black ${
-                isActive
-                  ? "border-[rgba(15,118,110,0.55)] bg-[var(--teal)] text-white"
-                  : "border-[var(--line)] bg-white text-[var(--teal-dark)]"
-              }`}
-              key={option.value}
-              onClick={() => chooseIntent(option.value)}
-              type="button"
-            >
-              {option.label}
-            </button>
-          );
-        })}
-      </div>
+        <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-3">
+          {leadIntents.map((option) => {
+            const isActive = option.value === intent;
 
-      <div className="mt-4 grid gap-3">
-        <label className="grid gap-1.5">
-          <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Name</span>
-          <input
-            className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
-            value={contactName}
-            onChange={(event) => setContactName(event.target.value)}
-            placeholder="Your name"
-          />
-        </label>
+            return (
+              <button
+                aria-pressed={isActive}
+                className={`min-h-10 cursor-pointer border px-3 py-2 text-left text-[0.82rem] font-black transition duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] ${
+                  isActive
+                    ? "border-[rgba(15,118,110,0.55)] bg-[var(--teal)] text-white hover:bg-[var(--teal-dark)]"
+                    : "border-[var(--line)] bg-white text-[var(--teal-dark)] hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4]"
+                }`}
+                key={option.value}
+                onClick={() => chooseIntent(option.value)}
+                type="button"
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
 
-        <div className="grid grid-cols-1 gap-3">
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Email</span>
+        <div className="mt-4 grid gap-3">
+          <label className="grid gap-1.5">
+            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Name</span>
             <input
               className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
-              value={contactEmail}
-              onChange={(event) => setContactEmail(event.target.value)}
-              placeholder="name@email.com"
-              type="email"
+              placeholder="Your name"
+              {...register("contactName")}
             />
           </label>
-          <label className="grid min-w-0 gap-1.5">
-            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Phone</span>
-            <input
-              className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
-              value={contactPhone}
-              onChange={(event) => setContactPhone(event.target.value)}
-              placeholder="+66..."
+
+          <div className="grid grid-cols-1 gap-3">
+            <label className="grid min-w-0 gap-1.5">
+              <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Email</span>
+              <input
+                className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
+                placeholder="name@email.com"
+                type="email"
+                {...register("contactEmail")}
+              />
+            </label>
+            <label className="grid min-w-0 gap-1.5">
+              <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Phone</span>
+              <input
+                className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
+                placeholder="+66..."
+                {...register("contactPhone")}
+              />
+            </label>
+          </div>
+
+          <label className="grid gap-1.5">
+            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Message</span>
+            <textarea
+              className="min-h-[104px] w-full min-w-0 resize-y border border-[var(--line)] px-3 py-2.5 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
+              {...register("message")}
             />
           </label>
         </div>
 
-        <label className="grid gap-1.5">
-          <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Message</span>
-          <textarea
-            className="min-h-[104px] w-full min-w-0 resize-y border border-[var(--line)] px-3 py-2.5 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-          />
-        </label>
-      </div>
+        {errors.contactName ? (
+          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.contactName.message}</p>
+        ) : null}
+        {errors.contactEmail ? (
+          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.contactEmail.message}</p>
+        ) : null}
 
-      {error ? <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{error}</p> : null}
-
-      <button
-        className="mt-4 inline-flex w-full items-center justify-center gap-2.5 bg-[var(--teal)] px-4 py-3.5 font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isPending}
-        onClick={submit}
-        type="button"
-      >
-        {isPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-        <span>{actionLabel}</span>
-      </button>
+        <button
+          className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2.5 bg-[var(--teal)] px-4 py-3.5 font-black text-white transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--teal-dark)] hover:shadow-[0_14px_28px_rgba(37,50,46,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:bg-[var(--teal)] disabled:hover:shadow-none"
+          disabled={isPending}
+          type="submit"
+        >
+          {isPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+          <span>{actionLabel}</span>
+        </button>
+      </form>
     </section>
   );
 }

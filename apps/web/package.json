@@ -9,6 +9,7 @@
     "dev": "next dev -p 3000"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.4.0",
     "@propertyflow/contracts": "0.1.0",
     "@propertyflow/domain": "0.1.0",
     "@tailwindcss/postcss": "^4.3.2",
