@@ -1,26 +1,34 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import { Building2, Home, KeyRound, RotateCcw } from "lucide-react";
-import { useMemo, useState } from "react";
-import type { PropertyListingType, PropertySnapshot } from "@propertyflow/domain";
-import { PropertyCard } from "../../../entities/property/ui/property-card";
-import { formatCompactThb } from "../../../shared/lib/format-money";
+import { useEffect, useMemo, useState } from "react";
+import type { PropertySnapshot } from "@propertyflow/domain";
+import { PropertyCard } from "@entities/property/ui/property-card";
+import { formatCompactThb } from "@shared/lib/format-money";
+import type { ListingIntent } from "../model/listing-intent";
 
-type ListingIntent = "all" | PropertyListingType;
-
-const intentOptions: Array<{
-  value: ListingIntent;
-  label: string;
-  icon: typeof Building2;
-}> = [
+const intentOptions: Array<{ value: ListingIntent; label: string; icon: typeof Building2 }> = [
   { value: "all", label: "All", icon: Building2 },
   { value: "sale", label: "Buy", icon: Home },
   { value: "rent", label: "Rent", icon: KeyRound },
   { value: "sale_or_rent", label: "Dual", icon: RotateCcw }
 ];
 
-export function ListingIntentFilter({ properties }: { properties: PropertySnapshot[] }) {
-  const [intent, setIntent] = useState<ListingIntent>("all");
+export function ListingIntentFilter({
+  initialIntent,
+  properties
+}: {
+  initialIntent: ListingIntent;
+  properties: PropertySnapshot[];
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const [intent, setIntent] = useState<ListingIntent>(initialIntent);
+
+  useEffect(() => {
+    setIntent(initialIntent);
+  }, [initialIntent]);
 
   const filteredProperties = useMemo(() => {
     if (intent === "all") {
@@ -53,6 +61,21 @@ export function ListingIntentFilter({ properties }: { properties: PropertySnapsh
     };
   }, [properties]);
 
+  function chooseIntent(nextIntent: ListingIntent) {
+    const nextSearchParams = new URLSearchParams(window.location.search);
+
+    if (nextIntent === "all") {
+      nextSearchParams.delete("intent");
+    } else {
+      nextSearchParams.set("intent", nextIntent);
+    }
+
+    const query = nextSearchParams.toString();
+
+    setIntent(nextIntent);
+    router.replace(`${pathname}${query ? `?${query}` : ""}#recommendations`, { scroll: false });
+  }
+
   return (
     <div className="grid gap-4">
       <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-2 min-[1081px]:grid-cols-4" aria-label="Listing intent">
@@ -64,13 +87,13 @@ export function ListingIntentFilter({ properties }: { properties: PropertySnapsh
           return (
             <button
               aria-pressed={isActive}
-              className={`grid min-h-[46px] cursor-pointer grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 border px-3 py-2.5 text-left text-[var(--teal-dark)] ${
+              className={`grid min-h-[46px] cursor-pointer grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 border px-3 py-2.5 text-left text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] ${
                 isActive
-                  ? "border-[rgba(15,118,110,0.55)] bg-[var(--teal)] text-white"
-                  : "border-[var(--line)] bg-white/70"
+                  ? "border-[rgba(15,118,110,0.55)] bg-[var(--teal)] text-white hover:bg-[var(--teal-dark)]"
+                  : "border-[var(--line)] bg-white/70 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4]"
               }`}
               key={option.value}
-              onClick={() => setIntent(option.value)}
+              onClick={() => chooseIntent(option.value)}
               type="button"
             >
               <Icon size={16} />

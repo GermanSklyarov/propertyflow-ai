@@ -1,8 +1,15 @@
 import { ArrowUpRight } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { ListingIntentFilter } from "../../../features/listing-intent-filter/ui/listing-intent-filter";
+import type { ListingIntent } from "@features/listing-intent-filter/model/listing-intent";
+import { ListingIntentFilter } from "@features/listing-intent-filter/ui/listing-intent-filter";
 
-export function PropertyFeed({ properties }: { properties: PropertySnapshot[] }) {
+export function PropertyFeed({
+  initialListingIntent,
+  properties
+}: {
+  initialListingIntent: ListingIntent;
+  properties: PropertySnapshot[];
+}) {
   const featured = properties[0];
 
   return (
@@ -22,7 +29,7 @@ export function PropertyFeed({ properties }: { properties: PropertySnapshot[] })
         </a>
       </div>
 
-      <ListingIntentFilter properties={properties} />
+      <ListingIntentFilter initialIntent={initialListingIntent} properties={properties} />
     </section>
   );
 }
