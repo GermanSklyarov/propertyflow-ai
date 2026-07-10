@@ -54,78 +54,6 @@ main {
   min-height: 100vh;
 }
 
-.hero-section {
-  position: relative;
-  min-height: 94vh;
-  overflow: hidden;
-  padding: 22px clamp(18px, 4vw, 54px) 46px;
-}
-
-.hero-media {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(90deg, rgba(8, 22, 20, 0.9), rgba(8, 22, 20, 0.58) 48%, rgba(8, 22, 20, 0.18)),
-    url("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2200&q=85") center/cover;
-  transform: scale(1.02);
-}
-
-.top-nav,
-.hero-content {
-  position: relative;
-  z-index: 1;
-}
-
-.top-nav {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  color: #fff;
-}
-
-.brand-mark {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.brand-mark span {
-  display: grid;
-  width: 42px;
-  height: 42px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  background: rgba(255, 255, 255, 0.12);
-  font-weight: 800;
-}
-
-.brand-mark strong {
-  font-size: 0.98rem;
-}
-
-.nav-links {
-  display: flex;
-  gap: 22px;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.92rem;
-}
-
-.hero-content {
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(420px, 0.72fr);
-  gap: clamp(24px, 5vw, 72px);
-  align-items: center;
-  max-width: 1320px;
-  min-height: calc(94vh - 82px);
-  margin: 0 auto;
-  padding-top: 46px;
-}
-
-.hero-copy {
-  color: #fff;
-}
-
 .eyebrow,
 .section-kicker,
 .answer-label {
@@ -135,50 +63,6 @@ main {
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-.hero-copy h1 {
-  max-width: 820px;
-  margin: 14px 0 18px;
-  font-size: clamp(3rem, 7vw, 7.6rem);
-  line-height: 0.95;
-}
-
-.hero-promise {
-  max-width: 680px;
-  margin: 0;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: clamp(1.05rem, 1.6vw, 1.35rem);
-  line-height: 1.65;
-}
-
-.hero-stats,
-.market-metrics {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 34px;
-}
-
-.metric {
-  min-width: 132px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-  padding: 14px 16px;
-  color: #fff;
-  backdrop-filter: blur(18px);
-}
-
-.metric strong {
-  display: block;
-  font-size: 1.35rem;
-}
-
-.metric span {
-  display: block;
-  margin-top: 4px;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 0.82rem;
 }
 
 .concierge-panel {
@@ -352,38 +236,17 @@ main {
   font-weight: 700;
 }
 
-.market-strip,
-.listing-section,
-.compare-band {
+.listing-section {
   max-width: 1320px;
   margin: 0 auto;
   padding: 54px clamp(18px, 4vw, 54px);
 }
 
-.market-strip {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 28px;
-}
-
-.market-strip h2,
-.section-heading h2,
-.compare-band h2 {
+.section-heading h2 {
   max-width: 760px;
   margin: 8px 0 0;
   font-size: clamp(1.8rem, 3.2vw, 3.4rem);
   line-height: 1.08;
-}
-
-.market-metrics .metric {
-  border-color: var(--line);
-  background: var(--panel-strong);
-  color: var(--ink);
-}
-
-.market-metrics .metric span {
-  color: var(--muted);
 }
 
 .listing-section {
@@ -405,65 +268,14 @@ main {
   white-space: nowrap;
 }
 
-.compare-band {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 28px;
-  margin-bottom: 48px;
-  border-top: 1px solid var(--line);
-}
-
-.compare-points {
-  display: grid;
-  gap: 10px;
-  min-width: 220px;
-}
-
-.compare-points span {
-  border-left: 4px solid var(--blue);
-  background: #fff;
-  padding: 14px 16px;
-  font-weight: 900;
-}
-
 @media (max-width: 1080px) {
-  .hero-content {
-    grid-template-columns: 1fr;
-    padding-top: 70px;
-  }
-
   .concierge-panel {
     max-width: 760px;
   }
 }
 
 @media (max-width: 760px) {
-  .hero-section {
-    min-height: auto;
-    padding-bottom: 34px;
-  }
-
-  .top-nav {
-    align-items: start;
-  }
-
-  .nav-links {
-    display: none;
-  }
-
-  .hero-content {
-    min-height: 0;
-    padding-top: 54px;
-  }
-
-  .hero-copy h1 {
-    font-size: 3.35rem;
-  }
-
-  .market-strip,
-  .section-heading,
-  .compare-band {
+  .section-heading {
     display: grid;
   }
 }

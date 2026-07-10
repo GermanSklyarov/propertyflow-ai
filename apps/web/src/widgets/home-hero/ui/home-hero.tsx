@@ -6,32 +6,43 @@ import { Metric } from "../../../shared/ui/metric";
 const ConciergeConsole = dynamic(
   () => import("../../../features/ai-concierge/ui/concierge-console").then((module) => module.ConciergeConsole),
   {
-    loading: () => <div className="concierge-panel concierge-loading">Loading AI console...</div>
+    loading: () => (
+      <div className="grid min-h-[520px] place-items-center border border-white/30 bg-[rgba(250,252,248,0.9)] p-[clamp(18px,2vw,26px)] text-[var(--muted)] shadow-[var(--shadow)] backdrop-blur-2xl">
+        Loading AI console...
+      </div>
+    )
   }
 );
 
 export function HomeHero({ properties }: { properties: PropertySnapshot[] }) {
   return (
-    <section className="hero-section">
-      <div className="hero-media" aria-hidden="true" />
-      <nav className="top-nav" aria-label="Primary">
-        <div className="brand-mark">
-          <span>PF</span>
-          <strong>PropertyFlow AI</strong>
+    <section className="relative min-h-auto overflow-hidden px-[clamp(18px,4vw,54px)] pb-[34px] pt-[22px] min-[761px]:min-h-[94vh] min-[761px]:pb-[46px]">
+      <div
+        className="absolute inset-0 scale-[1.02] bg-[linear-gradient(90deg,rgba(8,22,20,0.9),rgba(8,22,20,0.58)_48%,rgba(8,22,20,0.18)),url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=2200&q=85')] bg-cover bg-center"
+        aria-hidden="true"
+      />
+      <nav className="relative z-[1] flex items-start justify-between gap-6 text-white min-[761px]:items-center" aria-label="Primary">
+        <div className="flex items-center gap-3">
+          <span className="grid size-[42px] place-items-center border border-white/40 bg-white/10 font-extrabold">PF</span>
+          <strong className="text-[0.98rem]">PropertyFlow AI</strong>
         </div>
-        <div className="nav-links">
+        <div className="hidden gap-[22px] text-[0.92rem] text-white/80 min-[761px]:flex">
           <a href="#search">Search</a>
           <a href="#recommendations">Listings</a>
           <a href="#market">Market</a>
         </div>
       </nav>
 
-      <div className="hero-content">
-        <section className="hero-copy" id="search">
+      <div className="relative z-[1] mx-auto grid max-w-[1320px] grid-cols-1 items-center gap-[clamp(24px,5vw,72px)] pt-[54px] min-[761px]:min-h-[calc(94vh-82px)] min-[761px]:pt-[70px] min-[1081px]:grid-cols-[minmax(0,0.9fr)_minmax(420px,0.72fr)] min-[1081px]:pt-[46px]">
+        <section className="text-white" id="search">
           <p className="eyebrow">Thailand property intelligence</p>
-          <h1>{productPositioning.headline}</h1>
-          <p className="hero-promise">{productPositioning.promise}</p>
-          <div className="hero-stats" aria-label="Market snapshot">
+          <h1 className="mb-[18px] mt-3.5 max-w-[820px] text-[3.35rem] leading-none min-[761px]:text-[clamp(3rem,7vw,7.6rem)]">
+            {productPositioning.headline}
+          </h1>
+          <p className="m-0 max-w-[680px] text-[clamp(1.05rem,1.6vw,1.35rem)] leading-relaxed text-white/80">
+            {productPositioning.promise}
+          </p>
+          <div className="mt-[34px] flex flex-wrap gap-3" aria-label="Market snapshot">
             <Metric value={`${properties.length}+`} label="Curated matches" />
             <Metric value="6.7%" label="Yield signal" />
             <Metric value="4.8/5" label="Walkability fit" />
