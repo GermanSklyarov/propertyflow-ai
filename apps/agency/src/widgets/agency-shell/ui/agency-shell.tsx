@@ -19,7 +19,7 @@ import styles from "./agency-shell.module.css";
 const navigationItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard", status: "live" },
   { href: "/leads", icon: Users, label: "Leads", status: "live" },
-  { href: "/listings", icon: Building2, label: "Listings", status: "next" },
+  { href: "/listings", icon: Building2, label: "Listings", status: "live" },
   { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", status: "next" },
   { href: "/ai-tools", icon: Bot, label: "AI tools", status: "next" },
   { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", status: "next" },
