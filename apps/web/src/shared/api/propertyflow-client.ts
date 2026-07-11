@@ -1,14 +1,17 @@
 import type {
   ConciergeRequest,
   ConciergeResponse,
+  ComparePropertiesRequest,
   CreateLeadRequest,
   LeadSnapshot,
+  PropertyComparisonResponse,
   PropertySearchSort,
   PropertySearchResponse
 } from "@propertyflow/contracts";
 import type { PropertyListingType, PropertySnapshot } from "@propertyflow/domain";
 import { buildDemoConciergeResponse } from "../../entities/concierge/model/demo-concierge-response";
 import { demoProperties } from "../../entities/property/model/demo-properties";
+import { buildFallbackPropertyComparison } from "../../features/property-compare/model/property-comparison-fallback";
 
 const apiBaseUrl =
   process.env.PROPERTYFLOW_API_URL ?? process.env.NEXT_PUBLIC_PROPERTYFLOW_API_URL ?? "http://127.0.0.1:3001";
@@ -90,6 +93,31 @@ export async function askConcierge(request: ConciergeRequest): Promise<Concierge
     return (await response.json()) as ConciergeResponse;
   } catch {
     return buildDemoConciergeResponse(request);
+  }
+}
+
+export async function compareProperties(request: ComparePropertiesRequest): Promise<PropertyComparisonResponse> {
+  const selectedProperties = request.propertyIds
+    .map((propertyId) => demoProperties.find((property) => property.id === propertyId))
+    .filter((property): property is PropertySnapshot => Boolean(property));
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/compare`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...demoHeaders
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      return buildFallbackPropertyComparison(selectedProperties);
+    }
+
+    return (await response.json()) as PropertyComparisonResponse;
+  } catch {
+    return buildFallbackPropertyComparison(selectedProperties);
   }
 }
 
