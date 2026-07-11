@@ -1,5 +1,4 @@
-import { Type } from "class-transformer";
-import { IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsOptional, IsString } from "class-validator";
 import type { IndexedPropertySearchRequest } from "@propertyflow/contracts";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 
@@ -10,19 +9,6 @@ export class IndexedSearchPropertiesDto
   @IsOptional()
   @IsString()
   query?: string;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  offset?: number;
 
   toIndexedSearchRequest(): IndexedPropertySearchRequest {
     return toIndexedPropertySearchRequest(this);

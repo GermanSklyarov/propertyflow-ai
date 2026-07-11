@@ -313,6 +313,8 @@ export interface PropertySearchRequest {
   requiredAmenities?: string[];
   near?: GeoPoint;
   radiusMeters?: number;
+  limit?: number;
+  offset?: number;
 }
 
 export interface PropertySearchResponse {
@@ -325,8 +327,6 @@ export const PROPERTY_SEARCH_INDEX = "propertyflow-properties-v1";
 
 export interface IndexedPropertySearchRequest extends PropertySearchRequest {
   query?: string;
-  limit?: number;
-  offset?: number;
 }
 
 export interface IndexedPropertySearchHit {

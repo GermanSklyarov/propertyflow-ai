@@ -306,12 +306,23 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`st_dwithin(location, st_setsrid(st_makepoint(${longitude}, ${latitude}), 4326)::geography, ${radius})`);
     }
 
+    const paginationClauses: string[] = [];
+
+    if (filters.limit !== undefined) {
+      paginationClauses.push(`limit ${addValue(filters.limit)}`);
+    }
+
+    if (filters.offset !== undefined) {
+      paginationClauses.push(`offset ${addValue(filters.offset)}`);
+    }
+
     const result = await this.pool.query<PropertyRow>(
       `
         select *
         from properties
         where ${clauses.join(" and ")}
         order by created_at desc
+        ${paginationClauses.join(" ")}
       `,
       values
     );

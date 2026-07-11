@@ -103,6 +103,19 @@ export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> 
   @Min(1)
   radiusMeters?: number;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  offset?: number;
+
   toSearchRequest(): PropertySearchRequest {
     return toPropertySearchRequest(this);
   }
@@ -133,7 +146,9 @@ export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySea
     minAreaSqm: toOptionalNumber(query.minAreaSqm),
     maxBeachDistanceMeters: toOptionalNumber(query.maxBeachDistanceMeters),
     requiredAmenities: toOptionalStringArray(query.requiredAmenities),
-    radiusMeters
+    radiusMeters,
+    limit: toOptionalNumber(query.limit),
+    offset: toOptionalNumber(query.offset)
   };
 
   if (nearLatitude !== undefined && nearLongitude !== undefined && radiusMeters !== undefined) {

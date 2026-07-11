@@ -110,7 +110,7 @@ export class InMemoryPropertyRepository implements PropertyRepository {
   async search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]> {
     const properties = await this.list(tenantId);
 
-    return properties.filter((property) => {
+    const filteredProperties = properties.filter((property) => {
       if (filters.market && property.market !== filters.market) {
         return false;
       }
@@ -164,6 +164,12 @@ export class InMemoryPropertyRepository implements PropertyRepository {
 
       return true;
     });
+
+    const offset = filters.offset ?? 0;
+
+    return filters.limit !== undefined
+      ? filteredProperties.slice(offset, offset + filters.limit)
+      : filteredProperties.slice(offset);
   }
 
   async addPriceHistoryPoint(
