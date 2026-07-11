@@ -1,13 +1,19 @@
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatCompactThb } from "@shared/lib/format-money";
-import { getGrossYield } from "./property-brief";
+import { getBeachScore, getGrossYield, getQuietLivingScore, getRemoteWorkScore } from "./property-brief";
 
 export type PropertyCardMeta = {
   amenityLabel: string;
   listingBadge: string;
   matchSignal: string;
   priceLabel: string;
+  scoreChips: PropertyCardScoreChip[];
   yieldLabel: string;
+};
+
+export type PropertyCardScoreChip = {
+  label: string;
+  value: string;
 };
 
 export function buildPropertyCardMeta(property: PropertySnapshot): PropertyCardMeta {
@@ -16,6 +22,7 @@ export function buildPropertyCardMeta(property: PropertySnapshot): PropertyCardM
     listingBadge: getListingBadge(property),
     matchSignal: getMatchSignal(property),
     priceLabel: getCardPriceLabel(property),
+    scoreChips: getScoreChips(property),
     yieldLabel: getYieldLabel(property)
   };
 }
@@ -62,4 +69,12 @@ export function getMatchSignal(property: PropertySnapshot) {
   }
 
   return "Ownership-led resale case";
+}
+
+export function getScoreChips(property: PropertySnapshot): PropertyCardScoreChip[] {
+  return [
+    { label: "Beach", value: `${getBeachScore(property)}/5` },
+    { label: "Remote", value: `${getRemoteWorkScore(property)}/5` },
+    { label: "Quiet", value: `${getQuietLivingScore(property)}/5` }
+  ];
 }

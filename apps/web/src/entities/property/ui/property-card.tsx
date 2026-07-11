@@ -91,6 +91,16 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
               {meta.amenityLabel}
             </span>
           </div>
+          <div className="mt-2.5 grid grid-cols-3 gap-1.5">
+            {meta.scoreChips.map((chip) => (
+              <span
+                className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] text-center text-[0.74rem] font-extrabold text-[var(--teal-dark)]"
+                key={chip.label}
+              >
+                {chip.label} {chip.value}
+              </span>
+            ))}
+          </div>
         </div>
       </Link>
 

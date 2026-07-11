@@ -11,6 +11,11 @@ describe("buildPropertyCardMeta", () => {
     expect(meta.priceLabel).toContain("/mo");
     expect(meta.yieldLabel).toBe("7.8% gross yield");
     expect(meta.matchSignal).toBe("Flexible buy-or-rent strategy");
+    expect(meta.scoreChips).toEqual([
+      { label: "Beach", value: "5/5" },
+      { label: "Remote", value: "5/5" },
+      { label: "Quiet", value: "4/5" }
+    ]);
   });
 
   it("uses rental positioning for rent-only cards", () => {
@@ -26,6 +31,7 @@ describe("buildPropertyCardMeta", () => {
 
     expect(meta.listingBadge).toBe("sale · pattaya");
     expect(meta.matchSignal).toBe("Lifestyle-first ownership fit");
+    expect(meta.scoreChips.find((chip) => chip.label === "Quiet")?.value).toBe("5/5");
   });
 });
 
