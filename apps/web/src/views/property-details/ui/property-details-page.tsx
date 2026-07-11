@@ -3,12 +3,15 @@ import type { PropertySnapshot } from "@propertyflow/domain";
 import { propertyImage } from "@entities/property/lib/property-image";
 import { buildPropertyBrief } from "@entities/property/model/property-brief";
 import { buildPropertyEconomics } from "@entities/property/model/property-economics";
+import { buildPropertyPriceHistory, getPriceHistoryBars } from "@entities/property/model/property-price-history";
 import { LeadCaptureForm } from "@features/lead-capture/ui/lead-capture-form";
 import { formatCompactThb } from "@shared/lib/format-money";
 
 export function PropertyDetailsPage({ property }: { property: PropertySnapshot }) {
   const brief = buildPropertyBrief(property);
   const economics = buildPropertyEconomics(property);
+  const priceHistory = buildPropertyPriceHistory(property);
+  const priceHistoryBars = getPriceHistoryBars(priceHistory);
 
   return (
     <main className="bg-[#f7f6ef]">
@@ -52,6 +55,31 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
             <div className="mt-[22px] grid grid-cols-1 gap-3 min-[761px]:grid-cols-2">
               <BriefColumn title="Pros" items={brief.pros} tone="good" />
               <BriefColumn title="Tradeoffs" items={brief.tradeoffs} tone="warn" />
+            </div>
+          </section>
+
+          <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
+            <div className="flex items-start justify-between gap-[18px]">
+              <div>
+                <p className="section-kicker">Price history</p>
+                <h2 className="mt-2 max-w-[720px] text-[clamp(1.55rem,2.8vw,2.7rem)] leading-tight">
+                  {priceHistory.changeLabel}
+                </h2>
+              </div>
+              <Sparkles size={22} />
+            </div>
+            <div className="mt-[18px] grid min-h-[220px] grid-cols-5 items-end gap-2 border-b border-[var(--line)] pb-3">
+              {priceHistoryBars.map((point) => (
+                <div className="grid h-full min-h-[190px] content-end gap-2" key={point.label}>
+                  <span className="text-center text-[0.72rem] font-black text-[var(--muted)]">{point.valueLabel}</span>
+                  <div
+                    aria-label={`${point.label}: ${point.valueLabel}`}
+                    className="min-h-8 bg-[var(--teal)]"
+                    style={{ height: `${point.heightPercent}%` }}
+                  />
+                  <span className="text-center text-[0.78rem] font-black text-[var(--teal-dark)]">{point.label}</span>
+                </div>
+              ))}
             </div>
           </section>
 
