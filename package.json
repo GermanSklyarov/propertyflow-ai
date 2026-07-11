@@ -12,7 +12,10 @@
   "scripts": {
     "build": "tsc -b",
     "check": "tsc -b",
-    "dev": "npm run dev --workspaces --if-present",
+    "dev": "npm run dev:web",
+    "dev:api": "npm run dev --workspace @propertyflow/api",
+    "dev:web": "npm run dev --workspace @propertyflow/web",
+    "dev:admin": "npm run dev --workspace @propertyflow/admin",
     "infra:up": "docker compose up -d postgres redis opensearch minio",
     "infra:down": "docker compose down",
     "migrate": "npm run migrate --workspace @propertyflow/api",

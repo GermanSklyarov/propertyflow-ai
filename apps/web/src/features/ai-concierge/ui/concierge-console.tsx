@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
+import Link from "next/link";
 import { ArrowRight, Loader2, MapPinned, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -12,6 +13,7 @@ import {
   buildConciergeProfileChips,
   buildConciergeRequest
 } from "@features/ai-concierge/model/concierge-profile-builder";
+import { buildConciergeRecommendationCards } from "@features/ai-concierge/model/concierge-recommendation-cards";
 import {
   conciergeRequestSchema,
   type ConciergeRequestFormValues
@@ -26,6 +28,7 @@ const starterPrompts = [
 
 export function ConciergeConsole() {
   const followUpRef = useRef<HTMLElement | null>(null);
+  const recommendationsRef = useRef<HTMLElement | null>(null);
   const {
     formState: { errors },
     handleSubmit,
@@ -44,9 +47,11 @@ export function ConciergeConsole() {
   const message = watch("message");
   const inferredProfile = useMemo(() => ({ ...buildConciergeProfile(message), ...profileOverride }), [message, profileOverride]);
   const profileChips = useMemo(() => buildConciergeProfileChips(inferredProfile), [inferredProfile]);
+  const recommendationCards = useMemo(() => buildConciergeRecommendationCards(response), [response]);
 
   const primaryArea = response?.areaRecommendation;
   const shouldShowFollowUp = response?.stage === "intake" && response.nextQuestions.length > 0;
+  const shouldShowRecommendations = recommendationCards.length > 0;
   const recommendationTone = useMemo(() => {
     if (!response) {
       return "Ready";
@@ -70,17 +75,19 @@ export function ConciergeConsole() {
   }
 
   useEffect(() => {
-    if (!shouldShowFollowUp) {
+    const target = shouldShowFollowUp ? followUpRef.current : shouldShowRecommendations ? recommendationsRef.current : null;
+
+    if (!target) {
       return;
     }
 
     const animationFrame = window.requestAnimationFrame(() => {
-      followUpRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-      followUpRef.current?.focus({ preventScroll: true });
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.focus({ preventScroll: true });
     });
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [response?.id, shouldShowFollowUp]);
+  }, [response?.id, shouldShowFollowUp, shouldShowRecommendations]);
 
   return (
     <section
@@ -207,6 +214,62 @@ export function ConciergeConsole() {
             )
           )}
         </div>
+
+        {recommendationCards.length ? (
+          <section
+            aria-label="Concierge recommended listings"
+            className="grid scroll-mt-6 gap-2.5 border border-[rgba(15,118,110,0.36)] bg-white/90 p-4 shadow-[0_18px_42px_rgba(15,118,110,0.14)] outline-none ring-4 ring-[rgba(15,118,110,0.08)]"
+            ref={recommendationsRef}
+            tabIndex={-1}
+          >
+            <div>
+              <p className="m-0 text-[0.78rem] font-extrabold uppercase tracking-[0.12em] text-[var(--coral)]">Recommended listings</p>
+              <h3 className="mb-0 mt-1 text-[1.05rem]">Best matches from this advice</h3>
+              <p className="m-0 mt-1 text-[0.82rem] font-bold leading-normal text-[var(--muted)]">
+                The concierge has enough context now, so the next step is to review these suggested properties.
+              </p>
+            </div>
+            <div className="grid gap-2.5">
+              {recommendationCards.map((card) => (
+                <article className="grid gap-2.5 border border-[var(--line)] bg-[var(--panel-strong)] p-3" key={card.propertyId}>
+                  <div className="grid gap-2 min-[761px]:grid-cols-[minmax(0,1fr)_auto] min-[761px]:items-start">
+                    <div>
+                      <h4 className="m-0 text-[0.98rem]">{card.title}</h4>
+                      <div className="mt-2 flex flex-wrap gap-1.5">
+                        <span className={`border px-2 py-1 text-[0.72rem] font-black uppercase ${card.toneClassName}`}>
+                          {card.fitLabel}
+                        </span>
+                        <span className="border border-[var(--line)] bg-white px-2 py-1 text-[0.72rem] font-black uppercase text-[var(--muted)]">
+                          {card.scoreLabel}
+                        </span>
+                      </div>
+                    </div>
+                    <Link
+                      className="inline-flex w-fit items-center gap-1.5 border border-[var(--line)] bg-white px-2.5 py-2 text-[0.76rem] font-black text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)]"
+                      href={card.href}
+                    >
+                      Open brief <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                  <div className="grid gap-2 text-[0.82rem] font-bold leading-normal text-[#42524e] min-[761px]:grid-cols-2">
+                    <ul className="m-0 grid list-none gap-1.5 p-0">
+                      {card.reasons.slice(0, 2).map((reason) => (
+                        <li key={reason}>+ {reason}</li>
+                      ))}
+                    </ul>
+                    {card.tradeoffs.length ? (
+                      <ul className="m-0 grid list-none gap-1.5 p-0 text-[var(--muted)]">
+                        {card.tradeoffs.slice(0, 2).map((tradeoff) => (
+                          <li key={tradeoff}>Check: {tradeoff}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     </section>
   );
