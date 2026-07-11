@@ -1,6 +1,10 @@
-import { Metric } from "../../../shared/ui/metric";
+import type { PropertySnapshot } from "@propertyflow/domain";
+import { buildMarketSnapshot } from "@entities/property/model/market-snapshot";
+import { Metric } from "@shared/ui/metric";
 
-export function MarketStrip() {
+export function MarketStrip({ properties }: { properties: PropertySnapshot[] }) {
+  const marketSnapshot = buildMarketSnapshot(properties);
+
   return (
     <section
       className="mx-auto flex max-w-[1320px] items-end justify-between gap-7 px-[clamp(18px,4vw,54px)] py-[54px] max-[760px]:grid"
@@ -13,9 +17,9 @@ export function MarketStrip() {
         </h2>
       </div>
       <div className="mt-[34px] flex flex-wrap gap-3">
-        <Metric value="Pattaya" label="Primary market" variant="surface" />
-        <Metric value="30s" label="Advisor refresh" variant="surface" />
-        <Metric value="SSR" label="Initial feed" variant="surface" />
+        {marketSnapshot.surfaceMetrics.map((metric) => (
+          <Metric value={metric.value} label={metric.label} variant="surface" key={metric.label} />
+        ))}
       </div>
     </section>
   );

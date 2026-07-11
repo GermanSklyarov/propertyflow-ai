@@ -1,10 +1,11 @@
 import dynamic from "next/dynamic";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { productPositioning } from "../../../shared/config/product-positioning";
-import { Metric } from "../../../shared/ui/metric";
+import { buildMarketSnapshot } from "@entities/property/model/market-snapshot";
+import { productPositioning } from "@shared/config/product-positioning";
+import { Metric } from "@shared/ui/metric";
 
 const ConciergeConsole = dynamic(
-  () => import("../../../features/ai-concierge/ui/concierge-console").then((module) => module.ConciergeConsole),
+  () => import("@features/ai-concierge/ui/concierge-console").then((module) => module.ConciergeConsole),
   {
     loading: () => (
       <div className="grid min-h-[520px] place-items-center border border-white/30 bg-[rgba(250,252,248,0.9)] p-[clamp(18px,2vw,26px)] text-[var(--muted)] shadow-[var(--shadow)] backdrop-blur-2xl">
@@ -15,6 +16,8 @@ const ConciergeConsole = dynamic(
 );
 
 export function HomeHero({ properties }: { properties: PropertySnapshot[] }) {
+  const marketSnapshot = buildMarketSnapshot(properties);
+
   return (
     <section className="relative min-h-auto overflow-hidden px-[clamp(18px,4vw,54px)] pb-[34px] pt-[22px] min-[761px]:min-h-[94vh] min-[761px]:pb-[46px]">
       <div
@@ -43,9 +46,9 @@ export function HomeHero({ properties }: { properties: PropertySnapshot[] }) {
             {productPositioning.promise}
           </p>
           <div className="mt-[34px] flex flex-wrap gap-3" aria-label="Market snapshot">
-            <Metric value={`${properties.length}+`} label="Curated matches" />
-            <Metric value="6.7%" label="Yield signal" />
-            <Metric value="4.8/5" label="Walkability fit" />
+            {marketSnapshot.heroMetrics.map((metric) => (
+              <Metric value={metric.value} label={metric.label} key={metric.label} />
+            ))}
           </div>
         </section>
 

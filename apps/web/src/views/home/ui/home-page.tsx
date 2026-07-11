@@ -15,7 +15,7 @@ export async function HomePage({ initialListingIntent = "all" }: { initialListin
     <HydrationBoundary state={dehydrate(queryClient)}>
       <main>
         <HomeHero properties={properties} />
-        <MarketStrip />
+        <MarketStrip properties={properties} />
         <PropertyFeed initialListingIntent={initialListingIntent} properties={properties} />
         <CompareBand properties={properties} />
       </main>
