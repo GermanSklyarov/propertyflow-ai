@@ -72,6 +72,7 @@ Create `.env` from `.env.example`, then start the local infrastructure and apply
 npm install
 npm run infra:up
 npm run migrate
+npm run seed:demo --workspace @propertyflow/api
 npm run dev --workspace @propertyflow/api
 ```
 

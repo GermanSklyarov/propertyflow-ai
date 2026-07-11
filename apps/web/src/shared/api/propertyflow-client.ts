@@ -18,9 +18,11 @@ const demoHeaders = {
   "x-user-role": process.env.PROPERTYFLOW_USER_ROLE ?? "manager"
 };
 
+const featuredPropertiesLimit = 12;
+
 export async function listFeaturedProperties(): Promise<PropertySnapshot[]> {
   try {
-    const response = await fetch(`${apiBaseUrl}/properties?limit=6`, {
+    const response = await fetch(`${apiBaseUrl}/properties?limit=${featuredPropertiesLimit}`, {
       headers: demoHeaders,
       next: { revalidate: 30 }
     });
@@ -30,7 +32,7 @@ export async function listFeaturedProperties(): Promise<PropertySnapshot[]> {
     }
 
     const body = (await response.json()) as PropertySearchResponse;
-    return body.items.length > 0 ? body.items.slice(0, 6).map(normalizeProperty) : demoProperties;
+    return body.items.length > 0 ? body.items.slice(0, featuredPropertiesLimit).map(normalizeProperty) : demoProperties;
   } catch {
     return demoProperties;
   }
