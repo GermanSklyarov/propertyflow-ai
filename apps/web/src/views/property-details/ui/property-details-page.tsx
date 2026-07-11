@@ -23,8 +23,10 @@ import { formatCompactThb } from "@shared/lib/format-money";
 import styles from "./property-details-page.module.css";
 
 export function PropertyDetailsPage({
+  backHref = "/#recommendations",
   property,
 }: {
+  backHref?: string;
   property: PropertySnapshot;
 }) {
   const brief = buildPropertyBrief(property);
@@ -47,7 +49,7 @@ export function PropertyDetailsPage({
         <div className={`grid content-center gap-4 ${styles.heroContent}`}>
           <a
             className="inline-flex w-fit items-center gap-2 text-[0.88rem] font-extrabold text-white/80"
-            href="/#recommendations"
+            href={backHref}
           >
             <ArrowLeft size={16} />
             Back to matches

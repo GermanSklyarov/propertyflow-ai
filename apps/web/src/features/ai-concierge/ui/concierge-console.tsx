@@ -57,6 +57,8 @@ export function ConciergeConsole() {
     useState<ConciergeResponse | null>(null);
   const [hasRestoredConsoleState, setHasRestoredConsoleState] =
     useState(false);
+  const [shouldScrollToConciergeResult, setShouldScrollToConciergeResult] =
+    useState(false);
   const conciergeMutation = useMutation(askConciergeMutationOptions());
   const response = conciergeMutation.data ?? storedResponse;
   const message = watch("message");
@@ -87,6 +89,7 @@ export function ConciergeConsole() {
 
   function submit(values: ConciergeRequestFormValues) {
     setStoredResponse(null);
+    setShouldScrollToConciergeResult(true);
     conciergeMutation.reset();
     conciergeMutation.mutate(
       buildConciergeRequest(values.message, profileOverride),
@@ -101,6 +104,7 @@ export function ConciergeConsole() {
 
     setProfileOverride(nextProfileOverride);
     setStoredResponse(null);
+    setShouldScrollToConciergeResult(true);
     conciergeMutation.reset();
     conciergeMutation.mutate(
       buildConciergeRequest(message, nextProfileOverride),
@@ -159,6 +163,13 @@ export function ConciergeConsole() {
   }, [budgetAnswer, hasRestoredConsoleState, message, profileOverride, response]);
 
   useEffect(() => {
+    const shouldHonorConciergeHash =
+      window.location.hash === "#concierge-recommendations";
+
+    if (!shouldScrollToConciergeResult && !shouldHonorConciergeHash) {
+      return;
+    }
+
     const target = shouldShowFollowUp
       ? followUpRef.current
       : shouldShowRecommendations
@@ -172,10 +183,16 @@ export function ConciergeConsole() {
     const animationFrame = window.requestAnimationFrame(() => {
       target.scrollIntoView({ behavior: "smooth", block: "center" });
       target.focus({ preventScroll: true });
+      setShouldScrollToConciergeResult(false);
     });
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [response?.id, shouldShowFollowUp, shouldShowRecommendations]);
+  }, [
+    response?.id,
+    shouldScrollToConciergeResult,
+    shouldShowFollowUp,
+    shouldShowRecommendations,
+  ]);
 
   return (
     <section
@@ -233,6 +250,7 @@ export function ConciergeConsole() {
                   setProfileOverride({});
                   setBudgetAnswer("");
                   setStoredResponse(null);
+                  setShouldScrollToConciergeResult(false);
                   conciergeMutation.reset();
                   setValue("message", prompt, {
                     shouldDirty: true,
@@ -370,6 +388,7 @@ export function ConciergeConsole() {
           <section
             aria-label="Concierge recommended listings"
             className="grid scroll-mt-6 gap-2.5 border border-[rgba(15,118,110,0.36)] bg-white/90 p-4 shadow-[0_18px_42px_rgba(15,118,110,0.14)] outline-none ring-4 ring-[rgba(15,118,110,0.08)]"
+            id="concierge-recommendations"
             ref={recommendationsRef}
             tabIndex={-1}
           >
@@ -407,7 +426,7 @@ export function ConciergeConsole() {
                     </div>
                     <Link
                       className="inline-flex w-fit items-center gap-1.5 border border-[var(--line)] bg-white px-2.5 py-2 text-[0.76rem] font-black text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)]"
-                      href={card.href}
+                      href={`${card.href}?from=concierge`}
                     >
                       Open brief <ArrowRight size={14} />
                     </Link>
