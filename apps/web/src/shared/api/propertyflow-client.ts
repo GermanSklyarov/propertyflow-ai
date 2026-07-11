@@ -4,6 +4,8 @@ import type {
   ComparePropertiesRequest,
   CreateLeadRequest,
   LeadSnapshot,
+  NaturalLanguagePropertySearchResponse,
+  NaturalLanguageSearchRequest,
   PropertyComparisonResponse,
   PropertySearchSort,
   PropertySearchResponse
@@ -121,6 +123,34 @@ export async function compareProperties(request: ComparePropertiesRequest): Prom
   }
 }
 
+export async function searchPropertiesByNaturalLanguage(
+  request: NaturalLanguageSearchRequest
+): Promise<NaturalLanguagePropertySearchResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/ai-search`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...demoHeaders
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      return demoNaturalLanguageSearch(request);
+    }
+
+    const body = (await response.json()) as NaturalLanguagePropertySearchResponse;
+
+    return {
+      ...body,
+      items: body.items.map(normalizeProperty)
+    };
+  } catch {
+    return demoNaturalLanguageSearch(request);
+  }
+}
+
 export async function createWebsiteLead(request: Omit<CreateLeadRequest, "source">): Promise<LeadSnapshot> {
   const payload: CreateLeadRequest = {
     ...request,
@@ -145,6 +175,94 @@ export async function createWebsiteLead(request: Omit<CreateLeadRequest, "source
   } catch {
     return demoLead(payload);
   }
+}
+
+function demoNaturalLanguageSearch(request: NaturalLanguageSearchRequest): NaturalLanguagePropertySearchResponse {
+  const query = request.query.toLowerCase();
+  const market = request.market ?? detectSearchMarket(query);
+  const listingType = detectSearchListingType(query);
+  const maxPriceThb = detectMaxPriceThb(query);
+  const maxMonthlyRentThb = detectMaxMonthlyRentThb(query);
+  const maxBeachDistanceMeters = /beach|море|пляж|terminal 21|walk|пешком/.test(query) ? 1_000 : undefined;
+  const requiredAmenities = /internet|remote|cowork|интернет|удален/.test(query) ? ["fast-internet"] : undefined;
+  const lifestyleSignals = [
+    /quiet|тих/.test(query) ? "quiet-area" : undefined,
+    /family|children|семь|дет/.test(query) ? "family-fit" : undefined,
+    /beach|море|пляж/.test(query) ? "beach-access" : undefined
+  ].filter((signal): signal is string => Boolean(signal));
+  const items = demoProperties
+    .filter((property) => !market || property.market === market)
+    .filter((property) => !listingType || property.listingType === listingType || property.listingType === "sale_or_rent")
+    .filter((property) => !maxPriceThb || property.price.amount <= maxPriceThb)
+    .filter((property) => !maxMonthlyRentThb || (property.rentalPriceMonthly?.amount ?? Number.POSITIVE_INFINITY) <= maxMonthlyRentThb)
+    .filter((property) => !maxBeachDistanceMeters || (property.beachDistanceMeters ?? Number.POSITIVE_INFINITY) <= maxBeachDistanceMeters)
+    .filter((property) =>
+      !requiredAmenities?.length || requiredAmenities.some((amenity) => property.amenities.includes(amenity))
+    );
+
+  return {
+    filters: {
+      investmentSignals: request.purpose === "investment" ? ["rental-yield"] : [],
+      lifestyleSignals,
+      listingType,
+      market,
+      maxBeachDistanceMeters,
+      maxMonthlyRentThb,
+      maxPriceThb,
+      requiredAmenities
+    },
+    interpretedIntent: describeSearchIntent(request.query, items.length),
+    items: items.length ? items : demoProperties,
+    rankingExplanation:
+      "Demo AI Search ranked listings by detected market, listing intent, budget, beach access, and lifestyle signals.",
+    total: items.length || demoProperties.length
+  };
+}
+
+function detectSearchMarket(query: string) {
+  if (/phuket|пхукет/.test(query)) {
+    return "phuket";
+  }
+
+  if (/bangkok|бангкок|ekkamai/.test(query)) {
+    return "bangkok";
+  }
+
+  return /pattaya|паттай|terminal 21|wongamat|jomtien/.test(query) ? "pattaya" : undefined;
+}
+
+function detectSearchListingType(query: string) {
+  if (/rent|lease|аренд|снять/.test(query)) {
+    return "rent";
+  }
+
+  if (/buy|sale|purchase|купить|покуп/.test(query)) {
+    return "sale";
+  }
+
+  return undefined;
+}
+
+function detectMaxPriceThb(query: string) {
+  const millionMatch = query.match(/(?:under|до|budget|бюджет)?\s*(\d+(?:[.,]\d+)?)\s*(?:m|mln|million|млн)/);
+
+  return millionMatch?.[1] ? Math.round(Number.parseFloat(millionMatch[1].replace(",", ".")) * 1_000_000) : undefined;
+}
+
+function detectMaxMonthlyRentThb(query: string) {
+  const rentMatch = query.match(/(\d+(?:[.,]\d+)?)\s*(?:k|тыс|thousand)?\s*(?:thb|бат|\/month|per month|monthly|мес)/);
+
+  if (!rentMatch?.[1]) {
+    return undefined;
+  }
+
+  const amount = Number.parseFloat(rentMatch[1].replace(",", "."));
+
+  return amount < 1_000 ? Math.round(amount * 1_000) : Math.round(amount);
+}
+
+function describeSearchIntent(query: string, matchCount: number) {
+  return `AI interpreted "${query}" into ${matchCount} ranked ${matchCount === 1 ? "listing" : "listings"}.`;
 }
 
 function normalizeProperty(property: PropertySnapshot): PropertySnapshot {

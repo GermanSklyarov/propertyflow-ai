@@ -1,18 +1,23 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowDownUp,
   Building2,
   Home,
   KeyRound,
+  Loader2,
   RotateCcw,
+  Search,
+  Sparkles,
+  X,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { featuredPropertiesQueryOptions } from "@entities/property/api/property-queries";
 import { PropertyCard } from "@entities/property/ui/property-card";
+import { aiPropertySearchMutationOptions } from "@features/ai-property-search/api/ai-property-search-mutations";
 import {
   countPropertiesByIntent,
   filterPropertiesByIntent,
@@ -57,11 +62,21 @@ export function ListingIntentFilter({
   const [intent, setIntent] = useState<ListingIntent>(initialIntent);
   const [sort, setSort] = useState<ListingSort>("ai-fit");
   const [visibleLimit, setVisibleLimit] = useState(pageSize);
+  const [aiSearchQuery, setAiSearchQuery] = useState("");
+  const aiSearchMutation = useMutation(aiPropertySearchMutationOptions());
 
   useEffect(() => {
     setIntent(initialIntent);
     setVisibleLimit(pageSize);
   }, [initialIntent]);
+
+  useEffect(() => {
+    const interpretedListingType = aiSearchMutation.data?.filters.listingType;
+
+    if (interpretedListingType) {
+      setIntent(interpretedListingType);
+    }
+  }, [aiSearchMutation.data?.filters.listingType]);
 
   const apiListingType = intent === "all" ? undefined : intent;
   const propertiesQuery = useQuery({
@@ -73,17 +88,19 @@ export function ListingIntentFilter({
     placeholderData: (previousData) => previousData ?? properties,
   });
   const catalogProperties = propertiesQuery.data ?? properties;
+  const activeAiSearch = aiSearchMutation.data;
+  const activeCatalogProperties = activeAiSearch?.items ?? catalogProperties;
   const filteredProperties = useMemo(() => {
     return sortPropertiesForCatalog(
-      filterPropertiesByIntent(catalogProperties, intent),
+      filterPropertiesByIntent(activeCatalogProperties, intent),
       sort,
     );
-  }, [catalogProperties, intent, sort]);
+  }, [activeCatalogProperties, intent, sort]);
   const intentSummary = useMemo(
-    () => getListingIntentSummary(catalogProperties, intent),
-    [catalogProperties, intent],
+    () => getListingIntentSummary(activeCatalogProperties, intent),
+    [activeCatalogProperties, intent],
   );
-  const canLoadMore = filteredProperties.length >= visibleLimit;
+  const canLoadMore = !activeAiSearch && filteredProperties.length >= visibleLimit;
 
   function chooseIntent(nextIntent: ListingIntent) {
     const nextSearchParams = new URLSearchParams(window.location.search);
@@ -98,6 +115,7 @@ export function ListingIntentFilter({
 
     setIntent(nextIntent);
     setVisibleLimit(pageSize);
+    aiSearchMutation.reset();
     router.replace(`${pathname}${query ? `?${query}` : ""}#recommendations`, {
       scroll: false,
     });
@@ -108,8 +126,83 @@ export function ListingIntentFilter({
     setVisibleLimit(pageSize);
   }
 
+  function runAiSearch() {
+    const query = aiSearchQuery.trim();
+
+    if (!query) {
+      return;
+    }
+
+    setVisibleLimit(pageSize);
+    aiSearchMutation.mutate({
+      locale: /[а-яё]/i.test(query) ? "ru" : "en",
+      query,
+    });
+  }
+
+  function clearAiSearch() {
+    setAiSearchQuery("");
+    aiSearchMutation.reset();
+    setVisibleLimit(pageSize);
+  }
+
   return (
     <div className={styles.root}>
+      <div className={styles.aiSearchPanel}>
+        <div className={styles.aiSearchHeader}>
+          <Sparkles size={16} />
+          <span>AI Search</span>
+        </div>
+        <div className={styles.aiSearchControls}>
+          <label className={styles.aiSearchInputWrap}>
+            <Search size={16} />
+            <input
+              aria-label="Search listings with AI"
+              className={styles.aiSearchInput}
+              onChange={(event) => setAiSearchQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  runAiSearch();
+                }
+              }}
+              placeholder="Try: quiet condo near Terminal 21 under 4M THB"
+              type="search"
+              value={aiSearchQuery}
+            />
+          </label>
+          <button
+            className={styles.aiSearchButton}
+            disabled={!aiSearchQuery.trim() || aiSearchMutation.isPending}
+            onClick={runAiSearch}
+            type="button"
+          >
+            {aiSearchMutation.isPending ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <Sparkles size={16} />
+            )}
+            Search
+          </button>
+          {activeAiSearch ? (
+            <button
+              aria-label="Clear AI search"
+              className={styles.aiSearchClearButton}
+              onClick={clearAiSearch}
+              type="button"
+            >
+              <X size={16} />
+            </button>
+          ) : null}
+        </div>
+        {activeAiSearch ? (
+          <div className={styles.aiSearchResult}>
+            <strong>{activeAiSearch.interpretedIntent}</strong>
+            <span>{activeAiSearch.rankingExplanation}</span>
+          </div>
+        ) : null}
+      </div>
+
       <div className={styles.intentGrid} aria-label="Listing intent">
         {intentOptions.map((option) => {
           const Icon = option.icon;

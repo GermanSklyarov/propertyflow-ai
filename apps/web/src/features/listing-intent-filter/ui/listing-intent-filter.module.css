@@ -3,6 +3,134 @@
   gap: 16px;
 }
 
+.aiSearchPanel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: rgb(255 255 255 / 76%);
+  padding: 12px;
+  box-shadow: 0 14px 34px rgb(37 50 46 / 5%);
+}
+
+.aiSearchHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--coral);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.aiSearchControls {
+  display: grid;
+  gap: 8px;
+}
+
+.aiSearchInputWrap {
+  display: grid;
+  min-height: 44px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  padding: 0 12px;
+  color: var(--teal-dark);
+}
+
+.aiSearchInput {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 800;
+  outline: none;
+}
+
+.aiSearchInput::placeholder {
+  color: rgb(105 119 114 / 72%);
+}
+
+.aiSearchButton,
+.aiSearchClearButton {
+  display: inline-flex;
+  min-height: 44px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 42%);
+  padding: 0 14px;
+  font-size: 0.82rem;
+  font-weight: 900;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease,
+    transform 150ms ease;
+}
+
+.aiSearchButton {
+  background: var(--teal);
+  color: #fff;
+}
+
+.aiSearchButton:hover,
+.aiSearchClearButton:hover {
+  transform: translateY(-2px);
+}
+
+.aiSearchButton:hover {
+  background: var(--teal-dark);
+  box-shadow: 0 14px 28px rgb(37 50 46 / 12%);
+}
+
+.aiSearchButton:focus-visible,
+.aiSearchClearButton:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 4px rgb(15 118 110 / 18%);
+}
+
+.aiSearchButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.aiSearchButton:disabled:hover {
+  background: var(--teal);
+  box-shadow: none;
+  transform: none;
+}
+
+.aiSearchClearButton {
+  background: #fff;
+  color: var(--teal-dark);
+}
+
+.aiSearchClearButton:hover {
+  border-color: rgb(15 118 110 / 42%);
+  background: #edf8f4;
+}
+
+.aiSearchResult {
+  display: grid;
+  gap: 4px;
+  border-left: 4px solid var(--blue);
+  background: #edf8f4;
+  padding: 10px 12px;
+  color: #42524e;
+  font-size: 0.82rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.aiSearchResult strong {
+  color: var(--teal-dark);
+}
+
 .intentGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -190,6 +318,10 @@
 }
 
 @media (min-width: 768px) {
+  .aiSearchControls {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
   .propertyGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
