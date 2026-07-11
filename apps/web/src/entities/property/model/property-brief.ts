@@ -6,6 +6,7 @@ export type PropertyBrief = {
   beachScore: number;
   grossYield?: number;
   listingLabel: string;
+  neighborhoodRows: NeighborhoodScoreRow[];
   primaryPrice: string;
   pros: string[];
   questions: string[];
@@ -15,12 +16,18 @@ export type PropertyBrief = {
   tradeoffs: string[];
 };
 
+export type NeighborhoodScoreRow = {
+  label: string;
+  value: number;
+};
+
 export function buildPropertyBrief(property: PropertySnapshot): PropertyBrief {
   return {
     annualRentSignal: getAnnualRentSignal(property),
     beachScore: getBeachScore(property),
     grossYield: getGrossYield(property),
     listingLabel: getListingLabel(property.listingType),
+    neighborhoodRows: getNeighborhoodRows(property),
     primaryPrice: getPrimaryPrice(property),
     pros: getPropertyPros(property),
     questions: getAgentQuestions(property),
@@ -117,10 +124,59 @@ export function getQuietLivingScore(property: PropertySnapshot) {
   return property.address?.toLowerCase().includes("jomtien") ? 5 : 4;
 }
 
+export function getNeighborhoodRows(property: PropertySnapshot): NeighborhoodScoreRow[] {
+  return [
+    { label: "Beach", value: getBeachScore(property) },
+    { label: "Restaurants", value: getRestaurantsScore(property) },
+    { label: "Remote work", value: getRemoteWorkScore(property) },
+    { label: "Quiet living", value: getQuietLivingScore(property) },
+    { label: "Shopping", value: getShoppingScore(property) },
+    { label: "Nightlife", value: getNightlifeScore(property) }
+  ];
+}
+
 export function getAgentQuestions(property: PropertySnapshot) {
   return [
     property.listingType === "rent" ? "What lease length and deposit are acceptable?" : "What transfer fees and sinking fund apply?",
     "Can the agent confirm noise level at night?",
     "Are internet speed and building maintenance documents available?"
   ];
+}
+
+function getRestaurantsScore(property: PropertySnapshot) {
+  const address = property.address?.toLowerCase() ?? "";
+
+  if (address.includes("north") || address.includes("wongamat")) {
+    return 5;
+  }
+
+  return 4;
+}
+
+function getShoppingScore(property: PropertySnapshot) {
+  const address = property.address?.toLowerCase() ?? "";
+
+  if (address.includes("north")) {
+    return 5;
+  }
+
+  if (address.includes("wongamat")) {
+    return 4;
+  }
+
+  return 3;
+}
+
+function getNightlifeScore(property: PropertySnapshot) {
+  const address = property.address?.toLowerCase() ?? "";
+
+  if (address.includes("north")) {
+    return 4;
+  }
+
+  if (address.includes("jomtien")) {
+    return 3;
+  }
+
+  return 2;
 }

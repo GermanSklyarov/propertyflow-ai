@@ -83,10 +83,9 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
               <MapPin size={22} />
             </div>
             <div className="mt-[18px] grid gap-2.5">
-              <ScoreRow label="Beach" value={brief.beachScore} />
-              <ScoreRow label="Restaurants" value={4} />
-              <ScoreRow label="Remote work" value={brief.remoteWorkScore} />
-              <ScoreRow label="Quiet living" value={brief.quietLivingScore} />
+              {brief.neighborhoodRows.map((row) => (
+                <ScoreRow label={row.label} value={row.value} key={row.label} />
+              ))}
             </div>
           </section>
         </div>
