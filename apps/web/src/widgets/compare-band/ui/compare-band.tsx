@@ -44,6 +44,16 @@ export function CompareBand({ properties }: { properties: PropertySnapshot[] }) 
                 <p className="m-0 text-[0.76rem] font-black uppercase text-[var(--muted)]">{insight.label}</p>
                 <h3 className="mb-1.5 mt-1 text-[1rem]">{insight.property.title}</h3>
                 <p className="m-0 text-[0.84rem] font-bold leading-normal text-[#52615d]">{insight.reason}</p>
+                <div className="mt-2 grid gap-1.5 text-[0.78rem] font-bold leading-normal text-[#42524e]">
+                  {insight.signals.slice(0, 2).map((signal) => (
+                    <span key={signal}>+ {signal}</span>
+                  ))}
+                  {insight.tradeoffs.slice(0, 1).map((tradeoff) => (
+                    <span className="text-[var(--muted)]" key={tradeoff}>
+                      Check: {tradeoff}
+                    </span>
+                  ))}
+                </div>
               </article>
             ))
           : ["Investment", "Winter living", "Family fit"].map((label) => (
