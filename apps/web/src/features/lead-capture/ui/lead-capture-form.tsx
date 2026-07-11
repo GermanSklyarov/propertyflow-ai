@@ -3,26 +3,24 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
-import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { createWebsiteLeadMutationOptions } from "@entities/lead/api/lead-mutations";
 import {
+  getDefaultLeadMessage,
+  getFallbackLeadIntent,
+  getLeadActionLabel,
+  leadIntentOptions
+} from "@features/lead-capture/model/lead-capture-copy";
+import {
   leadCaptureSchema,
-  type LeadCaptureFormValues,
-  type LeadIntent
+  type LeadCaptureFormValues
 } from "@features/lead-capture/model/lead-capture-schema";
-
-const leadIntents: Array<{ value: LeadIntent; label: string }> = [
-  { value: "viewing", label: "Viewing" },
-  { value: "rental", label: "Rent terms" },
-  { value: "investment", label: "ROI check" }
-];
 
 export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
   const leadMutation = useMutation(createWebsiteLeadMutationOptions());
   const lead = leadMutation.data ?? null;
-  const fallbackIntent: LeadIntent = property.listingType === "rent" ? "rental" : "viewing";
+  const fallbackIntent = getFallbackLeadIntent(property);
   const {
     formState: { errors },
     handleSubmit,
@@ -36,26 +34,15 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
       contactEmail: "",
       contactPhone: "",
       intent: fallbackIntent,
-      message: defaultMessage(property, fallbackIntent)
+      message: getDefaultLeadMessage(property, fallbackIntent)
     }
   });
 
   const intent = watch("intent");
-  const actionLabel = useMemo(() => {
-    if (intent === "rental") {
-      return "Request rent terms";
-    }
 
-    if (intent === "investment") {
-      return "Request ROI review";
-    }
-
-    return "Request viewing";
-  }, [intent]);
-
-  function chooseIntent(nextIntent: LeadIntent) {
+  function chooseIntent(nextIntent: LeadCaptureFormValues["intent"]) {
     setValue("intent", nextIntent, { shouldDirty: true, shouldValidate: true });
-    setValue("message", defaultMessage(property, nextIntent), { shouldDirty: true, shouldValidate: true });
+    setValue("message", getDefaultLeadMessage(property, nextIntent), { shouldDirty: true, shouldValidate: true });
   }
 
   function submit(values: LeadCaptureFormValues) {
@@ -67,7 +54,7 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
       preferredLocale: "en",
       attributionSearchSource: "ai",
       attributionSearchQuery: `${values.intent}:${property.title}`,
-      message: values.message || defaultMessage(property, values.intent)
+      message: values.message || getDefaultLeadMessage(property, values.intent)
     });
   }
 
@@ -97,7 +84,7 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
         <input type="hidden" {...register("intent")} />
 
         <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-3">
-          {leadIntents.map((option) => {
+          {leadIntentOptions.map((option) => {
             const isActive = option.value === intent;
 
             return (
@@ -163,6 +150,9 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
         {errors.contactEmail ? (
           <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.contactEmail.message}</p>
         ) : null}
+        {errors.contactPhone ? (
+          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.contactPhone.message}</p>
+        ) : null}
 
         <button
           className="mt-4 inline-flex w-full cursor-pointer items-center justify-center gap-2.5 bg-[var(--teal)] px-4 py-3.5 font-black text-white transition duration-150 hover:-translate-y-0.5 hover:bg-[var(--teal-dark)] hover:shadow-[0_14px_28px_rgba(37,50,46,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0 disabled:hover:bg-[var(--teal)] disabled:hover:shadow-none"
@@ -170,21 +160,9 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
           type="submit"
         >
           {leadMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
-          <span>{actionLabel}</span>
+          <span>{getLeadActionLabel(intent)}</span>
         </button>
       </form>
     </section>
   );
-}
-
-function defaultMessage(property: PropertySnapshot, intent: LeadIntent) {
-  if (intent === "rental") {
-    return `I want to discuss rent terms for ${property.title}, including lease length, deposit, and utilities.`;
-  }
-
-  if (intent === "investment") {
-    return `Please review the ROI, rent estimate, fees, and resale liquidity for ${property.title}.`;
-  }
-
-  return `I would like to schedule a viewing or video tour for ${property.title}.`;
 }

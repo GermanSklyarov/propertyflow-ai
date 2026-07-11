@@ -13,6 +13,10 @@ export const leadCaptureSchema = z
   .refine((value) => Boolean(value.contactEmail || value.contactPhone), {
     message: "Add at least one contact method.",
     path: ["contactEmail"]
+  })
+  .refine((value) => Boolean(value.contactEmail || value.contactPhone), {
+    message: "Add at least one contact method.",
+    path: ["contactPhone"]
   });
 
 export type LeadCaptureFormValues = z.infer<typeof leadCaptureSchema>;
