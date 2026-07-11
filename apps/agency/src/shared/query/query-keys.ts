@@ -11,5 +11,11 @@ export const queryKeys = {
   listings: {
     all: ["listings"] as const,
     list: (filters: object) => [...queryKeys.listings.all, "list", filters] as const
+  },
+  savedSearches: {
+    all: ["saved-searches"] as const,
+    alertAnalytics: () => [...queryKeys.savedSearches.all, "alert-analytics"] as const,
+    list: () => [...queryKeys.savedSearches.all, "list"] as const,
+    opportunities: () => [...queryKeys.savedSearches.all, "opportunities"] as const
   }
 };

@@ -5,6 +5,9 @@ import type {
   ListLeadsRequest,
   PropertySearchRequest,
   PropertySearchResponse,
+  SavedPropertySearchListResponse,
+  SavedSearchAlertAnalyticsResponse,
+  SavedSearchOpportunitiesResponse,
   TenantDashboardMetrics
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -87,6 +90,57 @@ export async function listProperties(
     return (await response.json()) as PropertySearchResponse;
   } catch {
     return demoPropertySearchResponse(request);
+  }
+}
+
+export async function listSavedPropertySearches(): Promise<SavedPropertySearchListResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/saved-searches`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoSavedPropertySearchListResponse();
+    }
+
+    return (await response.json()) as SavedPropertySearchListResponse;
+  } catch {
+    return demoSavedPropertySearchListResponse();
+  }
+}
+
+export async function listSavedSearchOpportunities(): Promise<SavedSearchOpportunitiesResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/saved-searches/opportunities?limit=12&minScore=35`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoSavedSearchOpportunitiesResponse();
+    }
+
+    return (await response.json()) as SavedSearchOpportunitiesResponse;
+  } catch {
+    return demoSavedSearchOpportunitiesResponse();
+  }
+}
+
+export async function getSavedSearchAlertAnalytics(): Promise<SavedSearchAlertAnalyticsResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/saved-searches/alerts/analytics`, {
+      headers: demoHeaders,
+      next: { revalidate: 30 }
+    });
+
+    if (!response.ok) {
+      return demoSavedSearchAlertAnalyticsResponse();
+    }
+
+    return (await response.json()) as SavedSearchAlertAnalyticsResponse;
+  } catch {
+    return demoSavedSearchAlertAnalyticsResponse();
   }
 }
 
@@ -524,5 +578,187 @@ function demoPropertySearchResponse(filters: PropertySearchRequest): PropertySea
     filters,
     items: properties,
     total: properties.length
+  };
+}
+
+function demoSavedPropertySearchListResponse(): SavedPropertySearchListResponse {
+  const now = new Date();
+  const items: SavedPropertySearchListResponse["items"] = [
+    {
+      id: "saved-search-family-pattaya",
+      tenantId: demoHeaders["x-tenant-id"],
+      userId: demoHeaders["x-user-id"],
+      title: "Family move to quiet Pattaya",
+      naturalLanguageQuery: "Moving to Pattaya with family, quiet area, budget 3.5M THB",
+      locale: "en",
+      purpose: "relocation",
+      filters: {
+        listingType: "sale",
+        market: "pattaya",
+        maxPriceThb: 3_800_000,
+        minBedrooms: 1,
+        requiredAmenities: ["pool", "security"],
+        sort: "ai-fit"
+      },
+      matchCount: 4,
+      notificationsEnabled: true,
+      createdAt: addHours(now, -74),
+      updatedAt: addHours(now, -6)
+    },
+    {
+      id: "saved-search-terminal-rent",
+      tenantId: demoHeaders["x-tenant-id"],
+      userId: demoHeaders["x-user-id"],
+      title: "Terminal 21 rental under 30k",
+      naturalLanguageQuery: "Need to rent near Terminal 21, beach access, good internet, under 30k THB/month",
+      locale: "en",
+      purpose: "living",
+      filters: {
+        listingType: "rent",
+        market: "pattaya",
+        maxMonthlyRentThb: 30_000,
+        requiredAmenities: ["fiber-internet"],
+        sort: "beach-asc"
+      },
+      matchCount: 3,
+      notificationsEnabled: true,
+      createdAt: addHours(now, -50),
+      updatedAt: addHours(now, -2)
+    },
+    {
+      id: "saved-search-yield-pattaya",
+      tenantId: demoHeaders["x-tenant-id"],
+      userId: "agent-demo-2",
+      title: "Pattaya yield above 6%",
+      naturalLanguageQuery: "Investment condo in Pattaya with yield above 6%",
+      locale: "en",
+      purpose: "investment",
+      filters: {
+        listingType: "sale",
+        market: "pattaya",
+        maxPriceThb: 5_000_000,
+        sort: "yield-desc"
+      },
+      matchCount: 5,
+      notificationsEnabled: false,
+      createdAt: addHours(now, -120),
+      updatedAt: addHours(now, -18)
+    },
+    {
+      id: "saved-search-rawai-family",
+      tenantId: demoHeaders["x-tenant-id"],
+      userId: demoHeaders["x-user-id"],
+      title: "Rawai villa relocation",
+      naturalLanguageQuery: "Family villa in Rawai with pool and parking",
+      locale: "en",
+      purpose: "family",
+      filters: {
+        listingType: "sale",
+        market: "phuket",
+        minBedrooms: 3,
+        requiredAmenities: ["private-pool", "parking"],
+        sort: "ai-fit"
+      },
+      matchCount: 2,
+      notificationsEnabled: true,
+      createdAt: addHours(now, -160),
+      updatedAt: addHours(now, -28)
+    }
+  ];
+
+  return {
+    items,
+    total: items.length
+  };
+}
+
+function demoSavedSearchOpportunitiesResponse(): SavedSearchOpportunitiesResponse {
+  const now = new Date();
+  const savedSearches = demoSavedPropertySearchListResponse().items;
+  const properties = demoPropertySearchResponse({ limit: 30 }).items;
+  const items: SavedSearchOpportunitiesResponse["items"] = [
+    {
+      savedSearch: savedSearches[0],
+      currentMatchCount: 4,
+      leadCount: 0,
+      opportunityScore: 92,
+      reason: "High-fit family relocation search has fresh matches but no lead yet.",
+      topRecommendation: {
+        property: properties[0],
+        score: 87,
+        reasons: ["Wongamat is quieter than central Pattaya.", "Budget fit is close enough for negotiation."],
+        tradeoffs: ["One bedroom may be tight for larger families."]
+      }
+    },
+    {
+      savedSearch: savedSearches[1],
+      currentMatchCount: 3,
+      leadCount: 1,
+      opportunityScore: 78,
+      reason: "Rental intent is active and one follow-up is overdue.",
+      latestLeadAt: addHours(now, -26),
+      topRecommendation: {
+        property: properties[1],
+        score: 82,
+        reasons: ["Monthly rent is below budget.", "Fiber internet and central location match the request."],
+        tradeoffs: ["Central Pattaya is busier and less quiet."]
+      }
+    },
+    {
+      savedSearch: savedSearches[2],
+      currentMatchCount: 5,
+      leadCount: 2,
+      opportunityScore: 71,
+      reason: "Investment search has enough matches for a curated comparison email.",
+      latestLeadAt: addHours(now, -42),
+      topRecommendation: {
+        property: properties[2],
+        score: 79,
+        reasons: ["Compact unit has stronger liquidity.", "Rent estimate supports a yield story."],
+        tradeoffs: ["Reserved status needs availability confirmation."]
+      }
+    }
+  ];
+
+  return {
+    generatedAt: new Date().toISOString(),
+    items,
+    summary: {
+      averageOpportunityScore: Math.round(items.reduce((sum, item) => sum + item.opportunityScore, 0) / items.length),
+      hotOpportunities: items.filter((item) => item.opportunityScore >= 80).length,
+      openOpportunities: items.length,
+      unconvertedOpportunities: items.filter((item) => item.leadCount === 0).length
+    },
+    total: items.length
+  };
+}
+
+function demoSavedSearchAlertAnalyticsResponse(): SavedSearchAlertAnalyticsResponse {
+  const lastRun = {
+    id: "alert-run-demo-001",
+    tenantId: demoHeaders["x-tenant-id"],
+    requestedByUserId: demoHeaders["x-user-id"],
+    scope: "tenant" as const,
+    dryRun: false,
+    status: "completed" as const,
+    totalAlerts: 3,
+    totalCandidates: 12,
+    items: [
+      { savedSearchId: "saved-search-family-pattaya", title: "Family move to quiet Pattaya", currentMatchCount: 4 },
+      { savedSearchId: "saved-search-terminal-rent", title: "Terminal 21 rental under 30k", currentMatchCount: 3 }
+    ],
+    createdAt: addHours(new Date(), -8)
+  };
+
+  return {
+    averageCandidatesPerRun: 4,
+    completedRuns: 6,
+    enabledAlerts: 3,
+    failedRuns: 0,
+    generatedAt: new Date().toISOString(),
+    lastRun,
+    recentRuns: 6,
+    totalCandidates: 24,
+    totalSavedSearches: demoSavedPropertySearchListResponse().total
   };
 }
