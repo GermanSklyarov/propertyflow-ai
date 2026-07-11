@@ -1,0 +1,254 @@
+import {
+  Bot,
+  Camera,
+  FileText,
+  ImagePlus,
+  Languages,
+  LockKeyhole,
+  ShieldCheck,
+  Sparkles,
+  TrendingUp,
+  TriangleAlert,
+  WandSparkles
+} from "lucide-react";
+import type { TenantDashboardMetrics } from "@propertyflow/contracts";
+import type { PropertySnapshot } from "@propertyflow/domain";
+import styles from "./ai-tools-page.module.css";
+
+export function AiToolsPage({
+  listings,
+  metrics
+}: {
+  listings: PropertySnapshot[];
+  metrics: TenantDashboardMetrics;
+}) {
+  const operations = buildAiOperations(listings);
+  const readyCount = operations.filter((operation) => operation.readiness === "ready").length;
+  const reviewCount = operations.filter((operation) => operation.readiness === "review").length;
+
+  return (
+    <main className={styles.page}>
+      <div className={styles.shell}>
+        <header className={styles.header}>
+          <div>
+            <p className="section-kicker">Agent automation</p>
+            <h1 className={styles.title}>AI tools cockpit</h1>
+            <p className={styles.subtitle}>
+              Prepare listing descriptions, multilingual copy, image analysis, OCR-style extraction, pricing signals, and safe agent actions.
+            </p>
+          </div>
+          <span className={styles.timestamp}>Guardrails active</span>
+        </header>
+
+        <section className={styles.kpiGrid} aria-label="AI tools overview">
+          <KpiCard icon={<Sparkles size={18} />} label="AI-ready listings" note="Enough structured data" value={readyCount} />
+          <KpiCard icon={<TriangleAlert size={18} />} label="Needs review" note="Human approval first" value={reviewCount} />
+          <KpiCard icon={<ShieldCheck size={18} />} label="Blocked actions" note="Policy layer" value={metrics.security.blockedAiActions} />
+          <KpiCard icon={<TrendingUp size={18} />} label="Pricing rows" note="Training dataset" value={metrics.conciergeTrainingDatasetRows} />
+        </section>
+
+        <section className={styles.layout}>
+          <section className={styles.toolsPanel} aria-label="AI tool modules">
+            <div className={styles.panelHeader}>
+              <div>
+                <p className="section-kicker">Tool modules</p>
+                <h2 className={styles.panelTitle}>Agent workflows</h2>
+              </div>
+              <span className={styles.statusBadge}>MVP preview</span>
+            </div>
+
+            <div className={styles.toolGrid}>
+              <ToolCard
+                icon={<FileText size={19} />}
+                title="Listing description"
+                copy="Generate polished listing copy from structured fields, amenities, photos, and neighborhood signals."
+                status="Ready"
+              />
+              <ToolCard
+                icon={<Languages size={19} />}
+                title="Multilingual copy"
+                copy="Prepare English, Russian, Thai, and Chinese variants for agency sites and outbound follow-up."
+                status="Ready"
+              />
+              <ToolCard
+                icon={<Camera size={19} />}
+                title="Image analysis"
+                copy="Detect pool, sea view, furniture, renovation quality, air conditioning, and listing photo signals."
+                status="Review"
+              />
+              <ToolCard
+                icon={<ImagePlus size={19} />}
+                title="Document OCR"
+                copy="Extract ownership and parcel details from uploaded documents before an agent approves the result."
+                status="Next"
+              />
+              <ToolCard
+                icon={<TrendingUp size={19} />}
+                title="Price recommendation"
+                copy="Use comparable listings now, then graduate to trained pricing models once feedback coverage grows."
+                status="Ready"
+              />
+              <ToolCard
+                icon={<LockKeyhole size={19} />}
+                title="Action policy"
+                copy="Block destructive or hallucinated AI actions before they touch listings, images, or background jobs."
+                status="Live"
+              />
+            </div>
+          </section>
+
+          <aside className={styles.guardrailPanel}>
+            <p className="section-kicker">Safety layer</p>
+            <h2 className={styles.sideTitle}>AI action policy</h2>
+            <div className={styles.guardrailList}>
+              {metrics.security.blockedAiActionsByName.map((item) => (
+                <div className={styles.guardrailItem} key={item.bucket}>
+                  <strong>{item.count}</strong>
+                  <span>{formatBucket(item.bucket)}</span>
+                </div>
+              ))}
+              <div className={styles.guardrailItem}>
+                <strong>{metrics.security.imageDeletePreviews}</strong>
+                <span>delete previews issued</span>
+              </div>
+              <div className={styles.guardrailItem}>
+                <strong>{metrics.security.rejectedJobEnqueues}</strong>
+                <span>jobs rejected</span>
+              </div>
+            </div>
+          </aside>
+        </section>
+
+        <section className={styles.queuePanel} aria-label="AI listing queue">
+          <div className={styles.panelHeader}>
+            <div>
+              <p className="section-kicker">Listing queue</p>
+              <h2 className={styles.panelTitle}>Recommended AI work</h2>
+            </div>
+            <span className={styles.statusBadge}>{operations.length} listings scanned</span>
+          </div>
+
+          <div className={styles.operationList}>
+            {operations.map((operation) => (
+              <AiOperationRow key={operation.property.id} operation={operation} />
+            ))}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+interface AiOperation {
+  property: PropertySnapshot;
+  readiness: "ready" | "review" | "blocked";
+  score: number;
+  missing: string[];
+  recommendedActions: string[];
+}
+
+function AiOperationRow({ operation }: { operation: AiOperation }) {
+  return (
+    <article className={styles.operationRow}>
+      <div>
+        <h3>{operation.property.title}</h3>
+        <p>{operation.property.description ?? "No description yet. Start with AI copy generation and human review."}</p>
+      </div>
+
+      <div className={styles.actionGroup}>
+        {operation.recommendedActions.map((action) => (
+          <span key={action}>
+            <WandSparkles size={14} />
+            {action}
+          </span>
+        ))}
+      </div>
+
+      <div className={styles.operationStatus}>
+        <strong>{operation.score}/5</strong>
+        <span className={styles[operation.readiness]}>{operation.readiness}</span>
+        {operation.missing.length ? (
+          <div className={styles.missingGroup} aria-label="Missing listing signals">
+            {operation.missing.map((item) => (
+              <small key={item}>{item}</small>
+            ))}
+          </div>
+        ) : (
+          <small>ready for review</small>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function ToolCard({
+  copy,
+  icon,
+  status,
+  title
+}: {
+  copy: string;
+  icon: React.ReactNode;
+  status: string;
+  title: string;
+}) {
+  return (
+    <article className={styles.toolCard}>
+      <div className={styles.toolIcon}>{icon}</div>
+      <h3>{title}</h3>
+      <p>{copy}</p>
+      <span>{status}</span>
+    </article>
+  );
+}
+
+function KpiCard({
+  icon,
+  label,
+  note,
+  value
+}: {
+  icon: React.ReactNode;
+  label: string;
+  note: string;
+  value: number | string;
+}) {
+  return (
+    <article className={styles.kpiCard}>
+      <div className={styles.kpiIcon}>{icon}</div>
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{note}</small>
+    </article>
+  );
+}
+
+function buildAiOperations(listings: PropertySnapshot[]): AiOperation[] {
+  return listings.map((property) => {
+    const missing = [
+      property.description ? undefined : "copy",
+      property.amenities.length >= 4 ? undefined : "amenities",
+      property.beachDistanceMeters ? undefined : "distance",
+      property.monthlyRentEstimate || property.rentalPriceMonthly ? undefined : "rent signal",
+      property.maintenanceFeeMonthly ? undefined : "ownership costs"
+    ].filter((item): item is string => Boolean(item));
+    const score = 5 - missing.length;
+    const recommendedActions = [
+      !property.description ? "generate description" : "refresh copy",
+      property.amenities.length < 4 ? "analyze images" : "translate copy",
+      property.monthlyRentEstimate || property.rentalPriceMonthly ? "price check" : "rent estimate"
+    ];
+
+    return {
+      property,
+      missing,
+      readiness: score >= 4 ? "ready" : score >= 2 ? "review" : "blocked",
+      recommendedActions,
+      score
+    };
+  });
+}
+
+function formatBucket(value: string) {
+  return value.replaceAll("-", " ").replaceAll("_", " ");
+}
