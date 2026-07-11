@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import { getTenantDashboardMetrics } from "@shared/api/propertyflow-client";
+import { getTenantDashboardMetrics } from "@shared/api/agency-client";
 import { queryKeys } from "@shared/query/query-keys";
 
 export function tenantDashboardQueryOptions() {

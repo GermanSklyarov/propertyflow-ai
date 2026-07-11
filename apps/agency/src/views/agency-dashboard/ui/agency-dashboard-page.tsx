@@ -44,70 +44,31 @@ export function AgencyDashboardPage({ metrics }: { metrics: TenantDashboardMetri
         </section>
 
         <section className={styles.mainGrid}>
-          <Panel
-            icon={<Bot size={20} />}
-            kicker="AI Concierge"
-            title="Consultations that turn into CRM work"
-          >
+          <Panel icon={<Bot size={20} />} kicker="AI Concierge" title="Consultations that turn into CRM work">
             <div className={styles.healthGrid}>
               <HealthTile label="Sessions" value={metrics.conciergeSessions} />
-              <HealthTile
-                label="Recommended"
-                value={metrics.conciergeRecommendedSessions}
-              />
-              <HealthTile
-                label="Lead conversion"
-                value={formatPercent(metrics.conciergeLeadConversionRate)}
-              />
+              <HealthTile label="Recommended" value={metrics.conciergeRecommendedSessions} />
+              <HealthTile label="Lead conversion" value={formatPercent(metrics.conciergeLeadConversionRate)} />
             </div>
-            <BucketList
-              items={metrics.conciergeRecommendationsByArea}
-              title="Top recommended areas"
-            />
+            <BucketList items={metrics.conciergeRecommendationsByArea} title="Top recommended areas" />
           </Panel>
 
-          <Panel
-            icon={<Clock size={20} />}
-            kicker="Lead SLA"
-            title="Response health"
-          >
+          <Panel icon={<Clock size={20} />} kicker="Lead SLA" title="Response health">
             <div className={styles.healthGrid}>
-              <HealthTile
-                label="Health"
-                value={`${metrics.leadSlaHealthScore}/100`}
-              />
-              <HealthTile
-                label="Breached"
-                value={metrics.leadSlaResponseBreached}
-              />
-              <HealthTile
-                label="Due soon"
-                value={metrics.leadSlaResponseDueSoon}
-              />
+              <HealthTile label="Health" value={`${metrics.leadSlaHealthScore}/100`} />
+              <HealthTile label="Breached" value={metrics.leadSlaResponseBreached} />
+              <HealthTile label="Due soon" value={metrics.leadSlaResponseDueSoon} />
             </div>
-            <BucketList
-              items={metrics.leadSlaBreachedBySource}
-              title="Breaches by source"
-            />
+            <BucketList items={metrics.leadSlaBreachedBySource} title="Breaches by source" />
           </Panel>
         </section>
 
         <section className={styles.splitGrid}>
-          <Panel
-            icon={<Search size={20} />}
-            kicker="Saved search"
-            title="Follow-up opportunities"
-          >
+          <Panel icon={<Search size={20} />} kicker="Saved search" title="Follow-up opportunities">
             <div className={styles.healthGrid}>
               <HealthTile label="Alerts" value={metrics.savedSearches} />
-              <HealthTile
-                label="Open gaps"
-                value={metrics.savedSearchOpenOpportunities}
-              />
-              <HealthTile
-                label="Coverage"
-                value={formatPercent(metrics.savedSearchLeadCoverageRate)}
-              />
+              <HealthTile label="Open gaps" value={metrics.savedSearchOpenOpportunities} />
+              <HealthTile label="Coverage" value={formatPercent(metrics.savedSearchLeadCoverageRate)} />
             </div>
             <BucketList items={metrics.topSearchQueries} title="Top searches" />
           </Panel>
@@ -119,51 +80,22 @@ export function AgencyDashboardPage({ metrics }: { metrics: TenantDashboardMetri
         </section>
 
         <section className={styles.splitGrid}>
-          <Panel
-            icon={<Activity size={20} />}
-            kicker="Data quality"
-            title="Queue hygiene"
-          >
+          <Panel icon={<Activity size={20} />} kicker="Data quality" title="Queue hygiene">
             <div className={styles.healthGrid}>
-              <HealthTile
-                label="Health"
-                value={`${metrics.leadQualityHealthScore}/100`}
-              />
-              <HealthTile
-                label="Issues"
-                value={metrics.leadQualityIssueCount}
-              />
-              <HealthTile
-                label="Affected"
-                value={metrics.leadQualityAffectedLeads}
-              />
+              <HealthTile label="Health" value={`${metrics.leadQualityHealthScore}/100`} />
+              <HealthTile label="Issues" value={metrics.leadQualityIssueCount} />
+              <HealthTile label="Affected" value={metrics.leadQualityAffectedLeads} />
             </div>
             <BucketList items={metrics.leadQualityByIssue} title="Issue mix" />
           </Panel>
 
-          <Panel
-            icon={<ShieldCheck size={20} />}
-            kicker="Guardrails"
-            title="AI action safety"
-          >
+          <Panel icon={<ShieldCheck size={20} />} kicker="Guardrails" title="AI action safety">
             <div className={styles.healthGrid}>
-              <HealthTile
-                label="Blocked AI"
-                value={metrics.security.blockedAiActions}
-              />
-              <HealthTile
-                label="Delete previews"
-                value={metrics.security.imageDeletePreviews}
-              />
-              <HealthTile
-                label="Rejected jobs"
-                value={metrics.security.rejectedJobEnqueues}
-              />
+              <HealthTile label="Blocked AI" value={metrics.security.blockedAiActions} />
+              <HealthTile label="Delete previews" value={metrics.security.imageDeletePreviews} />
+              <HealthTile label="Rejected jobs" value={metrics.security.rejectedJobEnqueues} />
             </div>
-            <BucketList
-              items={metrics.security.blockedAiActionsByName}
-              title="Blocked actions"
-            />
+            <BucketList items={metrics.security.blockedAiActionsByName} title="Blocked actions" />
           </Panel>
         </section>
       </div>
@@ -260,6 +192,6 @@ function formatDateTime(value: string) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    month: "short",
+    month: "short"
   }).format(new Date(value));
 }

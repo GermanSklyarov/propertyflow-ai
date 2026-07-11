@@ -6,8 +6,8 @@
     { "path": "packages/config" },
     { "path": "apps/api" },
     { "path": "apps/web" },
+    { "path": "apps/agency" },
     { "path": "apps/admin" },
     { "path": "apps/worker" }
   ]
 }
-
