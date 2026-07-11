@@ -6,8 +6,9 @@ import Link from "next/link";
 import { ArrowRight, Loader2, MapPinned, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import type { ConciergeProfile, ConciergeQuestion } from "@propertyflow/contracts";
+import type { ConciergeProfile } from "@propertyflow/contracts";
 import { askConciergeMutationOptions } from "@entities/concierge/api/concierge-mutations";
+import { buildFollowUpOptions, parseBudgetAnswer } from "@features/ai-concierge/model/concierge-follow-up";
 import {
   buildConciergeProfile,
   buildConciergeProfileChips,
@@ -197,7 +198,7 @@ export function ConciergeConsole() {
                   <p className="m-0 text-[0.82rem] font-bold leading-normal text-[var(--muted)]">{question.reason}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {followUpOptions(question, inferredProfile).map((option) => (
+                  {buildFollowUpOptions(question, inferredProfile).map((option) => (
                     <button
                       className="cursor-pointer border border-[var(--line)] bg-white px-2.5 py-2 text-[0.78rem] font-extrabold text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-wait disabled:opacity-70"
                       disabled={conciergeMutation.isPending}
@@ -306,100 +307,4 @@ export function ConciergeConsole() {
       </div>
     </section>
   );
-}
-
-function followUpOptions(question: ConciergeQuestion, profile: ConciergeProfile): Array<{ label: string; patch: ConciergeProfile }> {
-  if (question.id === "listingIntent") {
-    return [
-      { label: "Rent", patch: { listingIntent: "rent", purpose: "living" } },
-      { label: "Buy", patch: { listingIntent: "sale" } },
-      { label: "Compare both", patch: { listingIntent: "sale_or_rent" } }
-    ];
-  }
-
-  if (question.id === "hasChildren") {
-    return [
-      { label: "Children will live here", patch: { hasChildren: true } },
-      { label: "Adults only", patch: { hasChildren: false } }
-    ];
-  }
-
-  if (question.id === "hasCar") {
-    return [
-      { label: "We will have a car", patch: { hasCar: true } },
-      { label: "Walkability matters", patch: { hasCar: false } }
-    ];
-  }
-
-  if (question.id === "remoteWork") {
-    return [
-      { label: "Remote work", patch: { remoteWork: true } },
-      { label: "Internet is not critical", patch: { remoteWork: false } }
-    ];
-  }
-
-  if (question.id === "purpose") {
-    return [
-      { label: "Living", patch: { purpose: "living" } },
-      { label: "Relocation", patch: { purpose: "relocation" } },
-      { label: "Investment", patch: { purpose: "investment" } }
-    ];
-  }
-
-  if (question.id === "prefersQuiet") {
-    return [
-      { label: "Quiet area", patch: { prefersQuiet: true } },
-      { label: "Lively is fine", patch: { prefersQuiet: false } }
-    ];
-  }
-
-  if (question.id === "budgetThb") {
-    if (profile.listingIntent === "rent") {
-      return [
-        { label: "25k THB/month", patch: { budgetThb: 25000 } },
-        { label: "40k THB/month", patch: { budgetThb: 40000 } },
-        { label: "60k THB/month", patch: { budgetThb: 60000 } }
-      ];
-    }
-
-    return [
-      { label: "3M THB", patch: { budgetThb: 3000000 } },
-      { label: "5M THB", patch: { budgetThb: 5000000 } },
-      { label: "8M THB", patch: { budgetThb: 8000000 } }
-    ];
-  }
-
-  if (question.id === "market") {
-    return [
-      { label: "Pattaya", patch: { market: "pattaya" } },
-      { label: "Phuket", patch: { market: "phuket" } },
-      { label: "Bangkok", patch: { market: "bangkok" } }
-    ];
-  }
-
-  return [];
-}
-
-function parseBudgetAnswer(value: string): number | undefined {
-  const normalized = value.trim().toLowerCase().replace(",", ".");
-
-  if (!normalized) {
-    return undefined;
-  }
-
-  const millionMatch = normalized.match(/(\d+(?:\.\d+)?)\s*(?:m|million|mln|млн)/);
-
-  if (millionMatch?.[1]) {
-    return Math.round(Number.parseFloat(millionMatch[1]) * 1_000_000);
-  }
-
-  const thousandMatch = normalized.match(/(\d+(?:\.\d+)?)\s*(?:k|тыс)/);
-
-  if (thousandMatch?.[1]) {
-    return Math.round(Number.parseFloat(thousandMatch[1]) * 1_000);
-  }
-
-  const plainNumber = normalized.match(/\d{4,9}/)?.[0];
-
-  return plainNumber ? Number.parseInt(plainNumber, 10) : undefined;
 }
