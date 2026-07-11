@@ -10,12 +10,13 @@ import {
   getDefaultLeadMessage,
   getFallbackLeadIntent,
   getLeadActionLabel,
-  leadIntentOptions
+  leadIntentOptions,
 } from "@features/lead-capture/model/lead-capture-copy";
 import {
   leadCaptureSchema,
-  type LeadCaptureFormValues
+  type LeadCaptureFormValues,
 } from "@features/lead-capture/model/lead-capture-schema";
+import styles from "./lead-capture-form.module.css";
 
 export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
   const leadMutation = useMutation(createWebsiteLeadMutationOptions());
@@ -26,7 +27,7 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
     handleSubmit,
     register,
     setValue,
-    watch
+    watch,
   } = useForm<LeadCaptureFormValues>({
     resolver: zodResolver(leadCaptureSchema),
     defaultValues: {
@@ -34,15 +35,18 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
       contactEmail: "",
       contactPhone: "",
       intent: fallbackIntent,
-      message: getDefaultLeadMessage(property, fallbackIntent)
-    }
+      message: getDefaultLeadMessage(property, fallbackIntent),
+    },
   });
 
   const intent = watch("intent");
 
   function chooseIntent(nextIntent: LeadCaptureFormValues["intent"]) {
     setValue("intent", nextIntent, { shouldDirty: true, shouldValidate: true });
-    setValue("message", getDefaultLeadMessage(property, nextIntent), { shouldDirty: true, shouldValidate: true });
+    setValue("message", getDefaultLeadMessage(property, nextIntent), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
   }
 
   function submit(values: LeadCaptureFormValues) {
@@ -54,7 +58,7 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
       preferredLocale: "en",
       attributionSearchSource: "ai",
       attributionSearchQuery: `${values.intent}:${property.title}`,
-      message: values.message || getDefaultLeadMessage(property, values.intent)
+      message: values.message || getDefaultLeadMessage(property, values.intent),
     });
   }
 
@@ -65,9 +69,12 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
           <CheckCircle2 className="mt-1 text-[var(--teal)]" size={22} />
           <div>
             <p className="section-kicker">Lead created</p>
-            <h2 className="mb-2 mt-2 text-2xl leading-tight">Agent follow-up is queued.</h2>
+            <h2 className="mb-2 mt-2 text-2xl leading-tight">
+              Agent follow-up is queued.
+            </h2>
             <p className="m-0 leading-normal text-[#42524e]">
-              Request <strong>{lead.id}</strong> is ready in the CRM queue with this property attached.
+              Request <strong>{lead.id}</strong> is ready in the CRM queue with
+              this property attached.
             </p>
           </div>
         </div>
@@ -78,12 +85,14 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
   return (
     <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
       <p className="section-kicker">Next step</p>
-      <h2 className="mb-4 mt-2 text-2xl leading-tight">Ask an agent to follow up.</h2>
+      <h2 className="mb-4 mt-2 text-2xl leading-tight">
+        Ask an agent to follow up.
+      </h2>
 
       <form onSubmit={handleSubmit(submit)}>
         <input type="hidden" {...register("intent")} />
 
-        <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-3">
+        <div className={`grid gap-2 ${styles.intentGrid}`}>
           {leadIntentOptions.map((option) => {
             const isActive = option.value === intent;
 
@@ -107,7 +116,9 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
 
         <div className="mt-4 grid gap-3">
           <label className="grid gap-1.5">
-            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Name</span>
+            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">
+              Name
+            </span>
             <input
               className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
               placeholder="Your name"
@@ -117,7 +128,9 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
 
           <div className="grid grid-cols-1 gap-3">
             <label className="grid min-w-0 gap-1.5">
-              <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Email</span>
+              <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">
+                Email
+              </span>
               <input
                 className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
                 placeholder="name@email.com"
@@ -126,7 +139,9 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
               />
             </label>
             <label className="grid min-w-0 gap-1.5">
-              <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Phone</span>
+              <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">
+                Phone
+              </span>
               <input
                 className="min-h-11 w-full min-w-0 border border-[var(--line)] px-3 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
                 placeholder="+66..."
@@ -136,7 +151,9 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
           </div>
 
           <label className="grid gap-1.5">
-            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">Message</span>
+            <span className="text-[0.82rem] font-extrabold text-[var(--muted)]">
+              Message
+            </span>
             <textarea
               className="min-h-[104px] w-full min-w-0 resize-y border border-[var(--line)] px-3 py-2.5 text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
               {...register("message")}
@@ -145,13 +162,19 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
         </div>
 
         {errors.contactName ? (
-          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.contactName.message}</p>
+          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">
+            {errors.contactName.message}
+          </p>
         ) : null}
         {errors.contactEmail ? (
-          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.contactEmail.message}</p>
+          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">
+            {errors.contactEmail.message}
+          </p>
         ) : null}
         {errors.contactPhone ? (
-          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">{errors.contactPhone.message}</p>
+          <p className="mb-0 mt-3 text-[0.86rem] font-bold text-[var(--coral)]">
+            {errors.contactPhone.message}
+          </p>
         ) : null}
 
         <button
@@ -159,7 +182,11 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
           disabled={leadMutation.isPending}
           type="submit"
         >
-          {leadMutation.isPending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+          {leadMutation.isPending ? (
+            <Loader2 className="animate-spin" size={18} />
+          ) : (
+            <Send size={18} />
+          )}
           <span>{getLeadActionLabel(intent)}</span>
         </button>
       </form>

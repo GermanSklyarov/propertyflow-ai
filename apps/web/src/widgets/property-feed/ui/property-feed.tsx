@@ -2,10 +2,11 @@ import { ArrowUpRight } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import type { ListingIntent } from "@features/listing-intent-filter/model/listing-intent";
 import { ListingIntentFilter } from "@features/listing-intent-filter/ui/listing-intent-filter";
+import styles from "./property-feed.module.css";
 
 export function PropertyFeed({
   initialListingIntent,
-  properties
+  properties,
 }: {
   initialListingIntent: ListingIntent;
   properties: PropertySnapshot[];
@@ -13,8 +14,11 @@ export function PropertyFeed({
   const featured = properties[0];
 
   return (
-    <section className="mx-auto max-w-[1320px] px-[clamp(18px,4vw,54px)] pb-[54px] pt-5" id="recommendations">
-      <div className="mb-[22px] grid items-end gap-6 min-[761px]:flex min-[761px]:justify-between">
+    <section
+      className="mx-auto max-w-[1320px] px-[clamp(18px,4vw,54px)] pb-[54px] pt-5"
+      id="recommendations"
+    >
+      <div className={`mb-[22px] items-end gap-6 ${styles.header}`}>
         <div>
           <p className="section-kicker">Recommended now</p>
           <h2 className="mt-2 max-w-[760px] text-[clamp(1.8rem,3.2vw,3.4rem)] leading-tight">
@@ -29,7 +33,10 @@ export function PropertyFeed({
         </a>
       </div>
 
-      <ListingIntentFilter initialIntent={initialListingIntent} properties={properties} />
+      <ListingIntentFilter
+        initialIntent={initialListingIntent}
+        properties={properties}
+      />
     </section>
   );
 }

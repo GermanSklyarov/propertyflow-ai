@@ -1,0 +1,52 @@
+.root {
+  min-height: auto;
+  padding: 22px clamp(18px, 4vw, 54px) 34px;
+}
+
+.nav {
+  align-items: flex-start;
+}
+
+.navLinks {
+  display: none;
+}
+
+.layout {
+  min-height: auto;
+  padding-top: 54px;
+}
+
+.title {
+  font-size: 3.35rem;
+}
+
+@media (min-width: 640px) {
+  .root {
+    min-height: 94vh;
+    padding-bottom: 46px;
+  }
+
+  .nav {
+    align-items: center;
+  }
+
+  .navLinks {
+    display: flex;
+  }
+
+  .layout {
+    min-height: calc(94vh - 82px);
+    padding-top: 70px;
+  }
+
+  .title {
+    font-size: clamp(3rem, 7vw, 7.6rem);
+  }
+}
+
+@media (min-width: 768px) {
+  .layout {
+    grid-template-columns: minmax(0, 0.9fr) minmax(420px, 0.72fr);
+    padding-top: 46px;
+  }
+}

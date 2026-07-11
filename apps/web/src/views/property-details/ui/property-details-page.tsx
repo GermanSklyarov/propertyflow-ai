@@ -1,13 +1,32 @@
-import { ArrowLeft, Bath, BedDouble, Building2, MapPin, Ruler, ShieldCheck, Sparkles, Waves, Wifi } from "lucide-react";
+import {
+  ArrowLeft,
+  Bath,
+  BedDouble,
+  Building2,
+  MapPin,
+  Ruler,
+  ShieldCheck,
+  Sparkles,
+  Waves,
+  Wifi,
+} from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { propertyImage } from "@entities/property/lib/property-image";
 import { buildPropertyBrief } from "@entities/property/model/property-brief";
 import { buildPropertyEconomics } from "@entities/property/model/property-economics";
-import { buildPropertyPriceHistory, getPriceHistoryBars } from "@entities/property/model/property-price-history";
+import {
+  buildPropertyPriceHistory,
+  getPriceHistoryBars,
+} from "@entities/property/model/property-price-history";
 import { LeadCaptureForm } from "@features/lead-capture/ui/lead-capture-form";
 import { formatCompactThb } from "@shared/lib/format-money";
+import styles from "./property-details-page.module.css";
 
-export function PropertyDetailsPage({ property }: { property: PropertySnapshot }) {
+export function PropertyDetailsPage({
+  property,
+}: {
+  property: PropertySnapshot;
+}) {
   const brief = buildPropertyBrief(property);
   const economics = buildPropertyEconomics(property);
   const priceHistory = buildPropertyPriceHistory(property);
@@ -15,32 +34,49 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
 
   return (
     <main className="bg-[#f7f6ef]">
-      <section className="grid min-h-[72vh] bg-[#101d1a] text-white min-[1081px]:grid-cols-[minmax(0,1.05fr)_minmax(420px,0.78fr)]">
-        <div className="min-h-[300px] min-[761px]:min-h-[420px] min-[1081px]:min-h-[520px]">
-          <img className="block size-full object-cover" src={propertyImage(property, true)} alt={property.title} />
+      <section
+        className={`grid min-h-[72vh] bg-[#101d1a] text-white ${styles.hero}`}
+      >
+        <div className={styles.heroMedia}>
+          <img
+            className="block size-full object-cover"
+            src={propertyImage(property, true)}
+            alt={property.title}
+          />
         </div>
-        <div className="grid content-center gap-4 px-[18px] py-7 min-[761px]:p-[clamp(28px,5vw,72px)]">
-          <a className="inline-flex w-fit items-center gap-2 text-[0.88rem] font-extrabold text-white/80" href="/#recommendations">
+        <div className={`grid content-center gap-4 ${styles.heroContent}`}>
+          <a
+            className="inline-flex w-fit items-center gap-2 text-[0.88rem] font-extrabold text-white/80"
+            href="/#recommendations"
+          >
             <ArrowLeft size={16} />
             Back to matches
           </a>
           <p className="eyebrow">AI property brief</p>
-          <h1 className="m-0 text-[clamp(2.7rem,5.8vw,6.4rem)] leading-none">{property.title}</h1>
+          <h1 className="m-0 text-[clamp(2.7rem,5.8vw,6.4rem)] leading-none">
+            {property.title}
+          </h1>
           <p className="m-0 inline-flex items-center gap-2 font-extrabold text-white/75">
             <MapPin size={18} />
             {property.address ?? property.market}
           </p>
           <div className="flex flex-wrap items-center gap-2.5">
-            <strong className="text-[clamp(1.5rem,2.4vw,2.4rem)] text-[#ffb199]">{brief.primaryPrice}</strong>
+            <strong className="text-[clamp(1.5rem,2.4vw,2.4rem)] text-[#ffb199]">
+              {brief.primaryPrice}
+            </strong>
             <span className="bg-white/10 px-2.5 py-2 text-[0.78rem] font-black uppercase text-white">
               {brief.listingLabel}
             </span>
           </div>
-          <p className="m-0 max-w-[680px] text-[1.05rem] leading-relaxed text-white/75">{property.description}</p>
+          <p className="m-0 max-w-[680px] text-[1.05rem] leading-relaxed text-white/75">
+            {property.description}
+          </p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-[1320px] grid-cols-1 gap-[18px] px-[clamp(18px,4vw,54px)] pb-14 pt-7 min-[1081px]:grid-cols-[minmax(0,1fr)_360px]">
+      <section
+        className={`mx-auto grid max-w-[1320px] gap-[18px] px-[clamp(18px,4vw,54px)] pb-14 pt-7 ${styles.contentGrid}`}
+      >
         <div className="grid content-start gap-[18px]">
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
             <div className="flex items-start justify-between gap-[18px]">
@@ -52,9 +88,13 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
               </div>
               <Sparkles size={22} />
             </div>
-            <div className="mt-[22px] grid grid-cols-1 gap-3 min-[761px]:grid-cols-2">
+            <div className={`mt-[22px] grid gap-3 ${styles.twoColumn}`}>
               <BriefColumn title="Pros" items={brief.pros} tone="good" />
-              <BriefColumn title="Tradeoffs" items={brief.tradeoffs} tone="warn" />
+              <BriefColumn
+                title="Tradeoffs"
+                items={brief.tradeoffs}
+                tone="warn"
+              />
             </div>
           </section>
 
@@ -70,14 +110,21 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
             </div>
             <div className="mt-[18px] grid min-h-[220px] grid-cols-5 items-end gap-2 border-b border-[var(--line)] pb-3">
               {priceHistoryBars.map((point) => (
-                <div className="grid h-full min-h-[190px] content-end gap-2" key={point.label}>
-                  <span className="text-center text-[0.72rem] font-black text-[var(--muted)]">{point.valueLabel}</span>
+                <div
+                  className="grid h-full min-h-[190px] content-end gap-2"
+                  key={point.label}
+                >
+                  <span className="text-center text-[0.72rem] font-black text-[var(--muted)]">
+                    {point.valueLabel}
+                  </span>
                   <div
                     aria-label={`${point.label}: ${point.valueLabel}`}
                     className="min-h-8 bg-[var(--teal)]"
                     style={{ height: `${point.heightPercent}%` }}
                   />
-                  <span className="text-center text-[0.78rem] font-black text-[var(--teal-dark)]">{point.label}</span>
+                  <span className="text-center text-[0.78rem] font-black text-[var(--teal-dark)]">
+                    {point.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -93,9 +140,13 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
               </div>
               <Sparkles size={22} />
             </div>
-            <div className="mt-[18px] grid gap-2.5 min-[761px]:grid-cols-2">
+            <div className={`mt-[18px] grid gap-2.5 ${styles.twoColumn}`}>
               {economics.calculatorRows.map((row) => (
-                <DetailMetric label={row.label} value={row.value} key={row.label} />
+                <DetailMetric
+                  label={row.label}
+                  value={row.value}
+                  key={row.label}
+                />
               ))}
             </div>
           </section>
@@ -124,23 +175,48 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
             <p className="section-kicker">Economics</p>
             <div className="mt-[18px] grid gap-2.5">
-              <DetailMetric label="Purchase price" value={formatCompactThb(property.price.amount)} />
+              <DetailMetric
+                label="Purchase price"
+                value={formatCompactThb(property.price.amount)}
+              />
               <DetailMetric
                 label="Monthly rent ask"
-                value={property.rentalPriceMonthly ? `${formatCompactThb(property.rentalPriceMonthly.amount)}/mo` : "Not listed"}
+                value={
+                  property.rentalPriceMonthly
+                    ? `${formatCompactThb(property.rentalPriceMonthly.amount)}/mo`
+                    : "Not listed"
+                }
               />
               <DetailMetric
                 label="Rent estimate"
-                value={property.monthlyRentEstimate ? `${formatCompactThb(property.monthlyRentEstimate.amount)}/mo` : "Pending"}
+                value={
+                  property.monthlyRentEstimate
+                    ? `${formatCompactThb(property.monthlyRentEstimate.amount)}/mo`
+                    : "Pending"
+                }
               />
-              <DetailMetric label="Gross yield" value={brief.grossYield ? `${brief.grossYield.toFixed(1)}%` : "Pending"} />
-              <DetailMetric label="Annual rent signal" value={brief.annualRentSignal ? formatCompactThb(brief.annualRentSignal) : "Pending"} />
+              <DetailMetric
+                label="Gross yield"
+                value={
+                  brief.grossYield
+                    ? `${brief.grossYield.toFixed(1)}%`
+                    : "Pending"
+                }
+              />
+              <DetailMetric
+                label="Annual rent signal"
+                value={
+                  brief.annualRentSignal
+                    ? formatCompactThb(brief.annualRentSignal)
+                    : "Pending"
+                }
+              />
             </div>
           </section>
 
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
             <p className="section-kicker">Facts</p>
-            <div className="mt-4 grid grid-cols-1 gap-2 min-[761px]:grid-cols-2">
+            <div className={`mt-4 grid gap-2 ${styles.twoColumn}`}>
               <span className="inline-flex items-center gap-2 border border-[var(--line)] p-2.5 text-[0.86rem] font-extrabold text-[#364642]">
                 <BedDouble size={16} />
                 {property.bedrooms} beds
@@ -155,7 +231,9 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
               </span>
               <span className="inline-flex items-center gap-2 border border-[var(--line)] p-2.5 text-[0.86rem] font-extrabold text-[#364642]">
                 <Waves size={16} />
-                {property.beachDistanceMeters ? `${property.beachDistanceMeters}m` : "near beach"}
+                {property.beachDistanceMeters
+                  ? `${property.beachDistanceMeters}m`
+                  : "near beach"}
               </span>
               <span className="inline-flex items-center gap-2 border border-[var(--line)] p-2.5 text-[0.86rem] font-extrabold text-[#364642]">
                 <Building2 size={16} />
@@ -163,7 +241,9 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
               </span>
               <span className="inline-flex items-center gap-2 border border-[var(--line)] p-2.5 text-[0.86rem] font-extrabold text-[#364642]">
                 <Wifi size={16} />
-                {property.amenities.includes("fiber internet") ? "fiber" : "internet check"}
+                {property.amenities.includes("fiber internet")
+                  ? "fiber"
+                  : "internet check"}
               </span>
             </div>
           </section>
@@ -188,9 +268,19 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
   );
 }
 
-function BriefColumn({ title, items, tone }: { title: string; items: string[]; tone: "good" | "warn" }) {
+function BriefColumn({
+  title,
+  items,
+  tone,
+}: {
+  title: string;
+  items: string[];
+  tone: "good" | "warn";
+}) {
   return (
-    <div className={`border border-[var(--line)] p-4 ${tone === "good" ? "bg-[#edf8f4]" : "bg-[#fff6eb]"}`}>
+    <div
+      className={`border border-[var(--line)] p-4 ${tone === "good" ? "bg-[#edf8f4]" : "bg-[#fff6eb]"}`}
+    >
       <h3 className="mb-2.5 mt-0">{title}</h3>
       <ul className="m-0 grid list-none gap-2.5 p-0">
         {items.map((item) => (
@@ -205,19 +295,29 @@ function BriefColumn({ title, items, tone }: { title: string; items: string[]; t
 
 function DetailMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid items-start gap-3.5 border-b border-[var(--line)] py-2.5 min-[761px]:flex min-[761px]:items-center min-[761px]:justify-between">
+    <div
+      className={`gap-3.5 border-b border-[var(--line)] py-2.5 ${styles.metricRow}`}
+    >
       <span className="font-extrabold text-[var(--muted)]">{label}</span>
-      <strong className="text-left text-[var(--ink)] min-[761px]:text-right">{value}</strong>
+      <strong className={`text-[var(--ink)] ${styles.metricValue}`}>
+        {value}
+      </strong>
     </div>
   );
 }
 
 function ScoreRow({ label, value }: { label: string; value: number }) {
   return (
-    <div className="grid items-start gap-3.5 border-b border-[var(--line)] py-2.5 min-[761px]:flex min-[761px]:items-center min-[761px]:justify-between">
+    <div
+      className={`gap-3.5 border-b border-[var(--line)] py-2.5 ${styles.metricRow}`}
+    >
       <span className="font-extrabold text-[var(--muted)]">{label}</span>
-      <strong className="text-[var(--gold)]" aria-label={`${label}: ${value} out of 5`}>
-        {"★".repeat(value)}{"☆".repeat(5 - value)}
+      <strong
+        className="text-[var(--gold)]"
+        aria-label={`${label}: ${value} out of 5`}
+      >
+        {"★".repeat(value)}
+        {"☆".repeat(5 - value)}
       </strong>
     </div>
   );

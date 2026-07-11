@@ -1,0 +1,66 @@
+.hero {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.heroMedia {
+  min-height: 300px;
+}
+
+.heroContent {
+  padding: 28px 18px;
+}
+
+.contentGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.twoColumn {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.metricRow {
+  display: grid;
+  align-items: flex-start;
+}
+
+.metricValue {
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .heroMedia {
+    min-height: 420px;
+  }
+
+  .heroContent {
+    padding: clamp(28px, 5vw, 72px);
+  }
+
+  .twoColumn {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .metricRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .metricValue {
+    text-align: right;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero {
+    grid-template-columns: minmax(0, 1.05fr) minmax(420px, 0.78fr);
+  }
+
+  .heroMedia {
+    min-height: 520px;
+  }
+
+  .contentGrid {
+    grid-template-columns: minmax(0, 1fr) 360px;
+  }
+}

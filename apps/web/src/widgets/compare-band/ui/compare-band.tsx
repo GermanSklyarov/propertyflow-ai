@@ -4,19 +4,32 @@ import type { PropertySnapshot } from "@propertyflow/domain";
 import { buildCompareInsights } from "@features/property-compare/model/compare-insights";
 import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
 import { useHasMounted } from "@shared/lib/use-has-mounted";
+import styles from "./compare-band.module.css";
 
-export function CompareBand({ properties }: { properties: PropertySnapshot[] }) {
+export function CompareBand({
+  properties,
+}: {
+  properties: PropertySnapshot[];
+}) {
   const hasMounted = useHasMounted();
-  const persistedSelectedPropertyIds = useCompareSelectionStore((state) => state.selectedPropertyIds);
-  const clearSelection = useCompareSelectionStore((state) => state.clearSelection);
+  const persistedSelectedPropertyIds = useCompareSelectionStore(
+    (state) => state.selectedPropertyIds,
+  );
+  const clearSelection = useCompareSelectionStore(
+    (state) => state.clearSelection,
+  );
   const selectedPropertyIds = hasMounted ? persistedSelectedPropertyIds : [];
   const selectedProperties = selectedPropertyIds
-    .map((propertyId) => properties.find((property) => property.id === propertyId))
+    .map((propertyId) =>
+      properties.find((property) => property.id === propertyId),
+    )
     .filter((property): property is PropertySnapshot => Boolean(property));
   const compareInsights = buildCompareInsights(selectedProperties);
 
   return (
-    <section className="mx-auto mb-12 grid max-w-[1320px] grid-cols-1 items-center gap-7 border-t border-[var(--line)] px-[clamp(18px,4vw,54px)] py-[54px] min-[761px]:grid-cols-[minmax(0,1fr)_auto]">
+    <section
+      className={`mx-auto mb-12 grid max-w-[1320px] items-center gap-7 border-t border-[var(--line)] px-[clamp(18px,4vw,54px)] py-[54px] ${styles.root}`}
+    >
       <div>
         <p className="section-kicker">AI Compare</p>
         <h2 className="mt-2 max-w-[760px] text-[clamp(1.8rem,3.2vw,3.4rem)] leading-tight">
@@ -37,13 +50,22 @@ export function CompareBand({ properties }: { properties: PropertySnapshot[] }) 
           </div>
         ) : null}
       </div>
-      <div className="grid min-w-[220px] gap-2.5 min-[761px]:min-w-[320px]">
+      <div className={`grid gap-2.5 ${styles.insights}`}>
         {compareInsights.length
           ? compareInsights.map((insight) => (
-              <article className="border-l-4 border-[var(--blue)] bg-white px-4 py-3.5" key={insight.label}>
-                <p className="m-0 text-[0.76rem] font-black uppercase text-[var(--muted)]">{insight.label}</p>
-                <h3 className="mb-1.5 mt-1 text-[1rem]">{insight.property.title}</h3>
-                <p className="m-0 text-[0.84rem] font-bold leading-normal text-[#52615d]">{insight.reason}</p>
+              <article
+                className="border-l-4 border-[var(--blue)] bg-white px-4 py-3.5"
+                key={insight.label}
+              >
+                <p className="m-0 text-[0.76rem] font-black uppercase text-[var(--muted)]">
+                  {insight.label}
+                </p>
+                <h3 className="mb-1.5 mt-1 text-[1rem]">
+                  {insight.property.title}
+                </h3>
+                <p className="m-0 text-[0.84rem] font-bold leading-normal text-[#52615d]">
+                  {insight.reason}
+                </p>
                 <div className="mt-2 grid gap-1.5 text-[0.78rem] font-bold leading-normal text-[#42524e]">
                   {insight.signals.slice(0, 2).map((signal) => (
                     <span key={signal}>+ {signal}</span>
@@ -57,7 +79,10 @@ export function CompareBand({ properties }: { properties: PropertySnapshot[] }) 
               </article>
             ))
           : ["Investment", "Winter living", "Family fit"].map((label) => (
-              <span className="border-l-4 border-[var(--blue)] bg-white px-4 py-3.5 font-black" key={label}>
+              <span
+                className="border-l-4 border-[var(--blue)] bg-white px-4 py-3.5 font-black"
+                key={label}
+              >
                 {label}
               </span>
             ))}

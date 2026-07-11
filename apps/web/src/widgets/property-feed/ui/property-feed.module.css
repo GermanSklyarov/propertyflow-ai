@@ -1,0 +1,10 @@
+.header {
+  display: grid;
+}
+
+@media (min-width: 640px) {
+  .header {
+    display: flex;
+    justify-content: space-between;
+  }
+}

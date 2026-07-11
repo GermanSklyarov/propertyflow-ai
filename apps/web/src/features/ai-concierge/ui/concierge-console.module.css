@@ -1,0 +1,36 @@
+.root {
+  max-width: 760px;
+}
+
+.inlineAction {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.recommendationHeader {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.recommendationMeta {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 640px) {
+  .inlineAction,
+  .recommendationHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .recommendationHeader {
+    align-items: flex-start;
+  }
+
+  .recommendationMeta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) {
+  .root {
+    max-width: none;
+  }
+}

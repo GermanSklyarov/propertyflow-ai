@@ -1,0 +1,9 @@
+.intentGrid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 640px) {
+  .intentGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

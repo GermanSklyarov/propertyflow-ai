@@ -1,0 +1,17 @@
+.root {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.insights {
+  min-width: 220px;
+}
+
+@media (min-width: 640px) {
+  .root {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .insights {
+    min-width: 320px;
+  }
+}
