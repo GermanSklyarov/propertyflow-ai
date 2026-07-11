@@ -2,7 +2,13 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDownUp, Building2, Home, KeyRound, RotateCcw } from "lucide-react";
+import {
+  ArrowDownUp,
+  Building2,
+  Home,
+  KeyRound,
+  RotateCcw,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { featuredPropertiesQueryOptions } from "@entities/property/api/property-queries";
@@ -14,27 +20,34 @@ import {
   listingIntentCopy,
   sortPropertiesForCatalog,
   type ListingIntent,
-  type ListingSort
+  type ListingSort,
 } from "@features/listing-intent-filter/model/listing-intent";
 import { formatCompactThb } from "@shared/lib/format-money";
+import styles from "./listing-intent-filter.module.css";
 
-const intentOptions: Array<{ value: ListingIntent; label: string; icon: typeof Building2 }> = [
+const intentOptions: Array<{
+  value: ListingIntent;
+  label: string;
+  icon: typeof Building2;
+}> = [
   { value: "all", label: "All", icon: Building2 },
   { value: "sale", label: "Buy", icon: Home },
   { value: "rent", label: "Rent", icon: KeyRound },
-  { value: "sale_or_rent", label: "Dual", icon: RotateCcw }
+  { value: "sale_or_rent", label: "Dual", icon: RotateCcw },
 ];
 
 const sortOptions: Array<{ value: ListingSort; label: string }> = [
   { value: "ai-fit", label: "AI fit" },
   { value: "price-asc", label: "Lowest price" },
   { value: "yield-desc", label: "Highest yield" },
-  { value: "beach-asc", label: "Closest beach" }
+  { value: "beach-asc", label: "Closest beach" },
 ];
+
+const pageSize = 12;
 
 export function ListingIntentFilter({
   initialIntent,
-  properties
+  properties,
 }: {
   initialIntent: ListingIntent;
   properties: PropertySnapshot[];
@@ -43,24 +56,34 @@ export function ListingIntentFilter({
   const router = useRouter();
   const [intent, setIntent] = useState<ListingIntent>(initialIntent);
   const [sort, setSort] = useState<ListingSort>("ai-fit");
+  const [visibleLimit, setVisibleLimit] = useState(pageSize);
 
   useEffect(() => {
     setIntent(initialIntent);
+    setVisibleLimit(pageSize);
   }, [initialIntent]);
 
   const apiListingType = intent === "all" ? undefined : intent;
   const propertiesQuery = useQuery({
     ...featuredPropertiesQueryOptions({
+      limit: visibleLimit,
       listingType: apiListingType,
-      sort
+      sort,
     }),
-    placeholderData: (previousData) => previousData ?? properties
+    placeholderData: (previousData) => previousData ?? properties,
   });
   const catalogProperties = propertiesQuery.data ?? properties;
   const filteredProperties = useMemo(() => {
-    return sortPropertiesForCatalog(filterPropertiesByIntent(catalogProperties, intent), sort);
+    return sortPropertiesForCatalog(
+      filterPropertiesByIntent(catalogProperties, intent),
+      sort,
+    );
   }, [catalogProperties, intent, sort]);
-  const intentSummary = useMemo(() => getListingIntentSummary(catalogProperties, intent), [catalogProperties, intent]);
+  const intentSummary = useMemo(
+    () => getListingIntentSummary(catalogProperties, intent),
+    [catalogProperties, intent],
+  );
+  const canLoadMore = filteredProperties.length >= visibleLimit;
 
   function chooseIntent(nextIntent: ListingIntent) {
     const nextSearchParams = new URLSearchParams(window.location.search);
@@ -74,64 +97,67 @@ export function ListingIntentFilter({
     const query = nextSearchParams.toString();
 
     setIntent(nextIntent);
-    router.replace(`${pathname}${query ? `?${query}` : ""}#recommendations`, { scroll: false });
+    setVisibleLimit(pageSize);
+    router.replace(`${pathname}${query ? `?${query}` : ""}#recommendations`, {
+      scroll: false,
+    });
+  }
+
+  function chooseSort(nextSort: ListingSort) {
+    setSort(nextSort);
+    setVisibleLimit(pageSize);
   }
 
   return (
-    <div className="grid gap-4">
-      <div className="grid grid-cols-1 gap-2 min-[761px]:grid-cols-2 min-[1081px]:grid-cols-4" aria-label="Listing intent">
+    <div className={styles.root}>
+      <div className={styles.intentGrid} aria-label="Listing intent">
         {intentOptions.map((option) => {
           const Icon = option.icon;
           const count = countPropertiesByIntent(properties, option.value);
           const isActive = intent === option.value;
+          const intentButtonClassName = isActive
+            ? `${styles.intentButton} ${styles.intentButtonActive}`
+            : styles.intentButton;
+          const intentCountClassName = isActive
+            ? `${styles.intentCount} ${styles.intentCountActive}`
+            : styles.intentCount;
 
           return (
             <button
               aria-pressed={isActive}
-              className={`grid min-h-[46px] cursor-pointer grid-cols-[18px_minmax(0,1fr)_auto] items-center gap-2 border px-3 py-2.5 text-left text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] ${
-                isActive
-                  ? "border-[rgba(15,118,110,0.55)] bg-[var(--teal)] text-white hover:bg-[var(--teal-dark)]"
-                  : "border-[var(--line)] bg-white/70 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4]"
-              }`}
+              className={intentButtonClassName}
               key={option.value}
               onClick={() => chooseIntent(option.value)}
               type="button"
             >
               <Icon size={16} />
-              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[0.86rem] font-black">
-                {option.label}
-              </span>
-              <strong
-                className={`grid h-[26px] min-w-[26px] place-items-center text-[0.78rem] ${
-                  isActive ? "bg-white/20 text-white" : "bg-[#edf8f4] text-[var(--teal-dark)]"
-                }`}
-              >
-                {count}
-              </strong>
+              <span className={styles.intentLabel}>{option.label}</span>
+              <strong className={intentCountClassName}>{count}</strong>
             </button>
           );
         })}
       </div>
 
-      <div className="grid items-start gap-3.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-3.5 py-3 text-[0.9rem] leading-normal text-[#42524e] min-[900px]:grid-cols-[minmax(0,1fr)_auto] min-[900px]:items-center">
-        <div className="min-w-0">
+      <div className={styles.summary}>
+        <div className={styles.summaryText}>
           <span>{listingIntentCopy(intent)}</span>
-          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[0.78rem] font-extrabold uppercase text-[var(--teal-dark)]">
+          <div className={styles.summaryMeta}>
             <span>{filteredProperties.length} matching listings</span>
-            {propertiesQuery.isFetching ? <span>Updating sort</span> : null}
+            {propertiesQuery.isFetching ? <span>Updating results</span> : null}
             <span>
-              {intentSummary.min !== undefined && intentSummary.max !== undefined
+              {intentSummary.min !== undefined &&
+              intentSummary.max !== undefined
                 ? `${formatCompactThb(intentSummary.min)}-${formatCompactThb(intentSummary.max)} ${intentSummary.label}`
                 : "Budget range appears when agents publish matching listings"}
             </span>
           </div>
         </div>
-        <label className="grid min-h-10 grid-cols-[18px_minmax(0,1fr)] items-center gap-2 border border-[rgba(15,118,110,0.2)] bg-white px-3 text-[0.8rem] font-black text-[var(--teal-dark)]">
+        <label className={styles.sortLabel}>
           <ArrowDownUp size={15} />
           <select
             aria-label="Sort listings"
-            className="min-w-0 cursor-pointer border-0 bg-transparent p-0 text-[0.8rem] font-black text-[var(--teal-dark)] outline-none"
-            onChange={(event) => setSort(event.target.value as ListingSort)}
+            className={styles.sortSelect}
+            onChange={(event) => chooseSort(event.target.value as ListingSort)}
             value={sort}
           >
             {sortOptions.map((option) => (
@@ -144,16 +170,39 @@ export function ListingIntentFilter({
       </div>
 
       {filteredProperties.length ? (
-        <div className="grid grid-cols-1 gap-[18px] min-[761px]:grid-cols-2 min-[1081px]:grid-cols-3">
-          {filteredProperties.map((property, index) => (
-            <PropertyCard key={property.id} property={property} priority={index === 0} />
-          ))}
-        </div>
+        <>
+          <div className={styles.propertyGrid}>
+            {filteredProperties.map((property, index) => (
+              <PropertyCard
+                key={property.id}
+                property={property}
+                priority={index === 0}
+              />
+            ))}
+          </div>
+          {canLoadMore ? (
+            <div className={styles.loadMoreRow}>
+              <button
+                className={styles.loadMoreButton}
+                disabled={propertiesQuery.isFetching}
+                onClick={() =>
+                  setVisibleLimit((currentLimit) => currentLimit + pageSize)
+                }
+                type="button"
+              >
+                {propertiesQuery.isFetching
+                  ? "Loading listings"
+                  : "Load more listings"}
+              </button>
+            </div>
+          ) : null}
+        </>
       ) : (
-        <div className="border border-[var(--line)] bg-[var(--panel-strong)] p-7">
-          <h3 className="mb-2 mt-0 text-xl">No matching listings yet</h3>
-          <p className="m-0 max-w-[620px] leading-normal text-[var(--muted)]">
-            Keep the intent filter active and ask Concierge to broaden the area, budget, or lease length.
+        <div className={styles.emptyState}>
+          <h3 className={styles.emptyTitle}>No matching listings yet</h3>
+          <p className={styles.emptyText}>
+            Keep the intent filter active and ask Concierge to broaden the area,
+            budget, or lease length.
           </p>
         </div>
       )}

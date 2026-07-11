@@ -2,125 +2,147 @@
 
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bath, BedDouble, Check, MapPin, Plus, Ruler, Sparkles, VolumeX, Waves, Wifi } from "lucide-react";
+import {
+  Bath,
+  BedDouble,
+  Check,
+  MapPin,
+  Plus,
+  Ruler,
+  Sparkles,
+  VolumeX,
+  Waves,
+  Wifi,
+} from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
 import { useHasMounted } from "@shared/lib/use-has-mounted";
 import { propertyDetailQueryOptions } from "../api/property-queries";
 import { propertyImage } from "../lib/property-image";
 import { buildPropertyCardMeta } from "../model/property-card-meta";
+import styles from "./property-card.module.css";
 
 const scoreChipIcons = {
   Beach: Waves,
   Quiet: VolumeX,
-  Remote: Wifi
+  Remote: Wifi,
 };
 
-export function PropertyCard({ property, priority }: { property: PropertySnapshot; priority?: boolean }) {
+export function PropertyCard({
+  property,
+  priority,
+}: {
+  property: PropertySnapshot;
+  priority?: boolean;
+}) {
   const hasMounted = useHasMounted();
   const queryClient = useQueryClient();
   const imageUrl = propertyImage(property, priority);
   const meta = buildPropertyCardMeta(property);
-  const isPersistedSelectedForCompare = useCompareSelectionStore((state) => state.isSelected(property.id));
-  const toggleProperty = useCompareSelectionStore((state) => state.toggleProperty);
-  const isSelectedForCompare = hasMounted ? isPersistedSelectedForCompare : false;
+  const isPersistedSelectedForCompare = useCompareSelectionStore((state) =>
+    state.isSelected(property.id),
+  );
+  const toggleProperty = useCompareSelectionStore(
+    (state) => state.toggleProperty,
+  );
+  const isSelectedForCompare = hasMounted
+    ? isPersistedSelectedForCompare
+    : false;
 
   function prefetchPropertyDetails() {
     void queryClient.prefetchQuery(propertyDetailQueryOptions(property.id));
   }
 
+  const compareButtonClassName = isSelectedForCompare
+    ? `${styles.compareButton} ${styles.compareButtonActive}`
+    : styles.compareButton;
+
   return (
-    <article className="flex h-full flex-col overflow-hidden border border-[var(--line)] bg-[var(--panel-strong)] shadow-[0_16px_46px_rgba(37,50,46,0.1)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.36)] hover:shadow-[0_20px_56px_rgba(37,50,46,0.14)]">
+    <article className={styles.card}>
       <Link
-        className="flex flex-1 flex-col"
+        className={styles.link}
         href={`/properties/${property.id}`}
         onFocus={prefetchPropertyDetails}
         onMouseEnter={prefetchPropertyDetails}
       >
-        <div className="relative aspect-[1.35] bg-[#dbe3dc]">
+        <div className={styles.media}>
           <img
-            className="block size-full object-cover"
+            className={styles.image}
             src={imageUrl}
             alt={property.title}
             loading={priority ? "eager" : "lazy"}
           />
-          <span className="absolute left-3 top-3 bg-white/90 px-2.5 py-1.5 text-[0.76rem] font-black uppercase text-[var(--teal-dark)]">
-            {meta.listingBadge}
-          </span>
+          <span className={styles.badge}>{meta.listingBadge}</span>
         </div>
-        <div className="flex flex-1 flex-col p-4 pb-3">
-          <div className="grid gap-3 min-[761px]:flex min-[761px]:items-start min-[761px]:justify-between min-[761px]:gap-3.5">
-            <div className="min-w-0 flex-1">
-              <h3 className="m-0 line-clamp-2 min-h-[48px] text-[1.08rem] leading-snug">{property.title}</h3>
-              <p className="mt-1.5 flex min-h-[20px] min-w-0 items-center gap-1.5 text-[0.84rem] text-[var(--muted)]">
+        <div className={styles.body}>
+          <div className={styles.header}>
+            <div className={styles.headingBlock}>
+              <h3 className={styles.title}>{property.title}</h3>
+              <p className={styles.address}>
                 <MapPin className="shrink-0" size={14} />
-                <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                <span className={styles.addressText}>
                   {property.address ?? property.market}
                 </span>
               </p>
             </div>
-            <strong
-              className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-[1.02rem] text-[var(--coral)] min-[761px]:max-w-[150px] min-[761px]:text-right"
-              title={meta.priceLabel}
-            >
+            <strong className={styles.price} title={meta.priceLabel}>
               {meta.priceLabel}
             </strong>
           </div>
-          <p className="mt-3 inline-flex min-h-[32px] max-w-full items-center gap-1.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-2.5 py-1.5 text-[0.78rem] font-black text-[var(--teal-dark)]">
+          <p className={styles.matchSignal}>
             <Sparkles size={14} />
-            <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{meta.matchSignal}</span>
+            <span className={styles.matchText}>{meta.matchSignal}</span>
           </p>
-          <p className="my-3.5 line-clamp-3 min-h-[62px] overflow-hidden text-[0.92rem] leading-normal text-[#52615d]">
-            {property.description}
-          </p>
-          <div className="mt-auto grid grid-cols-2 gap-1.5 min-[761px]:grid-cols-4">
-            <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
+          <p className={styles.description}>{property.description}</p>
+          <div className={styles.facts}>
+            <span className={styles.fact}>
               <BedDouble size={15} />
               {property.bedrooms}
             </span>
-            <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
+            <span className={styles.fact}>
               <Bath size={15} />
               {property.bathrooms}
             </span>
-            <span
-              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[var(--line)] px-1 text-[0.78rem] font-extrabold text-[#364642]"
-              title={`${property.areaSqm} sqm`}
-            >
+            <span className={styles.fact} title={`${property.areaSqm} sqm`}>
               <Ruler size={15} />
-              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{property.areaSqm} sqm</span>
+              <span className={styles.factText}>{property.areaSqm} sqm</span>
             </span>
             <span
-              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[var(--line)] px-1 text-[0.78rem] font-extrabold text-[#364642]"
-              title={property.beachDistanceMeters ? `${property.beachDistanceMeters}m to beach` : "Beach nearby"}
+              className={styles.fact}
+              title={
+                property.beachDistanceMeters
+                  ? `${property.beachDistanceMeters}m to beach`
+                  : "Beach nearby"
+              }
             >
               <Waves size={15} />
-              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
-                {property.beachDistanceMeters ? `${property.beachDistanceMeters}m` : "nearby"}
+              <span className={styles.factText}>
+                {property.beachDistanceMeters
+                  ? `${property.beachDistanceMeters}m`
+                  : "nearby"}
               </span>
             </span>
           </div>
-          <div className="mt-2.5 grid grid-cols-2 gap-1.5">
+          <div className={styles.pills}>
             <span
-              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[rgba(197,154,53,0.3)] bg-[rgba(197,154,53,0.12)] px-2 text-center text-[0.78rem] font-extrabold text-[#364642]"
+              className={`${styles.pill} ${styles.yieldPill}`}
               title={meta.yieldLabel}
             >
-              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{meta.yieldLabel}</span>
+              <span className={styles.pillText}>{meta.yieldLabel}</span>
             </span>
-            <span
-              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[var(--line)] px-2 text-center text-[0.78rem] font-extrabold text-[#364642]"
-              title={meta.amenityLabel}
-            >
-              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{meta.amenityLabel}</span>
+            <span className={styles.pill} title={meta.amenityLabel}>
+              <span className={styles.pillText}>{meta.amenityLabel}</span>
             </span>
           </div>
-          <div className="mt-2 flex min-h-[28px] items-center justify-between gap-1.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-2 text-[0.76rem] font-extrabold text-[var(--teal-dark)]">
+          <div className={styles.scores}>
             {meta.scoreChips.map((chip) => {
-              const Icon = scoreChipIcons[chip.label as keyof typeof scoreChipIcons];
+              const Icon =
+                scoreChipIcons[chip.label as keyof typeof scoreChipIcons];
 
               return (
                 <span
                   aria-label={`${chip.label} score ${chip.value}`}
-                  className="inline-flex min-w-0 shrink-0 items-center justify-center gap-1 whitespace-nowrap"
+                  className={styles.score}
                   key={chip.label}
                   title={`${chip.label}: ${chip.value}`}
                 >
@@ -133,14 +155,10 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
         </div>
       </Link>
 
-      <div className="px-4 pb-4">
+      <div className={styles.actions}>
         <button
           aria-pressed={isSelectedForCompare}
-          className={`inline-flex min-h-10 w-full cursor-pointer items-center justify-center gap-2 border px-3 py-2 text-[0.82rem] font-black shadow-[0_8px_20px_rgba(37,50,46,0.04)] transition duration-150 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(37,50,46,0.12)] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] ${
-            isSelectedForCompare
-              ? "border-[rgba(15,118,110,0.55)] bg-[var(--teal)] text-white hover:bg-[var(--teal-dark)]"
-              : "border-[var(--line)] bg-white text-[var(--teal-dark)] hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4]"
-          }`}
+          className={compareButtonClassName}
           onClick={() => toggleProperty(property.id)}
           type="button"
         >

@@ -22,13 +22,15 @@ const demoHeaders = {
 const featuredPropertiesLimit = 12;
 
 export type FeaturedPropertiesRequest = {
+  limit?: number;
   listingType?: PropertyListingType;
   sort?: PropertySearchSort;
 };
 
 export async function listFeaturedProperties(request: FeaturedPropertiesRequest = {}): Promise<PropertySnapshot[]> {
+  const limit = request.limit ?? featuredPropertiesLimit;
   const searchParams = new URLSearchParams({
-    limit: String(featuredPropertiesLimit),
+    limit: String(limit),
     sort: request.sort ?? "ai-fit"
   });
 
@@ -47,7 +49,7 @@ export async function listFeaturedProperties(request: FeaturedPropertiesRequest 
     }
 
     const body = (await response.json()) as PropertySearchResponse;
-    return body.items.length > 0 ? body.items.slice(0, featuredPropertiesLimit).map(normalizeProperty) : demoProperties;
+    return body.items.length > 0 ? body.items.slice(0, limit).map(normalizeProperty) : demoProperties;
   } catch {
     return demoProperties;
   }
