@@ -22,10 +22,11 @@ import type {
   ListConciergeSessionsRequest,
   SubmitConciergeFeedbackRequest
 } from "@propertyflow/contracts";
-import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
+import type { PropertyListingType, PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const purposes: PropertyPurpose[] = ["investment", "living", "family", "relocation"];
+const listingIntents: PropertyListingType[] = ["sale", "rent", "sale_or_rent"];
 
 export class ConciergeProfileDto implements ConciergeProfile {
   @ApiProperty({ required: false, enum: markets })
@@ -33,11 +34,16 @@ export class ConciergeProfileDto implements ConciergeProfile {
   @IsIn(markets)
   market?: ThailandMarket;
 
-  @ApiProperty({ required: false, minimum: 500_000, maximum: 100_000_000 })
+  @ApiProperty({ required: false, enum: listingIntents })
+  @IsOptional()
+  @IsIn(listingIntents)
+  listingIntent?: PropertyListingType;
+
+  @ApiProperty({ required: false, minimum: 5_000, maximum: 100_000_000 })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(500_000)
+  @Min(5_000)
   @Max(100_000_000)
   budgetThb?: number;
 

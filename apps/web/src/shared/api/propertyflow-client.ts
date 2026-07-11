@@ -6,7 +6,7 @@ import type {
   PropertySearchResponse
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { demoConciergeResponse } from "../../entities/concierge/model/demo-concierge-response";
+import { buildDemoConciergeResponse } from "../../entities/concierge/model/demo-concierge-response";
 import { demoProperties } from "../../entities/property/model/demo-properties";
 
 const apiBaseUrl =
@@ -65,12 +65,12 @@ export async function askConcierge(request: ConciergeRequest): Promise<Concierge
     });
 
     if (!response.ok) {
-      return demoConciergeResponse;
+      return buildDemoConciergeResponse(request);
     }
 
     return (await response.json()) as ConciergeResponse;
   } catch {
-    return demoConciergeResponse;
+    return buildDemoConciergeResponse(request);
   }
 }
 

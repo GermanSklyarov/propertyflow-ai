@@ -10,6 +10,7 @@ describe("buildConciergeProfile", () => {
     expect(buildConciergeProfile("Moving to Pattaya with family, remote work, quiet area, budget 3.5M THB")).toEqual({
       budgetThb: 3500000,
       hasChildren: true,
+      listingIntent: "sale",
       market: "pattaya",
       purpose: "relocation",
       prefersQuiet: true,
@@ -22,6 +23,7 @@ describe("buildConciergeProfile", () => {
 
     expect(profile).toMatchObject({
       budgetThb: 30000,
+      listingIntent: "rent",
       market: "pattaya",
       purpose: "living",
       remoteWork: true
@@ -30,6 +32,7 @@ describe("buildConciergeProfile", () => {
 
   it("detects investment purpose from yield language", () => {
     expect(buildConciergeProfile("Investment condo in Pattaya above 6% yield near the beach")).toMatchObject({
+      listingIntent: "sale",
       market: "pattaya",
       purpose: "investment"
     });
@@ -39,6 +42,7 @@ describe("buildConciergeProfile", () => {
     expect(buildConciergeProfile("Переезжаю в Паттайю с семьей, дети, удаленная работа, бюджет до 4 млн бат")).toMatchObject({
       budgetThb: 4000000,
       hasChildren: true,
+      listingIntent: "sale",
       market: "pattaya",
       purpose: "relocation",
       remoteWork: true
@@ -72,6 +76,7 @@ describe("buildConciergeProfileChips", () => {
         budgetThb: 3500000,
         hasCar: false,
         hasChildren: true,
+        listingIntent: "sale",
         market: "pattaya",
         purpose: "family",
         prefersQuiet: false,
@@ -79,6 +84,7 @@ describe("buildConciergeProfileChips", () => {
       })
     ).toEqual([
       { label: "Market", value: "pattaya" },
+      { label: "Intent", value: "buy" },
       { label: "Budget", value: "3.5M THB" },
       { label: "Purpose", value: "family" },
       { label: "Family", value: "children" },

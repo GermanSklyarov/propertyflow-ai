@@ -579,6 +579,7 @@ export interface AiChatResponse {
 
 export interface ConciergeProfile {
   market?: ThailandMarket;
+  listingIntent?: PropertyListingType;
   budgetThb?: number;
   familySize?: number;
   hasChildren?: boolean;

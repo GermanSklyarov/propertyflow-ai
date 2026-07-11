@@ -22,7 +22,16 @@ export function buildConciergeProfile(message: string): ConciergeProfile {
     market: detectMarket(normalized) ?? "pattaya"
   };
   const budgetThb = detectBudgetThb(normalized);
+  const listingIntent = detectListingIntent(normalized);
   const purpose = detectPurpose(normalized);
+
+  if (listingIntent) {
+    profile.listingIntent = listingIntent;
+  } else if (budgetThb && budgetThb >= 500_000) {
+    profile.listingIntent = "sale";
+  } else if (budgetThb) {
+    profile.listingIntent = "rent";
+  }
 
   if (budgetThb) {
     profile.budgetThb = budgetThb;
@@ -55,6 +64,7 @@ export function buildConciergeProfile(message: string): ConciergeProfile {
 export function buildConciergeProfileChips(profile: ConciergeProfile): ConciergeProfileChip[] {
   return [
     profile.market ? { label: "Market", value: profile.market } : undefined,
+    profile.listingIntent ? { label: "Intent", value: formatListingIntent(profile.listingIntent) } : undefined,
     profile.budgetThb ? { label: "Budget", value: formatBudget(profile.budgetThb) } : undefined,
     profile.purpose ? { label: "Purpose", value: profile.purpose } : undefined,
     profile.hasChildren !== undefined ? { label: "Family", value: profile.hasChildren ? "children" : "adults only" } : undefined,
@@ -108,6 +118,22 @@ function detectPurpose(normalizedMessage: string): ConciergeProfile["purpose"] |
   return undefined;
 }
 
+function detectListingIntent(normalizedMessage: string): ConciergeProfile["listingIntent"] | undefined {
+  if (mentionsAny(normalizedMessage, ["rent out", "yield", "roi", "invest", "сдач", "доход", "инвест"])) {
+    return "sale";
+  }
+
+  if (mentionsAny(normalizedMessage, ["rent", "lease", "аренд", "снять", "сним"])) {
+    return "rent";
+  }
+
+  if (mentionsAny(normalizedMessage, ["buy", "purchase", "ownership", "invest", "yield", "roi", "купить", "покуп", "инвест", "доход"])) {
+    return "sale";
+  }
+
+  return undefined;
+}
+
 function detectBudgetThb(normalizedMessage: string) {
   const millionMatch = normalizedMessage.match(/(\d+(?:[.,]\d+)?)\s*(?:m(?![a-z])|million|mln|млн)/i);
 
@@ -136,6 +162,14 @@ function formatBudget(amount: number) {
   }
 
   return `${Math.round(amount / 1_000)}k THB`;
+}
+
+function formatListingIntent(listingIntent: NonNullable<ConciergeProfile["listingIntent"]>) {
+  if (listingIntent === "sale_or_rent") {
+    return "rent or buy";
+  }
+
+  return listingIntent === "rent" ? "rent" : "buy";
 }
 
 function mentionsAny(value: string, tokens: string[]) {

@@ -24,7 +24,7 @@ import type {
   ListConciergeSessionsRequest,
   SubmitConciergeFeedbackRequest
 } from "@propertyflow/contracts";
-import type { PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
+import type { PropertyListingType, PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../database/database.constants.js";
 import { LeadService } from "../../leads/application/lead.service.js";
@@ -720,6 +720,7 @@ export class AiConciergeService {
     const topProperty = session.latestResponse.propertyRecommendations[0];
     const profileParts = [
       profile.market ? `market=${profile.market}` : undefined,
+      profile.listingIntent ? `listingIntent=${profile.listingIntent}` : undefined,
       profile.budgetThb ? `budgetThb=${profile.budgetThb}` : undefined,
       profile.purpose ? `purpose=${profile.purpose}` : undefined,
       profile.hasChildren !== undefined ? `hasChildren=${profile.hasChildren}` : undefined,
@@ -751,6 +752,15 @@ export class AiConciergeService {
     const budget = this.detectBudget(normalized);
     if (budget) {
       profile.budgetThb = budget;
+    }
+
+    const listingIntent = this.detectListingIntent(normalized);
+    if (listingIntent) {
+      profile.listingIntent = listingIntent;
+    } else if (budget && budget >= 500_000) {
+      profile.listingIntent = "sale";
+    } else if (budget) {
+      profile.listingIntent = "rent";
     }
 
     if (/(семь|family|children|дет)/.test(normalized)) {
@@ -801,10 +811,26 @@ export class AiConciergeService {
       });
     }
 
+    if (!profile.listingIntent) {
+      questions.push({
+        id: "listingIntent",
+        question: ru ? "Вы хотите снять, купить или рассматриваете оба варианта?" : "Do you want to rent, buy, or compare both paths?",
+        reason: ru ? "От этого зависит, какой бюджет и какие объекты показывать." : "This keeps monthly rent and purchase budgets from getting mixed."
+      });
+    }
+
     if (!profile.budgetThb) {
+      const budgetQuestion =
+        profile.listingIntent === "rent"
+          ? ru
+            ? "Какой месячный бюджет на аренду в батах?"
+            : "What monthly rent budget in THB should I stay under?"
+          : ru
+            ? "Какой бюджет покупки в батах?"
+            : "What purchase budget in THB should I stay under?";
       questions.push({
         id: "budgetThb",
-        question: ru ? "Какой бюджет в батах?" : "What budget in THB should I stay under?",
+        question: budgetQuestion,
         reason: ru ? "Без бюджета легко советовать красивые, но бесполезные варианты." : "Budget keeps recommendations realistic."
       });
     }
@@ -904,7 +930,9 @@ export class AiConciergeService {
   ): Promise<ConciergePropertyRecommendation[]> {
     const strictCandidates = await this.properties.search(tenantId, {
       market: profile.market,
-      maxPriceThb: profile.budgetThb,
+      listingType: profile.listingIntent,
+      maxMonthlyRentThb: profile.listingIntent === "rent" ? profile.budgetThb : undefined,
+      maxPriceThb: profile.listingIntent === "rent" ? undefined : profile.budgetThb,
       minBedrooms: profile.hasChildren ? 2 : undefined,
       requiredAmenities: profile.remoteWork ? ["fast-internet"] : undefined
     });
@@ -912,7 +940,9 @@ export class AiConciergeService {
       ? strictCandidates
       : await this.properties.search(tenantId, {
           market: profile.market,
-          maxPriceThb: profile.budgetThb
+          listingType: profile.listingIntent,
+          maxMonthlyRentThb: profile.listingIntent === "rent" ? profile.budgetThb : undefined,
+          maxPriceThb: profile.listingIntent === "rent" ? undefined : profile.budgetThb
         });
     const candidates = relaxedCandidates.length
       ? relaxedCandidates
@@ -1017,6 +1047,7 @@ export class AiConciergeService {
     const ru = locale === "ru";
     const parts = [
       profile.market ? (ru ? `рынок ${profile.market}` : `${profile.market} market`) : undefined,
+      profile.listingIntent ? (ru ? `формат: ${this.describeListingIntent(profile.listingIntent, locale)}` : `${this.describeListingIntent(profile.listingIntent, locale)} intent`) : undefined,
       profile.budgetThb ? (ru ? `бюджет до ${this.formatThb(profile.budgetThb)}` : `budget up to ${this.formatThb(profile.budgetThb)}`) : undefined,
       profile.purpose ? (ru ? `цель: ${this.describePurpose(profile.purpose, locale)}` : `${this.describePurpose(profile.purpose, locale)} goal`) : undefined,
       profile.hasChildren !== undefined ? (profile.hasChildren ? (ru ? "с детьми" : "children will live there") : ru ? "без детей" : "adults only") : undefined,
@@ -1026,6 +1057,26 @@ export class AiConciergeService {
     ].filter(Boolean);
 
     return parts.join(ru ? ", " : ", ");
+  }
+
+  private describeListingIntent(listingIntent: PropertyListingType, locale: ConciergeRequest["locale"]): string {
+    if (locale === "ru") {
+      const labels: Record<PropertyListingType, string> = {
+        rent: "аренда",
+        sale: "покупка",
+        sale_or_rent: "аренда или покупка"
+      };
+
+      return labels[listingIntent];
+    }
+
+    const labels: Record<PropertyListingType, string> = {
+      rent: "rental",
+      sale: "purchase",
+      sale_or_rent: "rent-or-buy"
+    };
+
+    return labels[listingIntent];
   }
 
   private describePurpose(purpose: PropertyPurpose, locale: ConciergeRequest["locale"]): string {
@@ -1072,6 +1123,22 @@ export class AiConciergeService {
     ];
 
     return markets.find(([, pattern]) => pattern.test(message))?.[0];
+  }
+
+  private detectListingIntent(message: string): PropertyListingType | undefined {
+    if (/(rent out|yield|roi|invest|сдач|доход|инвест)/.test(message)) {
+      return "sale";
+    }
+
+    if (/(rent|lease|аренд|снять|сним)/.test(message)) {
+      return "rent";
+    }
+
+    if (/(buy|purchase|ownership|invest|yield|roi|купить|покуп|инвест|доход)/.test(message)) {
+      return "sale";
+    }
+
+    return undefined;
   }
 
   private detectBudget(message: string): number | undefined {

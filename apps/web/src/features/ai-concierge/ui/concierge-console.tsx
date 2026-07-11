@@ -42,6 +42,7 @@ export function ConciergeConsole() {
     }
   });
   const [profileOverride, setProfileOverride] = useState<ConciergeProfile>({});
+  const [budgetAnswer, setBudgetAnswer] = useState("");
   const conciergeMutation = useMutation(askConciergeMutationOptions());
   const response = conciergeMutation.data ?? null;
   const message = watch("message");
@@ -72,6 +73,17 @@ export function ConciergeConsole() {
 
     setProfileOverride(nextProfileOverride);
     conciergeMutation.mutate(buildConciergeRequest(message, nextProfileOverride));
+  }
+
+  function submitCustomBudget() {
+    const budgetThb = parseBudgetAnswer(budgetAnswer);
+
+    if (!budgetThb) {
+      return;
+    }
+
+    setBudgetAnswer("");
+    answerFollowUp({ budgetThb });
   }
 
   useEffect(() => {
@@ -136,6 +148,7 @@ export function ConciergeConsole() {
                 type="button"
                 onClick={() => {
                   setProfileOverride({});
+                  setBudgetAnswer("");
                   setValue("message", prompt, { shouldDirty: true, shouldValidate: true });
                 }}
               >
@@ -184,7 +197,7 @@ export function ConciergeConsole() {
                   <p className="m-0 text-[0.82rem] font-bold leading-normal text-[var(--muted)]">{question.reason}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {followUpOptions(question).map((option) => (
+                  {followUpOptions(question, inferredProfile).map((option) => (
                     <button
                       className="cursor-pointer border border-[var(--line)] bg-white px-2.5 py-2 text-[0.78rem] font-extrabold text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.42)] hover:bg-[#edf8f4] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-wait disabled:opacity-70"
                       disabled={conciergeMutation.isPending}
@@ -196,6 +209,26 @@ export function ConciergeConsole() {
                     </button>
                   ))}
                 </div>
+                {question.id === "budgetThb" ? (
+                  <div className="grid gap-2 min-[761px]:grid-cols-[minmax(0,1fr)_auto]">
+                    <input
+                      aria-label="Custom budget"
+                      className="min-h-[38px] border border-[var(--line)] bg-white px-3 py-2 text-[0.82rem] font-bold text-[var(--ink)] outline-none focus:border-[rgba(15,118,110,0.55)] focus:shadow-[0_0_0_4px_rgba(15,118,110,0.12)]"
+                      onChange={(event) => setBudgetAnswer(event.target.value)}
+                      placeholder={inferredProfile.listingIntent === "rent" ? "Your monthly budget, e.g. 45k" : "Your purchase budget, e.g. 4.2M"}
+                      type="text"
+                      value={budgetAnswer}
+                    />
+                    <button
+                      className="cursor-pointer border border-[rgba(15,118,110,0.42)] bg-[#edf8f4] px-3 py-2 text-[0.78rem] font-extrabold text-[var(--teal-dark)] transition duration-150 hover:-translate-y-0.5 hover:bg-white focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(15,118,110,0.18)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                      disabled={!parseBudgetAnswer(budgetAnswer) || conciergeMutation.isPending}
+                      onClick={submitCustomBudget}
+                      type="button"
+                    >
+                      Use this budget
+                    </button>
+                  </div>
+                ) : null}
               </article>
             ))}
           </section>
@@ -275,7 +308,15 @@ export function ConciergeConsole() {
   );
 }
 
-function followUpOptions(question: ConciergeQuestion): Array<{ label: string; patch: ConciergeProfile }> {
+function followUpOptions(question: ConciergeQuestion, profile: ConciergeProfile): Array<{ label: string; patch: ConciergeProfile }> {
+  if (question.id === "listingIntent") {
+    return [
+      { label: "Rent", patch: { listingIntent: "rent", purpose: "living" } },
+      { label: "Buy", patch: { listingIntent: "sale" } },
+      { label: "Compare both", patch: { listingIntent: "sale_or_rent" } }
+    ];
+  }
+
   if (question.id === "hasChildren") {
     return [
       { label: "Children will live here", patch: { hasChildren: true } },
@@ -313,10 +354,18 @@ function followUpOptions(question: ConciergeQuestion): Array<{ label: string; pa
   }
 
   if (question.id === "budgetThb") {
+    if (profile.listingIntent === "rent") {
+      return [
+        { label: "25k THB/month", patch: { budgetThb: 25000 } },
+        { label: "40k THB/month", patch: { budgetThb: 40000 } },
+        { label: "60k THB/month", patch: { budgetThb: 60000 } }
+      ];
+    }
+
     return [
-      { label: "30k THB/month", patch: { budgetThb: 30000 } },
-      { label: "3.5M THB", patch: { budgetThb: 3500000 } },
-      { label: "5M THB", patch: { budgetThb: 5000000 } }
+      { label: "3M THB", patch: { budgetThb: 3000000 } },
+      { label: "5M THB", patch: { budgetThb: 5000000 } },
+      { label: "8M THB", patch: { budgetThb: 8000000 } }
     ];
   }
 
@@ -329,4 +378,28 @@ function followUpOptions(question: ConciergeQuestion): Array<{ label: string; pa
   }
 
   return [];
+}
+
+function parseBudgetAnswer(value: string): number | undefined {
+  const normalized = value.trim().toLowerCase().replace(",", ".");
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  const millionMatch = normalized.match(/(\d+(?:\.\d+)?)\s*(?:m|million|mln|млн)/);
+
+  if (millionMatch?.[1]) {
+    return Math.round(Number.parseFloat(millionMatch[1]) * 1_000_000);
+  }
+
+  const thousandMatch = normalized.match(/(\d+(?:\.\d+)?)\s*(?:k|тыс)/);
+
+  if (thousandMatch?.[1]) {
+    return Math.round(Number.parseFloat(thousandMatch[1]) * 1_000);
+  }
+
+  const plainNumber = normalized.match(/\d{4,9}/)?.[0];
+
+  return plainNumber ? Number.parseInt(plainNumber, 10) : undefined;
 }
