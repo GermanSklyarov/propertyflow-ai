@@ -5,9 +5,11 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   ArrowDownUp,
   Building2,
+  Check,
   Home,
   KeyRound,
   Loader2,
+  BellPlus,
   RotateCcw,
   Search,
   Sparkles,
@@ -27,6 +29,7 @@ import {
   type ListingIntent,
   type ListingSort,
 } from "@features/listing-intent-filter/model/listing-intent";
+import { createSavedPropertySearchMutationOptions } from "@features/saved-property-search/api/saved-property-search-mutations";
 import { formatCompactThb } from "@shared/lib/format-money";
 import styles from "./listing-intent-filter.module.css";
 
@@ -63,7 +66,9 @@ export function ListingIntentFilter({
   const [sort, setSort] = useState<ListingSort>("ai-fit");
   const [visibleLimit, setVisibleLimit] = useState(pageSize);
   const [aiSearchQuery, setAiSearchQuery] = useState("");
+  const [submittedAiSearchQuery, setSubmittedAiSearchQuery] = useState("");
   const aiSearchMutation = useMutation(aiPropertySearchMutationOptions());
+  const savedSearchMutation = useMutation(createSavedPropertySearchMutationOptions());
 
   useEffect(() => {
     setIntent(initialIntent);
@@ -134,6 +139,8 @@ export function ListingIntentFilter({
     }
 
     setVisibleLimit(pageSize);
+    setSubmittedAiSearchQuery(query);
+    savedSearchMutation.reset();
     aiSearchMutation.mutate({
       locale: /[а-яё]/i.test(query) ? "ru" : "en",
       query,
@@ -142,8 +149,24 @@ export function ListingIntentFilter({
 
   function clearAiSearch() {
     setAiSearchQuery("");
+    setSubmittedAiSearchQuery("");
     aiSearchMutation.reset();
+    savedSearchMutation.reset();
     setVisibleLimit(pageSize);
+  }
+
+  function saveAiSearch() {
+    if (!activeAiSearch || !submittedAiSearchQuery) {
+      return;
+    }
+
+    savedSearchMutation.mutate({
+      filters: activeAiSearch.filters,
+      locale: /[а-яё]/i.test(submittedAiSearchQuery) ? "ru" : "en",
+      naturalLanguageQuery: submittedAiSearchQuery,
+      notificationsEnabled: true,
+      title: buildSavedSearchTitle(submittedAiSearchQuery),
+    });
   }
 
   return (
@@ -197,8 +220,25 @@ export function ListingIntentFilter({
         </div>
         {activeAiSearch ? (
           <div className={styles.aiSearchResult}>
-            <strong>{activeAiSearch.interpretedIntent}</strong>
-            <span>{activeAiSearch.rankingExplanation}</span>
+            <div className={styles.aiSearchResultCopy}>
+              <strong>{activeAiSearch.interpretedIntent}</strong>
+              <span>{activeAiSearch.rankingExplanation}</span>
+            </div>
+            <button
+              className={styles.saveSearchButton}
+              disabled={savedSearchMutation.isPending || Boolean(savedSearchMutation.data)}
+              onClick={saveAiSearch}
+              type="button"
+            >
+              {savedSearchMutation.isPending ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : savedSearchMutation.data ? (
+                <Check size={16} />
+              ) : (
+                <BellPlus size={16} />
+              )}
+              {savedSearchMutation.data ? "Saved alert" : "Save alert"}
+            </button>
           </div>
         ) : null}
       </div>
@@ -301,4 +341,14 @@ export function ListingIntentFilter({
       )}
     </div>
   );
+}
+
+function buildSavedSearchTitle(query: string) {
+  const normalizedQuery = query.trim();
+
+  if (normalizedQuery.length <= 54) {
+    return normalizedQuery;
+  }
+
+  return `${normalizedQuery.slice(0, 51)}...`;
 }

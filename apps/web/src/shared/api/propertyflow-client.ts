@@ -2,11 +2,13 @@ import type {
   ConciergeRequest,
   ConciergeResponse,
   ComparePropertiesRequest,
+  CreateSavedPropertySearchRequest,
   CreateLeadRequest,
   LeadSnapshot,
   NaturalLanguagePropertySearchResponse,
   NaturalLanguageSearchRequest,
   PropertyComparisonResponse,
+  SavedPropertySearchSnapshot,
   PropertySearchSort,
   PropertySearchResponse
 } from "@propertyflow/contracts";
@@ -151,6 +153,29 @@ export async function searchPropertiesByNaturalLanguage(
   }
 }
 
+export async function createSavedPropertySearch(
+  request: CreateSavedPropertySearchRequest
+): Promise<SavedPropertySearchSnapshot> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/saved-searches`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...demoHeaders
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      return demoSavedSearch(request);
+    }
+
+    return (await response.json()) as SavedPropertySearchSnapshot;
+  } catch {
+    return demoSavedSearch(request);
+  }
+}
+
 export async function createWebsiteLead(request: Omit<CreateLeadRequest, "source">): Promise<LeadSnapshot> {
   const payload: CreateLeadRequest = {
     ...request,
@@ -175,6 +200,25 @@ export async function createWebsiteLead(request: Omit<CreateLeadRequest, "source
   } catch {
     return demoLead(payload);
   }
+}
+
+function demoSavedSearch(request: CreateSavedPropertySearchRequest): SavedPropertySearchSnapshot {
+  const now = new Date().toISOString();
+
+  return {
+    createdAt: now,
+    filters: request.filters ?? {},
+    id: `demo-saved-search-${Date.now()}`,
+    locale: request.locale,
+    matchCount: demoProperties.length,
+    naturalLanguageQuery: request.naturalLanguageQuery,
+    notificationsEnabled: request.notificationsEnabled ?? true,
+    purpose: request.purpose,
+    tenantId: demoHeaders["x-tenant-id"],
+    title: request.title,
+    updatedAt: now,
+    userId: demoHeaders["x-user-id"]
+  };
 }
 
 function demoNaturalLanguageSearch(request: NaturalLanguageSearchRequest): NaturalLanguagePropertySearchResponse {
