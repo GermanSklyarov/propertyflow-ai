@@ -2,13 +2,19 @@
 
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
-import { Bath, BedDouble, Check, MapPin, Plus, Ruler, Sparkles, Waves } from "lucide-react";
+import { Bath, BedDouble, Check, MapPin, Plus, Ruler, Sparkles, VolumeX, Waves, Wifi } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { useCompareSelectionStore } from "@features/property-compare/model/compare-selection-store";
 import { useHasMounted } from "@shared/lib/use-has-mounted";
 import { propertyDetailQueryOptions } from "../api/property-queries";
 import { propertyImage } from "../lib/property-image";
 import { buildPropertyCardMeta } from "../model/property-card-meta";
+
+const scoreChipIcons = {
+  Beach: Waves,
+  Quiet: VolumeX,
+  Remote: Wifi
+};
 
 export function PropertyCard({ property, priority }: { property: PropertySnapshot; priority?: boolean }) {
   const hasMounted = useHasMounted();
@@ -91,15 +97,22 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
               {meta.amenityLabel}
             </span>
           </div>
-          <div className="mt-2.5 grid grid-cols-3 gap-1.5">
-            {meta.scoreChips.map((chip) => (
-              <span
-                className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] text-center text-[0.74rem] font-extrabold text-[var(--teal-dark)]"
-                key={chip.label}
-              >
-                {chip.label} {chip.value}
-              </span>
-            ))}
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            {meta.scoreChips.map((chip) => {
+              const Icon = scoreChipIcons[chip.label as keyof typeof scoreChipIcons];
+
+              return (
+                <span
+                  aria-label={`${chip.label} score ${chip.value}`}
+                  className="inline-flex min-h-[28px] items-center justify-center gap-1 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-1.5 text-center text-[0.76rem] font-extrabold text-[var(--teal-dark)]"
+                  key={chip.label}
+                  title={`${chip.label}: ${chip.value}`}
+                >
+                  <Icon aria-hidden="true" size={14} strokeWidth={2.3} />
+                  {chip.value}
+                </span>
+              );
+            })}
           </div>
         </div>
       </Link>
