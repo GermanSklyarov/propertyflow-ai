@@ -2,11 +2,13 @@ import { ArrowLeft, Bath, BedDouble, Building2, MapPin, Ruler, ShieldCheck, Spar
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { propertyImage } from "@entities/property/lib/property-image";
 import { buildPropertyBrief } from "@entities/property/model/property-brief";
+import { buildPropertyEconomics } from "@entities/property/model/property-economics";
 import { LeadCaptureForm } from "@features/lead-capture/ui/lead-capture-form";
 import { formatCompactThb } from "@shared/lib/format-money";
 
 export function PropertyDetailsPage({ property }: { property: PropertySnapshot }) {
   const brief = buildPropertyBrief(property);
+  const economics = buildPropertyEconomics(property);
 
   return (
     <main className="bg-[#f7f6ef]">
@@ -50,6 +52,23 @@ export function PropertyDetailsPage({ property }: { property: PropertySnapshot }
             <div className="mt-[22px] grid grid-cols-1 gap-3 min-[761px]:grid-cols-2">
               <BriefColumn title="Pros" items={brief.pros} tone="good" />
               <BriefColumn title="Tradeoffs" items={brief.tradeoffs} tone="warn" />
+            </div>
+          </section>
+
+          <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
+            <div className="flex items-start justify-between gap-[18px]">
+              <div>
+                <p className="section-kicker">Investment calculator</p>
+                <h2 className="mt-2 max-w-[720px] text-[clamp(1.55rem,2.8vw,2.7rem)] leading-tight">
+                  Net economics before legal and transfer checks.
+                </h2>
+              </div>
+              <Sparkles size={22} />
+            </div>
+            <div className="mt-[18px] grid gap-2.5 min-[761px]:grid-cols-2">
+              {economics.calculatorRows.map((row) => (
+                <DetailMetric label={row.label} value={row.value} key={row.label} />
+              ))}
             </div>
           </section>
 
