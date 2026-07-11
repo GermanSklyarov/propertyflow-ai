@@ -30,9 +30,9 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
   }
 
   return (
-    <article className="overflow-hidden border border-[var(--line)] bg-[var(--panel-strong)] shadow-[0_16px_46px_rgba(37,50,46,0.1)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.36)] hover:shadow-[0_20px_56px_rgba(37,50,46,0.14)]">
+    <article className="flex h-full flex-col overflow-hidden border border-[var(--line)] bg-[var(--panel-strong)] shadow-[0_16px_46px_rgba(37,50,46,0.1)] transition hover:-translate-y-0.5 hover:border-[rgba(15,118,110,0.36)] hover:shadow-[0_20px_56px_rgba(37,50,46,0.14)]">
       <Link
-        className="block"
+        className="flex flex-1 flex-col"
         href={`/properties/${property.id}`}
         onFocus={prefetchPropertyDetails}
         onMouseEnter={prefetchPropertyDetails}
@@ -48,17 +48,19 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
             {meta.listingBadge}
           </span>
         </div>
-        <div className="p-4 pb-3">
+        <div className="flex flex-1 flex-col p-4 pb-3">
           <div className="grid gap-3 min-[761px]:flex min-[761px]:items-start min-[761px]:justify-between min-[761px]:gap-3.5">
-            <div>
-              <h3 className="m-0 text-[1.08rem]">{property.title}</h3>
-              <p className="mt-1.5 flex items-center gap-1.5 text-[0.84rem] text-[var(--muted)]">
-                <MapPin size={14} />
-                {property.address ?? property.market}
+            <div className="min-w-0 flex-1">
+              <h3 className="m-0 line-clamp-2 min-h-[48px] text-[1.08rem] leading-snug">{property.title}</h3>
+              <p className="mt-1.5 flex min-h-[20px] min-w-0 items-center gap-1.5 text-[0.84rem] text-[var(--muted)]">
+                <MapPin className="shrink-0" size={14} />
+                <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                  {property.address ?? property.market}
+                </span>
               </p>
             </div>
             <strong
-              className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-[1.02rem] text-[var(--coral)] min-[761px]:max-w-[175px] min-[761px]:text-right"
+              className="max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-left text-[1.02rem] text-[var(--coral)] min-[761px]:max-w-[150px] min-[761px]:text-right"
               title={meta.priceLabel}
             >
               {meta.priceLabel}
@@ -71,7 +73,7 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
           <p className="my-3.5 line-clamp-3 min-h-[62px] overflow-hidden text-[0.92rem] leading-normal text-[#52615d]">
             {property.description}
           </p>
-          <div className="grid grid-cols-2 gap-1.5 min-[761px]:grid-cols-4">
+          <div className="mt-auto grid grid-cols-2 gap-1.5 min-[761px]:grid-cols-4">
             <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
               <BedDouble size={15} />
               {property.bedrooms}
@@ -80,31 +82,45 @@ export function PropertyCard({ property, priority }: { property: PropertySnapsho
               <Bath size={15} />
               {property.bathrooms}
             </span>
-            <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
+            <span
+              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[var(--line)] px-1 text-[0.78rem] font-extrabold text-[#364642]"
+              title={`${property.areaSqm} sqm`}
+            >
               <Ruler size={15} />
-              {property.areaSqm} sqm
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{property.areaSqm} sqm</span>
             </span>
-            <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-[0.78rem] font-extrabold text-[#364642]">
+            <span
+              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[var(--line)] px-1 text-[0.78rem] font-extrabold text-[#364642]"
+              title={property.beachDistanceMeters ? `${property.beachDistanceMeters}m to beach` : "Beach nearby"}
+            >
               <Waves size={15} />
-              {property.beachDistanceMeters ? `${property.beachDistanceMeters}m` : "nearby"}
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">
+                {property.beachDistanceMeters ? `${property.beachDistanceMeters}m` : "nearby"}
+              </span>
             </span>
           </div>
           <div className="mt-2.5 grid grid-cols-2 gap-1.5">
-            <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[rgba(197,154,53,0.3)] bg-[rgba(197,154,53,0.12)] text-center text-[0.78rem] font-extrabold text-[#364642]">
-              {meta.yieldLabel}
+            <span
+              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[rgba(197,154,53,0.3)] bg-[rgba(197,154,53,0.12)] px-2 text-center text-[0.78rem] font-extrabold text-[#364642]"
+              title={meta.yieldLabel}
+            >
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{meta.yieldLabel}</span>
             </span>
-            <span className="inline-flex min-h-[34px] items-center justify-center gap-1 border border-[var(--line)] text-center text-[0.78rem] font-extrabold text-[#364642]">
-              {meta.amenityLabel}
+            <span
+              className="inline-flex min-h-[34px] items-center justify-center gap-1 overflow-hidden border border-[var(--line)] px-2 text-center text-[0.78rem] font-extrabold text-[#364642]"
+              title={meta.amenityLabel}
+            >
+              <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{meta.amenityLabel}</span>
             </span>
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-1.5">
+          <div className="mt-2 flex min-h-[28px] items-center justify-between gap-1.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-2 text-[0.76rem] font-extrabold text-[var(--teal-dark)]">
             {meta.scoreChips.map((chip) => {
               const Icon = scoreChipIcons[chip.label as keyof typeof scoreChipIcons];
 
               return (
                 <span
                   aria-label={`${chip.label} score ${chip.value}`}
-                  className="inline-flex min-h-[28px] items-center justify-center gap-1 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-1.5 text-center text-[0.76rem] font-extrabold text-[var(--teal-dark)]"
+                  className="inline-flex min-w-0 shrink-0 items-center justify-center gap-1 whitespace-nowrap"
                   key={chip.label}
                   title={`${chip.label}: ${chip.value}`}
                 >
