@@ -299,6 +299,8 @@ export interface PropertyListResponse {
   items: PropertySnapshot[];
 }
 
+export type PropertySearchSort = "created-desc" | "ai-fit" | "price-asc" | "yield-desc" | "beach-asc";
+
 export interface PropertySearchRequest {
   market?: ThailandMarket;
   listingType?: PropertyListingType;
@@ -315,6 +317,7 @@ export interface PropertySearchRequest {
   radiusMeters?: number;
   limit?: number;
   offset?: number;
+  sort?: PropertySearchSort;
 }
 
 export interface PropertySearchResponse {

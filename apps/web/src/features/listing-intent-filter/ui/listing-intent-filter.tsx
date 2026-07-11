@@ -1,16 +1,20 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { Building2, Home, KeyRound, RotateCcw } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowDownUp, Building2, Home, KeyRound, RotateCcw } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { PropertySnapshot } from "@propertyflow/domain";
+import { featuredPropertiesQueryOptions } from "@entities/property/api/property-queries";
 import { PropertyCard } from "@entities/property/ui/property-card";
 import {
   countPropertiesByIntent,
   filterPropertiesByIntent,
   getListingIntentSummary,
   listingIntentCopy,
-  type ListingIntent
+  sortPropertiesForCatalog,
+  type ListingIntent,
+  type ListingSort
 } from "@features/listing-intent-filter/model/listing-intent";
 import { formatCompactThb } from "@shared/lib/format-money";
 
@@ -19,6 +23,13 @@ const intentOptions: Array<{ value: ListingIntent; label: string; icon: typeof B
   { value: "sale", label: "Buy", icon: Home },
   { value: "rent", label: "Rent", icon: KeyRound },
   { value: "sale_or_rent", label: "Dual", icon: RotateCcw }
+];
+
+const sortOptions: Array<{ value: ListingSort; label: string }> = [
+  { value: "ai-fit", label: "AI fit" },
+  { value: "price-asc", label: "Lowest price" },
+  { value: "yield-desc", label: "Highest yield" },
+  { value: "beach-asc", label: "Closest beach" }
 ];
 
 export function ListingIntentFilter({
@@ -31,13 +42,25 @@ export function ListingIntentFilter({
   const pathname = usePathname();
   const router = useRouter();
   const [intent, setIntent] = useState<ListingIntent>(initialIntent);
+  const [sort, setSort] = useState<ListingSort>("ai-fit");
 
   useEffect(() => {
     setIntent(initialIntent);
   }, [initialIntent]);
 
-  const filteredProperties = useMemo(() => filterPropertiesByIntent(properties, intent), [intent, properties]);
-  const intentSummary = useMemo(() => getListingIntentSummary(properties, intent), [intent, properties]);
+  const apiListingType = intent === "all" ? undefined : intent;
+  const propertiesQuery = useQuery({
+    ...featuredPropertiesQueryOptions({
+      listingType: apiListingType,
+      sort
+    }),
+    placeholderData: (previousData) => previousData ?? properties
+  });
+  const catalogProperties = propertiesQuery.data ?? properties;
+  const filteredProperties = useMemo(() => {
+    return sortPropertiesForCatalog(filterPropertiesByIntent(catalogProperties, intent), sort);
+  }, [catalogProperties, intent, sort]);
+  const intentSummary = useMemo(() => getListingIntentSummary(catalogProperties, intent), [catalogProperties, intent]);
 
   function chooseIntent(nextIntent: ListingIntent) {
     const nextSearchParams = new URLSearchParams(window.location.search);
@@ -90,13 +113,34 @@ export function ListingIntentFilter({
         })}
       </div>
 
-      <div className="grid items-start gap-3.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-3.5 py-3 text-[0.9rem] leading-normal text-[#42524e] min-[761px]:flex min-[761px]:items-center min-[761px]:justify-between">
-        <span>{listingIntentCopy(intent)}</span>
-        <strong className="text-[var(--teal-dark)] min-[761px]:whitespace-nowrap">
-          {intentSummary.min !== undefined && intentSummary.max !== undefined
-            ? `${formatCompactThb(intentSummary.min)}-${formatCompactThb(intentSummary.max)} ${intentSummary.label}`
-            : "Budget range appears when agents publish matching listings"}
-        </strong>
+      <div className="grid items-start gap-3.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-3.5 py-3 text-[0.9rem] leading-normal text-[#42524e] min-[900px]:grid-cols-[minmax(0,1fr)_auto] min-[900px]:items-center">
+        <div className="min-w-0">
+          <span>{listingIntentCopy(intent)}</span>
+          <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[0.78rem] font-extrabold uppercase text-[var(--teal-dark)]">
+            <span>{filteredProperties.length} matching listings</span>
+            {propertiesQuery.isFetching ? <span>Updating sort</span> : null}
+            <span>
+              {intentSummary.min !== undefined && intentSummary.max !== undefined
+                ? `${formatCompactThb(intentSummary.min)}-${formatCompactThb(intentSummary.max)} ${intentSummary.label}`
+                : "Budget range appears when agents publish matching listings"}
+            </span>
+          </div>
+        </div>
+        <label className="grid min-h-10 grid-cols-[18px_minmax(0,1fr)] items-center gap-2 border border-[rgba(15,118,110,0.2)] bg-white px-3 text-[0.8rem] font-black text-[var(--teal-dark)]">
+          <ArrowDownUp size={15} />
+          <select
+            aria-label="Sort listings"
+            className="min-w-0 cursor-pointer border-0 bg-transparent p-0 text-[0.8rem] font-black text-[var(--teal-dark)] outline-none"
+            onChange={(event) => setSort(event.target.value as ListingSort)}
+            value={sort}
+          >
+            {sortOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       {filteredProperties.length ? (

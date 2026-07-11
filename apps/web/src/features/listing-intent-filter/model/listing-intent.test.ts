@@ -7,7 +7,8 @@ import {
   getPurchaseBudgetBand,
   getRentalBudgetBand,
   listingIntentCopy,
-  parseListingIntent
+  parseListingIntent,
+  sortPropertiesForCatalog
 } from "./listing-intent";
 
 describe("parseListingIntent", () => {
@@ -62,6 +63,24 @@ describe("getRentalBudgetBand", () => {
 
   it("returns undefined when no rental prices are published", () => {
     expect(getRentalBudgetBand([demoProperties[2]])).toBeUndefined();
+  });
+});
+
+describe("sortPropertiesForCatalog", () => {
+  it("sorts by primary price ascending", () => {
+    expect(sortPropertiesForCatalog(demoProperties, "price-asc").map((property) => property.id)).toEqual([
+      "demo-terminal-north",
+      "demo-wongamat-sky",
+      "demo-jomtien-family"
+    ]);
+  });
+
+  it("sorts by gross yield descending", () => {
+    expect(sortPropertiesForCatalog(demoProperties, "yield-desc")[0].id).toBe("demo-wongamat-sky");
+  });
+
+  it("sorts by beach distance ascending", () => {
+    expect(sortPropertiesForCatalog(demoProperties, "beach-asc")[0].id).toBe("demo-wongamat-sky");
   });
 });
 

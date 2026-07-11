@@ -3,9 +3,10 @@ import type {
   ConciergeResponse,
   CreateLeadRequest,
   LeadSnapshot,
+  PropertySearchSort,
   PropertySearchResponse
 } from "@propertyflow/contracts";
-import type { PropertySnapshot } from "@propertyflow/domain";
+import type { PropertyListingType, PropertySnapshot } from "@propertyflow/domain";
 import { buildDemoConciergeResponse } from "../../entities/concierge/model/demo-concierge-response";
 import { demoProperties } from "../../entities/property/model/demo-properties";
 
@@ -20,9 +21,23 @@ const demoHeaders = {
 
 const featuredPropertiesLimit = 12;
 
-export async function listFeaturedProperties(): Promise<PropertySnapshot[]> {
+export type FeaturedPropertiesRequest = {
+  listingType?: PropertyListingType;
+  sort?: PropertySearchSort;
+};
+
+export async function listFeaturedProperties(request: FeaturedPropertiesRequest = {}): Promise<PropertySnapshot[]> {
+  const searchParams = new URLSearchParams({
+    limit: String(featuredPropertiesLimit),
+    sort: request.sort ?? "ai-fit"
+  });
+
+  if (request.listingType) {
+    searchParams.set("listingType", request.listingType);
+  }
+
   try {
-    const response = await fetch(`${apiBaseUrl}/properties?limit=${featuredPropertiesLimit}`, {
+    const response = await fetch(`${apiBaseUrl}/properties?${searchParams.toString()}`, {
       headers: demoHeaders,
       next: { revalidate: 30 }
     });

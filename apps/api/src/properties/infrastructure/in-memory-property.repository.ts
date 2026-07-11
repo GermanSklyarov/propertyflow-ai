@@ -165,11 +165,12 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       return true;
     });
 
+    const sortedProperties = this.sortProperties(filteredProperties, filters);
     const offset = filters.offset ?? 0;
 
     return filters.limit !== undefined
-      ? filteredProperties.slice(offset, offset + filters.limit)
-      : filteredProperties.slice(offset);
+      ? sortedProperties.slice(offset, offset + filters.limit)
+      : sortedProperties.slice(offset);
   }
 
   async addPriceHistoryPoint(
@@ -198,5 +199,59 @@ export class InMemoryPropertyRepository implements PropertyRepository {
 
   private key(tenantId: string, propertyId: string): string {
     return `${tenantId}:${propertyId}`;
+  }
+
+  private sortProperties(properties: PropertySnapshot[], filters: PropertySearchRequest): PropertySnapshot[] {
+    return [...properties].sort((left, right) => {
+      if (filters.sort === "price-asc") {
+        return left.price.amount - right.price.amount;
+      }
+
+      if (filters.sort === "yield-desc") {
+        return this.grossYield(right) - this.grossYield(left);
+      }
+
+      if (filters.sort === "beach-asc") {
+        return this.beachDistance(left) - this.beachDistance(right);
+      }
+
+      if (filters.sort === "ai-fit") {
+        return this.catalogFitScore(right) - this.catalogFitScore(left);
+      }
+
+      return Date.parse(right.createdAt) - Date.parse(left.createdAt);
+    });
+  }
+
+  private grossYield(property: PropertySnapshot): number {
+    if (!property.monthlyRentEstimate?.amount || !property.price.amount) {
+      return 0;
+    }
+
+    return (property.monthlyRentEstimate.amount * 12) / property.price.amount;
+  }
+
+  private beachDistance(property: PropertySnapshot): number {
+    return property.beachDistanceMeters ?? Number.MAX_SAFE_INTEGER;
+  }
+
+  private catalogFitScore(property: PropertySnapshot): number {
+    let score = property.status === "available" ? 40 : 10;
+
+    if (property.beachDistanceMeters !== undefined) {
+      score += Math.max(0, 25 - property.beachDistanceMeters / 100);
+    }
+
+    if (property.amenities.some((amenity) => amenity.includes("fiber") || amenity.includes("coworking"))) {
+      score += 12;
+    }
+
+    if (property.amenities.some((amenity) => amenity.includes("sea-view") || amenity.includes("beachfront"))) {
+      score += 10;
+    }
+
+    score += Math.min(18, this.grossYield(property) * 200);
+
+    return score;
   }
 }

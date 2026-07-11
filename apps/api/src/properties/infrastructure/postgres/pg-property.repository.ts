@@ -321,13 +321,59 @@ export class PgPropertyRepository implements PropertyRepository {
         select *
         from properties
         where ${clauses.join(" and ")}
-        order by created_at desc
+        order by ${this.orderBy(filters)}
         ${paginationClauses.join(" ")}
       `,
       values
     );
 
     return result.rows.map((row) => this.toSnapshot(row));
+  }
+
+  private orderBy(filters: PropertySearchRequest): string {
+    if (filters.sort === "price-asc") {
+      return "price_amount asc, created_at desc";
+    }
+
+    if (filters.sort === "yield-desc") {
+      return `
+        case
+          when monthly_rent_estimate_amount is not null and price_amount > 0
+            then monthly_rent_estimate_amount * 12 / price_amount
+          else 0
+        end desc,
+        created_at desc
+      `;
+    }
+
+    if (filters.sort === "beach-asc") {
+      return "beach_distance_meters asc nulls last, created_at desc";
+    }
+
+    if (filters.sort === "ai-fit") {
+      return `
+        (
+          case when status = 'available' then 40 else 10 end
+          + case
+              when beach_distance_meters is not null then greatest(0, 25 - beach_distance_meters::numeric / 100)
+              else 0
+            end
+          + case when amenities && array['fiber-internet', 'coworking-lounge']::text[] then 12 else 0 end
+          + case when amenities && array['sea-view', 'beachfront']::text[] then 10 else 0 end
+          + least(
+              18,
+              case
+                when monthly_rent_estimate_amount is not null and price_amount > 0
+                  then monthly_rent_estimate_amount * 12 / price_amount * 200
+                else 0
+              end
+            )
+        ) desc,
+        created_at desc
+      `;
+    }
+
+    return "created_at desc";
   }
 
   async addPriceHistoryPoint(

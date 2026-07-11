@@ -1,11 +1,12 @@
 import { Transform, Type } from "class-transformer";
 import { BadRequestException } from "@nestjs/common";
 import { IsArray, IsIn, IsInt, IsNumber, IsOptional, IsString, Max, Min } from "class-validator";
-import type { PropertySearchRequest } from "@propertyflow/contracts";
+import type { PropertySearchRequest, PropertySearchSort } from "@propertyflow/contracts";
 import type { PropertyListingType, ThailandMarket } from "@propertyflow/domain";
 
 const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const propertyListingTypes: PropertyListingType[] = ["sale", "rent", "sale_or_rent"];
+const propertySearchSorts: PropertySearchSort[] = ["created-desc", "ai-fit", "price-asc", "yield-desc", "beach-asc"];
 
 export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> {
   @IsOptional()
@@ -116,6 +117,10 @@ export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> 
   @Min(0)
   offset?: number;
 
+  @IsOptional()
+  @IsIn(propertySearchSorts)
+  sort?: PropertySearchSort;
+
   toSearchRequest(): PropertySearchRequest {
     return toPropertySearchRequest(this);
   }
@@ -148,7 +153,8 @@ export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySea
     requiredAmenities: toOptionalStringArray(query.requiredAmenities),
     radiusMeters,
     limit: toOptionalNumber(query.limit),
-    offset: toOptionalNumber(query.offset)
+    offset: toOptionalNumber(query.offset),
+    sort: query.sort
   };
 
   if (nearLatitude !== undefined && nearLongitude !== undefined && radiusMeters !== undefined) {

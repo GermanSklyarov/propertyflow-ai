@@ -1,6 +1,7 @@
 import type { PropertyListingType, PropertySnapshot } from "@propertyflow/domain";
 
 export type ListingIntent = "all" | PropertyListingType;
+export type ListingSort = "ai-fit" | "price-asc" | "yield-desc" | "beach-asc";
 export type RentalBudgetBand = {
   max: number;
   min: number;
@@ -39,6 +40,24 @@ export function filterPropertiesByIntent(properties: PropertySnapshot[], intent:
 
 export function countPropertiesByIntent(properties: PropertySnapshot[], intent: ListingIntent) {
   return filterPropertiesByIntent(properties, intent).length;
+}
+
+export function sortPropertiesForCatalog(properties: PropertySnapshot[], sort: ListingSort) {
+  return [...properties].sort((left, right) => {
+    if (sort === "price-asc") {
+      return getPrimaryPrice(left) - getPrimaryPrice(right);
+    }
+
+    if (sort === "yield-desc") {
+      return getGrossYield(right) - getGrossYield(left);
+    }
+
+    if (sort === "beach-asc") {
+      return getBeachDistance(left) - getBeachDistance(right);
+    }
+
+    return getCatalogFitScore(right) - getCatalogFitScore(left);
+  });
 }
 
 export function getRentalBudgetBand(properties: PropertySnapshot[]): RentalBudgetBand | undefined {
@@ -115,4 +134,42 @@ export function listingIntentCopy(intent: ListingIntent) {
   }
 
   return "Switch between purchase and rental intent without losing the AI-picked property context.";
+}
+
+function getPrimaryPrice(property: PropertySnapshot) {
+  return property.listingType === "rent" && property.rentalPriceMonthly
+    ? property.rentalPriceMonthly.amount
+    : property.price.amount;
+}
+
+function getGrossYield(property: PropertySnapshot) {
+  if (!property.monthlyRentEstimate?.amount || !property.price.amount) {
+    return 0;
+  }
+
+  return (property.monthlyRentEstimate.amount * 12) / property.price.amount;
+}
+
+function getBeachDistance(property: PropertySnapshot) {
+  return property.beachDistanceMeters ?? Number.MAX_SAFE_INTEGER;
+}
+
+function getCatalogFitScore(property: PropertySnapshot) {
+  let score = property.status === "available" ? 40 : 10;
+
+  if (property.beachDistanceMeters !== undefined) {
+    score += Math.max(0, 25 - property.beachDistanceMeters / 100);
+  }
+
+  if (property.amenities.some((amenity) => amenity.includes("fiber") || amenity.includes("coworking"))) {
+    score += 12;
+  }
+
+  if (property.amenities.some((amenity) => amenity.includes("sea-view") || amenity.includes("beachfront"))) {
+    score += 10;
+  }
+
+  score += Math.min(18, getGrossYield(property) * 200);
+
+  return score;
 }
