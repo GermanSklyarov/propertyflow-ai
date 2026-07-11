@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AgencyShell } from "@widgets/agency-shell/ui/agency-shell";
 import "@shared/styles/globals.css";
 
 export const metadata: Metadata = {
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AgencyShell>{children}</AgencyShell>
+      </body>
     </html>
   );
 }

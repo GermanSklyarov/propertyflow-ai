@@ -1,0 +1,171 @@
+.root {
+  min-height: 100vh;
+  background: #eef2ec;
+}
+
+.layout {
+  display: grid;
+  min-height: 100vh;
+}
+
+.sidebar {
+  display: grid;
+  align-content: start;
+  gap: 18px;
+  border-bottom: 1px solid var(--line);
+  background: #0f1f1c;
+  padding: 18px;
+  color: #fff;
+}
+
+.brand {
+  display: grid;
+  gap: 5px;
+}
+
+.brandMark {
+  color: #ff8067;
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.brandName {
+  font-size: 1.28rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.tenantCard {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(255 255 255 / 7%);
+  padding: 12px;
+}
+
+.tenantLabel {
+  color: rgb(255 255 255 / 62%);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.tenantName {
+  font-size: 0.92rem;
+  font-weight: 900;
+}
+
+.roleRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rolePill {
+  border: 1px solid rgb(255 255 255 / 16%);
+  background: rgb(255 255 255 / 9%);
+  padding: 5px 7px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.nav {
+  display: grid;
+  gap: 6px;
+}
+
+.navItem {
+  display: grid;
+  min-height: 42px;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid transparent;
+  color: rgb(255 255 255 / 72%);
+  font-size: 0.84rem;
+  font-weight: 850;
+}
+
+.navItemActive {
+  border-color: rgb(255 255 255 / 16%);
+  background: rgb(255 255 255 / 9%);
+  color: #fff;
+  padding: 0 10px;
+}
+
+.navItemMuted {
+  padding: 0 10px;
+}
+
+.navBadge {
+  color: #ffb199;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.main {
+  min-width: 0;
+}
+
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: rgb(255 255 255 / 76%);
+  padding: 12px clamp(18px, 4vw, 34px);
+}
+
+.searchStub {
+  display: inline-flex;
+  min-height: 38px;
+  min-width: min(100%, 360px);
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 12px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.topbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.actionButton {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 0 10px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+@media (min-width: 1024px) {
+  .layout {
+    grid-template-columns: 268px minmax(0, 1fr);
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    min-height: 100vh;
+    border-bottom: 0;
+    border-right: 1px solid rgb(255 255 255 / 10%);
+  }
+}
