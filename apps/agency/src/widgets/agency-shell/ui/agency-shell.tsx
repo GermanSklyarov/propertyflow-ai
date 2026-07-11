@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Bell,
   Bot,
@@ -15,7 +18,7 @@ import styles from "./agency-shell.module.css";
 
 const navigationItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard", status: "live" },
-  { href: "/leads", icon: Users, label: "Leads", status: "next" },
+  { href: "/leads", icon: Users, label: "Leads", status: "live" },
   { href: "/listings", icon: Building2, label: "Listings", status: "next" },
   { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", status: "next" },
   { href: "/ai-tools", icon: Bot, label: "AI tools", status: "next" },
@@ -24,6 +27,8 @@ const navigationItems = [
 ];
 
 export function AgencyShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   return (
     <div className={styles.root}>
       <div className={styles.layout}>
@@ -45,11 +50,12 @@ export function AgencyShell({ children }: { children: React.ReactNode }) {
           <nav className={styles.nav}>
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isActive = item.href === "/";
+              const isLive = item.status === "live";
+              const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
 
-              return isActive ? (
+              return isLive ? (
                 <Link
-                  className={`${styles.navItem} ${styles.navItemActive}`}
+                  className={`${styles.navItem} ${isActive ? styles.navItemActive : styles.navItemLive}`}
                   href={item.href}
                   key={item.href}
                 >

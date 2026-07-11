@@ -1,4 +1,10 @@
-import type { TenantDashboardMetrics } from "@propertyflow/contracts";
+import type {
+  LeadListResponse,
+  LeadQueueSummaryResponse,
+  LeadSnapshot,
+  ListLeadsRequest,
+  TenantDashboardMetrics
+} from "@propertyflow/contracts";
 
 const apiBaseUrl =
   process.env.PROPERTYFLOW_API_URL ?? process.env.NEXT_PUBLIC_PROPERTYFLOW_API_URL ?? "http://127.0.0.1:3001";
@@ -24,6 +30,56 @@ export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetric
   } catch {
     return demoTenantDashboardMetrics();
   }
+}
+
+export async function listLeads(request: ListLeadsRequest = { limit: 24 }): Promise<LeadListResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/leads${toQueryString(request)}`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoLeadListResponse();
+    }
+
+    return (await response.json()) as LeadListResponse;
+  } catch {
+    return demoLeadListResponse();
+  }
+}
+
+export async function getLeadQueueSummary(
+  request: ListLeadsRequest = { limit: 24 }
+): Promise<LeadQueueSummaryResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/leads/queue-summary${toQueryString(request)}`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoLeadQueueSummaryResponse(request);
+    }
+
+    return (await response.json()) as LeadQueueSummaryResponse;
+  } catch {
+    return demoLeadQueueSummaryResponse(request);
+  }
+}
+
+function toQueryString(request: ListLeadsRequest) {
+  const params = new URLSearchParams();
+
+  Object.entries(request).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+
+  const query = params.toString();
+
+  return query ? `?${query}` : "";
 }
 
 function demoTenantDashboardMetrics(): TenantDashboardMetrics {
@@ -140,4 +196,162 @@ function demoTenantDashboardMetrics(): TenantDashboardMetrics {
     unassignedLeads: 5,
     wonLeads
   };
+}
+
+function demoLeadListResponse(): LeadListResponse {
+  const now = new Date();
+  const leads: LeadSnapshot[] = [
+    {
+      id: "lead-demo-001",
+      tenantId: demoHeaders["x-tenant-id"],
+      propertyId: "property-wongamat-sea-view",
+      source: "ai-concierge",
+      status: "new",
+      contactName: "Irina Volkova",
+      contactEmail: "irina@example.com",
+      contactPhone: "+66 81 234 1201",
+      message: "Relocating to Pattaya with family, quiet area, school access, budget around THB 3.5M.",
+      preferredLocale: "ru",
+      attributionSearchQuery: "family move to Pattaya quiet area 3.5M",
+      attributionSearchSource: "ai",
+      priority: "high",
+      nextFollowUpAt: addHours(now, 2),
+      createdAt: addHours(now, -1),
+      updatedAt: addHours(now, -1)
+    },
+    {
+      id: "lead-demo-002",
+      tenantId: demoHeaders["x-tenant-id"],
+      propertyId: "property-terminal-21-rental-loft",
+      source: "saved-search",
+      status: "contacted",
+      contactName: "Anton Lebedev",
+      contactEmail: "anton@example.com",
+      message: "Needs 6 month rental near Terminal 21, walkable to beach, remote-work internet.",
+      preferredLocale: "ru",
+      assignedAgentId: "agent-demo-1",
+      attributionSearchQuery: "rent Terminal 21 good internet under 30k",
+      attributionSearchSource: "indexed",
+      priority: "medium",
+      nextFollowUpAt: addHours(now, -3),
+      createdAt: addHours(now, -30),
+      updatedAt: addHours(now, -8)
+    },
+    {
+      id: "lead-demo-003",
+      tenantId: demoHeaders["x-tenant-id"],
+      propertyId: "property-pratumnak-investment",
+      source: "website",
+      status: "qualified",
+      contactName: "Maya Chen",
+      contactEmail: "maya@example.com",
+      contactPhone: "+852 5551 0912",
+      message: "Looking for rental yield above 6%, prefers liquid Pattaya condo, cash buyer.",
+      preferredLocale: "en",
+      assignedAgentId: "agent-demo-2",
+      attributionSearchQuery: "Pattaya rental yield above 6%",
+      attributionSearchSource: "ai",
+      priority: "high",
+      nextFollowUpAt: addHours(now, 18),
+      createdAt: addHours(now, -52),
+      updatedAt: addHours(now, -7)
+    },
+    {
+      id: "lead-demo-004",
+      tenantId: demoHeaders["x-tenant-id"],
+      propertyId: "property-jomtien-family-corner",
+      source: "ai-chat",
+      status: "new",
+      contactName: "Sergey Orlov",
+      contactEmail: "sergey@example.com",
+      message: "Compares Jomtien and Wongamat for winter living with two children.",
+      preferredLocale: "ru",
+      attributionSearchQuery: "winter living family Jomtien Wongamat",
+      attributionSearchSource: "ai",
+      priority: "medium",
+      nextFollowUpAt: addHours(now, 6),
+      createdAt: addHours(now, -5),
+      updatedAt: addHours(now, -5)
+    },
+    {
+      id: "lead-demo-005",
+      tenantId: demoHeaders["x-tenant-id"],
+      propertyId: "property-phuket-rawai-pool-villa",
+      source: "agent",
+      status: "won",
+      contactName: "Daniel Moore",
+      contactEmail: "daniel@example.com",
+      contactPhone: "+44 7700 900321",
+      message: "Family villa in Rawai with pool and parking. Contract signed.",
+      preferredLocale: "en",
+      assignedAgentId: "agent-demo-1",
+      priority: "low",
+      createdAt: addHours(now, -130),
+      updatedAt: addHours(now, -12)
+    },
+    {
+      id: "lead-demo-006",
+      tenantId: demoHeaders["x-tenant-id"],
+      source: "public-api",
+      status: "lost",
+      contactName: "Narin S.",
+      contactPhone: "+66 82 456 0190",
+      message: "Wanted a very short lease under current market range.",
+      preferredLocale: "th",
+      assignedAgentId: "agent-demo-2",
+      priority: "low",
+      createdAt: addHours(now, -96),
+      updatedAt: addHours(now, -60)
+    }
+  ];
+
+  return {
+    items: leads,
+    total: leads.length
+  };
+}
+
+function demoLeadQueueSummaryResponse(filters: ListLeadsRequest): LeadQueueSummaryResponse {
+  const leads = demoLeadListResponse().items;
+  const openStatuses = new Set(["new", "contacted", "qualified"]);
+  const now = new Date();
+  const soon = new Date(now.getTime() + 1000 * 60 * 60 * 24);
+
+  return {
+    total: leads.length,
+    open: leads.filter((lead) => openStatuses.has(lead.status)).length,
+    assigned: leads.filter((lead) => lead.assignedAgentId).length,
+    unassigned: leads.filter((lead) => !lead.assignedAgentId).length,
+    overdueFollowUps: leads.filter((lead) => lead.nextFollowUpAt && new Date(lead.nextFollowUpAt) < now).length,
+    dueSoonFollowUps: leads.filter((lead) => {
+      if (!lead.nextFollowUpAt) {
+        return false;
+      }
+
+      const followUpAt = new Date(lead.nextFollowUpAt);
+
+      return followUpAt >= now && followUpAt <= soon;
+    }).length,
+    highPriority: leads.filter((lead) => lead.priority === "high").length,
+    byStatus: countBy(leads, (lead) => lead.status),
+    byPriority: countBy(leads, (lead) => lead.priority ?? "none"),
+    bySource: countBy(leads, (lead) => lead.source),
+    filters,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+function countBy<T>(items: T[], getBucket: (item: T) => string) {
+  const counts = new Map<string, number>();
+
+  items.forEach((item) => {
+    const bucket = getBucket(item);
+    counts.set(bucket, (counts.get(bucket) ?? 0) + 1);
+  });
+
+  return [...counts.entries()].map(([bucket, count]) => ({ bucket, count }));
+}
+
+function addHours(date: Date, hours: number) {
+  return new Date(date.getTime() + hours * 60 * 60 * 1000).toISOString();
 }
