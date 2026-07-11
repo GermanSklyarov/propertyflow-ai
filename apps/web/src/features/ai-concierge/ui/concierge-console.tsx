@@ -6,8 +6,13 @@ import Link from "next/link";
 import { ArrowRight, Loader2, MapPinned, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
-import type { ConciergeProfile } from "@propertyflow/contracts";
+import type { ConciergeProfile, ConciergeResponse } from "@propertyflow/contracts";
 import { askConciergeMutationOptions } from "@entities/concierge/api/concierge-mutations";
+import {
+  conciergeConsoleStorageKey,
+  parseConciergeConsoleState,
+  stringifyConciergeConsoleState,
+} from "@features/ai-concierge/model/concierge-console-storage";
 import {
   buildFollowUpOptions,
   parseBudgetAnswer,
@@ -48,8 +53,12 @@ export function ConciergeConsole() {
   });
   const [profileOverride, setProfileOverride] = useState<ConciergeProfile>({});
   const [budgetAnswer, setBudgetAnswer] = useState("");
+  const [storedResponse, setStoredResponse] =
+    useState<ConciergeResponse | null>(null);
+  const [hasRestoredConsoleState, setHasRestoredConsoleState] =
+    useState(false);
   const conciergeMutation = useMutation(askConciergeMutationOptions());
-  const response = conciergeMutation.data ?? null;
+  const response = conciergeMutation.data ?? storedResponse;
   const message = watch("message");
   const inferredProfile = useMemo(
     () => ({ ...buildConciergeProfile(message), ...profileOverride }),
@@ -77,6 +86,8 @@ export function ConciergeConsole() {
   }, [response]);
 
   function submit(values: ConciergeRequestFormValues) {
+    setStoredResponse(null);
+    conciergeMutation.reset();
     conciergeMutation.mutate(
       buildConciergeRequest(values.message, profileOverride),
     );
@@ -89,6 +100,8 @@ export function ConciergeConsole() {
     };
 
     setProfileOverride(nextProfileOverride);
+    setStoredResponse(null);
+    conciergeMutation.reset();
     conciergeMutation.mutate(
       buildConciergeRequest(message, nextProfileOverride),
     );
@@ -104,6 +117,46 @@ export function ConciergeConsole() {
     setBudgetAnswer("");
     answerFollowUp({ budgetThb });
   }
+
+  useEffect(() => {
+    const savedState = parseConciergeConsoleState(
+      window.sessionStorage.getItem(conciergeConsoleStorageKey),
+    );
+
+    if (savedState) {
+      setValue("message", savedState.message, {
+        shouldDirty: false,
+        shouldValidate: true,
+      });
+      setProfileOverride(savedState.profileOverride);
+      setBudgetAnswer(savedState.budgetAnswer);
+      setStoredResponse(savedState.response);
+    }
+
+    setHasRestoredConsoleState(true);
+  }, [setValue]);
+
+  useEffect(() => {
+    if (conciergeMutation.data) {
+      setStoredResponse(conciergeMutation.data);
+    }
+  }, [conciergeMutation.data]);
+
+  useEffect(() => {
+    if (!hasRestoredConsoleState) {
+      return;
+    }
+
+    window.sessionStorage.setItem(
+      conciergeConsoleStorageKey,
+      stringifyConciergeConsoleState({
+        budgetAnswer,
+        message,
+        profileOverride,
+        response,
+      }),
+    );
+  }, [budgetAnswer, hasRestoredConsoleState, message, profileOverride, response]);
 
   useEffect(() => {
     const target = shouldShowFollowUp
@@ -179,6 +232,8 @@ export function ConciergeConsole() {
                 onClick={() => {
                   setProfileOverride({});
                   setBudgetAnswer("");
+                  setStoredResponse(null);
+                  conciergeMutation.reset();
                   setValue("message", prompt, {
                     shouldDirty: true,
                     shouldValidate: true,
