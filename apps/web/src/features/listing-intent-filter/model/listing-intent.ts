@@ -5,6 +5,11 @@ export type RentalBudgetBand = {
   max: number;
   min: number;
 };
+export type ListingIntentSummary = {
+  label: string;
+  max?: number;
+  min?: number;
+};
 
 export function parseListingIntent(value: string | string[] | null | undefined): ListingIntent {
   const intent = Array.isArray(value) ? value[0] : value;
@@ -48,6 +53,51 @@ export function getRentalBudgetBand(properties: PropertySnapshot[]): RentalBudge
   return {
     max: Math.max(...rentalPrices),
     min: Math.min(...rentalPrices)
+  };
+}
+
+export function getPurchaseBudgetBand(properties: PropertySnapshot[]): RentalBudgetBand | undefined {
+  const prices = properties
+    .map((property) => property.price.amount)
+    .filter((amount): amount is number => typeof amount === "number" && amount > 0);
+
+  if (!prices.length) {
+    return undefined;
+  }
+
+  return {
+    max: Math.max(...prices),
+    min: Math.min(...prices)
+  };
+}
+
+export function getListingIntentSummary(properties: PropertySnapshot[], intent: ListingIntent): ListingIntentSummary {
+  const filteredProperties = filterPropertiesByIntent(properties, intent);
+
+  if (intent === "rent") {
+    return {
+      ...getRentalBudgetBand(filteredProperties),
+      label: "monthly rental band"
+    };
+  }
+
+  if (intent === "sale") {
+    return {
+      ...getPurchaseBudgetBand(filteredProperties),
+      label: "purchase band"
+    };
+  }
+
+  if (intent === "sale_or_rent") {
+    return {
+      ...getRentalBudgetBand(filteredProperties),
+      label: "dual-listing rent band"
+    };
+  }
+
+  return {
+    ...getPurchaseBudgetBand(filteredProperties),
+    label: "market purchase band"
   };
 }
 

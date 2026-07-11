@@ -8,7 +8,7 @@ import { PropertyCard } from "@entities/property/ui/property-card";
 import {
   countPropertiesByIntent,
   filterPropertiesByIntent,
-  getRentalBudgetBand,
+  getListingIntentSummary,
   listingIntentCopy,
   type ListingIntent
 } from "@features/listing-intent-filter/model/listing-intent";
@@ -37,7 +37,7 @@ export function ListingIntentFilter({
   }, [initialIntent]);
 
   const filteredProperties = useMemo(() => filterPropertiesByIntent(properties, intent), [intent, properties]);
-  const rentalBudget = useMemo(() => getRentalBudgetBand(properties), [properties]);
+  const intentSummary = useMemo(() => getListingIntentSummary(properties, intent), [intent, properties]);
 
   function chooseIntent(nextIntent: ListingIntent) {
     const nextSearchParams = new URLSearchParams(window.location.search);
@@ -93,9 +93,9 @@ export function ListingIntentFilter({
       <div className="grid items-start gap-3.5 border border-[rgba(15,118,110,0.16)] bg-[#edf8f4] px-3.5 py-3 text-[0.9rem] leading-normal text-[#42524e] min-[761px]:flex min-[761px]:items-center min-[761px]:justify-between">
         <span>{listingIntentCopy(intent)}</span>
         <strong className="text-[var(--teal-dark)] min-[761px]:whitespace-nowrap">
-          {rentalBudget
-            ? `${formatCompactThb(rentalBudget.min)}-${formatCompactThb(rentalBudget.max)}/mo rental band`
-            : "Rental prices appear when agents publish rent listings"}
+          {intentSummary.min !== undefined && intentSummary.max !== undefined
+            ? `${formatCompactThb(intentSummary.min)}-${formatCompactThb(intentSummary.max)} ${intentSummary.label}`
+            : "Budget range appears when agents publish matching listings"}
         </strong>
       </div>
 

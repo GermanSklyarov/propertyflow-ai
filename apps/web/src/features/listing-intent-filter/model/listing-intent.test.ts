@@ -3,6 +3,8 @@ import { demoProperties } from "@entities/property/model/demo-properties";
 import {
   countPropertiesByIntent,
   filterPropertiesByIntent,
+  getListingIntentSummary,
+  getPurchaseBudgetBand,
   getRentalBudgetBand,
   listingIntentCopy,
   parseListingIntent
@@ -47,6 +49,12 @@ describe("filterPropertiesByIntent", () => {
   });
 });
 
+describe("getPurchaseBudgetBand", () => {
+  it("returns the purchase price range when sale listings are available", () => {
+    expect(getPurchaseBudgetBand(demoProperties)).toEqual({ min: 2850000, max: 4600000 });
+  });
+});
+
 describe("getRentalBudgetBand", () => {
   it("returns the monthly rental price range when rental prices are available", () => {
     expect(getRentalBudgetBand(demoProperties)).toEqual({ min: 22000, max: 26000 });
@@ -54,6 +62,26 @@ describe("getRentalBudgetBand", () => {
 
   it("returns undefined when no rental prices are published", () => {
     expect(getRentalBudgetBand([demoProperties[2]])).toBeUndefined();
+  });
+});
+
+describe("getListingIntentSummary", () => {
+  it("returns intent-specific budget summaries", () => {
+    expect(getListingIntentSummary(demoProperties, "sale")).toEqual({
+      label: "purchase band",
+      min: 3250000,
+      max: 4600000
+    });
+    expect(getListingIntentSummary(demoProperties, "rent")).toEqual({
+      label: "monthly rental band",
+      min: 22000,
+      max: 26000
+    });
+    expect(getListingIntentSummary(demoProperties, "sale_or_rent")).toEqual({
+      label: "dual-listing rent band",
+      min: 26000,
+      max: 26000
+    });
   });
 });
 
