@@ -13,6 +13,7 @@ export const queryKeys = {
   },
   listings: {
     all: ["listings"] as const,
+    detail: (propertyId: string) => [...queryKeys.listings.all, "detail", propertyId] as const,
     list: (filters: object) => [...queryKeys.listings.all, "list", filters] as const
   },
   savedSearches: {

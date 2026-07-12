@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   BadgeCheck,
   Building2,
@@ -77,7 +78,7 @@ function ListingRow({ listing }: { listing: PropertySnapshot }) {
   const yieldSignal = getGrossYield(listing);
 
   return (
-    <article className={styles.listingRow}>
+    <Link className={styles.listingRow} href={`/listings/${listing.id}`}>
       <div className={styles.listingMain}>
         <div className={styles.titleRow}>
           <span className={styles.kindIcon}>
@@ -125,7 +126,7 @@ function ListingRow({ listing }: { listing: PropertySnapshot }) {
         <SignalPill icon={<Sparkles size={14} />} label={`${readiness.score}/5 AI ready`} tone={readiness.tone} />
         <SignalPill icon={<DraftingCompass size={14} />} label={readiness.nextAction} />
       </div>
-    </article>
+    </Link>
   );
 }
 

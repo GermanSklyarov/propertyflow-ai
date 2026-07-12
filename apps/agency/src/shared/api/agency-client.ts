@@ -150,6 +150,23 @@ export async function listProperties(
   }
 }
 
+export async function getProperty(propertyId: string): Promise<PropertySnapshot | null> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoPropertyById(propertyId);
+    }
+
+    return (await response.json()) as PropertySnapshot;
+  } catch {
+    return demoPropertyById(propertyId);
+  }
+}
+
 export async function listSavedPropertySearches(): Promise<SavedPropertySearchListResponse> {
   try {
     const response = await fetch(`${apiBaseUrl}/properties/saved-searches`, {
@@ -804,6 +821,10 @@ function demoPropertySearchResponse(filters: PropertySearchRequest): PropertySea
     items: properties,
     total: properties.length
   };
+}
+
+function demoPropertyById(propertyId: string) {
+  return demoPropertySearchResponse({ limit: 30 }).items.find((property) => property.id === propertyId) ?? null;
 }
 
 function demoSavedPropertySearchListResponse(): SavedPropertySearchListResponse {
