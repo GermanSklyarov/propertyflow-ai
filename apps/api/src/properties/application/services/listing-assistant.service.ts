@@ -56,7 +56,8 @@ export class ListingAssistantService {
           tenantId,
           requestedByUserId: user.id,
           propertyId,
-          imageUrls: request.imageUrls
+          imageUrls: request.imageUrls,
+          imageIds: request.imageIds
         })
       );
     }

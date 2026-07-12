@@ -12,13 +12,14 @@ import {
   WandSparkles
 } from "lucide-react";
 import { runListingAssistantAction } from "@entities/listing/api/ai-tools-actions";
-import type { TenantDashboardMetrics } from "@propertyflow/contracts";
+import type { PropertyImageGalleryResponse, TenantDashboardMetrics } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./ai-tools-page.module.css";
 
 export function AiToolsPage({
   assistantResult,
+  galleries,
   listings,
   metrics
 }: {
@@ -27,10 +28,12 @@ export function AiToolsPage({
     policyItems: number;
     property: string;
   };
+  galleries: PropertyImageGalleryResponse[];
   listings: PropertySnapshot[];
   metrics: TenantDashboardMetrics;
 }) {
-  const operations = buildAiOperations(listings);
+  const galleriesByPropertyId = new Map(galleries.map((gallery) => [gallery.propertyId, gallery]));
+  const operations = buildAiOperations(listings, galleriesByPropertyId);
   const readyCount = operations.filter((operation) => operation.readiness === "ready").length;
   const reviewCount = operations.filter((operation) => operation.readiness === "review").length;
 
@@ -165,6 +168,7 @@ export function AiToolsPage({
 }
 
 interface AiOperation {
+  images: PropertyImageGalleryResponse["images"];
   property: PropertySnapshot;
   readiness: "ready" | "review" | "blocked";
   score: number;
@@ -192,10 +196,17 @@ function AiOperationRow({ operation }: { operation: AiOperation }) {
       <form action={runListingAssistantAction} className={styles.runAssistantForm}>
         <input name="propertyId" type="hidden" value={operation.property.id} />
         <input name="title" type="hidden" value={operation.property.title} />
+        {operation.images.map((image) => (
+          <input key={`${image.id}-url`} name="imageUrls" type="hidden" value={image.imageUrl} />
+        ))}
+        {operation.images.map((image) => (
+          <input key={`${image.id}-id`} name="imageIds" type="hidden" value={image.id} />
+        ))}
         <button type="submit">
           <Bot size={14} />
           Run assistant
         </button>
+        <small>{operation.images.length ? `${operation.images.length} photos included` : "copy only"}</small>
       </form>
 
       <div className={styles.operationStatus}>
@@ -257,10 +268,17 @@ function KpiCard({
   );
 }
 
-function buildAiOperations(listings: PropertySnapshot[]): AiOperation[] {
+function buildAiOperations(
+  listings: PropertySnapshot[],
+  galleriesByPropertyId: Map<string, PropertyImageGalleryResponse>
+): AiOperation[] {
   return listings.map((property) => {
+    const images = [...(galleriesByPropertyId.get(property.id)?.images ?? [])]
+      .filter((image) => !image.deletedAt)
+      .sort((first, second) => first.position - second.position);
     const missing = [
       property.description ? undefined : "copy",
+      images.length ? undefined : "photos",
       property.amenities.length >= 4 ? undefined : "amenities",
       property.beachDistanceMeters ? undefined : "distance",
       property.monthlyRentEstimate || property.rentalPriceMonthly ? undefined : "rent signal",
@@ -269,11 +287,12 @@ function buildAiOperations(listings: PropertySnapshot[]): AiOperation[] {
     const score = 5 - missing.length;
     const recommendedActions = [
       !property.description ? "generate description" : "refresh copy",
-      property.amenities.length < 4 ? "analyze images" : "translate copy",
+      images.length ? `analyze ${images.length} photos` : "upload photos",
       property.monthlyRentEstimate || property.rentalPriceMonthly ? "price check" : "rent estimate"
     ];
 
     return {
+      images,
       property,
       missing,
       readiness: score >= 4 ? "ready" : score >= 2 ? "review" : "blocked",

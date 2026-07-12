@@ -241,6 +241,9 @@
 }
 
 .runAssistantForm {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
   margin: 0;
 }
 
@@ -264,6 +267,13 @@
 .runAssistantForm button:hover,
 .runAssistantForm button:focus-visible {
   background: var(--teal-dark);
+}
+
+.runAssistantForm small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .operationStatus {

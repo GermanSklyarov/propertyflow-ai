@@ -970,6 +970,7 @@ export interface RunListingAssistantRequest {
   analyzeImages?: boolean;
   locales?: Array<"en" | "ru" | "th" | "zh">;
   imageUrls?: string[];
+  imageIds?: string[];
   requestedActions?: AiAgentActionName[];
 }
 

@@ -1,5 +1,5 @@
 import { tenantDashboardQueryOptions } from "@entities/analytics/api/analytics-queries";
-import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
+import { listingImagesQueryOptions, listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { AiToolsPage } from "@views/ai-tools/ui/ai-tools-page";
 
@@ -14,6 +14,9 @@ export default async function AgencyAiToolsPage({
     queryClient.ensureQueryData(listingsQueryOptions()),
     queryClient.ensureQueryData(tenantDashboardQueryOptions())
   ]);
+  const galleries = await Promise.all(
+    listings.items.map((listing) => queryClient.ensureQueryData(listingImagesQueryOptions(listing.id)))
+  );
 
   return (
     <AiToolsPage
@@ -26,6 +29,7 @@ export default async function AgencyAiToolsPage({
             }
           : undefined
       }
+      galleries={galleries}
       listings={listings.items}
       metrics={metrics}
     />

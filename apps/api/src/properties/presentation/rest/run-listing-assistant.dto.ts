@@ -37,6 +37,12 @@ export class RunListingAssistantDto implements RunListingAssistantRequest {
   @IsString({ each: true })
   imageUrls?: string[];
 
+  @ApiProperty({ isArray: true, required: false })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  imageIds?: string[];
+
   @ApiProperty({ enum: aiAgentActions, isArray: true, required: false })
   @IsOptional()
   @IsArray()
