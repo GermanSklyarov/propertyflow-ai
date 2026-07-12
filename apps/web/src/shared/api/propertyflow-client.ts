@@ -8,6 +8,7 @@ import type {
   NaturalLanguagePropertySearchResponse,
   NaturalLanguageSearchRequest,
   PropertyComparisonResponse,
+  PropertyImageGalleryResponse,
   SavedPropertySearchSnapshot,
   PropertySearchSort,
   PropertySearchResponse
@@ -76,6 +77,23 @@ export async function getPropertyById(propertyId: string): Promise<PropertySnaps
     return normalizeProperty((await response.json()) as PropertySnapshot);
   } catch {
     return fallbackProperty(propertyId);
+  }
+}
+
+export async function getPropertyImages(propertyId: string): Promise<PropertyImageGalleryResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images`, {
+      headers: demoHeaders,
+      next: { revalidate: 30 }
+    });
+
+    if (!response.ok) {
+      return demoPropertyImageGallery(propertyId);
+    }
+
+    return (await response.json()) as PropertyImageGalleryResponse;
+  } catch {
+    return demoPropertyImageGallery(propertyId);
   }
 }
 
@@ -356,4 +374,58 @@ function fallbackProperty(propertyId: string): PropertySnapshot | undefined {
     description:
       "The live API is not available for this listing right now, so PropertyFlow is showing a safe demo brief with the same decision layout."
   };
+}
+
+function demoPropertyImageGallery(propertyId: string): PropertyImageGalleryResponse {
+  const property = fallbackProperty(propertyId);
+  const now = new Date().toISOString();
+
+  if (!property) {
+    return { images: [], propertyId };
+  }
+
+  return {
+    images: demoPropertyImageUrls(property).map((imageUrl, index) => ({
+      caption: index === 0 ? `${property.title} cover` : `${property.title} photo ${index + 1}`,
+      createdAt: now,
+      id: `${propertyId}-public-image-${index + 1}`,
+      imageUrl,
+      position: index,
+      propertyId,
+      tenantId: demoHeaders["x-tenant-id"]
+    })),
+    propertyId
+  };
+}
+
+function demoPropertyImageUrls(property: PropertySnapshot) {
+  if (property.kind === "villa") {
+    return [
+      "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1400&q=85",
+      "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=900&q=85",
+      "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=900&q=85"
+    ];
+  }
+
+  if (property.address?.toLowerCase().includes("terminal")) {
+    return [
+      "https://images.unsplash.com/photo-1518005020951-eccb494ad742?auto=format&fit=crop&w=1400&q=85",
+      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=900&q=85",
+      "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=900&q=85"
+    ];
+  }
+
+  if (property.bedrooms >= 2) {
+    return [
+      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1400&q=85",
+      "https://images.unsplash.com/photo-1560185007-c5ca9d2c014d?auto=format&fit=crop&w=900&q=85",
+      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=85"
+    ];
+  }
+
+  return [
+    "https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1400&q=85",
+    "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=85",
+    "https://images.unsplash.com/photo-1560448075-bb485b067938?auto=format&fit=crop&w=900&q=85"
+  ];
 }

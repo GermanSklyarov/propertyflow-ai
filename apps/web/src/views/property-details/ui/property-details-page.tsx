@@ -10,6 +10,7 @@ import {
   Waves,
   Wifi,
 } from "lucide-react";
+import type { PropertyImageGalleryResponse, PropertyImageSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { propertyImage } from "@entities/property/lib/property-image";
 import { buildPropertyBrief } from "@entities/property/model/property-brief";
@@ -24,13 +25,16 @@ import styles from "./property-details-page.module.css";
 
 export function PropertyDetailsPage({
   backHref = "/#recommendations",
+  gallery,
   property,
 }: {
   backHref?: string;
+  gallery: PropertyImageGalleryResponse;
   property: PropertySnapshot;
 }) {
   const brief = buildPropertyBrief(property);
   const economics = buildPropertyEconomics(property);
+  const media = buildPropertyMedia(property, gallery);
   const priceHistory = buildPropertyPriceHistory(property);
   const priceHistoryBars = getPriceHistoryBars(priceHistory);
 
@@ -42,8 +46,8 @@ export function PropertyDetailsPage({
         <div className={styles.heroMedia}>
           <img
             className="block size-full object-cover"
-            src={propertyImage(property, true)}
-            alt={property.title}
+            src={media.cover.imageUrl}
+            alt={media.cover.caption ?? property.title}
           />
         </div>
         <div className={`grid content-center gap-4 ${styles.heroContent}`}>
@@ -80,6 +84,28 @@ export function PropertyDetailsPage({
         className={`mx-auto grid max-w-[1320px] gap-[18px] px-[clamp(18px,4vw,54px)] pb-14 pt-7 ${styles.contentGrid}`}
       >
         <div className="grid content-start gap-[18px]">
+          <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
+            <div className="flex items-start justify-between gap-[18px]">
+              <div>
+                <p className="section-kicker">Property gallery</p>
+                <h2 className="mt-2 max-w-[720px] text-[clamp(1.55rem,2.8vw,2.7rem)] leading-tight">
+                  {media.title}
+                </h2>
+              </div>
+              <span className="border border-[var(--line)] bg-[#edf8f4] px-3 py-2 text-[0.78rem] font-black uppercase text-[var(--teal-dark)]">
+                {media.images.length} photos
+              </span>
+            </div>
+            <div className={`mt-[18px] grid gap-3 ${styles.galleryGrid}`}>
+              {media.images.slice(0, 4).map((image, index) => (
+                <figure className={index === 0 ? styles.galleryHero : styles.galleryThumb} key={image.id}>
+                  <img src={image.imageUrl} alt={image.caption ?? `${property.title} photo ${index + 1}`} />
+                  <figcaption>{index === 0 ? "Cover photo" : `Photo ${index + 1}`}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </section>
+
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
             <div className="flex items-start justify-between gap-[18px]">
               <div>
@@ -268,6 +294,25 @@ export function PropertyDetailsPage({
       </section>
     </main>
   );
+}
+
+function buildPropertyMedia(property: PropertySnapshot, gallery: PropertyImageGalleryResponse) {
+  const activeImages = [...gallery.images]
+    .filter((image) => !image.deletedAt)
+    .sort((first, second) => first.position - second.position);
+  const fallbackCover = {
+    caption: property.title,
+    id: `${property.id}-fallback-cover`,
+    imageUrl: propertyImage(property, true),
+    position: 0
+  } satisfies Pick<PropertyImageSnapshot, "caption" | "id" | "imageUrl" | "position">;
+  const images = activeImages.length ? activeImages : [fallbackCover];
+
+  return {
+    cover: images[0],
+    images,
+    title: activeImages.length ? "Synced from agency media library." : "Preview image until agency photos are uploaded."
+  };
 }
 
 function BriefColumn({
