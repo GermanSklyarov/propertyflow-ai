@@ -12,6 +12,7 @@ import {
   Waves
 } from "lucide-react";
 import type { PropertySnapshot } from "@propertyflow/domain";
+import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import styles from "./listings-page.module.css";
 
 export function ListingsPage({ listings, total }: { listings: PropertySnapshot[]; total: number }) {
@@ -34,7 +35,12 @@ export function ListingsPage({ listings, total }: { listings: PropertySnapshot[]
         <section className={styles.kpiGrid} aria-label="Listing inventory overview">
           <KpiCard icon={<Building2 size={18} />} label="Available" note="Ready for clients" value={summary.available} />
           <KpiCard icon={<KeyRound size={18} />} label="Rental ready" note="Has monthly rent" value={summary.rentalReady} />
-          <KpiCard icon={<CircleDollarSign size={18} />} label="Avg yield" note="Estimate signal" value={formatPercent(summary.averageYield)} />
+          <KpiCard
+            icon={<CircleDollarSign size={18} />}
+            label="Avg yield"
+            note="Estimate signal"
+            value={formatPercent(summary.averageYield, { maximumFractionDigits: 1 })}
+          />
           <KpiCard icon={<Sparkles size={18} />} label="AI ready" note="Enough rich fields" value={`${summary.aiReady}/${listings.length}`} />
         </section>
 
@@ -112,7 +118,10 @@ function ListingRow({ listing }: { listing: PropertySnapshot }) {
       </div>
 
       <div className={styles.signals}>
-        <SignalPill icon={<Gauge size={14} />} label={yieldSignal ? `${formatPercent(yieldSignal)} yield` : "yield gap"} />
+        <SignalPill
+          icon={<Gauge size={14} />}
+          label={yieldSignal ? `${formatPercent(yieldSignal, { maximumFractionDigits: 1 })} yield` : "yield gap"}
+        />
         <SignalPill icon={<Sparkles size={14} />} label={`${readiness.score}/5 AI ready`} tone={readiness.tone} />
         <SignalPill icon={<DraftingCompass size={14} />} label={readiness.nextAction} />
       </div>
@@ -239,10 +248,6 @@ function countBy<T>(items: T[], getLabel: (item: T) => string) {
   return [...counts.entries()].map(([label, count]) => ({ label, count }));
 }
 
-function formatBucket(value: string) {
-  return value.replaceAll("-", " ").replaceAll("_", " ");
-}
-
 function formatDistance(value: number) {
   return value >= 1000 ? `${(value / 1000).toFixed(1)} km` : `${value} m`;
 }
@@ -264,8 +269,4 @@ function formatMoney(value: PropertySnapshot["price"]) {
     notation: value.amount >= 1_000_000 ? "compact" : "standard",
     style: "currency"
   }).format(value.amount);
-}
-
-function formatPercent(value: number) {
-  return `${(value * 100).toFixed(1)}%`;
 }

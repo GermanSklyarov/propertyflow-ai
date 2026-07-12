@@ -11,6 +11,7 @@ import {
   Users
 } from "lucide-react";
 import type { TenantSnapshot, TenantUsageMetric, TenantUsageResponse } from "@propertyflow/contracts";
+import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
 import styles from "./settings-page.module.css";
 
 export function SettingsPage({ tenant, usage }: { tenant: TenantSnapshot; usage: TenantUsageResponse }) {
@@ -219,24 +220,6 @@ function formatUsageKey(value: TenantUsageMetric["key"]) {
   return labels[value];
 }
 
-function formatPercent(value: number) {
-  const percent = Math.abs(value) <= 1 ? value * 100 : value;
-
-  return `${Math.round(percent)}%`;
-}
-
 function formatDomainStatus(value: TenantSnapshot["domainStatus"]) {
   return value ? value.replaceAll("-", " ") : "not configured";
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric"
-  }).format(new Date(value));
-}
-
-function formatNumber(value: number) {
-  return new Intl.NumberFormat("en", { maximumFractionDigits: 0 }).format(value);
 }

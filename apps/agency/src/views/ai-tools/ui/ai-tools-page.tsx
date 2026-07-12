@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import type { TenantDashboardMetrics } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
+import { formatBucket } from "@shared/lib/formatters";
 import styles from "./ai-tools-page.module.css";
 
 export function AiToolsPage({
@@ -247,8 +248,4 @@ function buildAiOperations(listings: PropertySnapshot[]): AiOperation[] {
       score
     };
   });
-}
-
-function formatBucket(value: string) {
-  return value.replaceAll("-", " ").replaceAll("_", " ");
 }

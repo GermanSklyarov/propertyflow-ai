@@ -17,6 +17,7 @@ import type {
   SavedSearchOpportunityItem,
   SavedSearchOpportunitiesResponse
 } from "@propertyflow/contracts";
+import { formatBucket, formatDateTime } from "@shared/lib/formatters";
 import styles from "./saved-searches-page.module.css";
 
 export function SavedSearchesPage({
@@ -214,17 +215,4 @@ function Metric({ label, value }: { label: string; value: number | string }) {
       <span>{label}</span>
     </div>
   );
-}
-
-function formatBucket(value: string) {
-  return value.replaceAll("-", " ").replaceAll("_", " ");
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short"
-  }).format(new Date(value));
 }

@@ -1,5 +1,6 @@
 import { Activity, Bot, Clock, Search, ShieldCheck, Users } from "lucide-react";
 import type { CountByBucket, TenantDashboardMetrics } from "@propertyflow/contracts";
+import { formatBucket, formatDateTime, formatPercent } from "@shared/lib/formatters";
 import styles from "./agency-dashboard-page.module.css";
 
 export function AgencyDashboardPage({ metrics }: { metrics: TenantDashboardMetrics }) {
@@ -177,23 +178,4 @@ function BucketList({ items, title }: { items: CountByBucket[]; title: string })
       ))}
     </div>
   );
-}
-
-function formatPercent(value: number) {
-  const percent = Math.abs(value) <= 1 ? value * 100 : value;
-
-  return `${Math.round(percent)}%`;
-}
-
-function formatBucket(value: string) {
-  return value.replaceAll("-", " ");
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short"
-  }).format(new Date(value));
 }

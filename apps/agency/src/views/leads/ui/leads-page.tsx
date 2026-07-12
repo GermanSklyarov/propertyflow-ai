@@ -12,6 +12,7 @@ import {
   Users
 } from "lucide-react";
 import type { CountByBucket, LeadQueueSummaryResponse, LeadSnapshot } from "@propertyflow/contracts";
+import { formatBucket, formatDateTime } from "@shared/lib/formatters";
 import styles from "./leads-page.module.css";
 
 export function LeadsPage({
@@ -219,17 +220,4 @@ function getFollowUpState(lead: LeadSnapshot) {
 
 function shortAgentName(agentId: string) {
   return agentId.replace("agent-", "Agent ").replace("demo-", "");
-}
-
-function formatBucket(value: string) {
-  return value.replaceAll("-", " ");
-}
-
-function formatDateTime(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short"
-  }).format(new Date(value));
 }
