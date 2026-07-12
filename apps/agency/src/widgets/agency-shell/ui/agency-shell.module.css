@@ -133,18 +133,41 @@
   padding: 12px clamp(18px, 4vw, 34px);
 }
 
-.searchStub {
-  display: inline-flex;
-  min-height: 38px;
-  min-width: min(100%, 360px);
+.quickNav {
+  display: flex;
+  min-width: min(100%, 560px);
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+}
+
+.quickNavLabel,
+.quickLink {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
   border: 1px solid var(--line);
   background: #fff;
+}
+
+.quickNavLabel {
+  gap: 8px;
   padding: 0 12px;
   color: var(--muted);
   font-size: 0.8rem;
   font-weight: 850;
+}
+
+.quickLink {
+  padding: 0 10px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.quickLink:hover {
+  border-color: rgb(15 118 110 / 24%);
+  background: #edf8f4;
 }
 
 .topbarActions {

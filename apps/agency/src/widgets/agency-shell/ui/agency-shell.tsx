@@ -4,27 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
-  Bot,
-  Building2,
-  ChartNoAxesCombined,
   DatabaseZap,
-  FolderSearch,
-  LayoutDashboard,
   Search,
-  Settings,
-  Users,
 } from "lucide-react";
+import {
+  agencyNavigationItems,
+  agencyTopbarQuickLinks,
+  isAgencyNavigationItemActive
+} from "@shared/navigation/agency-navigation";
 import styles from "./agency-shell.module.css";
-
-const navigationItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard", status: "live" },
-  { href: "/leads", icon: Users, label: "Leads", status: "live" },
-  { href: "/listings", icon: Building2, label: "Listings", status: "live" },
-  { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", status: "live" },
-  { href: "/ai-tools", icon: Bot, label: "AI tools", status: "live" },
-  { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", status: "live" },
-  { href: "/settings", icon: Settings, label: "Settings", status: "live" },
-];
 
 export function AgencyShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -48,10 +36,10 @@ export function AgencyShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className={styles.nav}>
-            {navigationItems.map((item) => {
+            {agencyNavigationItems.map((item) => {
               const Icon = item.icon;
               const isLive = item.status === "live";
-              const isActive = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+              const isActive = isAgencyNavigationItemActive(pathname, item.href);
 
               return isLive ? (
                 <Link
@@ -80,10 +68,17 @@ export function AgencyShell({ children }: { children: React.ReactNode }) {
 
         <div className={styles.main}>
           <header className={styles.topbar}>
-            <div className={styles.searchStub}>
-              <Search size={16} />
-              <span>Search leads, saved searches, listings...</span>
-            </div>
+            <nav className={styles.quickNav} aria-label="Agency quick links">
+              <span className={styles.quickNavLabel}>
+                <Search size={16} />
+                Quick jump
+              </span>
+              {agencyTopbarQuickLinks.map((link) => (
+                <Link className={styles.quickLink} href={link.href} key={link.href}>
+                  {link.label}
+                </Link>
+              ))}
+            </nav>
             <div className={styles.topbarActions}>
               <span className={styles.actionButton}>
                 <DatabaseZap size={16} />
