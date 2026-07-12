@@ -179,6 +179,12 @@
   border: 1px solid var(--line);
   background: #fff;
   padding: 14px;
+  color: inherit;
+}
+
+.leadRow:hover {
+  border-color: rgb(15 118 110 / 26%);
+  box-shadow: 0 14px 36px rgb(37 50 46 / 8%);
 }
 
 .leadMain {

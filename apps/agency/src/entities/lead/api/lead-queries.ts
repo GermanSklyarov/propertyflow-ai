@@ -1,6 +1,6 @@
 import type { ListLeadsRequest } from "@propertyflow/contracts";
 import { queryOptions } from "@tanstack/react-query";
-import { getLeadQueueSummary, listLeads } from "@shared/api/agency-client";
+import { getLead, getLeadNotes, getLeadQueueSummary, getLeadTimeline, listLeads } from "@shared/api/agency-client";
 import { queryKeys } from "@shared/query/query-keys";
 
 const defaultLeadQueueRequest = { limit: 24 } satisfies ListLeadsRequest;
@@ -16,5 +16,26 @@ export function leadQueueSummaryQueryOptions(request: ListLeadsRequest = default
   return queryOptions({
     queryKey: queryKeys.leads.queueSummary(request),
     queryFn: () => getLeadQueueSummary(request)
+  });
+}
+
+export function leadDetailQueryOptions(leadId: string) {
+  return queryOptions({
+    queryKey: queryKeys.leads.detail(leadId),
+    queryFn: () => getLead(leadId)
+  });
+}
+
+export function leadTimelineQueryOptions(leadId: string) {
+  return queryOptions({
+    queryKey: queryKeys.leads.timeline(leadId),
+    queryFn: () => getLeadTimeline(leadId)
+  });
+}
+
+export function leadNotesQueryOptions(leadId: string) {
+  return queryOptions({
+    queryKey: queryKeys.leads.notes(leadId),
+    queryFn: () => getLeadNotes(leadId)
   });
 }

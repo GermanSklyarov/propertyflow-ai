@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   AlertTriangle,
   Bot,
@@ -94,7 +95,7 @@ function LeadRow({ lead }: { lead: LeadSnapshot }) {
   const followUpState = getFollowUpState(lead);
 
   return (
-    <article className={styles.leadRow}>
+    <Link className={styles.leadRow} href={`/leads/${lead.id}`}>
       <div className={styles.leadMain}>
         <div className={styles.leadHeading}>
           <span className={`${styles.sourceIcon} ${lead.source === "ai-concierge" ? styles.sourceIconAi : ""}`}>
@@ -139,7 +140,7 @@ function LeadRow({ lead }: { lead: LeadSnapshot }) {
         <span className="section-kicker">Owner</span>
         <strong>{lead.assignedAgentId ? shortAgentName(lead.assignedAgentId) : "Unassigned"}</strong>
       </div>
-    </article>
+    </Link>
   );
 }
 

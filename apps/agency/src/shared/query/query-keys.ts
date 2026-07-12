@@ -5,8 +5,11 @@ export const queryKeys = {
   },
   leads: {
     all: ["leads"] as const,
+    detail: (leadId: string) => [...queryKeys.leads.all, "detail", leadId] as const,
     list: (filters: object) => [...queryKeys.leads.all, "list", filters] as const,
-    queueSummary: (filters: object) => [...queryKeys.leads.all, "queue-summary", filters] as const
+    notes: (leadId: string) => [...queryKeys.leads.all, "notes", leadId] as const,
+    queueSummary: (filters: object) => [...queryKeys.leads.all, "queue-summary", filters] as const,
+    timeline: (leadId: string) => [...queryKeys.leads.all, "timeline", leadId] as const
   },
   listings: {
     all: ["listings"] as const,

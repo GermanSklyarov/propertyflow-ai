@@ -1,7 +1,9 @@
 import type {
   LeadListResponse,
+  LeadNotesResponse,
   LeadQueueSummaryResponse,
   LeadSnapshot,
+  LeadTimelineResponse,
   ListLeadsRequest,
   PropertySearchRequest,
   PropertySearchResponse,
@@ -73,6 +75,59 @@ export async function getLeadQueueSummary(
     return (await response.json()) as LeadQueueSummaryResponse;
   } catch {
     return demoLeadQueueSummaryResponse(request);
+  }
+}
+
+export async function getLead(leadId: string): Promise<LeadSnapshot | null> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/leads?limit=100`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoLeadById(leadId);
+    }
+
+    const body = (await response.json()) as LeadListResponse;
+
+    return body.items.find((lead) => lead.id === leadId) ?? null;
+  } catch {
+    return demoLeadById(leadId);
+  }
+}
+
+export async function getLeadTimeline(leadId: string): Promise<LeadTimelineResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/leads/${leadId}/timeline`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoLeadTimelineResponse(leadId);
+    }
+
+    return (await response.json()) as LeadTimelineResponse;
+  } catch {
+    return demoLeadTimelineResponse(leadId);
+  }
+}
+
+export async function getLeadNotes(leadId: string): Promise<LeadNotesResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/leads/${leadId}/notes`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoLeadNotesResponse(leadId);
+    }
+
+    return (await response.json()) as LeadNotesResponse;
+  } catch {
+    return demoLeadNotesResponse(leadId);
   }
 }
 
@@ -503,6 +558,87 @@ function demoLeadQueueSummaryResponse(filters: ListLeadsRequest): LeadQueueSumma
     bySource: countBy(leads, (lead) => lead.source),
     filters,
     generatedAt: new Date().toISOString()
+  };
+}
+
+function demoLeadById(leadId: string) {
+  return demoLeadListResponse().items.find((lead) => lead.id === leadId) ?? null;
+}
+
+function demoLeadTimelineResponse(leadId: string): LeadTimelineResponse {
+  const lead = demoLeadById(leadId);
+  const now = new Date();
+
+  if (!lead) {
+    return { leadId, items: [], total: 0 };
+  }
+
+  const items: LeadTimelineResponse["items"] = [
+    {
+      id: `${leadId}-timeline-created`,
+      tenantId: lead.tenantId,
+      leadId,
+      type: "created",
+      title: `Lead created from ${lead.source}`,
+      actorUserId: lead.assignedAgentId,
+      actorUserRole: lead.assignedAgentId ? "agent" : undefined,
+      payload: { source: lead.source, contactName: lead.contactName },
+      createdAt: lead.createdAt
+    },
+    {
+      id: `${leadId}-timeline-follow-up`,
+      tenantId: lead.tenantId,
+      leadId,
+      type: "follow-up-updated",
+      title: lead.nextFollowUpAt ? "Follow-up scheduled" : "Follow-up needs scheduling",
+      actorUserId: lead.assignedAgentId ?? demoHeaders["x-user-id"],
+      actorUserRole: lead.assignedAgentId ? "agent" : "manager",
+      payload: { nextFollowUpAt: lead.nextFollowUpAt ?? null, priority: lead.priority ?? "none" },
+      createdAt: lead.updatedAt
+    },
+    {
+      id: `${leadId}-timeline-review`,
+      tenantId: lead.tenantId,
+      leadId,
+      type: "note",
+      title: "AI context reviewed",
+      actorUserId: demoHeaders["x-user-id"],
+      actorUserRole: "manager",
+      payload: { note: "Review intent, budget, property fit, and preferred channel before outreach." },
+      createdAt: addHours(now, -2)
+    }
+  ];
+
+  return {
+    leadId,
+    items,
+    total: items.length
+  };
+}
+
+function demoLeadNotesResponse(leadId: string): LeadNotesResponse {
+  const lead = demoLeadById(leadId);
+
+  if (!lead) {
+    return { leadId, items: [], total: 0 };
+  }
+
+  const items: LeadNotesResponse["items"] = [
+    {
+      id: `${leadId}-note-1`,
+      tenantId: lead.tenantId,
+      leadId,
+      note: "Confirm intent, timeline, and whether the client wants video tour or in-person viewing.",
+      createdByUserId: demoHeaders["x-user-id"],
+      createdByUserRole: "manager",
+      createdAt: addHours(new Date(), -3)
+    }
+  ];
+
+  return {
+    leadId,
+    items,
+    total: items.length
   };
 }
 
