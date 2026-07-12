@@ -6,6 +6,9 @@ import type {
   LeadTimelineResponse,
   ListLeadsRequest,
   AddPropertyImageRequest,
+  ConfirmPropertyImageUploadRequest,
+  CreatePropertyImageUploadRequest,
+  CreatePropertyImageUploadResponse,
   PropertyImageGalleryResponse,
   PropertyImageSnapshot,
   PropertySearchRequest,
@@ -202,6 +205,46 @@ export async function addPropertyImage(
 
   if (!response.ok) {
     throw new Error(`Failed to add property image: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageSnapshot;
+}
+
+export async function createPropertyImageUploadUrl(
+  propertyId: string,
+  request: CreatePropertyImageUploadRequest
+): Promise<CreatePropertyImageUploadResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/upload-url`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create property image upload URL: ${response.status}`);
+  }
+
+  return (await response.json()) as CreatePropertyImageUploadResponse;
+}
+
+export async function confirmPropertyImageUpload(
+  propertyId: string,
+  request: ConfirmPropertyImageUploadRequest
+): Promise<PropertyImageSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/confirm-upload`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to confirm property image upload: ${response.status}`);
   }
 
   return (await response.json()) as PropertyImageSnapshot;

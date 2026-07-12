@@ -15,7 +15,7 @@ import {
   Sparkles,
   Waves
 } from "lucide-react";
-import { addPropertyImageAction } from "@entities/listing/api/listing-actions";
+import { addPropertyImageAction, uploadPropertyImageAction } from "@entities/listing/api/listing-actions";
 import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
@@ -34,6 +34,7 @@ export function ListingDetailPage({
   const readiness = getReadiness(listing);
   const nextActions = buildNextActions(listing, readiness.score);
   const addImage = addPropertyImageAction.bind(null, listing.id);
+  const uploadImage = uploadPropertyImageAction.bind(null, listing.id);
 
   return (
     <main className={styles.page}>
@@ -114,6 +115,29 @@ export function ListingDetailPage({
             <button type="submit">
               <ImagePlus size={16} />
               Add to gallery
+            </button>
+          </form>
+
+          <form action={uploadImage} className={styles.mediaForm}>
+            <div>
+              <p className="section-kicker">Upload</p>
+              <h3>Upload local file</h3>
+            </div>
+            <label>
+              Image file
+              <input accept="image/*" name="imageFile" required type="file" />
+            </label>
+            <label>
+              Caption
+              <input name="caption" placeholder="Pool view, living room, bedroom..." />
+            </label>
+            <label className={styles.checkboxLabel}>
+              <input defaultChecked name="analyzeImage" type="checkbox" />
+              Queue AI image analysis
+            </label>
+            <button type="submit">
+              <ImagePlus size={16} />
+              Upload to gallery
             </button>
           </form>
         </section>
