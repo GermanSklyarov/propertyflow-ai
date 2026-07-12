@@ -22,7 +22,7 @@ const navigationItems = [
   { href: "/listings", icon: Building2, label: "Listings", status: "live" },
   { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", status: "live" },
   { href: "/ai-tools", icon: Bot, label: "AI tools", status: "live" },
-  { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", status: "next" },
+  { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", status: "live" },
   { href: "/settings", icon: Settings, label: "Settings", status: "next" },
 ];
 

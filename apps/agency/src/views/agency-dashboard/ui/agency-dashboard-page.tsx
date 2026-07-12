@@ -180,7 +180,9 @@ function BucketList({ items, title }: { items: CountByBucket[]; title: string })
 }
 
 function formatPercent(value: number) {
-  return `${Math.round(value * 100)}%`;
+  const percent = Math.abs(value) <= 1 ? value * 100 : value;
+
+  return `${Math.round(percent)}%`;
 }
 
 function formatBucket(value: string) {
