@@ -23,7 +23,7 @@ const navigationItems = [
   { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", status: "live" },
   { href: "/ai-tools", icon: Bot, label: "AI tools", status: "live" },
   { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", status: "live" },
-  { href: "/settings", icon: Settings, label: "Settings", status: "next" },
+  { href: "/settings", icon: Settings, label: "Settings", status: "live" },
 ];
 
 export function AgencyShell({ children }: { children: React.ReactNode }) {

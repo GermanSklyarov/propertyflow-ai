@@ -17,5 +17,10 @@ export const queryKeys = {
     alertAnalytics: () => [...queryKeys.savedSearches.all, "alert-analytics"] as const,
     list: () => [...queryKeys.savedSearches.all, "list"] as const,
     opportunities: () => [...queryKeys.savedSearches.all, "opportunities"] as const
+  },
+  tenant: {
+    all: ["tenant"] as const,
+    current: () => [...queryKeys.tenant.all, "current"] as const,
+    usage: () => [...queryKeys.tenant.all, "usage"] as const
   }
 };

@@ -8,7 +8,9 @@ import type {
   SavedPropertySearchListResponse,
   SavedSearchAlertAnalyticsResponse,
   SavedSearchOpportunitiesResponse,
-  TenantDashboardMetrics
+  TenantDashboardMetrics,
+  TenantSnapshot,
+  TenantUsageResponse
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 
@@ -144,6 +146,40 @@ export async function getSavedSearchAlertAnalytics(): Promise<SavedSearchAlertAn
   }
 }
 
+export async function getCurrentTenant(): Promise<TenantSnapshot> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/tenants/current`, {
+      headers: demoHeaders,
+      next: { revalidate: 30 }
+    });
+
+    if (!response.ok) {
+      return demoTenantSnapshot();
+    }
+
+    return (await response.json()) as TenantSnapshot;
+  } catch {
+    return demoTenantSnapshot();
+  }
+}
+
+export async function getTenantUsage(): Promise<TenantUsageResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/tenants/current/usage`, {
+      headers: demoHeaders,
+      next: { revalidate: 30 }
+    });
+
+    if (!response.ok) {
+      return demoTenantUsageResponse();
+    }
+
+    return (await response.json()) as TenantUsageResponse;
+  } catch {
+    return demoTenantUsageResponse();
+  }
+}
+
 function toQueryString(request: object) {
   const params = new URLSearchParams();
 
@@ -271,6 +307,59 @@ function demoTenantDashboardMetrics(): TenantDashboardMetrics {
     totalSearches: 161,
     unassignedLeads: 5,
     wonLeads
+  };
+}
+
+function demoTenantSnapshot(): TenantSnapshot {
+  return {
+    id: demoHeaders["x-tenant-id"],
+    name: "Demo Thailand Realty",
+    slug: "demo-thailand-realty",
+    status: "active",
+    primaryMarket: "pattaya",
+    customDomain: "demo.propertyflow.local",
+    domainStatus: "pending-verification",
+    subscriptionPlan: "growth",
+    limits: {
+      properties: 250,
+      agents: 12,
+      aiCreditsMonthly: 20_000,
+      publicApiRequestsMonthly: 50_000
+    },
+    branding: {
+      displayName: "Demo Thailand Realty",
+      primaryColor: "#0f766e"
+    },
+    createdAt: "2026-01-12T09:00:00.000Z",
+    updatedAt: new Date().toISOString()
+  };
+}
+
+function demoTenantUsageResponse(): TenantUsageResponse {
+  const tenant = demoTenantSnapshot();
+  const now = new Date();
+  const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const periodEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
+  const usage = [
+    ["properties", 18, tenant.limits.properties],
+    ["agents", 4, tenant.limits.agents],
+    ["aiCreditsMonthly", 8240, tenant.limits.aiCreditsMonthly],
+    ["publicApiRequestsMonthly", 1280, tenant.limits.publicApiRequestsMonthly]
+  ] as const;
+
+  return {
+    tenantId: tenant.id,
+    subscriptionPlan: tenant.subscriptionPlan,
+    periodStart: periodStart.toISOString(),
+    periodEnd: periodEnd.toISOString(),
+    generatedAt: now.toISOString(),
+    items: usage.map(([key, used, limit]) => ({
+      key,
+      used,
+      limit,
+      remaining: Math.max(limit - used, 0),
+      utilizationRate: limit > 0 ? Math.round((used / limit) * 10_000) / 100 : 0
+    }))
   };
 }
 
