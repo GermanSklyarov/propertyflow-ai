@@ -12,7 +12,8 @@
   "scripts": {
     "build": "tsc -b",
     "check": "tsc -b",
-    "dev": "npm run dev:web",
+    "dev": "node scripts/dev.mjs",
+    "dev:all": "node scripts/dev.mjs",
     "dev:api": "npm run dev --workspace @propertyflow/api",
     "dev:web": "npm run dev --workspace @propertyflow/web",
     "dev:agency": "npm run dev --workspace @propertyflow/agency",
