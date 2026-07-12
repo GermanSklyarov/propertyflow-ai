@@ -5,6 +5,7 @@ import {
   Building2,
   CircleDollarSign,
   DraftingCompass,
+  ExternalLink,
   Gauge,
   Home,
   KeyRound,
@@ -28,6 +29,7 @@ export function ListingDetailPage({
 }) {
   const economics = buildEconomics(listing);
   const media = buildMediaSummary(gallery);
+  const publication = buildPublicationSummary(listing, media);
   const readiness = getReadiness(listing);
   const nextActions = buildNextActions(listing, readiness.score);
 
@@ -96,6 +98,28 @@ export function ListingDetailPage({
           <KpiCard icon={<KeyRound size={18} />} label="Rent signal" note={economics.rentNote} value={economics.rentValue} />
           <KpiCard icon={<Gauge size={18} />} label="Gross yield" note="Annual rent / ask" value={economics.grossYieldValue} />
           <KpiCard icon={<Sparkles size={18} />} label="AI readiness" note={readiness.note} value={`${readiness.score}/5`} />
+        </section>
+
+        <section className={styles.publicationPanel} aria-label="Client publication sync">
+          <div className={styles.publicationHeader}>
+            <div>
+              <p className="section-kicker">Client publication</p>
+              <h2 className={styles.panelTitle}>{publication.title}</h2>
+            </div>
+            <a className={styles.previewLink} href={publication.previewHref} target="_blank" rel="noreferrer">
+              Preview public page
+              <ExternalLink size={15} />
+            </a>
+          </div>
+          <div className={styles.publicationGrid}>
+            {publication.items.map((item) => (
+              <article className={`${styles.publicationItem} ${item.ready ? styles.publicationReady : styles.publicationBlocked}`} key={item.label}>
+                <span>{item.ready ? "Ready" : "Missing"}</span>
+                <strong>{item.label}</strong>
+                <small>{item.detail}</small>
+              </article>
+            ))}
+          </div>
         </section>
 
         <section className={styles.layout}>
@@ -254,10 +278,62 @@ function buildMediaSummary(gallery: PropertyImageGalleryResponse) {
   const cover = activeImages[0];
 
   return {
+    activeCount: activeImages.length,
     cover,
     thumbnails: activeImages.slice(1, 5),
     title: activeImages.length ? "Published gallery preview" : "No photos attached yet"
   };
+}
+
+function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildMediaSummary>) {
+  const items = [
+    {
+      detail: media.activeCount ? `${media.activeCount} public-ready photos` : "Add at least one cover photo",
+      label: "Gallery",
+      ready: media.activeCount > 0
+    },
+    {
+      detail: listing.description ? "Client-facing description exists" : "Generate or write public description",
+      label: "Description",
+      ready: Boolean(listing.description)
+    },
+    {
+      detail: formatCompactMoney(listing.price),
+      label: "Price",
+      ready: listing.price.amount > 0
+    },
+    {
+      detail: listing.amenities.length ? `${listing.amenities.length} tags available` : "Add searchable amenity tags",
+      label: "Amenities",
+      ready: listing.amenities.length > 0
+    },
+    {
+      detail: listing.status === "available" ? "Visible candidate" : `Currently ${formatBucket(listing.status)}`,
+      label: "Availability",
+      ready: listing.status === "available"
+    },
+    {
+      detail:
+        listing.rentalPriceMonthly || listing.monthlyRentEstimate || listing.maintenanceFeeMonthly
+          ? "Economics enrich public AI summary"
+          : "Add rent or ownership cost signal",
+      label: "Economics",
+      ready: Boolean(listing.rentalPriceMonthly || listing.monthlyRentEstimate || listing.maintenanceFeeMonthly)
+    }
+  ];
+  const readyCount = items.filter((item) => item.ready).length;
+
+  return {
+    items,
+    previewHref: buildPublicPreviewHref(listing.id),
+    title: `${readyCount}/${items.length} public fields ready`
+  };
+}
+
+function buildPublicPreviewHref(propertyId: string) {
+  const webBaseUrl = process.env.NEXT_PUBLIC_PROPERTYFLOW_WEB_URL ?? "http://localhost:3000";
+
+  return `${webBaseUrl.replace(/\/$/, "")}/properties/${propertyId}`;
 }
 
 function buildEconomics(listing: PropertySnapshot) {
