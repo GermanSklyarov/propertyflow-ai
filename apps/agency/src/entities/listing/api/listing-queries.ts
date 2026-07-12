@@ -1,6 +1,6 @@
 import type { PropertySearchRequest } from "@propertyflow/contracts";
 import { queryOptions } from "@tanstack/react-query";
-import { getProperty, listProperties } from "@shared/api/agency-client";
+import { getProperty, getPropertyImages, listProperties } from "@shared/api/agency-client";
 import { queryKeys } from "@shared/query/query-keys";
 
 const defaultListingRequest = { limit: 30, sort: "created-desc" } satisfies PropertySearchRequest;
@@ -16,5 +16,12 @@ export function listingDetailQueryOptions(propertyId: string) {
   return queryOptions({
     queryKey: queryKeys.listings.detail(propertyId),
     queryFn: () => getProperty(propertyId)
+  });
+}
+
+export function listingImagesQueryOptions(propertyId: string) {
+  return queryOptions({
+    queryKey: queryKeys.listings.images(propertyId),
+    queryFn: () => getPropertyImages(propertyId)
   });
 }

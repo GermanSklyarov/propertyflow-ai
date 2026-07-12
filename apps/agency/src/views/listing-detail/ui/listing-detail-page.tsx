@@ -8,17 +8,26 @@ import {
   Gauge,
   Home,
   KeyRound,
+  ImagePlus,
   MapPin,
   Ruler,
   Sparkles,
   Waves
 } from "lucide-react";
+import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import styles from "./listing-detail-page.module.css";
 
-export function ListingDetailPage({ listing }: { listing: PropertySnapshot }) {
+export function ListingDetailPage({
+  gallery,
+  listing
+}: {
+  gallery: PropertyImageGalleryResponse;
+  listing: PropertySnapshot;
+}) {
   const economics = buildEconomics(listing);
+  const media = buildMediaSummary(gallery);
   const readiness = getReadiness(listing);
   const nextActions = buildNextActions(listing, readiness.score);
 
@@ -37,6 +46,50 @@ export function ListingDetailPage({ listing }: { listing: PropertySnapshot }) {
           </div>
           <span className={`${styles.statusBadge} ${styles[`status-${listing.status}`]}`}>{formatBucket(listing.status)}</span>
         </header>
+
+        <section className={styles.mediaPanel} aria-label="Listing media gallery">
+          <div className={styles.mediaHeader}>
+            <div>
+              <p className="section-kicker">Media</p>
+              <h2 className={styles.panelTitle}>{media.title}</h2>
+            </div>
+            <span className={styles.mediaCount}>{gallery.images.length} photos</span>
+          </div>
+
+          {media.cover ? (
+            <div className={styles.galleryGrid}>
+              <figure className={styles.coverFrame}>
+                <img src={media.cover.imageUrl} alt={media.cover.caption ?? `${listing.title} cover photo`} />
+                <figcaption>
+                  <span>Cover</span>
+                  <strong>{media.cover.caption ?? listing.title}</strong>
+                </figcaption>
+              </figure>
+
+              <div className={styles.thumbnailGrid}>
+                {media.thumbnails.map((image, index) => (
+                  <figure className={styles.thumbnailFrame} key={image.id}>
+                    <img src={image.imageUrl} alt={image.caption ?? `${listing.title} photo ${index + 2}`} />
+                    <figcaption>{index === 0 ? "Next in gallery" : `Photo ${index + 2}`}</figcaption>
+                  </figure>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className={styles.emptyMedia}>
+              <ImagePlus size={28} />
+              <strong>Upload photos before publishing</strong>
+              <p>Photos will power the public listing gallery, AI image analysis, amenity detection, and client-facing recommendations.</p>
+            </div>
+          )}
+
+          <div className={styles.mediaActions}>
+            <span>Cover selection</span>
+            <span>Reorder queue</span>
+            <span>AI quality review</span>
+            <span>Public gallery sync</span>
+          </div>
+        </section>
 
         <section className={styles.kpiGrid} aria-label="Listing detail overview">
           <KpiCard icon={<CircleDollarSign size={18} />} label="Ask" note={formatListingType(listing.listingType)} value={formatCompactMoney(listing.price)} />
@@ -192,6 +245,19 @@ function Metric({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </article>
   );
+}
+
+function buildMediaSummary(gallery: PropertyImageGalleryResponse) {
+  const activeImages = [...gallery.images]
+    .filter((image) => !image.deletedAt)
+    .sort((first, second) => first.position - second.position);
+  const cover = activeImages[0];
+
+  return {
+    cover,
+    thumbnails: activeImages.slice(1, 5),
+    title: activeImages.length ? "Published gallery preview" : "No photos attached yet"
+  };
 }
 
 function buildEconomics(listing: PropertySnapshot) {
