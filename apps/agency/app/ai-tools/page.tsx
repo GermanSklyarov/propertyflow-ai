@@ -1,12 +1,12 @@
 import { tenantDashboardQueryOptions } from "@entities/analytics/api/analytics-queries";
-import { listingImagesQueryOptions, listingsQueryOptions } from "@entities/listing/api/listing-queries";
+import { listingAiAssetsQueryOptions, listingImagesQueryOptions, listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { AiToolsPage } from "@views/ai-tools/ui/ai-tools-page";
 
 export default async function AgencyAiToolsPage({
   searchParams
 }: {
-  searchParams: Promise<{ assistant?: string; jobs?: string; policy?: string; property?: string }>;
+  searchParams: Promise<{ assistant?: string; jobs?: string; policy?: string; property?: string; propertyId?: string }>;
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
@@ -17,6 +17,9 @@ export default async function AgencyAiToolsPage({
   const galleries = await Promise.all(
     listings.items.map((listing) => queryClient.ensureQueryData(listingImagesQueryOptions(listing.id)))
   );
+  const aiAssets = await Promise.all(
+    listings.items.map((listing) => queryClient.ensureQueryData(listingAiAssetsQueryOptions(listing.id)))
+  );
 
   return (
     <AiToolsPage
@@ -25,10 +28,12 @@ export default async function AgencyAiToolsPage({
           ? {
               jobs: Number(query.jobs ?? 0),
               policyItems: Number(query.policy ?? 0),
-              property: query.property ?? "Selected listing"
+              property: query.property ?? "Selected listing",
+              propertyId: query.propertyId
             }
           : undefined
       }
+      aiAssets={aiAssets}
       galleries={galleries}
       listings={listings.items}
       metrics={metrics}

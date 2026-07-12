@@ -12,28 +12,32 @@ import {
   WandSparkles
 } from "lucide-react";
 import { runListingAssistantAction } from "@entities/listing/api/ai-tools-actions";
-import type { PropertyImageGalleryResponse, TenantDashboardMetrics } from "@propertyflow/contracts";
+import type { PropertyAiAssets, PropertyImageGalleryResponse, TenantDashboardMetrics } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./ai-tools-page.module.css";
 
 export function AiToolsPage({
+  aiAssets,
   assistantResult,
   galleries,
   listings,
   metrics
 }: {
+  aiAssets: PropertyAiAssets[];
   assistantResult?: {
     jobs: number;
     policyItems: number;
     property: string;
+    propertyId?: string;
   };
   galleries: PropertyImageGalleryResponse[];
   listings: PropertySnapshot[];
   metrics: TenantDashboardMetrics;
 }) {
+  const aiAssetsByPropertyId = new Map(aiAssets.map((assets) => [assets.propertyId, assets]));
   const galleriesByPropertyId = new Map(galleries.map((gallery) => [gallery.propertyId, gallery]));
-  const operations = buildAiOperations(listings, galleriesByPropertyId);
+  const operations = buildAiOperations(listings, galleriesByPropertyId, aiAssetsByPropertyId);
   const readyCount = operations.filter((operation) => operation.readiness === "ready").length;
   const reviewCount = operations.filter((operation) => operation.readiness === "review").length;
 
@@ -71,6 +75,12 @@ export function AiToolsPage({
                 {assistantResult.policyItems} policy rule{assistantResult.policyItems === 1 ? "" : "s"}. Keep the worker running, then review
                 generated assets on the listing page.
               </p>
+              {assistantResult.propertyId ? (
+                <div className={styles.resultLinks}>
+                  <a href={`/listings/${assistantResult.propertyId}#ai-descriptions`}>Review descriptions</a>
+                  <a href={`/listings/${assistantResult.propertyId}#ai-image-analysis`}>Review image analysis</a>
+                </div>
+              ) : null}
             </div>
           </section>
         ) : null}
@@ -168,11 +178,14 @@ export function AiToolsPage({
 }
 
 interface AiOperation {
+  assets: PropertyAiAssets;
   images: PropertyImageGalleryResponse["images"];
   property: PropertySnapshot;
   readiness: "ready" | "review" | "blocked";
   score: number;
   missing: string[];
+  pendingDescriptions: number;
+  pendingImageAnalyses: number;
   recommendedActions: string[];
 }
 
@@ -193,34 +206,50 @@ function AiOperationRow({ operation }: { operation: AiOperation }) {
         ))}
       </div>
 
-      <form action={runListingAssistantAction} className={styles.runAssistantForm}>
-        <input name="propertyId" type="hidden" value={operation.property.id} />
-        <input name="title" type="hidden" value={operation.property.title} />
-        {operation.images.map((image) => (
-          <input key={`${image.id}-url`} name="imageUrls" type="hidden" value={image.imageUrl} />
-        ))}
-        {operation.images.map((image) => (
-          <input key={`${image.id}-id`} name="imageIds" type="hidden" value={image.id} />
-        ))}
-        <button type="submit">
-          <Bot size={14} />
-          Run assistant
-        </button>
-        <small>{operation.images.length ? `${operation.images.length} photos included` : "copy only"}</small>
-      </form>
+      <div className={styles.reviewGroup}>
+        <div className={styles.reviewMetric}>
+          <FileText size={14} />
+          <strong>{operation.pendingDescriptions}</strong>
+          <span>copy drafts</span>
+        </div>
+        <div className={styles.reviewMetric}>
+          <Camera size={14} />
+          <strong>{operation.pendingImageAnalyses}</strong>
+          <span>image drafts</span>
+        </div>
+        <a href={`/listings/${operation.property.id}#ai-descriptions`}>Review assets</a>
+      </div>
 
-      <div className={styles.operationStatus}>
-        <strong>{operation.score}/5</strong>
-        <span className={styles[operation.readiness]}>{operation.readiness}</span>
-        {operation.missing.length ? (
-          <div className={styles.missingGroup} aria-label="Missing listing signals">
-            {operation.missing.map((item) => (
-              <small key={item}>{item}</small>
-            ))}
-          </div>
-        ) : (
-          <small>ready for review</small>
-        )}
+      <div className={styles.operationControls}>
+        <form action={runListingAssistantAction} className={styles.runAssistantForm}>
+          <input name="propertyId" type="hidden" value={operation.property.id} />
+          <input name="title" type="hidden" value={operation.property.title} />
+          {operation.images.map((image) => (
+            <input key={`${image.id}-url`} name="imageUrls" type="hidden" value={image.imageUrl} />
+          ))}
+          {operation.images.map((image) => (
+            <input key={`${image.id}-id`} name="imageIds" type="hidden" value={image.id} />
+          ))}
+          <button type="submit">
+            <Bot size={14} />
+            Run assistant
+          </button>
+          <small>{operation.images.length ? `${operation.images.length} photos included` : "copy only"}</small>
+        </form>
+
+        <div className={styles.operationStatus}>
+          <strong>{operation.score}/5</strong>
+          <span className={styles[operation.readiness]}>{operation.readiness}</span>
+          {operation.missing.length ? (
+            <div className={styles.missingGroup} aria-label="Missing listing signals">
+              {operation.missing.map((item) => (
+                <small key={item}>{item}</small>
+              ))}
+            </div>
+          ) : (
+            <small>ready for review</small>
+          )}
+        </div>
       </div>
     </article>
   );
@@ -270,12 +299,20 @@ function KpiCard({
 
 function buildAiOperations(
   listings: PropertySnapshot[],
-  galleriesByPropertyId: Map<string, PropertyImageGalleryResponse>
+  galleriesByPropertyId: Map<string, PropertyImageGalleryResponse>,
+  aiAssetsByPropertyId: Map<string, PropertyAiAssets>
 ): AiOperation[] {
   return listings.map((property) => {
+    const assets = aiAssetsByPropertyId.get(property.id) ?? {
+      descriptions: [],
+      imageAnalysis: [],
+      propertyId: property.id
+    };
     const images = [...(galleriesByPropertyId.get(property.id)?.images ?? [])]
       .filter((image) => !image.deletedAt)
       .sort((first, second) => first.position - second.position);
+    const pendingDescriptions = assets.descriptions.filter((asset) => asset.reviewStatus === "draft").length;
+    const pendingImageAnalyses = assets.imageAnalysis.filter((asset) => asset.reviewStatus === "draft").length;
     const missing = [
       property.description ? undefined : "copy",
       images.length ? undefined : "photos",
@@ -292,9 +329,12 @@ function buildAiOperations(
     ];
 
     return {
+      assets,
       images,
       property,
       missing,
+      pendingDescriptions,
+      pendingImageAnalyses,
       readiness: score >= 4 ? "ready" : score >= 2 ? "review" : "blocked",
       recommendedActions,
       score

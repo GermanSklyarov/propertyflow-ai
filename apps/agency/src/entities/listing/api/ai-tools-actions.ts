@@ -36,7 +36,8 @@ export async function runListingAssistantAction(formData: FormData) {
     assistant: "queued",
     jobs: String(result.jobs.length),
     policy: String(result.actionPolicy.length),
-    property: title || propertyId
+    property: title || propertyId,
+    propertyId
   });
 
   redirect(`/ai-tools?${params.toString()}#assistant-result`);
