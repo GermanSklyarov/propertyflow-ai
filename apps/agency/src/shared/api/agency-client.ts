@@ -1,6 +1,10 @@
 import type {
   BackgroundJobMonitorResponse,
+  BackgroundJobSnapshot,
   BackgroundJobState,
+  CreateKnowledgeDocumentRequest,
+  KnowledgeDocumentListResponse,
+  KnowledgeDocumentSnapshot,
   LeadListResponse,
   LeadNotesResponse,
   LeadQueueSummaryResponse,
@@ -439,6 +443,53 @@ export async function getSavedSearchAlertAnalytics(): Promise<SavedSearchAlertAn
   } catch {
     return demoSavedSearchAlertAnalyticsResponse();
   }
+}
+
+export async function listKnowledgeDocuments(request: { limit?: number } = { limit: 24 }): Promise<KnowledgeDocumentListResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/knowledge-documents${toQueryString(request)}`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoKnowledgeDocumentListResponse();
+    }
+
+    return (await response.json()) as KnowledgeDocumentListResponse;
+  } catch {
+    return demoKnowledgeDocumentListResponse();
+  }
+}
+
+export async function createKnowledgeDocument(request: CreateKnowledgeDocumentRequest): Promise<KnowledgeDocumentSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/knowledge-documents`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create knowledge document: ${response.status}`);
+  }
+
+  return (await response.json()) as KnowledgeDocumentSnapshot;
+}
+
+export async function ingestKnowledgeDocument(documentId: string): Promise<BackgroundJobSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/knowledge-documents/${documentId}/ingest`, {
+    method: "POST",
+    headers: demoHeaders
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to ingest knowledge document: ${response.status}`);
+  }
+
+  return (await response.json()) as BackgroundJobSnapshot;
 }
 
 export async function getCurrentTenant(): Promise<TenantSnapshot> {
@@ -1111,6 +1162,50 @@ function demoPropertyAiAssets(propertyId: string): PropertyAiAssets {
     descriptions: [],
     imageAnalysis: [],
     propertyId
+  };
+}
+
+function demoKnowledgeDocumentListResponse(): KnowledgeDocumentListResponse {
+  const now = new Date();
+  const items: KnowledgeDocumentSnapshot[] = [
+    {
+      id: "knowledge-wongamat-relocation",
+      tenantId: demoHeaders["x-tenant-id"],
+      title: "Wongamat relocation briefing",
+      body: "Wongamat is calmer than Central Pattaya, with strong beach access, family-friendly condos, and good demand from long-stay tenants.",
+      locale: "en",
+      kind: "relocation",
+      tags: ["pattaya", "wongamat", "family"],
+      createdAt: addHours(now, -96),
+      updatedAt: addHours(now, -12)
+    },
+    {
+      id: "knowledge-pattaya-yield",
+      tenantId: demoHeaders["x-tenant-id"],
+      title: "Pattaya rental yield notes",
+      body: "Yield estimates should compare monthly rent, occupancy assumptions, maintenance fees, agency fees, and building liquidity.",
+      locale: "en",
+      kind: "investment",
+      tags: ["pattaya", "yield", "rental"],
+      createdAt: addHours(now, -72),
+      updatedAt: addHours(now, -8)
+    },
+    {
+      id: "knowledge-chanote-basics",
+      tenantId: demoHeaders["x-tenant-id"],
+      title: "Chanote document checklist",
+      body: "Before publishing ownership-sensitive claims, confirm title deed type, owner name, plot area, encumbrance notes, and coordinate consistency.",
+      locale: "en",
+      kind: "legal",
+      tags: ["chanote", "ownership", "documents"],
+      createdAt: addHours(now, -48),
+      updatedAt: addHours(now, -4)
+    }
+  ];
+
+  return {
+    items,
+    total: items.length
   };
 }
 

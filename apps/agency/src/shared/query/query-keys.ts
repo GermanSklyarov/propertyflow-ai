@@ -22,6 +22,10 @@ export const queryKeys = {
     all: ["jobs"] as const,
     list: (filters: object) => [...queryKeys.jobs.all, "list", filters] as const
   },
+  knowledge: {
+    all: ["knowledge"] as const,
+    list: (filters: object) => [...queryKeys.knowledge.all, "list", filters] as const
+  },
   savedSearches: {
     all: ["saved-searches"] as const,
     alertAnalytics: () => [...queryKeys.savedSearches.all, "alert-analytics"] as const,

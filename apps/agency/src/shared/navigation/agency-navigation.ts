@@ -1,5 +1,6 @@
 import {
   Bot,
+  BookOpenText,
   Building2,
   ChartNoAxesCombined,
   FolderSearch,
@@ -21,6 +22,7 @@ export const agencyNavigationItems = [
   { href: "/leads", icon: Users, label: "Leads", status: "live" },
   { href: "/listings", icon: Building2, label: "Listings", status: "live" },
   { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", status: "live" },
+  { href: "/knowledge", icon: BookOpenText, label: "Knowledge", status: "live" },
   { href: "/ai-tools", icon: Bot, label: "AI tools", status: "live" },
   { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", status: "live" },
   { href: "/settings", icon: Settings, label: "Settings", status: "live" }
@@ -30,6 +32,7 @@ export const agencyTopbarQuickLinks = [
   { href: "/leads", label: "Lead queue" },
   { href: "/listings", label: "Inventory" },
   { href: "/saved-searches", label: "Saved demand" },
+  { href: "/knowledge", label: "Knowledge" },
   { href: "/ai-tools", label: "AI tools" }
 ] as const;
 
