@@ -1,6 +1,7 @@
-import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
+import type { FastifyReply } from "fastify";
 import type {
   AiAdvisorSummary,
   BackgroundJobSnapshot,
@@ -1179,6 +1180,22 @@ export class PropertiesController {
   @Get(":propertyId/images")
   images(@TenantId() tenantId: string, @Param("propertyId") propertyId: string): Promise<PropertyImageGalleryResponse> {
     return this.propertyImages.getGallery(tenantId, propertyId);
+  }
+
+  @Get(":propertyId/images/:imageId/content")
+  async imageContent(
+    @TenantId() tenantId: string,
+    @Param("propertyId") propertyId: string,
+    @Param("imageId") imageId: string,
+    @Res() reply: FastifyReply
+  ): Promise<void> {
+    const content = await this.propertyImages.createImageReadUrl(tenantId, propertyId, imageId);
+
+    reply
+      .status(302)
+      .header("location", content.objectUrl)
+      .header("cache-control", `private, max-age=${Math.min(content.expiresInSeconds, 120)}`)
+      .send();
   }
 
   @Post(":propertyId/images/upload-url")

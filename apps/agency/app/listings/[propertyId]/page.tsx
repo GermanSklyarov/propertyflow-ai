@@ -7,8 +7,15 @@ import {
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { ListingDetailPage } from "@views/listing-detail/ui/listing-detail-page";
 
-export default async function AgencyListingDetailPage({ params }: { params: Promise<{ propertyId: string }> }) {
+export default async function AgencyListingDetailPage({
+  params,
+  searchParams
+}: {
+  params: Promise<{ propertyId: string }>;
+  searchParams: Promise<{ queued?: string }>;
+}) {
   const { propertyId } = await params;
+  const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
   const [listing, gallery, aiAssets] = await Promise.all([
     queryClient.ensureQueryData(listingDetailQueryOptions(propertyId)),
@@ -20,5 +27,12 @@ export default async function AgencyListingDetailPage({ params }: { params: Prom
     notFound();
   }
 
-  return <ListingDetailPage aiAssets={aiAssets} gallery={gallery} listing={listing} />;
+  return (
+    <ListingDetailPage
+      aiAssets={aiAssets}
+      gallery={gallery}
+      listing={listing}
+      queuedImageAnalysis={query.queued === "image-analysis"}
+    />
+  );
 }

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import {
   addPropertyImage,
   applyPropertyImageAnalysisAsset,
@@ -26,6 +27,10 @@ export async function addPropertyImageAction(propertyId: string, formData: FormD
 
   revalidatePath(`/listings/${propertyId}`);
   revalidatePath(`/properties/${propertyId}`);
+
+  if (analyzeImage) {
+    redirect(`/listings/${propertyId}?queued=image-analysis#ai-image-analysis`);
+  }
 }
 
 export async function uploadPropertyImageAction(propertyId: string, formData: FormData) {
@@ -65,6 +70,10 @@ export async function uploadPropertyImageAction(propertyId: string, formData: Fo
 
   revalidatePath(`/listings/${propertyId}`);
   revalidatePath(`/properties/${propertyId}`);
+
+  if (analyzeImage) {
+    redirect(`/listings/${propertyId}?queued=image-analysis#ai-image-analysis`);
+  }
 }
 
 export async function reviewPropertyImageAnalysisAction(

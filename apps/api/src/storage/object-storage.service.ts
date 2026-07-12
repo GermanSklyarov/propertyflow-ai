@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { CreateBucketCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import { CreateBucketCommand, GetObjectCommand, HeadBucketCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { loadAppConfig } from "@propertyflow/config";
 
@@ -15,6 +15,17 @@ export interface PresignedPutObjectResponse {
   uploadUrl: string;
   method: "PUT";
   headers: Record<string, string>;
+  expiresInSeconds: number;
+}
+
+export interface PresignedGetObjectRequest {
+  bucket?: string;
+  objectKey: string;
+  expiresInSeconds?: number;
+}
+
+export interface PresignedGetObjectResponse {
+  objectUrl: string;
   expiresInSeconds: number;
 }
 
@@ -49,6 +60,19 @@ export class ObjectStorageService {
       headers: {
         "content-type": request.contentType
       },
+      expiresInSeconds
+    };
+  }
+
+  async createPresignedGetUrl(request: PresignedGetObjectRequest): Promise<PresignedGetObjectResponse> {
+    const expiresInSeconds = request.expiresInSeconds ?? 300;
+    const command = new GetObjectCommand({
+      Bucket: request.bucket ?? this.config.s3Bucket,
+      Key: request.objectKey
+    });
+
+    return {
+      objectUrl: await getSignedUrl(this.client, command, { expiresIn: expiresInSeconds }),
       expiresInSeconds
     };
   }

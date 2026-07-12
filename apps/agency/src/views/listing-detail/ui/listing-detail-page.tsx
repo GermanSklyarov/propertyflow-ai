@@ -30,11 +30,13 @@ import styles from "./listing-detail-page.module.css";
 export function ListingDetailPage({
   aiAssets,
   gallery,
-  listing
+  listing,
+  queuedImageAnalysis = false
 }: {
   aiAssets: PropertyAiAssets;
   gallery: PropertyImageGalleryResponse;
   listing: PropertySnapshot;
+  queuedImageAnalysis?: boolean;
 }) {
   const economics = buildEconomics(listing);
   const media = buildMediaSummary(gallery);
@@ -44,6 +46,7 @@ export function ListingDetailPage({
   const addImage = addPropertyImageAction.bind(null, listing.id);
   const uploadImage = uploadPropertyImageAction.bind(null, listing.id);
   const imageAnalysisEmptyCopy = buildImageAnalysisEmptyCopy(media);
+  const galleryImagesById = new Map(gallery.images.map((image) => [image.id, image]));
 
   return (
     <main className={styles.page}>
@@ -73,7 +76,7 @@ export function ListingDetailPage({
           {media.cover ? (
             <div className={styles.galleryGrid}>
               <figure className={styles.coverFrame}>
-                <img src={media.cover.imageUrl} alt={media.cover.caption ?? `${listing.title} cover photo`} />
+                <img src={buildGalleryImageSrc(media.cover)} alt={media.cover.caption ?? `${listing.title} cover photo`} />
                 <figcaption>
                   <span>Cover</span>
                   <strong>{media.cover.caption ?? listing.title}</strong>
@@ -83,7 +86,7 @@ export function ListingDetailPage({
               <div className={styles.thumbnailGrid}>
                 {media.thumbnails.map((image, index) => (
                   <figure className={styles.thumbnailFrame} key={image.id}>
-                    <img src={image.imageUrl} alt={image.caption ?? `${listing.title} photo ${index + 2}`} />
+                    <img src={buildGalleryImageSrc(image)} alt={image.caption ?? `${listing.title} photo ${index + 2}`} />
                     <figcaption>{index === 0 ? "Next in gallery" : `Photo ${index + 2}`}</figcaption>
                   </figure>
                 ))}
@@ -256,7 +259,7 @@ export function ListingDetailPage({
           </section>
         </section>
 
-        <section className={styles.panel}>
+        <section className={styles.panel} id="ai-image-analysis">
           <div className={styles.panelHeader}>
             <div>
               <p className="section-kicker">AI image analysis</p>
@@ -264,39 +267,53 @@ export function ListingDetailPage({
             </div>
             <ScanSearch size={20} />
           </div>
+          {queuedImageAnalysis ? (
+            <div className={styles.analysisNotice}>
+              <Sparkles size={18} />
+              <div>
+                <strong>Photo added to the analysis queue</strong>
+                <p>The gallery has the uploaded image now. Keep the worker running and review the AI result here once it finishes.</p>
+              </div>
+            </div>
+          ) : null}
           {aiAssets.imageAnalysis.length ? (
             <div className={styles.analysisGrid}>
-              {aiAssets.imageAnalysis.map((asset) => (
-                <article className={styles.analysisCard} key={asset.id}>
-                  <img src={asset.imageUrl} alt="AI analyzed listing photo" />
-                  <div>
-                    <span className={`${styles.analysisStatus} ${styles[`analysis-${asset.reviewStatus}`]}`}>
-                      {formatBucket(asset.reviewStatus)}
-                    </span>
-                    <strong>{formatPercent(asset.confidence, { maximumFractionDigits: 0 })} confidence</strong>
-                    <div className={styles.analysisFeatures}>
-                      {asset.detectedFeatures.length ? (
-                        asset.detectedFeatures.map((feature) => <span key={feature}>{formatBucket(feature)}</span>)
-                      ) : (
-                        <span>No features detected</span>
-                      )}
+              {aiAssets.imageAnalysis.map((asset) => {
+                const linkedImage = asset.propertyImageId ? galleryImagesById.get(asset.propertyImageId) : undefined;
+                const imageSrc = linkedImage ? buildGalleryImageSrc(linkedImage) : asset.imageUrl;
+
+                return (
+                  <article className={styles.analysisCard} key={asset.id}>
+                    <img src={imageSrc} alt={linkedImage?.caption ?? "AI analyzed listing photo"} />
+                    <div>
+                      <span className={`${styles.analysisStatus} ${styles[`analysis-${asset.reviewStatus}`]}`}>
+                        {formatBucket(asset.reviewStatus)}
+                      </span>
+                      <strong>{formatPercent(asset.confidence, { maximumFractionDigits: 0 })} confidence</strong>
+                      <div className={styles.analysisFeatures}>
+                        {asset.detectedFeatures.length ? (
+                          asset.detectedFeatures.map((feature) => <span key={feature}>{formatBucket(feature)}</span>)
+                        ) : (
+                          <span>No features detected</span>
+                        )}
+                      </div>
+                      <div className={styles.analysisActions}>
+                        <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "approved")}>
+                          <button type="submit">Approve</button>
+                        </form>
+                        <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "rejected")}>
+                          <button type="submit">Reject</button>
+                        </form>
+                        <form action={applyPropertyImageAnalysisAction.bind(null, listing.id, asset.id)}>
+                          <button disabled={asset.reviewStatus !== "approved"} type="submit">
+                            Apply features
+                          </button>
+                        </form>
+                      </div>
                     </div>
-                    <div className={styles.analysisActions}>
-                      <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "approved")}>
-                        <button type="submit">Approve</button>
-                      </form>
-                      <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "rejected")}>
-                        <button type="submit">Reject</button>
-                      </form>
-                      <form action={applyPropertyImageAnalysisAction.bind(null, listing.id, asset.id)}>
-                        <button disabled={asset.reviewStatus !== "approved"} type="submit">
-                          Apply features
-                        </button>
-                      </form>
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <div className={styles.emptyAnalysis}>
@@ -421,6 +438,14 @@ function buildImageAnalysisEmptyCopy(media: ReturnType<typeof buildMediaSummary>
     title: "No image analysis assets yet",
     body: "Upload a photo with AI analysis enabled. Results will appear here for review before they update amenities."
   };
+}
+
+function buildGalleryImageSrc(image: PropertyImageGalleryResponse["images"][number]) {
+  if (!image.objectKey) {
+    return image.imageUrl;
+  }
+
+  return `/api/listing-images/${encodeURIComponent(image.propertyId)}/${encodeURIComponent(image.id)}`;
 }
 
 function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildMediaSummary>) {

@@ -172,6 +172,35 @@ export class PropertyImagesService {
     return image;
   }
 
+  async createImageReadUrl(
+    tenantId: string,
+    propertyId: string,
+    imageId: string
+  ): Promise<{ image: PropertyImageSnapshot; objectUrl: string; expiresInSeconds: number }> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const image = await this.images.findById(tenantId, propertyId, imageId);
+
+    if (!image) {
+      throw new NotFoundException("Property image not found");
+    }
+
+    if (!image.objectKey) {
+      throw new BadRequestException("Property image is not stored in object storage");
+    }
+
+    const signed = await this.storage.createPresignedGetUrl({
+      bucket: image.bucket,
+      objectKey: image.objectKey
+    });
+
+    return {
+      image,
+      objectUrl: signed.objectUrl,
+      expiresInSeconds: signed.expiresInSeconds
+    };
+  }
+
   private async ensurePropertyExists(tenantId: string, propertyId: string): Promise<void> {
     const property = await this.properties.findById(tenantId, propertyId);
 
