@@ -22,6 +22,39 @@
   padding-bottom: 18px;
 }
 
+.descriptionAppliedNotice,
+.amenitiesNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid rgb(22 163 74 / 20%);
+  background: #ecfdf3;
+  padding: 14px;
+  color: #176b3b;
+}
+
+.descriptionAppliedNotice svg,
+.amenitiesNotice svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.descriptionAppliedNotice strong,
+.amenitiesNotice strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.descriptionAppliedNotice p,
+.amenitiesNotice p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .backLink {
   display: inline-flex;
   align-items: center;
@@ -549,6 +582,53 @@
   gap: 12px;
 }
 
+.descriptionGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.descriptionCard {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 14px;
+}
+
+.descriptionMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.descriptionMeta > span:last-child {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 0 9px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.descriptionCard h3 {
+  margin: 0;
+  color: var(--teal-dark);
+  font-size: 1.1rem;
+  line-height: 1.2;
+}
+
+.descriptionCard p {
+  margin: 0;
+  color: #475955;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
 .analysisNotice {
   display: flex;
   align-items: flex-start;
@@ -571,35 +651,6 @@
 }
 
 .analysisNotice p {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 750;
-  line-height: 1.45;
-}
-
-.amenitiesNotice {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  border: 1px solid rgb(22 163 74 / 20%);
-  background: #ecfdf3;
-  padding: 14px;
-  color: #176b3b;
-}
-
-.amenitiesNotice svg {
-  flex: 0 0 auto;
-  margin-top: 2px;
-}
-
-.amenitiesNotice strong {
-  display: block;
-  font-size: 0.95rem;
-  font-weight: 900;
-}
-
-.amenitiesNotice p {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.86rem;
@@ -802,6 +853,10 @@
   }
 
   .analysisGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .descriptionGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

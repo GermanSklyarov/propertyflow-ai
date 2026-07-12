@@ -9,6 +9,7 @@ import type {
   ConfirmPropertyImageUploadRequest,
   CreatePropertyImageUploadRequest,
   CreatePropertyImageUploadResponse,
+  GeneratedPropertyDescription,
   PropertyAiAssets,
   PropertyImageGalleryResponse,
   PropertyImageAnalysisResult,
@@ -291,6 +292,40 @@ export async function reviewPropertyImageAnalysisAsset(
   }
 
   return (await response.json()) as PropertyImageAnalysisResult;
+}
+
+export async function reviewPropertyDescriptionAsset(
+  propertyId: string,
+  assetId: string,
+  request: ReviewAiAssetRequest
+): Promise<GeneratedPropertyDescription> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/descriptions/${assetId}/review`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to review description asset: ${response.status}`);
+  }
+
+  return (await response.json()) as GeneratedPropertyDescription;
+}
+
+export async function applyPropertyDescriptionAsset(propertyId: string, assetId: string): Promise<PropertySnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/descriptions/${assetId}/apply`, {
+    method: "POST",
+    headers: demoHeaders
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to apply description asset: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertySnapshot;
 }
 
 export async function applyPropertyImageAnalysisAsset(propertyId: string, assetId: string): Promise<PropertySnapshot> {

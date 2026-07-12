@@ -9,6 +9,7 @@ import {
   CircleDollarSign,
   DraftingCompass,
   ExternalLink,
+  FileText,
   Gauge,
   Home,
   KeyRound,
@@ -23,10 +24,17 @@ import {
 import {
   addPropertyImageAction,
   applyPropertyImageAnalysisAction,
+  applyPropertyDescriptionAction,
+  reviewPropertyDescriptionAction,
   reviewPropertyImageAnalysisAction,
   uploadPropertyImageAction
 } from "@entities/listing/api/listing-actions";
-import type { PropertyAiAssets, PropertyImageAnalysisResult, PropertyImageGalleryResponse } from "@propertyflow/contracts";
+import type {
+  GeneratedPropertyDescription,
+  PropertyAiAssets,
+  PropertyImageAnalysisResult,
+  PropertyImageGalleryResponse
+} from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import styles from "./listing-detail-page.module.css";
@@ -93,12 +101,14 @@ const appliedButtonStyle: CSSProperties = {
 };
 
 export function ListingDetailPage({
+  appliedDescriptionAssetId,
   appliedImageAnalysisAssetId,
   aiAssets,
   gallery,
   listing,
   queuedImageAnalysis = false
 }: {
+  appliedDescriptionAssetId?: string;
   appliedImageAnalysisAssetId?: string;
   aiAssets: PropertyAiAssets;
   gallery: PropertyImageGalleryResponse;
@@ -116,7 +126,7 @@ export function ListingDetailPage({
   const galleryImagesById = new Map(gallery.images.map((image) => [image.id, image]));
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} id="listing-brief">
       <div className={styles.shell}>
         <header className={styles.header}>
           <div>
@@ -130,6 +140,15 @@ export function ListingDetailPage({
           </div>
           <span className={`${styles.statusBadge} ${styles[`status-${listing.status}`]}`}>{formatBucket(listing.status)}</span>
         </header>
+        {appliedDescriptionAssetId ? (
+          <div className={styles.descriptionAppliedNotice}>
+            <CheckCircle2 size={18} />
+            <div>
+              <strong>AI description applied</strong>
+              <p>The listing title and public description were updated from the approved generated copy.</p>
+            </div>
+          </div>
+        ) : null}
 
         <section className={styles.mediaPanel} aria-label="Listing media gallery">
           <div className={styles.mediaHeader}>
@@ -324,6 +343,74 @@ export function ListingDetailPage({
               ))}
             </div>
           </section>
+        </section>
+
+        <section className={styles.panel} id="ai-descriptions">
+          <div className={styles.panelHeader}>
+            <div>
+              <p className="section-kicker">AI descriptions</p>
+              <h2 className={styles.panelTitle}>{buildDescriptionAssetTitle(aiAssets.descriptions)}</h2>
+            </div>
+            <FileText size={20} />
+          </div>
+          {aiAssets.descriptions.length ? (
+            <div className={styles.descriptionGrid}>
+              {aiAssets.descriptions.map((asset) => (
+                <article className={styles.descriptionCard} key={asset.id}>
+                  <div className={styles.descriptionMeta}>
+                    <span className={`${styles.analysisStatus} ${styles[`analysis-${asset.reviewStatus}`]}`}>
+                      {formatBucket(asset.reviewStatus)}
+                    </span>
+                    <span>{asset.locale.toUpperCase()}</span>
+                  </div>
+                  <h3>{asset.title}</h3>
+                  <p>{asset.description}</p>
+                  <div className={styles.analysisActions}>
+                    <form action={reviewPropertyDescriptionAction.bind(null, listing.id, asset.id, "approved")}>
+                      <button className={`${styles.analysisActionButton} ${styles.approveButton}`} style={approveButtonStyle} type="submit">
+                        <Check size={14} style={analysisActionIconStyle} />
+                        <span style={analysisActionLabelStyle}>Approve</span>
+                      </button>
+                    </form>
+                    <form action={reviewPropertyDescriptionAction.bind(null, listing.id, asset.id, "rejected")}>
+                      <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} style={rejectButtonStyle} type="submit">
+                        <X size={14} style={analysisActionIconStyle} />
+                        <span style={analysisActionLabelStyle}>Reject</span>
+                      </button>
+                    </form>
+                    <form action={applyPropertyDescriptionAction.bind(null, listing.id, asset.id)}>
+                      <button
+                        className={`${styles.analysisActionButton} ${
+                          appliedDescriptionAssetId === asset.id ? styles.appliedButton : ""
+                        }`}
+                        disabled={asset.reviewStatus !== "approved"}
+                        style={appliedDescriptionAssetId === asset.id ? appliedButtonStyle : applyButtonStyle}
+                        type="submit"
+                      >
+                        {appliedDescriptionAssetId === asset.id ? (
+                          <>
+                            <CheckCircle2 size={14} style={analysisActionIconStyle} />
+                            <span style={analysisActionLabelStyle}>Applied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles size={14} style={analysisActionIconStyle} />
+                            <span style={analysisActionLabelStyle}>Apply copy</span>
+                          </>
+                        )}
+                      </button>
+                    </form>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyAnalysis}>
+              <Sparkles size={24} />
+              <strong>No generated descriptions yet</strong>
+              <p>Run the listing assistant from AI Tools. Generated copy will appear here for human review before publishing.</p>
+            </div>
+          )}
         </section>
 
         <section className={styles.panel} id="ai-image-analysis">
@@ -523,6 +610,17 @@ function buildImageAnalysisTitle(items: PropertyImageAnalysisResult[], activeIma
   const draft = items.filter((item) => item.reviewStatus === "draft").length;
 
   return `${items.length} analyzed photos, ${draft} awaiting review, ${approved} approved`;
+}
+
+function buildDescriptionAssetTitle(items: GeneratedPropertyDescription[]) {
+  if (!items.length) {
+    return "Waiting for generated copy";
+  }
+
+  const approved = items.filter((item) => item.reviewStatus === "approved").length;
+  const draft = items.filter((item) => item.reviewStatus === "draft").length;
+
+  return `${items.length} generated drafts, ${draft} awaiting review, ${approved} approved`;
 }
 
 function buildImageAnalysisEmptyCopy(media: ReturnType<typeof buildMediaSummary>) {

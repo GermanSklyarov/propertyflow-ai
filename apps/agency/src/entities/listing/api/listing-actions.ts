@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import {
   addPropertyImage,
+  applyPropertyDescriptionAsset,
   applyPropertyImageAnalysisAsset,
   confirmPropertyImageUpload,
   createPropertyImageUploadUrl,
+  reviewPropertyDescriptionAsset,
   reviewPropertyImageAnalysisAsset
 } from "@shared/api/agency-client";
 
@@ -94,4 +96,24 @@ export async function applyPropertyImageAnalysisAction(propertyId: string, asset
   revalidatePath(`/properties/${propertyId}`);
 
   redirect(`/listings/${propertyId}?applied=image-features&asset=${assetId}#amenities`);
+}
+
+export async function reviewPropertyDescriptionAction(
+  propertyId: string,
+  assetId: string,
+  status: "approved" | "rejected"
+) {
+  await reviewPropertyDescriptionAsset(propertyId, assetId, { status });
+
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function applyPropertyDescriptionAction(propertyId: string, assetId: string) {
+  await applyPropertyDescriptionAsset(propertyId, assetId);
+
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+
+  redirect(`/listings/${propertyId}?applied=description&asset=${assetId}#listing-brief`);
 }

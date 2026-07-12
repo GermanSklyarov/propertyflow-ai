@@ -30,6 +30,7 @@ export default async function AgencyListingDetailPage({
   return (
     <ListingDetailPage
       aiAssets={aiAssets}
+      appliedDescriptionAssetId={query.applied === "description" ? query.asset : undefined}
       gallery={gallery}
       listing={listing}
       appliedImageAnalysisAssetId={query.applied === "image-features" ? query.asset : undefined}
