@@ -16,6 +16,8 @@ import type {
   PropertySearchRequest,
   PropertySearchResponse,
   ReviewAiAssetRequest,
+  RunListingAssistantRequest,
+  RunListingAssistantResponse,
   SavedPropertySearchListResponse,
   SavedSearchAlertAnalyticsResponse,
   SavedSearchOpportunitiesResponse,
@@ -302,6 +304,26 @@ export async function applyPropertyImageAnalysisAsset(propertyId: string, assetI
   }
 
   return (await response.json()) as PropertySnapshot;
+}
+
+export async function runListingAssistant(
+  propertyId: string,
+  request: RunListingAssistantRequest
+): Promise<RunListingAssistantResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assistant`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to run listing assistant: ${response.status}`);
+  }
+
+  return (await response.json()) as RunListingAssistantResponse;
 }
 
 export async function listSavedPropertySearches(): Promise<SavedPropertySearchListResponse> {

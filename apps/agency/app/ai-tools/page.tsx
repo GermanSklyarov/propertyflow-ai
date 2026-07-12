@@ -3,12 +3,31 @@ import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { AiToolsPage } from "@views/ai-tools/ui/ai-tools-page";
 
-export default async function AgencyAiToolsPage() {
+export default async function AgencyAiToolsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ assistant?: string; jobs?: string; policy?: string; property?: string }>;
+}) {
+  const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
   const [listings, metrics] = await Promise.all([
     queryClient.ensureQueryData(listingsQueryOptions()),
     queryClient.ensureQueryData(tenantDashboardQueryOptions())
   ]);
 
-  return <AiToolsPage listings={listings.items} metrics={metrics} />;
+  return (
+    <AiToolsPage
+      assistantResult={
+        query.assistant === "queued"
+          ? {
+              jobs: Number(query.jobs ?? 0),
+              policyItems: Number(query.policy ?? 0),
+              property: query.property ?? "Selected listing"
+            }
+          : undefined
+      }
+      listings={listings.items}
+      metrics={metrics}
+    />
+  );
 }

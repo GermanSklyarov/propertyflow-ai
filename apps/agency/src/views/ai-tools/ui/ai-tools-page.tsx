@@ -11,15 +11,22 @@ import {
   TriangleAlert,
   WandSparkles
 } from "lucide-react";
+import { runListingAssistantAction } from "@entities/listing/api/ai-tools-actions";
 import type { TenantDashboardMetrics } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./ai-tools-page.module.css";
 
 export function AiToolsPage({
+  assistantResult,
   listings,
   metrics
 }: {
+  assistantResult?: {
+    jobs: number;
+    policyItems: number;
+    property: string;
+  };
   listings: PropertySnapshot[];
   metrics: TenantDashboardMetrics;
 }) {
@@ -47,6 +54,23 @@ export function AiToolsPage({
           <KpiCard icon={<ShieldCheck size={18} />} label="Blocked actions" note="Policy layer" value={metrics.security.blockedAiActions} />
           <KpiCard icon={<TrendingUp size={18} />} label="Pricing rows" note="Training dataset" value={metrics.conciergeTrainingDatasetRows} />
         </section>
+
+        {assistantResult ? (
+          <section className={styles.resultPanel} id="assistant-result">
+            <div className={styles.resultIcon}>
+              <Bot size={19} />
+            </div>
+            <div>
+              <p className="section-kicker">Assistant queued</p>
+              <h2>{assistantResult.property}</h2>
+              <p>
+                Created {assistantResult.jobs} background job{assistantResult.jobs === 1 ? "" : "s"} and evaluated{" "}
+                {assistantResult.policyItems} policy rule{assistantResult.policyItems === 1 ? "" : "s"}. Keep the worker running, then review
+                generated assets on the listing page.
+              </p>
+            </div>
+          </section>
+        ) : null}
 
         <section className={styles.layout}>
           <section className={styles.toolsPanel} aria-label="AI tool modules">
@@ -164,6 +188,15 @@ function AiOperationRow({ operation }: { operation: AiOperation }) {
           </span>
         ))}
       </div>
+
+      <form action={runListingAssistantAction} className={styles.runAssistantForm}>
+        <input name="propertyId" type="hidden" value={operation.property.id} />
+        <input name="title" type="hidden" value={operation.property.title} />
+        <button type="submit">
+          <Bot size={14} />
+          Run assistant
+        </button>
+      </form>
 
       <div className={styles.operationStatus}>
         <strong>{operation.score}/5</strong>
