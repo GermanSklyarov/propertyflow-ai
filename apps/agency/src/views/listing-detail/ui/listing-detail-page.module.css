@@ -276,6 +276,84 @@
   color: var(--muted);
 }
 
+.mediaForm {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 14px;
+}
+
+.mediaForm h3 {
+  margin: 4px 0 0;
+  color: var(--teal-dark);
+  font-size: 1.15rem;
+}
+
+.mediaForm label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mediaForm input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #f8faf7;
+  padding: 11px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  text-transform: none;
+}
+
+.mediaForm input:focus {
+  border-color: var(--teal);
+  outline: 2px solid rgb(15 118 110 / 16%);
+  outline-offset: 0;
+}
+
+.checkboxLabel {
+  display: inline-flex !important;
+  width: fit-content;
+  align-items: center;
+  gap: 8px !important;
+  text-transform: none !important;
+}
+
+.checkboxLabel input {
+  width: 16px;
+  height: 16px;
+}
+
+.mediaForm button {
+  display: inline-flex;
+  min-height: 42px;
+  width: fit-content;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.mediaForm button:hover,
+.mediaForm button:focus-visible {
+  background: var(--teal-dark);
+}
+
 .publicationPanel {
   display: grid;
   gap: 14px;
@@ -463,6 +541,15 @@
 
   .publicationGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mediaForm {
+    grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.25fr) minmax(0, 0.9fr);
+    align-items: end;
+  }
+
+  .mediaForm button {
+    justify-self: start;
   }
 }
 

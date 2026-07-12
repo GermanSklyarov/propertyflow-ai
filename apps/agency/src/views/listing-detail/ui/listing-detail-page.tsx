@@ -15,6 +15,7 @@ import {
   Sparkles,
   Waves
 } from "lucide-react";
+import { addPropertyImageAction } from "@entities/listing/api/listing-actions";
 import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
@@ -32,6 +33,7 @@ export function ListingDetailPage({
   const publication = buildPublicationSummary(listing, media);
   const readiness = getReadiness(listing);
   const nextActions = buildNextActions(listing, readiness.score);
+  const addImage = addPropertyImageAction.bind(null, listing.id);
 
   return (
     <main className={styles.page}>
@@ -91,6 +93,29 @@ export function ListingDetailPage({
             <span>AI quality review</span>
             <span>Public gallery sync</span>
           </div>
+
+          <form action={addImage} className={styles.mediaForm}>
+            <div>
+              <p className="section-kicker">Add photo</p>
+              <h3>Add image by URL</h3>
+            </div>
+            <label>
+              Image URL
+              <input name="imageUrl" placeholder="https://images.unsplash.com/..." required type="url" />
+            </label>
+            <label>
+              Caption
+              <input name="caption" placeholder="Sea-view balcony, renovated kitchen..." />
+            </label>
+            <label className={styles.checkboxLabel}>
+              <input defaultChecked name="analyzeImage" type="checkbox" />
+              Queue AI image analysis
+            </label>
+            <button type="submit">
+              <ImagePlus size={16} />
+              Add to gallery
+            </button>
+          </form>
         </section>
 
         <section className={styles.kpiGrid} aria-label="Listing detail overview">

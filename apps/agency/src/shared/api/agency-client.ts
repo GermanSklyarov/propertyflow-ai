@@ -5,7 +5,9 @@ import type {
   LeadSnapshot,
   LeadTimelineResponse,
   ListLeadsRequest,
+  AddPropertyImageRequest,
   PropertyImageGalleryResponse,
+  PropertyImageSnapshot,
   PropertySearchRequest,
   PropertySearchResponse,
   SavedPropertySearchListResponse,
@@ -183,6 +185,26 @@ export async function getPropertyImages(propertyId: string): Promise<PropertyIma
   } catch {
     return demoPropertyImageGallery(propertyId);
   }
+}
+
+export async function addPropertyImage(
+  propertyId: string,
+  request: AddPropertyImageRequest
+): Promise<PropertyImageSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to add property image: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageSnapshot;
 }
 
 export async function listSavedPropertySearches(): Promise<SavedPropertySearchListResponse> {
