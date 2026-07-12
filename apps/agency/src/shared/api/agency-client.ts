@@ -11,9 +11,11 @@ import type {
   CreatePropertyImageUploadResponse,
   PropertyAiAssets,
   PropertyImageGalleryResponse,
+  PropertyImageAnalysisResult,
   PropertyImageSnapshot,
   PropertySearchRequest,
   PropertySearchResponse,
+  ReviewAiAssetRequest,
   SavedPropertySearchListResponse,
   SavedSearchAlertAnalyticsResponse,
   SavedSearchOpportunitiesResponse,
@@ -266,6 +268,40 @@ export async function confirmPropertyImageUpload(
   }
 
   return (await response.json()) as PropertyImageSnapshot;
+}
+
+export async function reviewPropertyImageAnalysisAsset(
+  propertyId: string,
+  assetId: string,
+  request: ReviewAiAssetRequest
+): Promise<PropertyImageAnalysisResult> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/image-analysis/${assetId}/review`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to review image analysis asset: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageAnalysisResult;
+}
+
+export async function applyPropertyImageAnalysisAsset(propertyId: string, assetId: string): Promise<PropertySnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/image-analysis/${assetId}/apply`, {
+    method: "POST",
+    headers: demoHeaders
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to apply image analysis asset: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertySnapshot;
 }
 
 export async function listSavedPropertySearches(): Promise<SavedPropertySearchListResponse> {

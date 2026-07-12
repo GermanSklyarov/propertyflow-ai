@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { addPropertyImage, confirmPropertyImageUpload, createPropertyImageUploadUrl } from "@shared/api/agency-client";
+import {
+  addPropertyImage,
+  applyPropertyImageAnalysisAsset,
+  confirmPropertyImageUpload,
+  createPropertyImageUploadUrl,
+  reviewPropertyImageAnalysisAsset
+} from "@shared/api/agency-client";
 
 export async function addPropertyImageAction(propertyId: string, formData: FormData) {
   const imageUrl = String(formData.get("imageUrl") ?? "").trim();
@@ -19,6 +25,7 @@ export async function addPropertyImageAction(propertyId: string, formData: FormD
   });
 
   revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
 }
 
 export async function uploadPropertyImageAction(propertyId: string, formData: FormData) {
@@ -27,7 +34,7 @@ export async function uploadPropertyImageAction(propertyId: string, formData: Fo
   const analyzeImage = formData.get("analyzeImage") === "on";
 
   if (!(file instanceof File) || file.size === 0) {
-    return;
+    throw new Error("Image file is required");
   }
 
   const upload = await createPropertyImageUploadUrl(propertyId, {
@@ -57,4 +64,23 @@ export async function uploadPropertyImageAction(propertyId: string, formData: Fo
   });
 
   revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function reviewPropertyImageAnalysisAction(
+  propertyId: string,
+  assetId: string,
+  status: "approved" | "rejected"
+) {
+  await reviewPropertyImageAnalysisAsset(propertyId, assetId, { status });
+
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function applyPropertyImageAnalysisAction(propertyId: string, assetId: string) {
+  await applyPropertyImageAnalysisAsset(propertyId, assetId);
+
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
 }

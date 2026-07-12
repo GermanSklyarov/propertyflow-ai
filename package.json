@@ -17,6 +17,7 @@
     "dev:web": "npm run dev --workspace @propertyflow/web",
     "dev:agency": "npm run dev --workspace @propertyflow/agency",
     "dev:admin": "npm run dev --workspace @propertyflow/admin",
+    "dev:worker": "npm run dev --workspace @propertyflow/worker",
     "infra:up": "docker compose up -d postgres redis opensearch minio",
     "infra:down": "docker compose down",
     "migrate": "npm run migrate --workspace @propertyflow/api",

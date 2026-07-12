@@ -16,7 +16,12 @@ import {
   Sparkles,
   Waves
 } from "lucide-react";
-import { addPropertyImageAction, uploadPropertyImageAction } from "@entities/listing/api/listing-actions";
+import {
+  addPropertyImageAction,
+  applyPropertyImageAnalysisAction,
+  reviewPropertyImageAnalysisAction,
+  uploadPropertyImageAction
+} from "@entities/listing/api/listing-actions";
 import type { PropertyAiAssets, PropertyImageAnalysisResult, PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
@@ -38,6 +43,7 @@ export function ListingDetailPage({
   const nextActions = buildNextActions(listing, readiness.score);
   const addImage = addPropertyImageAction.bind(null, listing.id);
   const uploadImage = uploadPropertyImageAction.bind(null, listing.id);
+  const imageAnalysisEmptyCopy = buildImageAnalysisEmptyCopy(media);
 
   return (
     <main className={styles.page}>
@@ -254,7 +260,7 @@ export function ListingDetailPage({
           <div className={styles.panelHeader}>
             <div>
               <p className="section-kicker">AI image analysis</p>
-              <h2 className={styles.panelTitle}>{buildImageAnalysisTitle(aiAssets.imageAnalysis)}</h2>
+              <h2 className={styles.panelTitle}>{buildImageAnalysisTitle(aiAssets.imageAnalysis, media.activeCount)}</h2>
             </div>
             <ScanSearch size={20} />
           </div>
@@ -275,6 +281,19 @@ export function ListingDetailPage({
                         <span>No features detected</span>
                       )}
                     </div>
+                    <div className={styles.analysisActions}>
+                      <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "approved")}>
+                        <button type="submit">Approve</button>
+                      </form>
+                      <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "rejected")}>
+                        <button type="submit">Reject</button>
+                      </form>
+                      <form action={applyPropertyImageAnalysisAction.bind(null, listing.id, asset.id)}>
+                        <button disabled={asset.reviewStatus !== "approved"} type="submit">
+                          Apply features
+                        </button>
+                      </form>
+                    </div>
                   </div>
                 </article>
               ))}
@@ -282,8 +301,8 @@ export function ListingDetailPage({
           ) : (
             <div className={styles.emptyAnalysis}>
               <ScanSearch size={24} />
-              <strong>No image analysis assets yet</strong>
-              <p>Upload a photo with AI analysis enabled. Results will appear here for review before they update amenities.</p>
+              <strong>{imageAnalysisEmptyCopy.title}</strong>
+              <p>{imageAnalysisEmptyCopy.body}</p>
             </div>
           )}
         </section>
@@ -375,8 +394,12 @@ function buildMediaSummary(gallery: PropertyImageGalleryResponse) {
   };
 }
 
-function buildImageAnalysisTitle(items: PropertyImageAnalysisResult[]) {
+function buildImageAnalysisTitle(items: PropertyImageAnalysisResult[], activeImageCount: number) {
   if (!items.length) {
+    if (activeImageCount) {
+      return `Analysis queued for ${activeImageCount} photos`;
+    }
+
     return "Waiting for analyzed photos";
   }
 
@@ -384,6 +407,20 @@ function buildImageAnalysisTitle(items: PropertyImageAnalysisResult[]) {
   const draft = items.filter((item) => item.reviewStatus === "draft").length;
 
   return `${items.length} analyzed photos, ${draft} awaiting review, ${approved} approved`;
+}
+
+function buildImageAnalysisEmptyCopy(media: ReturnType<typeof buildMediaSummary>) {
+  if (media.activeCount) {
+    return {
+      title: "Image analysis is queued",
+      body: "Photos are already in the gallery. Keep the background worker running so BullMQ can turn queued analysis jobs into reviewable AI assets."
+    };
+  }
+
+  return {
+    title: "No image analysis assets yet",
+    body: "Upload a photo with AI analysis enabled. Results will appear here for review before they update amenities."
+  };
 }
 
 function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildMediaSummary>) {
