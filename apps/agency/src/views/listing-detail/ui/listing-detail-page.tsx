@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { CSSProperties } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
@@ -38,67 +37,6 @@ import type {
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import styles from "./listing-detail-page.module.css";
-
-const analysisActionButtonStyle: CSSProperties = {
-  WebkitAppearance: "none",
-  alignItems: "center",
-  appearance: "none",
-  cursor: "pointer",
-  display: "inline-flex",
-  flexDirection: "row",
-  flexWrap: "nowrap",
-  fontFamily: "inherit",
-  fontSize: "0.72rem",
-  fontWeight: 900,
-  gap: 6,
-  height: 32,
-  justifyContent: "center",
-  lineHeight: 1,
-  minHeight: 32,
-  padding: "0 9px",
-  textTransform: "uppercase",
-  verticalAlign: "middle",
-  whiteSpace: "nowrap",
-  width: "fit-content"
-};
-
-const analysisActionIconStyle: CSSProperties = {
-  display: "block",
-  flex: "0 0 14px",
-  height: 14,
-  width: 14
-};
-
-const analysisActionLabelStyle: CSSProperties = {
-  display: "inline-block",
-  lineHeight: 1,
-  whiteSpace: "nowrap"
-};
-
-const approveButtonStyle: CSSProperties = {
-  ...analysisActionButtonStyle,
-  borderColor: "rgb(22 163 74 / 28%)",
-  color: "#176b3b"
-};
-
-const rejectButtonStyle: CSSProperties = {
-  ...analysisActionButtonStyle,
-  borderColor: "rgb(220 38 38 / 28%)",
-  color: "#9f3029"
-};
-
-const applyButtonStyle: CSSProperties = {
-  ...analysisActionButtonStyle,
-  borderColor: "rgb(15 118 110 / 20%)",
-  color: "#0c4a45"
-};
-
-const appliedButtonStyle: CSSProperties = {
-  ...analysisActionButtonStyle,
-  background: "#ecfdf3",
-  borderColor: "rgb(22 163 74 / 32%)",
-  color: "#176b3b"
-};
 
 export function ListingDetailPage({
   appliedDescriptionAssetId,
@@ -367,15 +305,15 @@ export function ListingDetailPage({
                   <p>{asset.description}</p>
                   <div className={styles.analysisActions}>
                     <form action={reviewPropertyDescriptionAction.bind(null, listing.id, asset.id, "approved")}>
-                      <button className={`${styles.analysisActionButton} ${styles.approveButton}`} style={approveButtonStyle} type="submit">
-                        <Check size={14} style={analysisActionIconStyle} />
-                        <span style={analysisActionLabelStyle}>Approve</span>
+                      <button className={`${styles.analysisActionButton} ${styles.approveButton}`} type="submit">
+                        <Check size={14} />
+                        <span>Approve</span>
                       </button>
                     </form>
                     <form action={reviewPropertyDescriptionAction.bind(null, listing.id, asset.id, "rejected")}>
-                      <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} style={rejectButtonStyle} type="submit">
-                        <X size={14} style={analysisActionIconStyle} />
-                        <span style={analysisActionLabelStyle}>Reject</span>
+                      <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} type="submit">
+                        <X size={14} />
+                        <span>Reject</span>
                       </button>
                     </form>
                     <form action={applyPropertyDescriptionAction.bind(null, listing.id, asset.id)}>
@@ -384,18 +322,17 @@ export function ListingDetailPage({
                           appliedDescriptionAssetId === asset.id ? styles.appliedButton : ""
                         }`}
                         disabled={asset.reviewStatus !== "approved"}
-                        style={appliedDescriptionAssetId === asset.id ? appliedButtonStyle : applyButtonStyle}
                         type="submit"
                       >
                         {appliedDescriptionAssetId === asset.id ? (
                           <>
-                            <CheckCircle2 size={14} style={analysisActionIconStyle} />
-                            <span style={analysisActionLabelStyle}>Applied</span>
+                            <CheckCircle2 size={14} />
+                            <span>Applied</span>
                           </>
                         ) : (
                           <>
-                            <Sparkles size={14} style={analysisActionIconStyle} />
-                            <span style={analysisActionLabelStyle}>Apply copy</span>
+                            <Sparkles size={14} />
+                            <span>Apply copy</span>
                           </>
                         )}
                       </button>
@@ -453,15 +390,15 @@ export function ListingDetailPage({
                       </div>
                       <div className={styles.analysisActions}>
                         <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "approved")}>
-                          <button className={`${styles.analysisActionButton} ${styles.approveButton}`} style={approveButtonStyle} type="submit">
-                            <Check size={14} style={analysisActionIconStyle} />
-                            <span style={analysisActionLabelStyle}>Approve</span>
+                          <button className={`${styles.analysisActionButton} ${styles.approveButton}`} type="submit">
+                            <Check size={14} />
+                            <span>Approve</span>
                           </button>
                         </form>
                         <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "rejected")}>
-                          <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} style={rejectButtonStyle} type="submit">
-                            <X size={14} style={analysisActionIconStyle} />
-                            <span style={analysisActionLabelStyle}>Reject</span>
+                          <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} type="submit">
+                            <X size={14} />
+                            <span>Reject</span>
                           </button>
                         </form>
                         <form action={applyPropertyImageAnalysisAction.bind(null, listing.id, asset.id)}>
@@ -470,18 +407,17 @@ export function ListingDetailPage({
                               appliedImageAnalysisAssetId === asset.id ? styles.appliedButton : ""
                             }`}
                             disabled={asset.reviewStatus !== "approved"}
-                            style={appliedImageAnalysisAssetId === asset.id ? appliedButtonStyle : applyButtonStyle}
                             type="submit"
                           >
                             {appliedImageAnalysisAssetId === asset.id ? (
                               <>
-                                <CheckCircle2 size={14} style={analysisActionIconStyle} />
-                                <span style={analysisActionLabelStyle}>Applied</span>
+                                <CheckCircle2 size={14} />
+                                <span>Applied</span>
                               </>
                             ) : (
                               <>
-                                <Sparkles size={14} style={analysisActionIconStyle} />
-                                <span style={analysisActionLabelStyle}>Apply features</span>
+                                <Sparkles size={14} />
+                                <span>Apply features</span>
                               </>
                             )}
                           </button>
