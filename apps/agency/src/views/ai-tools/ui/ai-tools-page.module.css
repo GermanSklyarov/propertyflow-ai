@@ -97,6 +97,7 @@
 .toolsPanel,
 .guardrailPanel,
 .queuePanel,
+.jobsPanel,
 .resultPanel {
   border: 1px solid var(--line);
   background: var(--panel-strong);
@@ -223,9 +224,101 @@
 }
 
 .guardrailList,
-.operationList {
+.operationList,
+.jobList {
   display: grid;
   gap: 10px;
+}
+
+.jobRow {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 12px;
+}
+
+.jobRow div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.jobRow strong {
+  color: var(--teal-dark);
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.jobRow div span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.jobRow small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.jobState {
+  width: fit-content;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  padding: 5px 7px;
+  color: var(--teal-dark);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.job-active {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.job-completed {
+  background: #ecfdf3;
+  color: #176b3b;
+}
+
+.job-failed {
+  background: #fff1f0;
+  color: #9f3029;
+}
+
+.job-waiting,
+.job-delayed {
+  background: #fff8e8;
+  color: #6f4d11;
+}
+
+.emptyJobs {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  gap: 8px;
+  border: 1px dashed rgb(15 118 110 / 20%);
+  background: #edf8f4;
+  padding: 18px;
+  text-align: center;
+}
+
+.emptyJobs svg,
+.emptyJobs strong {
+  color: var(--teal-dark);
+}
+
+.emptyJobs p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.45;
 }
 
 .guardrailItem {
@@ -427,5 +520,10 @@
   .operationRow {
     grid-template-columns: minmax(0, 1.12fr) minmax(210px, 0.58fr) minmax(220px, 0.54fr) minmax(190px, 0.4fr);
     align-items: start;
+  }
+
+  .jobRow {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    align-items: center;
   }
 }

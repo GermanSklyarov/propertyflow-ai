@@ -1,4 +1,6 @@
 import type {
+  BackgroundJobMonitorResponse,
+  BackgroundJobState,
   LeadListResponse,
   LeadNotesResponse,
   LeadQueueSummaryResponse,
@@ -52,6 +54,33 @@ export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetric
   } catch {
     return demoTenantDashboardMetrics();
   }
+}
+
+export async function listBackgroundJobs(
+  request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12 }
+): Promise<BackgroundJobMonitorResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/jobs${toQueryString(request)}`, {
+      headers: demoHeaders,
+      next: { revalidate: 5 }
+    });
+
+    if (!response.ok) {
+      return demoBackgroundJobs(request);
+    }
+
+    return (await response.json()) as BackgroundJobMonitorResponse;
+  } catch {
+    return demoBackgroundJobs(request);
+  }
+}
+
+function demoBackgroundJobs(request: { states?: BackgroundJobState[] } = {}): BackgroundJobMonitorResponse {
+  return {
+    items: [],
+    states: request.states ?? ["active", "waiting", "completed", "failed"],
+    total: 0
+  };
 }
 
 export async function listLeads(request: ListLeadsRequest = { limit: 24 }): Promise<LeadListResponse> {
