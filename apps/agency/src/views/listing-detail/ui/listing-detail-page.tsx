@@ -12,19 +12,22 @@ import {
   ImagePlus,
   MapPin,
   Ruler,
+  ScanSearch,
   Sparkles,
   Waves
 } from "lucide-react";
 import { addPropertyImageAction, uploadPropertyImageAction } from "@entities/listing/api/listing-actions";
-import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
+import type { PropertyAiAssets, PropertyImageAnalysisResult, PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import styles from "./listing-detail-page.module.css";
 
 export function ListingDetailPage({
+  aiAssets,
   gallery,
   listing
 }: {
+  aiAssets: PropertyAiAssets;
   gallery: PropertyImageGalleryResponse;
   listing: PropertySnapshot;
 }) {
@@ -250,6 +253,44 @@ export function ListingDetailPage({
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <div>
+              <p className="section-kicker">AI image analysis</p>
+              <h2 className={styles.panelTitle}>{buildImageAnalysisTitle(aiAssets.imageAnalysis)}</h2>
+            </div>
+            <ScanSearch size={20} />
+          </div>
+          {aiAssets.imageAnalysis.length ? (
+            <div className={styles.analysisGrid}>
+              {aiAssets.imageAnalysis.map((asset) => (
+                <article className={styles.analysisCard} key={asset.id}>
+                  <img src={asset.imageUrl} alt="AI analyzed listing photo" />
+                  <div>
+                    <span className={`${styles.analysisStatus} ${styles[`analysis-${asset.reviewStatus}`]}`}>
+                      {formatBucket(asset.reviewStatus)}
+                    </span>
+                    <strong>{formatPercent(asset.confidence, { maximumFractionDigits: 0 })} confidence</strong>
+                    <div className={styles.analysisFeatures}>
+                      {asset.detectedFeatures.length ? (
+                        asset.detectedFeatures.map((feature) => <span key={feature}>{formatBucket(feature)}</span>)
+                      ) : (
+                        <span>No features detected</span>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyAnalysis}>
+              <ScanSearch size={24} />
+              <strong>No image analysis assets yet</strong>
+              <p>Upload a photo with AI analysis enabled. Results will appear here for review before they update amenities.</p>
+            </div>
+          )}
+        </section>
+
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <div>
               <p className="section-kicker">Amenities</p>
               <h2 className={styles.panelTitle}>Client-facing tags</h2>
             </div>
@@ -332,6 +373,17 @@ function buildMediaSummary(gallery: PropertyImageGalleryResponse) {
     thumbnails: activeImages.slice(1, 5),
     title: activeImages.length ? "Published gallery preview" : "No photos attached yet"
   };
+}
+
+function buildImageAnalysisTitle(items: PropertyImageAnalysisResult[]) {
+  if (!items.length) {
+    return "Waiting for analyzed photos";
+  }
+
+  const approved = items.filter((item) => item.reviewStatus === "approved").length;
+  const draft = items.filter((item) => item.reviewStatus === "draft").length;
+
+  return `${items.length} analyzed photos, ${draft} awaiting review, ${approved} approved`;
 }
 
 function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildMediaSummary>) {

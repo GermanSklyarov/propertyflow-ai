@@ -9,6 +9,7 @@ import type {
   ConfirmPropertyImageUploadRequest,
   CreatePropertyImageUploadRequest,
   CreatePropertyImageUploadResponse,
+  PropertyAiAssets,
   PropertyImageGalleryResponse,
   PropertyImageSnapshot,
   PropertySearchRequest,
@@ -187,6 +188,23 @@ export async function getPropertyImages(propertyId: string): Promise<PropertyIma
     return (await response.json()) as PropertyImageGalleryResponse;
   } catch {
     return demoPropertyImageGallery(propertyId);
+  }
+}
+
+export async function getPropertyAiAssets(propertyId: string): Promise<PropertyAiAssets> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets`, {
+      headers: demoHeaders,
+      next: { revalidate: 20 }
+    });
+
+    if (!response.ok) {
+      return demoPropertyAiAssets(propertyId);
+    }
+
+    return (await response.json()) as PropertyAiAssets;
+  } catch {
+    return demoPropertyAiAssets(propertyId);
   }
 }
 
@@ -964,6 +982,14 @@ function demoPropertyImageUrls(property: PropertySnapshot) {
     "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=85",
     "https://images.unsplash.com/photo-1560448075-bb485b067938?auto=format&fit=crop&w=900&q=85"
   ];
+}
+
+function demoPropertyAiAssets(propertyId: string): PropertyAiAssets {
+  return {
+    descriptions: [],
+    imageAnalysis: [],
+    propertyId
+  };
 }
 
 function demoSavedPropertySearchListResponse(): SavedPropertySearchListResponse {
