@@ -221,7 +221,21 @@
 .thumbnailGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: 340px;
+  overflow-y: auto;
+  padding-right: 4px;
   gap: 12px;
+  overscroll-behavior: contain;
+  scrollbar-color: rgb(15 118 110 / 34%) transparent;
+}
+
+.thumbnailGrid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.thumbnailGrid::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgb(15 118 110 / 28%);
 }
 
 .thumbnailFrame {
@@ -564,6 +578,35 @@
   line-height: 1.45;
 }
 
+.amenitiesNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid rgb(22 163 74 / 20%);
+  background: #ecfdf3;
+  padding: 14px;
+  color: #176b3b;
+}
+
+.amenitiesNotice svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.amenitiesNotice strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.amenitiesNotice p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
 .analysisCard {
   display: grid;
   min-width: 0;
@@ -637,27 +680,77 @@
 
 .analysisActions form {
   margin: 0;
+  line-height: 0;
 }
 
-.analysisActions button {
-  min-height: 34px;
+.analysisActionButton {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: auto;
+  min-width: 0;
+  min-height: 32px;
+  white-space: nowrap;
   cursor: pointer;
   border: 1px solid rgb(15 118 110 / 18%);
   background: #fff;
-  padding: 0 10px;
+  padding: 0 9px;
   color: var(--teal-dark);
-  font: inherit;
-  font-size: 0.74rem;
+  font-family: inherit;
+  font-size: 0.72rem;
   font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
-.analysisActions button:hover,
-.analysisActions button:focus-visible {
+.analysisActionButton svg {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+}
+
+.analysisActionButton span {
+  display: inline;
+  min-width: 0;
+}
+
+.approveButton {
+  border-color: rgb(22 163 74 / 20%);
+  color: #176b3b;
+}
+
+.approveButton:hover,
+.approveButton:focus-visible {
+  border-color: rgb(22 163 74 / 34%);
+  background: #ecfdf3;
+}
+
+.rejectButton {
+  border-color: rgb(220 38 38 / 18%);
+  color: #9f3029;
+}
+
+.rejectButton:hover,
+.rejectButton:focus-visible {
+  border-color: rgb(220 38 38 / 34%);
+  background: #fff1f0;
+}
+
+.appliedButton {
+  border-color: rgb(22 163 74 / 28%);
+  background: #ecfdf3;
+  color: #176b3b;
+}
+
+.analysisActionButton:hover,
+.analysisActionButton:focus-visible {
   border-color: rgb(15 118 110 / 36%);
   background: #edf8f4;
 }
 
-.analysisActions button:disabled {
+.analysisActionButton:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }

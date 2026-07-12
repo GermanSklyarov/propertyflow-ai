@@ -12,7 +12,7 @@ export default async function AgencyListingDetailPage({
   searchParams
 }: {
   params: Promise<{ propertyId: string }>;
-  searchParams: Promise<{ queued?: string }>;
+  searchParams: Promise<{ applied?: string; asset?: string; queued?: string }>;
 }) {
   const { propertyId } = await params;
   const query = await searchParams;
@@ -32,6 +32,7 @@ export default async function AgencyListingDetailPage({
       aiAssets={aiAssets}
       gallery={gallery}
       listing={listing}
+      appliedImageAnalysisAssetId={query.applied === "image-features" ? query.asset : undefined}
       queuedImageAnalysis={query.queued === "image-analysis"}
     />
   );

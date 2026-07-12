@@ -1,8 +1,11 @@
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import {
   ArrowLeft,
   BadgeCheck,
   Building2,
+  Check,
+  CheckCircle2,
   CircleDollarSign,
   DraftingCompass,
   ExternalLink,
@@ -14,7 +17,8 @@ import {
   Ruler,
   ScanSearch,
   Sparkles,
-  Waves
+  Waves,
+  X
 } from "lucide-react";
 import {
   addPropertyImageAction,
@@ -27,12 +31,75 @@ import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import styles from "./listing-detail-page.module.css";
 
+const analysisActionButtonStyle: CSSProperties = {
+  WebkitAppearance: "none",
+  alignItems: "center",
+  appearance: "none",
+  cursor: "pointer",
+  display: "inline-flex",
+  flexDirection: "row",
+  flexWrap: "nowrap",
+  fontFamily: "inherit",
+  fontSize: "0.72rem",
+  fontWeight: 900,
+  gap: 6,
+  height: 32,
+  justifyContent: "center",
+  lineHeight: 1,
+  minHeight: 32,
+  padding: "0 9px",
+  textTransform: "uppercase",
+  verticalAlign: "middle",
+  whiteSpace: "nowrap",
+  width: "fit-content"
+};
+
+const analysisActionIconStyle: CSSProperties = {
+  display: "block",
+  flex: "0 0 14px",
+  height: 14,
+  width: 14
+};
+
+const analysisActionLabelStyle: CSSProperties = {
+  display: "inline-block",
+  lineHeight: 1,
+  whiteSpace: "nowrap"
+};
+
+const approveButtonStyle: CSSProperties = {
+  ...analysisActionButtonStyle,
+  borderColor: "rgb(22 163 74 / 28%)",
+  color: "#176b3b"
+};
+
+const rejectButtonStyle: CSSProperties = {
+  ...analysisActionButtonStyle,
+  borderColor: "rgb(220 38 38 / 28%)",
+  color: "#9f3029"
+};
+
+const applyButtonStyle: CSSProperties = {
+  ...analysisActionButtonStyle,
+  borderColor: "rgb(15 118 110 / 20%)",
+  color: "#0c4a45"
+};
+
+const appliedButtonStyle: CSSProperties = {
+  ...analysisActionButtonStyle,
+  background: "#ecfdf3",
+  borderColor: "rgb(22 163 74 / 32%)",
+  color: "#176b3b"
+};
+
 export function ListingDetailPage({
+  appliedImageAnalysisAssetId,
   aiAssets,
   gallery,
   listing,
   queuedImageAnalysis = false
 }: {
+  appliedImageAnalysisAssetId?: string;
   aiAssets: PropertyAiAssets;
   gallery: PropertyImageGalleryResponse;
   listing: PropertySnapshot;
@@ -70,7 +137,7 @@ export function ListingDetailPage({
               <p className="section-kicker">Media</p>
               <h2 className={styles.panelTitle}>{media.title}</h2>
             </div>
-            <span className={styles.mediaCount}>{gallery.images.length} photos</span>
+            <span className={styles.mediaCount}>{media.activeCount} photos</span>
           </div>
 
           {media.cover ? (
@@ -299,14 +366,37 @@ export function ListingDetailPage({
                       </div>
                       <div className={styles.analysisActions}>
                         <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "approved")}>
-                          <button type="submit">Approve</button>
+                          <button className={`${styles.analysisActionButton} ${styles.approveButton}`} style={approveButtonStyle} type="submit">
+                            <Check size={14} style={analysisActionIconStyle} />
+                            <span style={analysisActionLabelStyle}>Approve</span>
+                          </button>
                         </form>
                         <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "rejected")}>
-                          <button type="submit">Reject</button>
+                          <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} style={rejectButtonStyle} type="submit">
+                            <X size={14} style={analysisActionIconStyle} />
+                            <span style={analysisActionLabelStyle}>Reject</span>
+                          </button>
                         </form>
                         <form action={applyPropertyImageAnalysisAction.bind(null, listing.id, asset.id)}>
-                          <button disabled={asset.reviewStatus !== "approved"} type="submit">
-                            Apply features
+                          <button
+                            className={`${styles.analysisActionButton} ${
+                              appliedImageAnalysisAssetId === asset.id ? styles.appliedButton : ""
+                            }`}
+                            disabled={asset.reviewStatus !== "approved"}
+                            style={appliedImageAnalysisAssetId === asset.id ? appliedButtonStyle : applyButtonStyle}
+                            type="submit"
+                          >
+                            {appliedImageAnalysisAssetId === asset.id ? (
+                              <>
+                                <CheckCircle2 size={14} style={analysisActionIconStyle} />
+                                <span style={analysisActionLabelStyle}>Applied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles size={14} style={analysisActionIconStyle} />
+                                <span style={analysisActionLabelStyle}>Apply features</span>
+                              </>
+                            )}
                           </button>
                         </form>
                       </div>
@@ -324,7 +414,7 @@ export function ListingDetailPage({
           )}
         </section>
 
-        <section className={styles.panel}>
+        <section className={styles.panel} id="amenities">
           <div className={styles.panelHeader}>
             <div>
               <p className="section-kicker">Amenities</p>
@@ -332,6 +422,15 @@ export function ListingDetailPage({
             </div>
             <Sparkles size={20} />
           </div>
+          {appliedImageAnalysisAssetId ? (
+            <div className={styles.amenitiesNotice}>
+              <CheckCircle2 size={18} />
+              <div>
+                <strong>AI features applied</strong>
+                <p>Client-facing tags were updated from the approved image analysis.</p>
+              </div>
+            </div>
+          ) : null}
           <div className={styles.chipGrid}>
             {listing.amenities.length ? (
               listing.amenities.map((amenity) => <span key={amenity}>{formatBucket(amenity)}</span>)
@@ -406,7 +505,7 @@ function buildMediaSummary(gallery: PropertyImageGalleryResponse) {
   return {
     activeCount: activeImages.length,
     cover,
-    thumbnails: activeImages.slice(1, 5),
+    thumbnails: activeImages.slice(1),
     title: activeImages.length ? "Published gallery preview" : "No photos attached yet"
   };
 }

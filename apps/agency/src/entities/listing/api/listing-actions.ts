@@ -92,4 +92,6 @@ export async function applyPropertyImageAnalysisAction(propertyId: string, asset
 
   revalidatePath(`/listings/${propertyId}`);
   revalidatePath(`/properties/${propertyId}`);
+
+  redirect(`/listings/${propertyId}?applied=image-features&asset=${assetId}#amenities`);
 }
