@@ -1,0 +1,231 @@
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
+}
+
+.drawer {
+  display: grid;
+}
+
+.drawer > summary {
+  list-style: none;
+}
+
+.drawer > summary::-webkit-details-marker {
+  display: none;
+}
+
+.openButton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+  cursor: pointer;
+  padding: 16px;
+}
+
+.openButton > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--teal-dark);
+  font-size: 1rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.openButton > small {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.openButton > svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--teal-dark);
+}
+
+.body,
+.form {
+  display: grid;
+  gap: 14px;
+}
+
+.body {
+  border-top: 1px solid var(--line);
+  padding: 16px;
+}
+
+.copy h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 2vw, 2.1rem);
+}
+
+.copy p:not(:first-child) {
+  max-width: 860px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.success,
+.warning {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 12px;
+  color: var(--teal-dark);
+}
+
+.warning {
+  border-color: rgb(220 91 69 / 28%);
+  background: #fff2ec;
+  color: #943b2f;
+}
+
+.success strong,
+.warning strong,
+.success span,
+.warning span {
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.success small,
+.warning small {
+  flex-basis: 100%;
+  color: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.fileDrop,
+.csvPaste {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fileDrop {
+  cursor: pointer;
+  border: 1px dashed rgb(15 118 110 / 28%);
+  background: #f5faf7;
+  padding: 14px;
+  color: var(--teal-dark);
+}
+
+.fileDrop span,
+.csvPaste span {
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.fileDrop small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.fileDrop input {
+  cursor: pointer;
+  max-width: 100%;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.csvPaste textarea {
+  min-height: 104px;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.csvPaste textarea:focus,
+.fileDrop:focus-within {
+  border-color: rgb(15 118 110 / 48%);
+  outline: 2px solid rgb(15 118 110 / 12%);
+}
+
+.template {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.template code {
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 6px 8px;
+  color: var(--teal-dark);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.actions button:hover,
+.actions button:focus-visible {
+  background: var(--teal-dark);
+}
+
+.actions small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+@media (min-width: 880px) {
+  .form {
+    grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+  }
+
+  .template,
+  .actions {
+    grid-column: 1 / -1;
+  }
+}

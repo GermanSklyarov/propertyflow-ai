@@ -14,6 +14,7 @@ import {
 } from "@shared/api/agency-client";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
+import { buildCreatePropertyRequest, parseListingImportCsv } from "../lib/listing-import";
 
 const marketCoordinates = {
   pattaya: { latitude: 12.9236, longitude: 100.8825 },
@@ -92,6 +93,48 @@ export async function addPropertyImageAction(propertyId: string, formData: FormD
   if (analyzeImage) {
     redirect(`/listings/${propertyId}?queued=image-analysis#ai-image-analysis`);
   }
+}
+
+export async function importPropertiesCsvAction(formData: FormData) {
+  const csvFile = formData.get("listingsCsv");
+  const pastedCsv = getOptionalString(formData, "csvText");
+  const csvText = csvFile instanceof File && csvFile.size > 0 ? await csvFile.text() : pastedCsv;
+
+  if (!csvText) {
+    redirect("/listings?imported=0&failed=1&importError=empty#import-listings");
+  }
+
+  const parseResult = parseListingImportCsv(csvText);
+  const rows = parseResult.rows.slice(0, 500);
+  const skippedByLimit = Math.max(parseResult.rows.length - rows.length, 0);
+  const failed = [...parseResult.issues];
+  let imported = 0;
+
+  for (const row of rows) {
+    try {
+      await createProperty(buildCreatePropertyRequest(row));
+      imported += 1;
+    } catch (error) {
+      failed.push({
+        rowNumber: row.rowNumber,
+        title: row.values.title,
+        reason: error instanceof Error ? error.message : "Failed to create property"
+      });
+    }
+  }
+
+  revalidatePath("/listings");
+
+  const params = new URLSearchParams({
+    imported: String(imported),
+    failed: String(failed.length + skippedByLimit)
+  });
+
+  if (skippedByLimit > 0) {
+    params.set("limit", "500");
+  }
+
+  redirect(`/listings?${params.toString()}#import-listings`);
 }
 
 function getRequiredString(formData: FormData, key: string) {

@@ -1,9 +1,20 @@
 import { CreateListingForm } from "@features/listing-create/ui/create-listing-form";
+import { ListingBulkImportPanel } from "@features/listing-bulk-import/ui/listing-bulk-import-panel";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { ListingsInventoryPanel } from "@widgets/listings-inventory/ui/listings-inventory-panel";
 import styles from "./listings-page.module.css";
 
-export function ListingsPage({ listings, total }: { listings: PropertySnapshot[]; total: number }) {
+interface ListingsPageProps {
+  importResult?: {
+    failed: number;
+    imported: number;
+    limitedTo?: number;
+  };
+  listings: PropertySnapshot[];
+  total: number;
+}
+
+export function ListingsPage({ importResult, listings, total }: ListingsPageProps) {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -19,6 +30,8 @@ export function ListingsPage({ listings, total }: { listings: PropertySnapshot[]
         </header>
 
         <CreateListingForm />
+
+        <ListingBulkImportPanel result={importResult} />
 
         <ListingsInventoryPanel listings={listings} />
       </div>
