@@ -183,6 +183,37 @@
   font-weight: 900;
 }
 
+.checkbox {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--teal);
+}
+
+.checkbox span {
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.checkbox small {
+  grid-column: 2;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -225,6 +256,7 @@
   }
 
   .template,
+  .checkbox,
   .actions {
     grid-column: 1 / -1;
   }

@@ -6,9 +6,8 @@ import styles from "./listings-page.module.css";
 
 interface ListingsPageProps {
   importResult?: {
-    failed: number;
-    imported: number;
-    limitedTo?: number;
+    error?: "empty";
+    jobId?: string;
   };
   listings: PropertySnapshot[];
   total: number;

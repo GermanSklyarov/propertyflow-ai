@@ -26,6 +26,7 @@ import type {
   PropertyImageGalleryResponse,
   PropertyImageAnalysisResult,
   PropertyImageSnapshot,
+  PropertyImportJobPayload,
   PropertySearchRequest,
   PropertySearchResponse,
   ReviewAiAssetRequest,
@@ -570,6 +571,28 @@ export async function ingestKnowledgeDocument(documentId: string): Promise<Backg
 
   if (!response.ok) {
     throw new Error(`Failed to ingest knowledge document: ${response.status}`);
+  }
+
+  return (await response.json()) as BackgroundJobSnapshot;
+}
+
+export async function enqueuePropertyImport(
+  request: Omit<PropertyImportJobPayload, "tenantId" | "requestedByUserId">
+): Promise<BackgroundJobSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/jobs`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify({
+      name: "properties.import",
+      payload: request
+    })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to enqueue property import: ${response.status}`);
   }
 
   return (await response.json()) as BackgroundJobSnapshot;

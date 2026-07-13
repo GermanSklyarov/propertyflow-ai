@@ -4,9 +4,8 @@ import styles from "./listing-bulk-import-panel.module.css";
 
 interface ListingBulkImportPanelProps {
   result?: {
-    failed: number;
-    imported: number;
-    limitedTo?: number;
+    error?: "empty";
+    jobId?: string;
   };
 }
 
@@ -43,16 +42,23 @@ export function ListingBulkImportPanel({ result }: ListingBulkImportPanelProps) 
             <p className="section-kicker">Agency onboarding</p>
             <h2>Bulk listing import</h2>
             <p>
-              Upload a CSV exported from an old CRM, spreadsheet, or partner system. This MVP creates listing drafts now;
-              production-scale imports will run as BullMQ jobs with dry-run preview, progress, and downloadable error reports.
+              Upload a CSV exported from an old CRM, spreadsheet, or partner system. The import is queued as a BullMQ job,
+              so agents can keep working while drafts are created in the background.
             </p>
           </div>
 
-          {result ? (
-            <div className={result.failed > 0 ? styles.warning : styles.success} role="status">
-              <strong>{result.imported} imported</strong>
-              <span>{result.failed} failed or skipped</span>
-              {result.limitedTo ? <small>Only the first {result.limitedTo} rows were processed in this MVP import.</small> : null}
+          {result?.jobId ? (
+            <div className={styles.success} role="status">
+              <strong>Import queued</strong>
+              <span>Job {result.jobId}</span>
+              <small>Worker progress appears in background jobs. Imported listings will land as drafts.</small>
+            </div>
+          ) : null}
+
+          {result?.error === "empty" ? (
+            <div className={styles.warning} role="alert">
+              <strong>No CSV received</strong>
+              <span>Upload a file or paste rows before queueing import.</span>
             </div>
           ) : null}
 
@@ -78,10 +84,16 @@ export function ListingBulkImportPanel({ result }: ListingBulkImportPanelProps) 
               ))}
             </div>
 
+            <label className={styles.checkbox}>
+              <input name="dryRun" type="checkbox" />
+              <span>Dry-run only</span>
+              <small>Validate rows and progress through the job without creating listing drafts.</small>
+            </label>
+
             <div className={styles.actions}>
               <button type="submit">
                 <Upload size={16} />
-                Import listing drafts
+                Queue import job
               </button>
               <small>After import, agents can open drafts, attach photos, run AI description, and publish.</small>
             </div>
