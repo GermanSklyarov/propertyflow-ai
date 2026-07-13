@@ -12,7 +12,6 @@ import {
   Gauge,
   Home,
   KeyRound,
-  ImagePlus,
   MapPin,
   Ruler,
   ScanSearch,
@@ -21,13 +20,12 @@ import {
   X
 } from "lucide-react";
 import {
-  addPropertyImageAction,
   applyPropertyImageAnalysisAction,
   applyPropertyDescriptionAction,
   reviewPropertyDescriptionAction,
-  reviewPropertyImageAnalysisAction,
-  uploadPropertyImageAction
+  reviewPropertyImageAnalysisAction
 } from "@entities/listing/api/listing-actions";
+import { buildGalleryImageSrc, buildListingMediaSummary } from "@entities/listing/lib/listing-media";
 import type {
   GeneratedPropertyDescription,
   PropertyAiAssets,
@@ -36,6 +34,7 @@ import type {
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
+import { ListingMediaPanel } from "@widgets/listing-media/ui/listing-media-panel";
 import styles from "./listing-detail-page.module.css";
 
 export function ListingDetailPage({
@@ -54,12 +53,10 @@ export function ListingDetailPage({
   queuedImageAnalysis?: boolean;
 }) {
   const economics = buildEconomics(listing);
-  const media = buildMediaSummary(gallery);
+  const media = buildListingMediaSummary(gallery);
   const publication = buildPublicationSummary(listing, media);
   const readiness = getReadiness(listing);
   const nextActions = buildNextActions(listing, readiness.score);
-  const addImage = addPropertyImageAction.bind(null, listing.id);
-  const uploadImage = uploadPropertyImageAction.bind(null, listing.id);
   const imageAnalysisEmptyCopy = buildImageAnalysisEmptyCopy(media);
   const galleryImagesById = new Map(gallery.images.map((image) => [image.id, image]));
 
@@ -88,95 +85,7 @@ export function ListingDetailPage({
           </div>
         ) : null}
 
-        <section className={styles.mediaPanel} aria-label="Listing media gallery">
-          <div className={styles.mediaHeader}>
-            <div>
-              <p className="section-kicker">Media</p>
-              <h2 className={styles.panelTitle}>{media.title}</h2>
-            </div>
-            <span className={styles.mediaCount}>{media.activeCount} photos</span>
-          </div>
-
-          {media.cover ? (
-            <div className={styles.galleryGrid}>
-              <figure className={styles.coverFrame}>
-                <img src={buildGalleryImageSrc(media.cover)} alt={media.cover.caption ?? `${listing.title} cover photo`} />
-                <figcaption>
-                  <span>Cover</span>
-                  <strong>{media.cover.caption ?? listing.title}</strong>
-                </figcaption>
-              </figure>
-
-              <div className={styles.thumbnailGrid}>
-                {media.thumbnails.map((image, index) => (
-                  <figure className={styles.thumbnailFrame} key={image.id}>
-                    <img src={buildGalleryImageSrc(image)} alt={image.caption ?? `${listing.title} photo ${index + 2}`} />
-                    <figcaption>{index === 0 ? "Next in gallery" : `Photo ${index + 2}`}</figcaption>
-                  </figure>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <div className={styles.emptyMedia}>
-              <ImagePlus size={28} />
-              <strong>Upload photos before publishing</strong>
-              <p>Photos will power the public listing gallery, AI image analysis, amenity detection, and client-facing recommendations.</p>
-            </div>
-          )}
-
-          <div className={styles.mediaActions}>
-            <span>Cover selection</span>
-            <span>Reorder queue</span>
-            <span>AI quality review</span>
-            <span>Public gallery sync</span>
-          </div>
-
-          <form action={addImage} className={styles.mediaForm}>
-            <div>
-              <p className="section-kicker">Add photo</p>
-              <h3>Add image by URL</h3>
-            </div>
-            <label>
-              Image URL
-              <input name="imageUrl" placeholder="https://images.unsplash.com/..." required type="url" />
-            </label>
-            <label>
-              Caption
-              <input name="caption" placeholder="Sea-view balcony, renovated kitchen..." />
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input defaultChecked name="analyzeImage" type="checkbox" />
-              Queue AI image analysis
-            </label>
-            <button type="submit">
-              <ImagePlus size={16} />
-              Add to gallery
-            </button>
-          </form>
-
-          <form action={uploadImage} className={styles.mediaForm}>
-            <div>
-              <p className="section-kicker">Upload</p>
-              <h3>Upload local file</h3>
-            </div>
-            <label>
-              Image file
-              <input accept="image/*" name="imageFile" required type="file" />
-            </label>
-            <label>
-              Caption
-              <input name="caption" placeholder="Pool view, living room, bedroom..." />
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input defaultChecked name="analyzeImage" type="checkbox" />
-              Queue AI image analysis
-            </label>
-            <button type="submit">
-              <ImagePlus size={16} />
-              Upload to gallery
-            </button>
-          </form>
-        </section>
+        <ListingMediaPanel gallery={gallery} listingId={listing.id} listingTitle={listing.title} />
 
         <section className={styles.kpiGrid} aria-label="Listing detail overview">
           <KpiCard icon={<CircleDollarSign size={18} />} label="Ask" note={formatListingType(listing.listingType)} value={formatCompactMoney(listing.price)} />
@@ -519,20 +428,6 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function buildMediaSummary(gallery: PropertyImageGalleryResponse) {
-  const activeImages = [...gallery.images]
-    .filter((image) => !image.deletedAt)
-    .sort((first, second) => first.position - second.position);
-  const cover = activeImages[0];
-
-  return {
-    activeCount: activeImages.length,
-    cover,
-    thumbnails: activeImages.slice(1),
-    title: activeImages.length ? "Published gallery preview" : "No photos attached yet"
-  };
-}
-
 function buildImageAnalysisTitle(items: PropertyImageAnalysisResult[], activeImageCount: number) {
   if (!items.length) {
     if (activeImageCount) {
@@ -559,7 +454,7 @@ function buildDescriptionAssetTitle(items: GeneratedPropertyDescription[]) {
   return `${items.length} generated drafts, ${draft} awaiting review, ${approved} approved`;
 }
 
-function buildImageAnalysisEmptyCopy(media: ReturnType<typeof buildMediaSummary>) {
+function buildImageAnalysisEmptyCopy(media: ReturnType<typeof buildListingMediaSummary>) {
   if (media.activeCount) {
     return {
       title: "Image analysis is queued",
@@ -573,15 +468,7 @@ function buildImageAnalysisEmptyCopy(media: ReturnType<typeof buildMediaSummary>
   };
 }
 
-function buildGalleryImageSrc(image: PropertyImageGalleryResponse["images"][number]) {
-  if (!image.objectKey) {
-    return image.imageUrl;
-  }
-
-  return `/api/listing-images/${encodeURIComponent(image.propertyId)}/${encodeURIComponent(image.id)}`;
-}
-
-function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildMediaSummary>) {
+function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildListingMediaSummary>) {
   const items = [
     {
       detail: media.activeCount ? `${media.activeCount} public-ready photos` : "Add at least one cover photo",
