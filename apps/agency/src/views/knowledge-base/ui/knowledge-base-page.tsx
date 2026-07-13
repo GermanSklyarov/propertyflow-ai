@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
-import { BookOpenText, DatabaseZap, FileText, Languages, Plus, RefreshCcw, SearchCheck, Tags } from "lucide-react";
+import { BookOpenText, DatabaseZap, FileText, Languages, Plus, RefreshCcw, Search, SearchCheck, Tags } from "lucide-react";
 import { createKnowledgeDocumentAction, ingestKnowledgeDocumentAction } from "@entities/knowledge/api/knowledge-actions";
-import type { KnowledgeDocumentKind, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
-import { formatBucket, formatDate } from "@shared/lib/formatters";
+import type {
+  KnowledgeChunkSearchRequest,
+  KnowledgeChunkSearchResponse,
+  KnowledgeDocumentKind,
+  KnowledgeDocumentSnapshot
+} from "@propertyflow/contracts";
+import { formatBucket, formatDate, formatNumber } from "@shared/lib/formatters";
 import styles from "./knowledge-base-page.module.css";
 
 const localeOptions: KnowledgeDocumentSnapshot["locale"][] = ["en", "ru", "th", "zh"];
@@ -11,10 +16,14 @@ const kindOptions: KnowledgeDocumentKind[] = ["article", "neighborhood", "reloca
 export function KnowledgeBasePage({
   documents,
   notice,
+  retrieval,
+  retrievalRequest,
   total
 }: {
   documents: KnowledgeDocumentSnapshot[];
   notice?: { message: string; tone: "success" };
+  retrieval: KnowledgeChunkSearchResponse;
+  retrievalRequest: KnowledgeChunkSearchRequest;
   total: number;
 }) {
   const kindCount = new Set(documents.map((document) => document.kind)).size;
@@ -47,6 +56,79 @@ export function KnowledgeBasePage({
           <KpiCard icon={<FileText size={18} />} label="Content kinds" note="RAG routing" value={kindCount} />
           <KpiCard icon={<Languages size={18} />} label="Locales" note="Multilingual advice" value={localeCount} />
           <KpiCard icon={<Tags size={18} />} label="Tagged docs" note="Retrieval hints" value={taggedCount} />
+        </section>
+
+        <section className={styles.panel} id="retrieval-preview">
+          <div className={styles.panelHeader}>
+            <div>
+              <p className="section-kicker">Retrieval preview</p>
+              <h2 className={styles.panelTitle}>Test what AI can retrieve</h2>
+            </div>
+            <span className={styles.statusBadge}>{formatBucket(retrieval.retrieval)}</span>
+          </div>
+
+          <form className={styles.retrievalForm}>
+            <label className={styles.retrievalQuery}>
+              Query
+              <input defaultValue={retrievalRequest.query} name="q" placeholder="quiet family area near beach" />
+            </label>
+            <label>
+              Locale
+              <select defaultValue={retrievalRequest.locale ?? ""} name="locale">
+                <option value="">Any</option>
+                {localeOptions.map((locale) => (
+                  <option key={locale} value={locale}>
+                    {locale.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Kind
+              <select defaultValue={retrievalRequest.kind ?? ""} name="kind">
+                <option value="">Any</option>
+                {kindOptions.map((kind) => (
+                  <option key={kind} value={kind}>
+                    {formatBucket(kind)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit">
+              <Search size={16} />
+              Test retrieval
+            </button>
+          </form>
+
+          {retrieval.items.length ? (
+            <div className={styles.chunkList}>
+              {retrieval.items.map((chunk) => (
+                <article className={styles.chunkCard} key={chunk.id}>
+                  <div className={styles.chunkTop}>
+                    <div>
+                      <span>{chunk.locale.toUpperCase()}</span>
+                      <span>{formatBucket(chunk.kind)}</span>
+                      <span>{formatBucket(chunk.embeddingStatus)}</span>
+                    </div>
+                    <strong>{formatNumber(chunk.score)} score</strong>
+                  </div>
+                  <h3>{chunk.title}</h3>
+                  <p>{excerpt(chunk.content, 240)}</p>
+                  <div className={styles.chunkMeta}>
+                    <span>{chunk.tokenEstimate} tokens</span>
+                    <span>Chunk {chunk.chunkIndex + 1}</span>
+                    <span>Updated {formatDate(chunk.updatedAt)}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <SearchCheck size={24} />
+              <strong>No matching chunks</strong>
+              <p>Try a broader query or ingest more documents before testing AI retrieval.</p>
+            </div>
+          )}
         </section>
 
         <section className={styles.layout}>
@@ -193,6 +275,6 @@ function DocumentCard({ document }: { document: KnowledgeDocumentSnapshot }) {
   );
 }
 
-function excerpt(value: string) {
-  return value.length > 180 ? `${value.slice(0, 177).trim()}...` : value;
+function excerpt(value: string, limit = 180) {
+  return value.length > limit ? `${value.slice(0, limit - 3).trim()}...` : value;
 }

@@ -3,6 +3,8 @@ import type {
   BackgroundJobSnapshot,
   BackgroundJobState,
   CreateKnowledgeDocumentRequest,
+  KnowledgeChunkSearchRequest,
+  KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
   KnowledgeDocumentSnapshot,
   LeadListResponse,
@@ -459,6 +461,25 @@ export async function listKnowledgeDocuments(request: { limit?: number } = { lim
     return (await response.json()) as KnowledgeDocumentListResponse;
   } catch {
     return demoKnowledgeDocumentListResponse();
+  }
+}
+
+export async function searchKnowledgeChunks(
+  request: KnowledgeChunkSearchRequest
+): Promise<KnowledgeChunkSearchResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/search${toQueryString(request)}`, {
+      headers: demoHeaders,
+      next: { revalidate: 10 }
+    });
+
+    if (!response.ok) {
+      return demoKnowledgeChunkSearchResponse(request);
+    }
+
+    return (await response.json()) as KnowledgeChunkSearchResponse;
+  } catch {
+    return demoKnowledgeChunkSearchResponse(request);
   }
 }
 
@@ -1205,6 +1226,56 @@ function demoKnowledgeDocumentListResponse(): KnowledgeDocumentListResponse {
 
   return {
     items,
+    total: items.length
+  };
+}
+
+function demoKnowledgeChunkSearchResponse(request: KnowledgeChunkSearchRequest): KnowledgeChunkSearchResponse {
+  const documents = demoKnowledgeDocumentListResponse().items.filter((document) => {
+    if (request.locale && document.locale !== request.locale) {
+      return false;
+    }
+
+    if (request.kind && document.kind !== request.kind) {
+      return false;
+    }
+
+    return true;
+  });
+  const terms = request.query
+    .toLowerCase()
+    .split(/[^a-zа-я0-9-]+/i)
+    .filter((term) => term.length >= 3);
+  const now = new Date().toISOString();
+  const items = documents
+    .map((document, index) => {
+      const haystack = `${document.title} ${document.body} ${document.tags.join(" ")}`.toLowerCase();
+      const lexicalHits = terms.filter((term) => haystack.includes(term)).length;
+
+      return {
+        id: `${document.id}-chunk-1`,
+        tenantId: document.tenantId,
+        documentId: document.id,
+        chunkIndex: 0,
+        title: document.title,
+        content: document.body,
+        locale: document.locale,
+        kind: document.kind,
+        tags: document.tags,
+        tokenEstimate: Math.max(24, Math.round(document.body.length / 4)),
+        score: lexicalHits * 3 + Math.max(0, 3 - index),
+        embeddingStatus: index === 0 ? "embedded" : "pending",
+        createdAt: document.createdAt,
+        updatedAt: now
+      } satisfies KnowledgeChunkSearchResponse["items"][number];
+    })
+    .sort((left, right) => right.score - left.score)
+    .slice(0, request.limit ?? 5);
+
+  return {
+    generatedAt: now,
+    items,
+    retrieval: items.some((item) => item.embeddingStatus === "embedded") ? "hybrid-chunks-v1" : "lexical-chunks-v1",
     total: items.length
   };
 }

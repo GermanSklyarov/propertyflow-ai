@@ -24,6 +24,7 @@ export const queryKeys = {
   },
   knowledge: {
     all: ["knowledge"] as const,
+    chunks: (filters: object) => [...queryKeys.knowledge.all, "chunks", filters] as const,
     list: (filters: object) => [...queryKeys.knowledge.all, "list", filters] as const
   },
   savedSearches: {
