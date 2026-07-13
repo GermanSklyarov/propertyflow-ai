@@ -25,6 +25,20 @@ export function buildLeadFollowUpState(lead: LeadSnapshot) {
   };
 }
 
+export function buildLeadFollowUpSummary(lead: LeadSnapshot) {
+  if (!lead.nextFollowUpAt) {
+    return { note: "Needs scheduling", value: "No follow-up" };
+  }
+
+  const followUpAt = new Date(lead.nextFollowUpAt);
+
+  if (followUpAt < new Date()) {
+    return { note: "Past due", value: `Overdue ${formatDateTime(lead.nextFollowUpAt)}` };
+  }
+
+  return { note: "Next action", value: formatDateTime(lead.nextFollowUpAt) };
+}
+
 export function formatLeadOwner(agentId?: string) {
   return agentId ? agentId.replace("agent-", "Agent ").replace("demo-", "") : "Unassigned";
 }
