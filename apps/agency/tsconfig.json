@@ -26,6 +26,9 @@
       "@entities/*": [
         "src/entities/*"
       ],
+      "@features/*": [
+        "src/features/*"
+      ],
       "@propertyflow/config": [
         "../../packages/config/src/index.ts"
       ],

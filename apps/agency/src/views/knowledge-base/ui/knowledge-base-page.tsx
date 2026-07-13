@@ -1,24 +1,20 @@
 import type { ReactNode } from "react";
-import { Bot, BookOpenText, DatabaseZap, FileText, Languages, Plus, RefreshCcw, Search, SearchCheck, Tags } from "lucide-react";
-import {
-  createKnowledgeDocumentAction,
-  embedKnowledgeChunksAction,
-  ingestKnowledgeDocumentAction
-} from "@entities/knowledge/api/knowledge-actions";
+import { Bot, BookOpenText, DatabaseZap, FileText, Languages, Plus, SearchCheck, Tags } from "lucide-react";
+import { KnowledgeDocumentCard } from "@entities/knowledge/ui/knowledge-document-card";
+import { CreateKnowledgeDocumentForm } from "@features/knowledge-document-create/ui/create-knowledge-document-form";
+import { KnowledgeAiAnswerPanel } from "@features/knowledge-ai-answer/ui/knowledge-ai-answer-panel";
+import { KnowledgeRetrievalPreview } from "@features/knowledge-retrieval-preview/ui/knowledge-retrieval-preview";
 import type {
   AiChatRequest,
   AiChatResponse,
   BackgroundJobMonitorItem,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
-  KnowledgeDocumentKind,
   KnowledgeDocumentSnapshot
 } from "@propertyflow/contracts";
-import { formatBucket, formatDate, formatNumber } from "@shared/lib/formatters";
+import { formatBucket } from "@shared/lib/formatters";
+import { KnowledgeJobsPanel } from "@widgets/knowledge-jobs/ui/knowledge-jobs-panel";
 import styles from "./knowledge-base-page.module.css";
-
-const localeOptions: KnowledgeDocumentSnapshot["locale"][] = ["en", "ru", "th", "zh"];
-const kindOptions: KnowledgeDocumentKind[] = ["article", "neighborhood", "relocation", "legal", "investment", "faq"];
 
 export function KnowledgeBasePage({
   chat,
@@ -80,78 +76,7 @@ export function KnowledgeBasePage({
             <span className={styles.statusBadge}>{formatBucket(retrieval.retrieval)}</span>
           </div>
 
-          <form className={styles.retrievalForm}>
-            <label className={styles.retrievalQuery}>
-              Query
-              <input defaultValue={retrievalRequest.query} name="q" placeholder="quiet family area near beach" />
-            </label>
-            <label>
-              Locale
-              <select defaultValue={retrievalRequest.locale ?? ""} name="locale">
-                <option value="">Any</option>
-                {localeOptions.map((locale) => (
-                  <option key={locale} value={locale}>
-                    {locale.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Kind
-              <select defaultValue={retrievalRequest.kind ?? ""} name="kind">
-                <option value="">Any</option>
-                {kindOptions.map((kind) => (
-                  <option key={kind} value={kind}>
-                    {formatBucket(kind)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit">
-              <Search size={16} />
-              Test retrieval
-            </button>
-          </form>
-          <form action={embedKnowledgeChunksAction} className={styles.embedForm}>
-            <input name="q" type="hidden" value={retrievalRequest.query} />
-            <input name="locale" type="hidden" value={retrievalRequest.locale ?? ""} />
-            <input name="kind" type="hidden" value={retrievalRequest.kind ?? ""} />
-            <span>Queue local-hash embeddings for pending chunks, then retest retrieval quality.</span>
-            <button type="submit">
-              <DatabaseZap size={16} />
-              Queue embeddings
-            </button>
-          </form>
-
-          {retrieval.items.length ? (
-            <div className={styles.chunkList}>
-              {retrieval.items.map((chunk) => (
-                <article className={styles.chunkCard} key={chunk.id}>
-                  <div className={styles.chunkTop}>
-                    <div>
-                      <span>{chunk.locale.toUpperCase()}</span>
-                      <span>{formatBucket(chunk.kind)}</span>
-                      <span>{formatBucket(chunk.embeddingStatus)}</span>
-                    </div>
-                    <strong>{formatNumber(chunk.score)} score</strong>
-                  </div>
-                  <h3>{chunk.title}</h3>
-                  <p>{excerpt(chunk.content, 240)}</p>
-                  <div className={styles.chunkMeta}>
-                    <span>{chunk.tokenEstimate} tokens</span>
-                    <span>Chunk {chunk.chunkIndex + 1}</span>
-                    <span>Updated {formatDate(chunk.updatedAt)}</span>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <SearchCheck size={24} />
-              <strong>No matching chunks</strong>
-              <p>Try a broader query or ingest more documents before testing AI retrieval.</p>
-            </div>
-          )}
+          <KnowledgeRetrievalPreview retrieval={retrieval} retrievalRequest={retrievalRequest} />
         </section>
 
         <section className={styles.panel} id="knowledge-chat">
@@ -163,59 +88,7 @@ export function KnowledgeBasePage({
             <Bot size={20} />
           </div>
 
-          <form className={styles.chatForm}>
-            <label className={styles.chatQuery}>
-              Question
-              <input
-                defaultValue={chatRequest?.message ?? "Which Pattaya area is best for a quiet family relocation?"}
-                name="ask"
-                placeholder="Which area is best for family relocation?"
-              />
-            </label>
-            <label>
-              Locale
-              <select defaultValue={chatRequest?.locale ?? retrievalRequest.locale ?? "en"} name="locale">
-                {localeOptions.map((locale) => (
-                  <option key={locale} value={locale}>
-                    {locale.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button type="submit">
-              <Bot size={16} />
-              Ask AI
-            </button>
-          </form>
-
-          {chat ? (
-            <article className={styles.chatAnswer}>
-              <div className={styles.chatAnswerHeader}>
-                <span>{chat.citations.length} citations</span>
-                <span>{chat.suggestedActions.length} actions</span>
-              </div>
-              <h3>{chat.message}</h3>
-              <p>{chat.answer}</p>
-              <div className={styles.citationList}>
-                {chat.citations.map((citation) => (
-                  <span key={`${citation.source}-${citation.documentId ?? citation.propertyId ?? citation.label}`}>
-                    {formatBucket(citation.source)} · {citation.label}
-                  </span>
-                ))}
-              </div>
-              <div className={styles.actionRow}>
-                {chat.suggestedActions.map((action) => (
-                  <span key={action}>{formatBucket(action)}</span>
-                ))}
-              </div>
-            </article>
-          ) : (
-            <div className={styles.chatPlaceholder}>
-              <Bot size={22} />
-              <strong>Ask a question to verify the final AI answer</strong>
-              <p>The answer will include citations, matched properties when relevant, and suggested next actions.</p>
-            </div>
-          )}
+          <KnowledgeAiAnswerPanel chat={chat} chatRequest={chatRequest} retrievalRequest={retrievalRequest} />
         </section>
 
         <section className={styles.panel} id="knowledge-jobs">
@@ -227,19 +100,7 @@ export function KnowledgeBasePage({
             <span className={styles.statusBadge}>{jobs.length} recent</span>
           </div>
 
-          {jobs.length ? (
-            <div className={styles.jobList}>
-              {jobs.map((job) => (
-                <JobCard job={job} key={job.id} />
-              ))}
-            </div>
-          ) : (
-            <div className={styles.emptyState}>
-              <DatabaseZap size={24} />
-              <strong>No knowledge jobs yet</strong>
-              <p>Create a document, re-ingest a source, or queue embeddings to see worker activity here.</p>
-            </div>
-          )}
+          <KnowledgeJobsPanel jobs={jobs} />
         </section>
 
         <section className={styles.layout}>
@@ -252,49 +113,7 @@ export function KnowledgeBasePage({
               <Plus size={20} />
             </div>
 
-            <form action={createKnowledgeDocumentAction} className={styles.documentForm}>
-              <label className={styles.fieldWide}>
-                Title
-                <input name="title" placeholder="Wongamat family relocation guide" required />
-              </label>
-              <label>
-                Locale
-                <select defaultValue="en" name="locale">
-                  {localeOptions.map((locale) => (
-                    <option key={locale} value={locale}>
-                      {locale.toUpperCase()}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Kind
-                <select defaultValue="relocation" name="kind">
-                  {kindOptions.map((kind) => (
-                    <option key={kind} value={kind}>
-                      {formatBucket(kind)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={styles.fieldWide}>
-                Tags
-                <input name="tags" placeholder="pattaya, wongamat, family" />
-              </label>
-              <label className={styles.fieldWide}>
-                Body
-                <textarea
-                  name="body"
-                  placeholder="Add the source material agents would normally explain by hand..."
-                  required
-                  rows={8}
-                />
-              </label>
-              <button type="submit">
-                <DatabaseZap size={16} />
-                Create and ingest
-              </button>
-            </form>
+            <CreateKnowledgeDocumentForm />
           </section>
 
           <aside className={styles.sidePanel}>
@@ -320,7 +139,7 @@ export function KnowledgeBasePage({
           {documents.length ? (
             <div className={styles.documentList}>
               {documents.map((document) => (
-                <DocumentCard document={document} key={document.id} />
+                <KnowledgeDocumentCard document={document} key={document.id} />
               ))}
             </div>
           ) : (
@@ -357,85 +176,4 @@ function Signal({ icon, label, copy }: { icon: ReactNode; label: string; copy: s
       </div>
     </div>
   );
-}
-
-function DocumentCard({ document }: { document: KnowledgeDocumentSnapshot }) {
-  return (
-    <article className={styles.documentCard}>
-      <div className={styles.documentMain}>
-        <div className={styles.documentTop}>
-          <span>{document.locale.toUpperCase()}</span>
-          <span>{formatBucket(document.kind)}</span>
-        </div>
-        <h3>{document.title}</h3>
-        <p>{excerpt(document.body)}</p>
-        <div className={styles.tagRow}>
-          {document.tags.length ? document.tags.map((tag) => <span key={tag}>{tag}</span>) : <span>untagged</span>}
-        </div>
-      </div>
-      <div className={styles.documentMeta}>
-        <span>Updated {formatDate(document.updatedAt)}</span>
-        <form action={ingestKnowledgeDocumentAction.bind(null, document.id, document.title)}>
-          <button type="submit">
-            <RefreshCcw size={15} />
-            Re-ingest
-          </button>
-        </form>
-      </div>
-    </article>
-  );
-}
-
-function JobCard({ job }: { job: BackgroundJobMonitorItem }) {
-  return (
-    <article className={styles.jobCard}>
-      <div>
-        <strong>{formatJobName(job.name)}</strong>
-        <span>{formatJobPayload(job)}</span>
-      </div>
-      <span className={styles.jobState}>{formatBucket(job.state)}</span>
-      <small>{formatJobTime(job)}</small>
-      <small>{job.attemptsMade ? `${job.attemptsMade} attempts` : "first attempt"}</small>
-    </article>
-  );
-}
-
-function formatJobName(name: BackgroundJobMonitorItem["name"]) {
-  return name
-    .split(".")
-    .map((part) => formatBucket(part))
-    .join(" / ");
-}
-
-function formatJobPayload(job: BackgroundJobMonitorItem) {
-  const payload = job.payload;
-
-  if ("documentId" in payload && payload.documentId) {
-    return `document ${payload.documentId.slice(0, 8)}`;
-  }
-
-  if ("provider" in payload) {
-    return `${formatBucket(payload.provider)} · ${payload.model} · ${payload.dimensions} dimensions`;
-  }
-
-  return "tenant scoped job";
-}
-
-function formatJobTime(job: BackgroundJobMonitorItem) {
-  const timestamp = job.finishedAt ?? job.processedAt ?? job.createdAt;
-
-  if (!timestamp) {
-    return "time pending";
-  }
-
-  return new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    month: "short"
-  }).format(new Date(timestamp));
-}
-
-function excerpt(value: string, limit = 180) {
-  return value.length > limit ? `${value.slice(0, limit - 3).trim()}...` : value;
 }
