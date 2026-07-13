@@ -1,0 +1,117 @@
+.form {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 14px;
+}
+
+.notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(22 101 52 / 18%);
+  background: #ecfdf3;
+  padding: 10px 12px;
+  color: #176b3b;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.section {
+  display: grid;
+  gap: 10px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal-dark);
+  font-size: 0.86rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.field input,
+.field select {
+  min-width: 0;
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.field input:focus,
+.field select:focus {
+  border-color: rgb(15 118 110 / 48%);
+  outline: 2px solid rgb(15 118 110 / 12%);
+  outline-offset: 0;
+}
+
+.hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.actions button:hover,
+.actions button:focus-visible {
+  background: var(--teal-dark);
+}
+
+@media (min-width: 720px) {
+  .fieldGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

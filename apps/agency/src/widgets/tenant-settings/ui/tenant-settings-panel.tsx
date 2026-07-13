@@ -1,10 +1,19 @@
 import { BadgeCheck, Building2, CircleDot, Code2, Globe2, KeyRound, Palette, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
 import type { ReactNode } from "react";
+import { UpdateTenantSettingsForm } from "@features/tenant-settings-update/ui/update-tenant-settings-form";
 import type { TenantSnapshot, TenantUsageMetric, TenantUsageResponse } from "@propertyflow/contracts";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
 import styles from "./tenant-settings-panel.module.css";
 
-export function TenantSettingsPanel({ tenant, usage }: { tenant: TenantSnapshot; usage: TenantUsageResponse }) {
+export function TenantSettingsPanel({
+  saved,
+  tenant,
+  usage
+}: {
+  saved?: boolean;
+  tenant: TenantSnapshot;
+  usage: TenantUsageResponse;
+}) {
   return (
     <>
       <section className={styles.kpiGrid} aria-label="Tenant settings overview">
@@ -56,6 +65,18 @@ export function TenantSettingsPanel({ tenant, usage }: { tenant: TenantSnapshot;
             <Field label="Logo URL" value={tenant.branding.logoUrl ?? "not configured"} />
           </div>
         </section>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <div>
+            <p className="section-kicker">Editable setup</p>
+            <h2 className={styles.panelTitle}>Update workspace settings</h2>
+          </div>
+          <SlidersHorizontal size={20} />
+        </div>
+
+        <UpdateTenantSettingsForm saved={saved} tenant={tenant} />
       </section>
 
       <section className={styles.panel}>

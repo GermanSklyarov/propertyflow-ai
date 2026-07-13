@@ -2,7 +2,15 @@ import type { TenantSnapshot, TenantUsageResponse } from "@propertyflow/contract
 import { TenantSettingsPanel } from "@widgets/tenant-settings/ui/tenant-settings-panel";
 import styles from "./settings-page.module.css";
 
-export function SettingsPage({ tenant, usage }: { tenant: TenantSnapshot; usage: TenantUsageResponse }) {
+export function SettingsPage({
+  settingsSaved,
+  tenant,
+  usage
+}: {
+  settingsSaved?: boolean;
+  tenant: TenantSnapshot;
+  usage: TenantUsageResponse;
+}) {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -17,7 +25,7 @@ export function SettingsPage({ tenant, usage }: { tenant: TenantSnapshot; usage:
           <span className={styles.statusBadge}>{tenant.status}</span>
         </header>
 
-        <TenantSettingsPanel tenant={tenant} usage={usage} />
+        <TenantSettingsPanel saved={settingsSaved} tenant={tenant} usage={usage} />
       </div>
     </main>
   );

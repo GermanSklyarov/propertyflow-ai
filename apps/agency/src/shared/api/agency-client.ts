@@ -35,7 +35,8 @@ import type {
   SavedSearchOpportunitiesResponse,
   TenantDashboardMetrics,
   TenantSnapshot,
-  TenantUsageResponse
+  TenantUsageResponse,
+  UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 
@@ -588,6 +589,23 @@ export async function getTenantUsage(): Promise<TenantUsageResponse> {
   } catch {
     return demoTenantUsageResponse();
   }
+}
+
+export async function updateTenantSettings(request: UpdateTenantSettingsRequest): Promise<TenantSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/tenants/current/settings`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update tenant settings: ${response.status}`);
+  }
+
+  return (await response.json()) as TenantSnapshot;
 }
 
 function toQueryString(request: object) {

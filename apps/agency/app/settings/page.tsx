@@ -2,12 +2,17 @@ import { currentTenantQueryOptions, tenantUsageQueryOptions } from "@entities/te
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { SettingsPage } from "@views/settings/ui/settings-page";
 
-export default async function AgencySettingsPage() {
+export default async function AgencySettingsPage({
+  searchParams
+}: {
+  searchParams: Promise<{ updated?: string }>;
+}) {
+  const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
   const [tenant, usage] = await Promise.all([
     queryClient.ensureQueryData(currentTenantQueryOptions()),
     queryClient.ensureQueryData(tenantUsageQueryOptions())
   ]);
 
-  return <SettingsPage tenant={tenant} usage={usage} />;
+  return <SettingsPage settingsSaved={query.updated === "tenant-settings"} tenant={tenant} usage={usage} />;
 }
