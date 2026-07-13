@@ -73,6 +73,9 @@ export class BackgroundJobPolicyService {
         this.requireEnum(payload, "source", importSources);
         this.optionalString(payload, "objectUrl");
         this.optionalBoolean(payload, "dryRun");
+        if ((payload.source === "csv" || payload.source === "json") && !payload.objectUrl) {
+          throw new BadRequestException("objectUrl is required for csv and json property imports");
+        }
         return;
       case "properties.ai_description.generate":
         this.requireString(payload, "propertyId");

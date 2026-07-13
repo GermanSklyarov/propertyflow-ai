@@ -19,6 +19,7 @@ import {
 } from "@propertyflow/contracts";
 import { loadAppConfig } from "@propertyflow/config";
 import { PropertyAiOutputWriter } from "./property-ai-output-writer.js";
+import { PropertyImporter } from "./property-importer.js";
 import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
@@ -53,6 +54,7 @@ interface SavedSearchAlertRow {
 export class PropertyflowWorker {
   private readonly pool: Pool;
   private readonly aiOutputWriter: PropertyAiOutputWriter;
+  private readonly propertyImporter: PropertyImporter;
   private readonly searchIndexer: PropertySearchIndexer;
   private readonly connection: Redis;
   private readonly worker: Worker<BackgroundJobPayload, unknown, BackgroundJobName>;
@@ -66,6 +68,7 @@ export class PropertyflowWorker {
     });
 
     this.aiOutputWriter = new PropertyAiOutputWriter(this.pool);
+    this.propertyImporter = new PropertyImporter(this.pool);
 
     this.searchIndexer = new PropertySearchIndexer(
       this.pool,
@@ -134,13 +137,7 @@ export class PropertyflowWorker {
   }
 
   private async importProperties(job: PropertyImportJob): Promise<Record<string, unknown>> {
-    return {
-      tenantId: job.data.tenantId,
-      source: job.data.source,
-      dryRun: job.data.dryRun ?? false,
-      imported: 0,
-      skipped: 0
-    };
+    return this.propertyImporter.import(job);
   }
 
   private async ingestKnowledgeDocument(job: KnowledgeDocumentIngestJob): Promise<Record<string, unknown>> {
