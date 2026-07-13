@@ -126,7 +126,6 @@
 }
 
 .kpiCard,
-.publicationPanel,
 .panel {
   border: 1px solid var(--line);
   background: var(--panel-strong);
@@ -145,8 +144,7 @@
 .kpiCard span,
 .kpiCard small,
 .field span,
-.metric span,
-.readinessItem span {
+.metric span {
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 900;
@@ -172,81 +170,6 @@
   color: var(--teal-dark);
 }
 
-.publicationPanel {
-  display: grid;
-  gap: 14px;
-  padding: 16px;
-}
-
-.publicationHeader {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.previewLink {
-  display: inline-flex;
-  min-height: 38px;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  border: 1px solid rgb(15 118 110 / 22%);
-  background: var(--teal);
-  padding: 0 12px;
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 900;
-  text-decoration: none;
-}
-
-.previewLink:hover,
-.previewLink:focus-visible {
-  background: var(--teal-dark);
-}
-
-.publicationGrid {
-  display: grid;
-  gap: 10px;
-}
-
-.publicationItem {
-  display: grid;
-  min-width: 0;
-  gap: 7px;
-  border: 1px solid rgb(15 118 110 / 12%);
-  background: #fff;
-  padding: 12px;
-}
-
-.publicationItem span,
-.publicationItem small {
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.publicationItem strong {
-  color: var(--teal-dark);
-  font-size: 1rem;
-}
-
-.publicationItem small {
-  overflow-wrap: anywhere;
-  line-height: 1.35;
-  text-transform: none;
-}
-
-.publicationReady {
-  background: #ecfdf3;
-}
-
-.publicationBlocked {
-  background: #fff8e8;
-}
-
 .panel {
   padding: 16px;
 }
@@ -267,8 +190,6 @@
 
 .fieldGrid,
 .economicsGrid,
-.readinessList,
-.actionList,
 .chipGrid {
   display: grid;
   gap: 10px;
@@ -280,9 +201,7 @@
 }
 
 .field,
-.metric,
-.readinessItem,
-.actionItem {
+.metric {
   display: grid;
   gap: 8px;
   border: 1px solid rgb(15 118 110 / 12%);
@@ -302,8 +221,7 @@
 }
 
 .field strong,
-.metric strong,
-.actionItem strong {
+.metric strong {
   min-width: 0;
   overflow-wrap: anywhere;
   color: var(--teal-dark);
@@ -312,27 +230,6 @@
 
 .metric strong {
   font-size: 1.25rem;
-}
-
-.readinessItem {
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-}
-
-.done {
-  background: #ecfdf3;
-}
-
-.missing {
-  background: #fff8e8;
-}
-
-.actionItem p {
-  margin: 0;
-  color: #475955;
-  font-size: 0.9rem;
-  font-weight: 700;
-  line-height: 1.45;
 }
 
 .chipGrid {
@@ -356,11 +253,6 @@
   .layout {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-
-  .publicationGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
 }
 
 @media (min-width: 1180px) {

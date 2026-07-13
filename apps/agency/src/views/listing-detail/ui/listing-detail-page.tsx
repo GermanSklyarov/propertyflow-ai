@@ -1,12 +1,9 @@
 import Link from "next/link";
 import {
   ArrowLeft,
-  BadgeCheck,
   Building2,
   CheckCircle2,
   CircleDollarSign,
-  DraftingCompass,
-  ExternalLink,
   Gauge,
   Home,
   KeyRound,
@@ -15,13 +12,26 @@ import {
   Sparkles,
   Waves
 } from "lucide-react";
+import {
+  formatCompactListingMoney,
+  formatListingDistance,
+  formatListingMoney,
+  formatListingType
+} from "@entities/listing/lib/listing-formatters";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
+import {
+  buildListingNextActions,
+  buildListingPublicationSummary,
+  buildListingReadiness
+} from "@entities/listing/lib/listing-readiness";
 import { ListingAiDescriptionReviewPanel } from "@features/listing-ai-description-review/ui/listing-ai-description-review-panel";
 import { ListingImageAnalysisReviewPanel } from "@features/listing-image-analysis-review/ui/listing-image-analysis-review-panel";
 import type { PropertyAiAssets, PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
+import { ListingAgentGuidancePanel } from "@widgets/listing-agent-guidance/ui/listing-agent-guidance-panel";
 import { ListingMediaPanel } from "@widgets/listing-media/ui/listing-media-panel";
+import { ListingPublicationPanel } from "@widgets/listing-publication/ui/listing-publication-panel";
 import styles from "./listing-detail-page.module.css";
 
 export function ListingDetailPage({
@@ -41,9 +51,9 @@ export function ListingDetailPage({
 }) {
   const economics = buildEconomics(listing);
   const media = buildListingMediaSummary(gallery);
-  const publication = buildPublicationSummary(listing, media);
-  const readiness = getReadiness(listing);
-  const nextActions = buildNextActions(listing, readiness.score);
+  const publication = buildListingPublicationSummary(listing, media.activeCount);
+  const readiness = buildListingReadiness(listing);
+  const nextActions = buildListingNextActions(listing, readiness.score);
 
   return (
     <main className={styles.page} id="listing-brief">
@@ -73,33 +83,18 @@ export function ListingDetailPage({
         <ListingMediaPanel gallery={gallery} listingId={listing.id} listingTitle={listing.title} />
 
         <section className={styles.kpiGrid} aria-label="Listing detail overview">
-          <KpiCard icon={<CircleDollarSign size={18} />} label="Ask" note={formatListingType(listing.listingType)} value={formatCompactMoney(listing.price)} />
+          <KpiCard
+            icon={<CircleDollarSign size={18} />}
+            label="Ask"
+            note={formatListingType(listing.listingType)}
+            value={formatCompactListingMoney(listing.price)}
+          />
           <KpiCard icon={<KeyRound size={18} />} label="Rent signal" note={economics.rentNote} value={economics.rentValue} />
           <KpiCard icon={<Gauge size={18} />} label="Gross yield" note="Annual rent / ask" value={economics.grossYieldValue} />
           <KpiCard icon={<Sparkles size={18} />} label="AI readiness" note={readiness.note} value={`${readiness.score}/5`} />
         </section>
 
-        <section className={styles.publicationPanel} aria-label="Client publication sync">
-          <div className={styles.publicationHeader}>
-            <div>
-              <p className="section-kicker">Client publication</p>
-              <h2 className={styles.panelTitle}>{publication.title}</h2>
-            </div>
-            <a className={styles.previewLink} href={publication.previewHref} target="_blank" rel="noreferrer">
-              Preview public page
-              <ExternalLink size={15} />
-            </a>
-          </div>
-          <div className={styles.publicationGrid}>
-            {publication.items.map((item) => (
-              <article className={`${styles.publicationItem} ${item.ready ? styles.publicationReady : styles.publicationBlocked}`} key={item.label}>
-                <span>{item.ready ? "Ready" : "Missing"}</span>
-                <strong>{item.label}</strong>
-                <small>{item.detail}</small>
-              </article>
-            ))}
-          </div>
-        </section>
+        <ListingPublicationPanel publication={publication} />
 
         <section className={styles.layout}>
           <section className={styles.panel}>
@@ -117,7 +112,11 @@ export function ListingDetailPage({
               <Field label="Bedrooms" value={`${listing.bedrooms}`} />
               <Field label="Bathrooms" value={`${listing.bathrooms}`} />
               <Field label="Floor" value={listing.floor ? `${listing.floor}` : "not set"} />
-              <Field icon={<Waves size={15} />} label="Beach" value={listing.beachDistanceMeters ? formatDistance(listing.beachDistanceMeters) : "not set"} />
+              <Field
+                icon={<Waves size={15} />}
+                label="Beach"
+                value={listing.beachDistanceMeters ? formatListingDistance(listing.beachDistanceMeters) : "not set"}
+              />
               <Field label="Address" value={listing.address ?? "not provided"} wide />
             </div>
           </section>
@@ -139,43 +138,7 @@ export function ListingDetailPage({
           </section>
         </section>
 
-        <section className={styles.layout}>
-          <section className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <div>
-                <p className="section-kicker">AI readiness</p>
-                <h2 className={styles.panelTitle}>Publication signals</h2>
-              </div>
-              <BadgeCheck size={20} />
-            </div>
-            <div className={styles.readinessList}>
-              {readiness.checks.map((check) => (
-                <article className={`${styles.readinessItem} ${check.done ? styles.done : styles.missing}`} key={check.label}>
-                  <span>{check.done ? "Ready" : "Missing"}</span>
-                  <strong>{check.label}</strong>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className={styles.panel}>
-            <div className={styles.panelHeader}>
-              <div>
-                <p className="section-kicker">Agent actions</p>
-                <h2 className={styles.panelTitle}>Next best steps</h2>
-              </div>
-              <DraftingCompass size={20} />
-            </div>
-            <div className={styles.actionList}>
-              {nextActions.map((action) => (
-                <article className={styles.actionItem} key={action.title}>
-                  <strong>{action.title}</strong>
-                  <p>{action.body}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-        </section>
+        <ListingAgentGuidancePanel nextActions={nextActions} readiness={readiness} />
 
         <ListingAiDescriptionReviewPanel
           appliedDescriptionAssetId={appliedDescriptionAssetId}
@@ -274,132 +237,19 @@ function Metric({ label, value }: { label: string; value: string }) {
   );
 }
 
-function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildListingMediaSummary>) {
-  const items = [
-    {
-      detail: media.activeCount ? `${media.activeCount} public-ready photos` : "Add at least one cover photo",
-      label: "Gallery",
-      ready: media.activeCount > 0
-    },
-    {
-      detail: listing.description ? "Client-facing description exists" : "Generate or write public description",
-      label: "Description",
-      ready: Boolean(listing.description)
-    },
-    {
-      detail: formatCompactMoney(listing.price),
-      label: "Price",
-      ready: listing.price.amount > 0
-    },
-    {
-      detail: listing.amenities.length ? `${listing.amenities.length} tags available` : "Add searchable amenity tags",
-      label: "Amenities",
-      ready: listing.amenities.length > 0
-    },
-    {
-      detail: listing.status === "available" ? "Visible candidate" : `Currently ${formatBucket(listing.status)}`,
-      label: "Availability",
-      ready: listing.status === "available"
-    },
-    {
-      detail:
-        listing.rentalPriceMonthly || listing.monthlyRentEstimate || listing.maintenanceFeeMonthly
-          ? "Economics enrich public AI summary"
-          : "Add rent or ownership cost signal",
-      label: "Economics",
-      ready: Boolean(listing.rentalPriceMonthly || listing.monthlyRentEstimate || listing.maintenanceFeeMonthly)
-    }
-  ];
-  const readyCount = items.filter((item) => item.ready).length;
-
-  return {
-    items,
-    previewHref: buildPublicPreviewHref(listing.id),
-    title: `${readyCount}/${items.length} public fields ready`
-  };
-}
-
-function buildPublicPreviewHref(propertyId: string) {
-  const webBaseUrl = process.env.NEXT_PUBLIC_PROPERTYFLOW_WEB_URL ?? "http://localhost:3000";
-
-  return `${webBaseUrl.replace(/\/$/, "")}/properties/${propertyId}`;
-}
-
 function buildEconomics(listing: PropertySnapshot) {
   const rent = listing.monthlyRentEstimate ?? listing.rentalPriceMonthly;
   const grossYield = rent && listing.price.amount > 0 ? (rent.amount * 12) / listing.price.amount : undefined;
 
   return {
-    annualRentValue: rent ? formatMoney({ ...rent, amount: rent.amount * 12 }) : "not estimated",
+    annualRentValue: rent ? formatListingMoney({ ...rent, amount: rent.amount * 12 }) : "not estimated",
     grossYieldValue: grossYield ? formatPercent(grossYield, { maximumFractionDigits: 1 }) : "not enough data",
-    maintenanceValue: listing.maintenanceFeeMonthly ? `${formatMoney(listing.maintenanceFeeMonthly)}/mo` : "not set",
-    pricePerSqm: listing.areaSqm > 0 ? formatMoney({ ...listing.price, amount: listing.price.amount / listing.areaSqm }) : "not set",
+    maintenanceValue: listing.maintenanceFeeMonthly ? `${formatListingMoney(listing.maintenanceFeeMonthly)}/mo` : "not set",
+    pricePerSqm: listing.areaSqm > 0 ? formatListingMoney({ ...listing.price, amount: listing.price.amount / listing.areaSqm }) : "not set",
     rentNote: listing.rentalPriceMonthly ? "Listed monthly rent" : rent ? "AI rent estimate" : "Needs rent signal",
-    rentValue: rent ? `${formatCompactMoney(rent)}/mo` : "not set",
+    rentValue: rent ? `${formatCompactListingMoney(rent)}/mo` : "not set",
     yieldQuality: grossYield ? getYieldQuality(grossYield) : "needs rent estimate"
   };
-}
-
-function getReadiness(listing: PropertySnapshot) {
-  const checks = [
-    { done: Boolean(listing.description), label: "Description" },
-    { done: listing.amenities.length >= 4, label: "Amenity depth" },
-    { done: Boolean(listing.beachDistanceMeters), label: "Distance context" },
-    { done: Boolean(listing.monthlyRentEstimate || listing.rentalPriceMonthly), label: "Rent signal" },
-    { done: Boolean(listing.maintenanceFeeMonthly), label: "Ownership cost" }
-  ];
-  const score = checks.filter((check) => check.done).length;
-  const note = score >= 4 ? "Ready for AI-assisted pitching" : "Needs enrichment";
-
-  return { checks, note, score };
-}
-
-function buildNextActions(listing: PropertySnapshot, readinessScore: number) {
-  const actions = [];
-
-  if (!listing.description) {
-    actions.push({
-      body: "Generate multilingual copy before sending this listing to clients.",
-      title: "Run AI description"
-    });
-  }
-
-  if (listing.amenities.length < 4) {
-    actions.push({
-      body: "Add amenities from photos or agent notes so search, concierge, and compare can explain fit.",
-      title: "Enrich amenities"
-    });
-  }
-
-  if (!listing.monthlyRentEstimate && !listing.rentalPriceMonthly) {
-    actions.push({
-      body: "Add an estimated monthly rent to unlock yield, investment, and rental-readiness signals.",
-      title: "Add rent estimate"
-    });
-  }
-
-  if (!listing.beachDistanceMeters) {
-    actions.push({
-      body: "Add walking-distance context so the concierge can explain lifestyle and relocation fit.",
-      title: "Add location context"
-    });
-  }
-
-  if (!listing.maintenanceFeeMonthly) {
-    actions.push({
-      body: "Capture monthly maintenance to make ownership costs and investment comparisons credible.",
-      title: "Add ownership cost"
-    });
-  }
-
-  if (readinessScore >= 4) {
-    actions.push({
-      body: "Use this object in concierge recommendations and compare flows for active matching leads.",
-      title: "Push to client matching"
-    });
-  }
-
-  return actions.slice(0, 3);
 }
 
 function getYieldQuality(grossYield: number) {
@@ -412,36 +262,4 @@ function getYieldQuality(grossYield: number) {
   }
 
   return "lifestyle-led case";
-}
-
-function formatDistance(value: number) {
-  return value >= 1000 ? `${(value / 1000).toFixed(1)} km` : `${value} m`;
-}
-
-function formatListingType(value: PropertySnapshot["listingType"]) {
-  const labels = {
-    rent: "For rent",
-    sale: "For sale",
-    sale_or_rent: "Sale or rent"
-  } satisfies Record<PropertySnapshot["listingType"], string>;
-
-  return labels[value];
-}
-
-function formatMoney(value: PropertySnapshot["price"]) {
-  return new Intl.NumberFormat("en", {
-    currency: value.currency,
-    maximumFractionDigits: 0,
-    notation: value.amount >= 1_000_000 ? "compact" : "standard",
-    style: "currency"
-  }).format(value.amount);
-}
-
-function formatCompactMoney(value: PropertySnapshot["price"]) {
-  return new Intl.NumberFormat("en", {
-    currency: value.currency,
-    maximumFractionDigits: value.amount >= 1_000_000 ? 1 : 0,
-    notation: "compact",
-    style: "currency"
-  }).format(value.amount);
 }
