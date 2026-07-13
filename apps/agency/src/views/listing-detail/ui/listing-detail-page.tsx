@@ -3,35 +3,22 @@ import {
   ArrowLeft,
   BadgeCheck,
   Building2,
-  Check,
   CheckCircle2,
   CircleDollarSign,
   DraftingCompass,
   ExternalLink,
-  FileText,
   Gauge,
   Home,
   KeyRound,
   MapPin,
   Ruler,
-  ScanSearch,
   Sparkles,
-  Waves,
-  X
+  Waves
 } from "lucide-react";
-import {
-  applyPropertyImageAnalysisAction,
-  applyPropertyDescriptionAction,
-  reviewPropertyDescriptionAction,
-  reviewPropertyImageAnalysisAction
-} from "@entities/listing/api/listing-actions";
-import { buildGalleryImageSrc, buildListingMediaSummary } from "@entities/listing/lib/listing-media";
-import type {
-  GeneratedPropertyDescription,
-  PropertyAiAssets,
-  PropertyImageAnalysisResult,
-  PropertyImageGalleryResponse
-} from "@propertyflow/contracts";
+import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
+import { ListingAiDescriptionReviewPanel } from "@features/listing-ai-description-review/ui/listing-ai-description-review-panel";
+import { ListingImageAnalysisReviewPanel } from "@features/listing-image-analysis-review/ui/listing-image-analysis-review-panel";
+import type { PropertyAiAssets, PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import { ListingMediaPanel } from "@widgets/listing-media/ui/listing-media-panel";
@@ -57,8 +44,6 @@ export function ListingDetailPage({
   const publication = buildPublicationSummary(listing, media);
   const readiness = getReadiness(listing);
   const nextActions = buildNextActions(listing, readiness.score);
-  const imageAnalysisEmptyCopy = buildImageAnalysisEmptyCopy(media);
-  const galleryImagesById = new Map(gallery.images.map((image) => [image.id, image]));
 
   return (
     <main className={styles.page} id="listing-brief">
@@ -192,159 +177,20 @@ export function ListingDetailPage({
           </section>
         </section>
 
-        <section className={styles.panel} id="ai-descriptions">
-          <div className={styles.panelHeader}>
-            <div>
-              <p className="section-kicker">AI descriptions</p>
-              <h2 className={styles.panelTitle}>{buildDescriptionAssetTitle(aiAssets.descriptions)}</h2>
-            </div>
-            <FileText size={20} />
-          </div>
-          {aiAssets.descriptions.length ? (
-            <div className={styles.descriptionGrid}>
-              {aiAssets.descriptions.map((asset) => (
-                <article className={styles.descriptionCard} key={asset.id}>
-                  <div className={styles.descriptionMeta}>
-                    <span className={`${styles.analysisStatus} ${styles[`analysis-${asset.reviewStatus}`]}`}>
-                      {formatBucket(asset.reviewStatus)}
-                    </span>
-                    <span>{asset.locale.toUpperCase()}</span>
-                  </div>
-                  <h3>{asset.title}</h3>
-                  <p>{asset.description}</p>
-                  <div className={styles.analysisActions}>
-                    <form action={reviewPropertyDescriptionAction.bind(null, listing.id, asset.id, "approved")}>
-                      <button className={`${styles.analysisActionButton} ${styles.approveButton}`} type="submit">
-                        <Check size={14} />
-                        <span>Approve</span>
-                      </button>
-                    </form>
-                    <form action={reviewPropertyDescriptionAction.bind(null, listing.id, asset.id, "rejected")}>
-                      <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} type="submit">
-                        <X size={14} />
-                        <span>Reject</span>
-                      </button>
-                    </form>
-                    <form action={applyPropertyDescriptionAction.bind(null, listing.id, asset.id)}>
-                      <button
-                        className={`${styles.analysisActionButton} ${
-                          appliedDescriptionAssetId === asset.id ? styles.appliedButton : ""
-                        }`}
-                        disabled={asset.reviewStatus !== "approved"}
-                        type="submit"
-                      >
-                        {appliedDescriptionAssetId === asset.id ? (
-                          <>
-                            <CheckCircle2 size={14} />
-                            <span>Applied</span>
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles size={14} />
-                            <span>Apply copy</span>
-                          </>
-                        )}
-                      </button>
-                    </form>
-                  </div>
-                </article>
-              ))}
-            </div>
-          ) : (
-            <div className={styles.emptyAnalysis}>
-              <Sparkles size={24} />
-              <strong>No generated descriptions yet</strong>
-              <p>Run the listing assistant from AI Tools. Generated copy will appear here for human review before publishing.</p>
-            </div>
-          )}
-        </section>
+        <ListingAiDescriptionReviewPanel
+          appliedDescriptionAssetId={appliedDescriptionAssetId}
+          descriptions={aiAssets.descriptions}
+          propertyId={listing.id}
+        />
 
-        <section className={styles.panel} id="ai-image-analysis">
-          <div className={styles.panelHeader}>
-            <div>
-              <p className="section-kicker">AI image analysis</p>
-              <h2 className={styles.panelTitle}>{buildImageAnalysisTitle(aiAssets.imageAnalysis, media.activeCount)}</h2>
-            </div>
-            <ScanSearch size={20} />
-          </div>
-          {queuedImageAnalysis ? (
-            <div className={styles.analysisNotice}>
-              <Sparkles size={18} />
-              <div>
-                <strong>Photo added to the analysis queue</strong>
-                <p>The gallery has the uploaded image now. Keep the worker running and review the AI result here once it finishes.</p>
-              </div>
-            </div>
-          ) : null}
-          {aiAssets.imageAnalysis.length ? (
-            <div className={styles.analysisGrid}>
-              {aiAssets.imageAnalysis.map((asset) => {
-                const linkedImage = asset.propertyImageId ? galleryImagesById.get(asset.propertyImageId) : undefined;
-                const imageSrc = linkedImage ? buildGalleryImageSrc(linkedImage) : asset.imageUrl;
-
-                return (
-                  <article className={styles.analysisCard} key={asset.id}>
-                    <img src={imageSrc} alt={linkedImage?.caption ?? "AI analyzed listing photo"} />
-                    <div>
-                      <span className={`${styles.analysisStatus} ${styles[`analysis-${asset.reviewStatus}`]}`}>
-                        {formatBucket(asset.reviewStatus)}
-                      </span>
-                      <strong>{formatPercent(asset.confidence, { maximumFractionDigits: 0 })} confidence</strong>
-                      <div className={styles.analysisFeatures}>
-                        {asset.detectedFeatures.length ? (
-                          asset.detectedFeatures.map((feature) => <span key={feature}>{formatBucket(feature)}</span>)
-                        ) : (
-                          <span>No features detected</span>
-                        )}
-                      </div>
-                      <div className={styles.analysisActions}>
-                        <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "approved")}>
-                          <button className={`${styles.analysisActionButton} ${styles.approveButton}`} type="submit">
-                            <Check size={14} />
-                            <span>Approve</span>
-                          </button>
-                        </form>
-                        <form action={reviewPropertyImageAnalysisAction.bind(null, listing.id, asset.id, "rejected")}>
-                          <button className={`${styles.analysisActionButton} ${styles.rejectButton}`} type="submit">
-                            <X size={14} />
-                            <span>Reject</span>
-                          </button>
-                        </form>
-                        <form action={applyPropertyImageAnalysisAction.bind(null, listing.id, asset.id)}>
-                          <button
-                            className={`${styles.analysisActionButton} ${
-                              appliedImageAnalysisAssetId === asset.id ? styles.appliedButton : ""
-                            }`}
-                            disabled={asset.reviewStatus !== "approved"}
-                            type="submit"
-                          >
-                            {appliedImageAnalysisAssetId === asset.id ? (
-                              <>
-                                <CheckCircle2 size={14} />
-                                <span>Applied</span>
-                              </>
-                            ) : (
-                              <>
-                                <Sparkles size={14} />
-                                <span>Apply features</span>
-                              </>
-                            )}
-                          </button>
-                        </form>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          ) : (
-            <div className={styles.emptyAnalysis}>
-              <ScanSearch size={24} />
-              <strong>{imageAnalysisEmptyCopy.title}</strong>
-              <p>{imageAnalysisEmptyCopy.body}</p>
-            </div>
-          )}
-        </section>
+        <ListingImageAnalysisReviewPanel
+          activeImageCount={media.activeCount}
+          appliedImageAnalysisAssetId={appliedImageAnalysisAssetId}
+          gallery={gallery}
+          imageAnalysis={aiAssets.imageAnalysis}
+          propertyId={listing.id}
+          queuedImageAnalysis={queuedImageAnalysis}
+        />
 
         <section className={styles.panel} id="amenities">
           <div className={styles.panelHeader}>
@@ -426,46 +272,6 @@ function Metric({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </article>
   );
-}
-
-function buildImageAnalysisTitle(items: PropertyImageAnalysisResult[], activeImageCount: number) {
-  if (!items.length) {
-    if (activeImageCount) {
-      return `Analysis queued for ${activeImageCount} photos`;
-    }
-
-    return "Waiting for analyzed photos";
-  }
-
-  const approved = items.filter((item) => item.reviewStatus === "approved").length;
-  const draft = items.filter((item) => item.reviewStatus === "draft").length;
-
-  return `${items.length} analyzed photos, ${draft} awaiting review, ${approved} approved`;
-}
-
-function buildDescriptionAssetTitle(items: GeneratedPropertyDescription[]) {
-  if (!items.length) {
-    return "Waiting for generated copy";
-  }
-
-  const approved = items.filter((item) => item.reviewStatus === "approved").length;
-  const draft = items.filter((item) => item.reviewStatus === "draft").length;
-
-  return `${items.length} generated drafts, ${draft} awaiting review, ${approved} approved`;
-}
-
-function buildImageAnalysisEmptyCopy(media: ReturnType<typeof buildListingMediaSummary>) {
-  if (media.activeCount) {
-    return {
-      title: "Image analysis is queued",
-      body: "Photos are already in the gallery. Keep the background worker running so BullMQ can turn queued analysis jobs into reviewable AI assets."
-    };
-  }
-
-  return {
-    title: "No image analysis assets yet",
-    body: "Upload a photo with AI analysis enabled. Results will appear here for review before they update amenities."
-  };
 }
 
 function buildPublicationSummary(listing: PropertySnapshot, media: ReturnType<typeof buildListingMediaSummary>) {
