@@ -5,6 +5,7 @@ import type {
   AiChatRequest,
   AiChatResponse,
   CreateKnowledgeDocumentRequest,
+  CreatePropertyRequest,
   KnowledgeChunkEmbeddingJobPayload,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
@@ -199,6 +200,23 @@ export async function listProperties(
   } catch {
     return demoPropertySearchResponse(request);
   }
+}
+
+export async function createProperty(request: CreatePropertyRequest): Promise<PropertySnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create property: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertySnapshot;
 }
 
 export async function getProperty(propertyId: string): Promise<PropertySnapshot | null> {

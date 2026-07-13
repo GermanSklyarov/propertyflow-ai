@@ -1,3 +1,4 @@
+import { CreateListingForm } from "@features/listing-create/ui/create-listing-form";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { ListingsInventoryPanel } from "@widgets/listings-inventory/ui/listings-inventory-panel";
 import styles from "./listings-page.module.css";
@@ -16,6 +17,8 @@ export function ListingsPage({ listings, total }: { listings: PropertySnapshot[]
           </div>
           <span className={styles.totalBadge}>{total} listings</span>
         </header>
+
+        <CreateListingForm />
 
         <ListingsInventoryPanel listings={listings} />
       </div>

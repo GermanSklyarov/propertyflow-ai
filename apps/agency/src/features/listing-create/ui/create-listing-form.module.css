@@ -1,0 +1,380 @@
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
+}
+
+.drawer {
+  display: grid;
+}
+
+.drawer > summary {
+  list-style: none;
+}
+
+.drawer > summary::-webkit-details-marker,
+.advanced > summary::-webkit-details-marker {
+  display: none;
+}
+
+.openButton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px 14px;
+  cursor: pointer;
+  padding: 16px;
+}
+
+.openButton > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--teal-dark);
+  font-size: 1rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.openButton > small {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.openButton > svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--teal-dark);
+  transition: transform 140ms ease;
+}
+
+.drawer[open] .openButton > svg {
+  transform: rotate(180deg);
+}
+
+.body {
+  display: grid;
+  gap: 14px;
+  border-top: 1px solid var(--line);
+  padding: 16px;
+}
+
+.panelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panelTitle {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 2vw, 2.1rem);
+}
+
+.hint {
+  max-width: 780px;
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.form,
+.step,
+.advancedBody {
+  display: grid;
+  gap: 14px;
+}
+
+.step,
+.advanced {
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 14px;
+}
+
+.stepHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.stepHeader > span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.stepHeader h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.stepHeader p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 750;
+  line-height: 1.4;
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.field,
+.wideField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.wideField {
+  grid-column: 1 / -1;
+}
+
+.field span,
+.wideField span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.field input,
+.field select,
+.wideField input,
+.wideField textarea {
+  min-width: 0;
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.wideField textarea {
+  min-height: 86px;
+  padding: 10px;
+  resize: vertical;
+}
+
+.field input:focus,
+.field select:focus,
+.wideField input:focus,
+.wideField textarea:focus,
+.fileDrop:focus-within {
+  border-color: rgb(15 118 110 / 48%);
+  outline: 2px solid rgb(15 118 110 / 12%);
+  outline-offset: 0;
+}
+
+.fileDrop {
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px dashed rgb(15 118 110 / 28%);
+  background: #f5faf7;
+  padding: 14px;
+  color: var(--teal-dark);
+}
+
+.fileDrop span {
+  font-size: 0.9rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.fileDrop small,
+.checkbox span,
+.aiNote span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.fileDrop input {
+  cursor: pointer;
+  margin-top: 6px;
+  max-width: 100%;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.checkbox {
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--teal);
+}
+
+.chanoteGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.subSection,
+.manualFallbackGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.aiNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 10px 12px;
+  color: var(--teal-dark);
+}
+
+.aiNote svg {
+  flex: 0 0 auto;
+}
+
+.advanced {
+  padding: 0;
+}
+
+.advanced > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 12px;
+  cursor: pointer;
+  padding: 14px;
+  list-style: none;
+}
+
+.advanced > summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.advanced > summary > small {
+  grid-column: 1;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.advanced > summary > svg {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  color: var(--teal-dark);
+  transition: transform 140ms ease;
+}
+
+.advanced[open] > summary > svg {
+  transform: rotate(180deg);
+}
+
+.advancedBody {
+  border-top: 1px solid var(--line);
+  padding: 14px;
+}
+
+.commercialGrid {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f9fbf8;
+  padding: 12px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.actions button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.actions button:hover,
+.actions button:focus-visible {
+  background: var(--teal-dark);
+}
+
+.actions small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+@media (min-width: 780px) {
+  .fieldGrid,
+  .commercialGrid,
+  .chanoteGrid,
+  .manualFallbackGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .chanoteGrid .wideField {
+    grid-column: span 2;
+  }
+
+  .manualFallbackGrid .wideField {
+    grid-column: span 2;
+  }
+}
