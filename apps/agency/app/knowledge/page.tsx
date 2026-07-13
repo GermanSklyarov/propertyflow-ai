@@ -1,3 +1,4 @@
+import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { knowledgeChunkSearchQueryOptions, knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
 import type { AiChatRequest, KnowledgeChunkSearchRequest } from "@propertyflow/contracts";
 import { askAiChat } from "@shared/api/agency-client";
@@ -13,8 +14,9 @@ export default async function AgencyKnowledgePage({
   const queryClient = createPropertyFlowQueryClient();
   const retrievalRequest = buildRetrievalRequest(query);
   const chatRequest = buildChatRequest(query);
-  const [documents, retrieval] = await Promise.all([
+  const [documents, jobs, retrieval] = await Promise.all([
     queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 24 })),
+    queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 })),
     queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest))
   ]);
   const chat = chatRequest ? await askAiChat(chatRequest) : undefined;
@@ -24,6 +26,7 @@ export default async function AgencyKnowledgePage({
       chat={chat}
       chatRequest={chatRequest}
       documents={documents.items}
+      jobs={jobs.items.filter((job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed")}
       notice={
         query.created
           ? { message: `${query.created} was added and queued for ingestion.`, tone: "success" }

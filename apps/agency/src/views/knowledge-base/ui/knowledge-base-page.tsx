@@ -8,6 +8,7 @@ import {
 import type {
   AiChatRequest,
   AiChatResponse,
+  BackgroundJobMonitorItem,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentKind,
@@ -23,6 +24,7 @@ export function KnowledgeBasePage({
   chat,
   chatRequest,
   documents,
+  jobs,
   notice,
   retrieval,
   retrievalRequest,
@@ -31,6 +33,7 @@ export function KnowledgeBasePage({
   chat?: AiChatResponse;
   chatRequest?: AiChatRequest;
   documents: KnowledgeDocumentSnapshot[];
+  jobs: BackgroundJobMonitorItem[];
   notice?: { message: string; tone: "success" };
   retrieval: KnowledgeChunkSearchResponse;
   retrievalRequest: KnowledgeChunkSearchRequest;
@@ -215,6 +218,30 @@ export function KnowledgeBasePage({
           )}
         </section>
 
+        <section className={styles.panel} id="knowledge-jobs">
+          <div className={styles.panelHeader}>
+            <div>
+              <p className="section-kicker">Worker monitor</p>
+              <h2 className={styles.panelTitle}>Knowledge jobs</h2>
+            </div>
+            <span className={styles.statusBadge}>{jobs.length} recent</span>
+          </div>
+
+          {jobs.length ? (
+            <div className={styles.jobList}>
+              {jobs.map((job) => (
+                <JobCard job={job} key={job.id} />
+              ))}
+            </div>
+          ) : (
+            <div className={styles.emptyState}>
+              <DatabaseZap size={24} />
+              <strong>No knowledge jobs yet</strong>
+              <p>Create a document, re-ingest a source, or queue embeddings to see worker activity here.</p>
+            </div>
+          )}
+        </section>
+
         <section className={styles.layout}>
           <section className={styles.panel}>
             <div className={styles.panelHeader}>
@@ -357,6 +384,56 @@ function DocumentCard({ document }: { document: KnowledgeDocumentSnapshot }) {
       </div>
     </article>
   );
+}
+
+function JobCard({ job }: { job: BackgroundJobMonitorItem }) {
+  return (
+    <article className={styles.jobCard}>
+      <div>
+        <strong>{formatJobName(job.name)}</strong>
+        <span>{formatJobPayload(job)}</span>
+      </div>
+      <span className={styles.jobState}>{formatBucket(job.state)}</span>
+      <small>{formatJobTime(job)}</small>
+      <small>{job.attemptsMade ? `${job.attemptsMade} attempts` : "first attempt"}</small>
+    </article>
+  );
+}
+
+function formatJobName(name: BackgroundJobMonitorItem["name"]) {
+  return name
+    .split(".")
+    .map((part) => formatBucket(part))
+    .join(" / ");
+}
+
+function formatJobPayload(job: BackgroundJobMonitorItem) {
+  const payload = job.payload;
+
+  if ("documentId" in payload && payload.documentId) {
+    return `document ${payload.documentId.slice(0, 8)}`;
+  }
+
+  if ("provider" in payload) {
+    return `${formatBucket(payload.provider)} · ${payload.model} · ${payload.dimensions} dimensions`;
+  }
+
+  return "tenant scoped job";
+}
+
+function formatJobTime(job: BackgroundJobMonitorItem) {
+  const timestamp = job.finishedAt ?? job.processedAt ?? job.createdAt;
+
+  if (!timestamp) {
+    return "time pending";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short"
+  }).format(new Date(timestamp));
 }
 
 function excerpt(value: string, limit = 180) {

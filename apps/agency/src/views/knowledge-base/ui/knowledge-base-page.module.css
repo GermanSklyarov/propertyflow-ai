@@ -246,7 +246,8 @@
 
 .signalList,
 .documentList,
-.chunkList {
+.chunkList,
+.jobList {
   display: grid;
   gap: 10px;
 }
@@ -430,6 +431,51 @@
 .chunkMeta span {
   border-left: 2px solid rgb(15 118 110 / 20%);
   padding-left: 8px;
+}
+
+.jobCard {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 12px;
+}
+
+.jobCard div {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.jobCard strong {
+  color: var(--teal-dark);
+  font-size: 0.92rem;
+  line-height: 1.25;
+}
+
+.jobCard div span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.jobCard small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.jobState {
+  width: fit-content;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  padding: 6px 8px;
+  color: var(--teal-dark);
+  font-size: 0.7rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .documentMeta {
