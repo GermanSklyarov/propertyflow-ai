@@ -66,7 +66,8 @@ export class JobQueueService implements OnModuleDestroy {
             processedAt: job.processedOn ? new Date(job.processedOn).toISOString() : undefined,
             finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : undefined,
             failedReason: job.failedReason,
-            payload: job.data
+            payload: job.data,
+            result: job.returnvalue
           };
         })
     );

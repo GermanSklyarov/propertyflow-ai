@@ -329,6 +329,37 @@
   font-weight: 850;
 }
 
+.resultSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 8px;
+}
+
+.resultSummary strong,
+.resultSummary span {
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.issueList {
+  display: grid;
+  gap: 5px;
+  border: 1px solid rgb(220 91 69 / 18%);
+  background: #fff8f4;
+  padding: 8px;
+}
+
+.issueList small {
+  color: #943b2f;
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
 .failure {
   margin: 0;
   color: #943b2f;

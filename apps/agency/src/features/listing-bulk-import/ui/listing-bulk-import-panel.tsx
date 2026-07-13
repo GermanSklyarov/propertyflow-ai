@@ -101,6 +101,7 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
                 <div className={styles.jobList}>
                   {jobs.map((job) => {
                     const progress = getImportProgress(job);
+                    const result = getImportResult(job);
 
                     return (
                       <article className={styles.jobCard} key={job.id}>
@@ -117,6 +118,23 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
                           <small>{progress.total} total</small>
                           <small>{formatJobTime(job)}</small>
                         </div>
+                        {result ? (
+                          <div className={styles.resultSummary}>
+                            <strong>{result.dryRun ? "Dry-run complete" : "Import complete"}</strong>
+                            <span>
+                              {result.imported} imported · {result.skipped} skipped · {result.total} rows
+                            </span>
+                          </div>
+                        ) : null}
+                        {result?.issues?.length ? (
+                          <div className={styles.issueList}>
+                            {result.issues.map((issue) => (
+                              <small key={`${job.id}-${issue.rowNumber}-${issue.reason}`}>
+                                Row {issue.rowNumber}: {issue.reason}
+                              </small>
+                            ))}
+                          </div>
+                        ) : null}
                         {job.failedReason ? <p className={styles.failure}>{job.failedReason}</p> : null}
                       </article>
                     );
@@ -156,8 +174,45 @@ function getImportProgress(job: BackgroundJobMonitorItem) {
   };
 }
 
+function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undefined {
+  if (!isRecord(job.result)) {
+    return undefined;
+  }
+
+  const imported = getProgressNumber(job.result.imported);
+  const skipped = getProgressNumber(job.result.skipped);
+  const total = getProgressNumber(job.result.total);
+  const dryRun = job.result.dryRun === true;
+  const issues = Array.isArray(job.result.issues)
+    ? job.result.issues.filter(isImportIssue).slice(0, 3)
+    : [];
+
+  return { dryRun, imported, issues, skipped, total };
+}
+
 function isProgressObject(value: BackgroundJobMonitorItem["progress"]): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+interface ImportJobResult {
+  dryRun: boolean;
+  imported: number;
+  issues: ImportIssue[];
+  skipped: number;
+  total: number;
+}
+
+interface ImportIssue {
+  reason: string;
+  rowNumber: number;
+}
+
+function isImportIssue(value: unknown): value is ImportIssue {
+  return isRecord(value) && typeof value.reason === "string" && typeof value.rowNumber === "number";
 }
 
 function getProgressNumber(value: unknown) {

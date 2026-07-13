@@ -1907,6 +1907,7 @@ export interface BackgroundJobMonitorItem {
   finishedAt?: string;
   failedReason?: string;
   payload: BackgroundJobPayload;
+  result?: unknown;
 }
 
 export interface BackgroundJobMonitorResponse {
