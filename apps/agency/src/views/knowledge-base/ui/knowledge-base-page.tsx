@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { Bot, BookOpenText, DatabaseZap, FileText, Languages, Plus, RefreshCcw, Search, SearchCheck, Tags } from "lucide-react";
-import { createKnowledgeDocumentAction, ingestKnowledgeDocumentAction } from "@entities/knowledge/api/knowledge-actions";
+import {
+  createKnowledgeDocumentAction,
+  embedKnowledgeChunksAction,
+  ingestKnowledgeDocumentAction
+} from "@entities/knowledge/api/knowledge-actions";
 import type {
   AiChatRequest,
   AiChatResponse,
@@ -103,6 +107,16 @@ export function KnowledgeBasePage({
             <button type="submit">
               <Search size={16} />
               Test retrieval
+            </button>
+          </form>
+          <form action={embedKnowledgeChunksAction} className={styles.embedForm}>
+            <input name="q" type="hidden" value={retrievalRequest.query} />
+            <input name="locale" type="hidden" value={retrievalRequest.locale ?? ""} />
+            <input name="kind" type="hidden" value={retrievalRequest.kind ?? ""} />
+            <span>Queue local-hash embeddings for pending chunks, then retest retrieval quality.</span>
+            <button type="submit">
+              <DatabaseZap size={16} />
+              Queue embeddings
             </button>
           </form>
 

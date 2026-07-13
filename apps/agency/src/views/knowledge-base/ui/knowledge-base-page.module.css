@@ -181,6 +181,7 @@
 
 .documentForm button,
 .documentMeta button,
+.embedForm button,
 .chatForm button,
 .retrievalForm button {
   display: inline-flex;
@@ -204,11 +205,43 @@
 .documentForm button:focus-visible,
 .documentMeta button:hover,
 .documentMeta button:focus-visible,
+.embedForm button:hover,
+.embedForm button:focus-visible,
 .chatForm button:hover,
 .chatForm button:focus-visible,
 .retrievalForm button:hover,
 .retrievalForm button:focus-visible {
   background: var(--teal-dark);
+}
+
+.embedForm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 0 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 12px;
+}
+
+.embedForm span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+.embedForm button {
+  min-height: 36px;
+  background: #fff;
+  color: var(--teal-dark);
+}
+
+.embedForm button:hover,
+.embedForm button:focus-visible {
+  color: #fff;
 }
 
 .signalList,

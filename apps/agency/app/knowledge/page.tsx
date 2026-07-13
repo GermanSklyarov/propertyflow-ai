@@ -7,7 +7,7 @@ import { KnowledgeBasePage } from "@views/knowledge-base/ui/knowledge-base-page"
 export default async function AgencyKnowledgePage({
   searchParams
 }: {
-  searchParams: Promise<{ ask?: string; created?: string; document?: string; ingest?: string; kind?: string; locale?: string; q?: string }>;
+  searchParams: Promise<{ ask?: string; created?: string; document?: string; embed?: string; ingest?: string; kind?: string; locale?: string; q?: string }>;
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
@@ -29,7 +29,9 @@ export default async function AgencyKnowledgePage({
           ? { message: `${query.created} was added and queued for ingestion.`, tone: "success" }
           : query.ingest === "queued"
             ? { message: `${query.document ?? "Knowledge document"} was queued for re-ingestion.`, tone: "success" }
-            : undefined
+            : query.embed === "queued"
+              ? { message: "Knowledge chunk embedding was queued for the current tenant.", tone: "success" }
+              : undefined
       }
       retrieval={retrieval}
       retrievalRequest={retrievalRequest}

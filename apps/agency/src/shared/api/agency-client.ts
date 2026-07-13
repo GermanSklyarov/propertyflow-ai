@@ -5,6 +5,7 @@ import type {
   AiChatRequest,
   AiChatResponse,
   CreateKnowledgeDocumentRequest,
+  KnowledgeChunkEmbeddingJobPayload,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
@@ -504,6 +505,25 @@ export async function askAiChat(request: AiChatRequest): Promise<AiChatResponse>
   } catch {
     return demoAiChatResponse(request);
   }
+}
+
+export async function embedKnowledgeChunks(
+  request: Omit<KnowledgeChunkEmbeddingJobPayload, "tenantId" | "requestedByUserId">
+): Promise<BackgroundJobSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/embed`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to enqueue knowledge chunk embedding: ${response.status}`);
+  }
+
+  return (await response.json()) as BackgroundJobSnapshot;
 }
 
 export async function createKnowledgeDocument(request: CreateKnowledgeDocumentRequest): Promise<KnowledgeDocumentSnapshot> {
