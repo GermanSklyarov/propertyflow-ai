@@ -2,6 +2,8 @@ import type {
   BackgroundJobMonitorResponse,
   BackgroundJobSnapshot,
   BackgroundJobState,
+  AiChatRequest,
+  AiChatResponse,
   CreateKnowledgeDocumentRequest,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
@@ -480,6 +482,27 @@ export async function searchKnowledgeChunks(
     return (await response.json()) as KnowledgeChunkSearchResponse;
   } catch {
     return demoKnowledgeChunkSearchResponse(request);
+  }
+}
+
+export async function askAiChat(request: AiChatRequest): Promise<AiChatResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/chat`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...demoHeaders
+      },
+      body: JSON.stringify(request)
+    });
+
+    if (!response.ok) {
+      return demoAiChatResponse(request);
+    }
+
+    return (await response.json()) as AiChatResponse;
+  } catch {
+    return demoAiChatResponse(request);
   }
 }
 
@@ -1277,6 +1300,32 @@ function demoKnowledgeChunkSearchResponse(request: KnowledgeChunkSearchRequest):
     items,
     retrieval: items.some((item) => item.embeddingStatus === "embedded") ? "hybrid-chunks-v1" : "lexical-chunks-v1",
     total: items.length
+  };
+}
+
+function demoAiChatResponse(request: AiChatRequest): AiChatResponse {
+  const knowledge = demoKnowledgeChunkSearchResponse({
+    limit: 3,
+    locale: request.locale,
+    query: request.message
+  });
+  const knowledgeLine = knowledge.items.length
+    ? knowledge.items.map((item) => `${item.title}: ${item.content}`).join(" ")
+    : "No approved knowledge chunks matched this question yet.";
+
+  return {
+    id: `demo-chat-${Date.now()}`,
+    message: request.message,
+    answer: `Based on tenant knowledge, I would answer with: ${knowledgeLine}`,
+    matchedPropertyIds: [],
+    citations: knowledge.items.map((item) => ({
+      documentId: item.documentId,
+      label: `${item.title} (${item.kind}, chunk ${item.chunkIndex + 1}, score ${item.score})`,
+      source: "knowledge",
+      title: item.title
+    })),
+    suggestedActions: ["review-citations", "add-source-document", "run-retrieval-preview"],
+    createdAt: new Date().toISOString()
   };
 }
 

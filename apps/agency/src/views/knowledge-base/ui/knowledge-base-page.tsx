@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
-import { BookOpenText, DatabaseZap, FileText, Languages, Plus, RefreshCcw, Search, SearchCheck, Tags } from "lucide-react";
+import { Bot, BookOpenText, DatabaseZap, FileText, Languages, Plus, RefreshCcw, Search, SearchCheck, Tags } from "lucide-react";
 import { createKnowledgeDocumentAction, ingestKnowledgeDocumentAction } from "@entities/knowledge/api/knowledge-actions";
 import type {
+  AiChatRequest,
+  AiChatResponse,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentKind,
@@ -14,12 +16,16 @@ const localeOptions: KnowledgeDocumentSnapshot["locale"][] = ["en", "ru", "th", 
 const kindOptions: KnowledgeDocumentKind[] = ["article", "neighborhood", "relocation", "legal", "investment", "faq"];
 
 export function KnowledgeBasePage({
+  chat,
+  chatRequest,
   documents,
   notice,
   retrieval,
   retrievalRequest,
   total
 }: {
+  chat?: AiChatResponse;
+  chatRequest?: AiChatRequest;
   documents: KnowledgeDocumentSnapshot[];
   notice?: { message: string; tone: "success" };
   retrieval: KnowledgeChunkSearchResponse;
@@ -127,6 +133,70 @@ export function KnowledgeBasePage({
               <SearchCheck size={24} />
               <strong>No matching chunks</strong>
               <p>Try a broader query or ingest more documents before testing AI retrieval.</p>
+            </div>
+          )}
+        </section>
+
+        <section className={styles.panel} id="knowledge-chat">
+          <div className={styles.panelHeader}>
+            <div>
+              <p className="section-kicker">AI answer check</p>
+              <h2 className={styles.panelTitle}>Ask AI from knowledge</h2>
+            </div>
+            <Bot size={20} />
+          </div>
+
+          <form className={styles.chatForm}>
+            <label className={styles.chatQuery}>
+              Question
+              <input
+                defaultValue={chatRequest?.message ?? "Which Pattaya area is best for a quiet family relocation?"}
+                name="ask"
+                placeholder="Which area is best for family relocation?"
+              />
+            </label>
+            <label>
+              Locale
+              <select defaultValue={chatRequest?.locale ?? retrievalRequest.locale ?? "en"} name="locale">
+                {localeOptions.map((locale) => (
+                  <option key={locale} value={locale}>
+                    {locale.toUpperCase()}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button type="submit">
+              <Bot size={16} />
+              Ask AI
+            </button>
+          </form>
+
+          {chat ? (
+            <article className={styles.chatAnswer}>
+              <div className={styles.chatAnswerHeader}>
+                <span>{chat.citations.length} citations</span>
+                <span>{chat.suggestedActions.length} actions</span>
+              </div>
+              <h3>{chat.message}</h3>
+              <p>{chat.answer}</p>
+              <div className={styles.citationList}>
+                {chat.citations.map((citation) => (
+                  <span key={`${citation.source}-${citation.documentId ?? citation.propertyId ?? citation.label}`}>
+                    {formatBucket(citation.source)} · {citation.label}
+                  </span>
+                ))}
+              </div>
+              <div className={styles.actionRow}>
+                {chat.suggestedActions.map((action) => (
+                  <span key={action}>{formatBucket(action)}</span>
+                ))}
+              </div>
+            </article>
+          ) : (
+            <div className={styles.chatPlaceholder}>
+              <Bot size={22} />
+              <strong>Ask a question to verify the final AI answer</strong>
+              <p>The answer will include citations, matched properties when relevant, and suggested next actions.</p>
             </div>
           )}
         </section>

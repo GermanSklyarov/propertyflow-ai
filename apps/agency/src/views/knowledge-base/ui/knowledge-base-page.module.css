@@ -126,6 +126,7 @@
   font-size: clamp(1.35rem, 2vw, 2.1rem);
 }
 
+.chatForm,
 .documentForm,
 .retrievalForm {
   display: grid;
@@ -133,6 +134,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.chatForm label,
 .documentForm label,
 .retrievalForm label {
   display: grid;
@@ -146,6 +148,8 @@
 .documentForm input,
 .documentForm select,
 .documentForm textarea,
+.chatForm input,
+.chatForm select,
 .retrievalForm input,
 .retrievalForm select {
   width: 100%;
@@ -171,8 +175,13 @@
   grid-column: 1 / -1;
 }
 
+.chatQuery {
+  grid-column: 1 / -1;
+}
+
 .documentForm button,
 .documentMeta button,
+.chatForm button,
 .retrievalForm button {
   display: inline-flex;
   align-items: center;
@@ -195,6 +204,8 @@
 .documentForm button:focus-visible,
 .documentMeta button:hover,
 .documentMeta button:focus-visible,
+.chatForm button:hover,
+.chatForm button:focus-visible,
 .retrievalForm button:hover,
 .retrievalForm button:focus-visible {
   background: var(--teal-dark);
@@ -205,6 +216,71 @@
 .chunkList {
   display: grid;
   gap: 10px;
+}
+
+.chatAnswer,
+.chatPlaceholder {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 14px;
+}
+
+.chatAnswer {
+  display: grid;
+  gap: 12px;
+}
+
+.chatAnswerHeader,
+.citationList,
+.actionRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chatAnswerHeader span,
+.citationList span,
+.actionRow span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 0 9px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.chatAnswer h3 {
+  margin: 0;
+  font-size: 1.12rem;
+  line-height: 1.2;
+}
+
+.chatAnswer p,
+.chatPlaceholder p {
+  margin: 0;
+  color: #475955;
+  font-size: 0.94rem;
+  font-weight: 720;
+  line-height: 1.55;
+}
+
+.chatPlaceholder {
+  display: grid;
+  min-height: 170px;
+  place-items: center;
+  gap: 10px;
+  background: #edf8f4;
+  text-align: center;
+}
+
+.chatPlaceholder svg,
+.chatPlaceholder strong {
+  color: var(--teal-dark);
 }
 
 .signalItem {
@@ -399,6 +475,15 @@
 }
 
 @media (min-width: 880px) {
+  .chatForm {
+    grid-template-columns: minmax(0, 1fr) 140px auto;
+    align-items: end;
+  }
+
+  .chatQuery {
+    grid-column: auto;
+  }
+
   .retrievalForm {
     grid-template-columns: minmax(0, 1fr) 140px 180px auto;
     align-items: end;
@@ -416,6 +501,7 @@
 }
 
 @media (max-width: 620px) {
+  .chatForm,
   .documentForm,
   .retrievalForm {
     grid-template-columns: 1fr;
