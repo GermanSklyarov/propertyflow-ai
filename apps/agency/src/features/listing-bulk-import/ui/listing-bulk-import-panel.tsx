@@ -1,8 +1,10 @@
 import { FileSpreadsheet, Upload } from "lucide-react";
 import { importPropertiesCsvAction } from "@entities/listing/api/listing-actions";
+import type { BackgroundJobMonitorItem } from "@propertyflow/contracts";
 import styles from "./listing-bulk-import-panel.module.css";
 
 interface ListingBulkImportPanelProps {
+  jobs: BackgroundJobMonitorItem[];
   result?: {
     error?: "empty";
     jobId?: string;
@@ -24,7 +26,7 @@ const templateColumns = [
   "description"
 ];
 
-export function ListingBulkImportPanel({ result }: ListingBulkImportPanelProps) {
+export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelProps) {
   return (
     <section className={styles.panel} id="import-listings">
       <details className={styles.drawer}>
@@ -90,6 +92,39 @@ export function ListingBulkImportPanel({ result }: ListingBulkImportPanelProps) 
               <small>Validate rows and progress through the job without creating listing drafts.</small>
             </label>
 
+            {jobs.length ? (
+              <div className={styles.jobsPanel}>
+                <div className={styles.jobsHeader}>
+                  <span>Recent import jobs</span>
+                  <small>{jobs.length} visible</small>
+                </div>
+                <div className={styles.jobList}>
+                  {jobs.map((job) => {
+                    const progress = getImportProgress(job);
+
+                    return (
+                      <article className={styles.jobCard} key={job.id}>
+                        <div className={styles.jobTopline}>
+                          <strong>Job {job.id}</strong>
+                          <span className={`${styles.jobState} ${styles[`job-${job.state}`] ?? ""}`}>{job.state}</span>
+                        </div>
+                        <div className={styles.progressTrack} aria-label={`Import progress ${progress.percent}%`}>
+                          <span style={{ width: `${progress.percent}%` }} />
+                        </div>
+                        <div className={styles.jobMeta}>
+                          <small>{progress.imported} imported</small>
+                          <small>{progress.skipped} skipped</small>
+                          <small>{progress.total} total</small>
+                          <small>{formatJobTime(job)}</small>
+                        </div>
+                        {job.failedReason ? <p className={styles.failure}>{job.failedReason}</p> : null}
+                      </article>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
             <div className={styles.actions}>
               <button type="submit">
                 <Upload size={16} />
@@ -102,4 +137,44 @@ export function ListingBulkImportPanel({ result }: ListingBulkImportPanelProps) 
       </details>
     </section>
   );
+}
+
+function getImportProgress(job: BackgroundJobMonitorItem) {
+  const progress = isProgressObject(job.progress) ? job.progress : {};
+  const imported = getProgressNumber(progress.imported);
+  const skipped = getProgressNumber(progress.skipped);
+  const total = getProgressNumber(progress.total);
+  const percent =
+    getProgressNumber(progress.percent) ||
+    (typeof job.progress === "number" ? job.progress : total > 0 ? Math.round(((imported + skipped) / total) * 100) : 0);
+
+  return {
+    imported,
+    percent: Math.max(0, Math.min(percent, 100)),
+    skipped,
+    total
+  };
+}
+
+function isProgressObject(value: BackgroundJobMonitorItem["progress"]): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getProgressNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function formatJobTime(job: BackgroundJobMonitorItem) {
+  const timestamp = job.finishedAt ?? job.processedAt ?? job.createdAt;
+
+  if (!timestamp) {
+    return "time pending";
+  }
+
+  return new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    month: "short"
+  }).format(new Date(timestamp));
 }
