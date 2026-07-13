@@ -22,8 +22,7 @@
   padding-bottom: 18px;
 }
 
-.descriptionAppliedNotice,
-.amenitiesNotice {
+.descriptionAppliedNotice {
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -33,21 +32,18 @@
   color: #176b3b;
 }
 
-.descriptionAppliedNotice svg,
-.amenitiesNotice svg {
+.descriptionAppliedNotice svg {
   flex: 0 0 auto;
   margin-top: 2px;
 }
 
-.descriptionAppliedNotice strong,
-.amenitiesNotice strong {
+.descriptionAppliedNotice strong {
   display: block;
   font-size: 0.95rem;
   font-weight: 900;
 }
 
-.descriptionAppliedNotice p,
-.amenitiesNotice p {
+.descriptionAppliedNotice p {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.86rem;
@@ -117,153 +113,4 @@
 .status-archived {
   background: #f3f5f1;
   color: var(--muted);
-}
-
-.kpiGrid,
-.layout {
-  display: grid;
-  gap: 14px;
-}
-
-.kpiCard,
-.panel {
-  border: 1px solid var(--line);
-  background: var(--panel-strong);
-  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
-}
-
-.kpiCard {
-  display: grid;
-  min-width: 0;
-  min-height: 136px;
-  align-content: space-between;
-  gap: 10px;
-  padding: 14px;
-}
-
-.kpiCard span,
-.kpiCard small,
-.field span,
-.metric span {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.kpiCard strong {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  color: var(--teal-dark);
-  font-size: clamp(1.35rem, 1.7vw, 2.15rem);
-  line-height: 1.05;
-}
-
-.kpiIcon {
-  display: inline-grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgb(15 118 110 / 18%);
-  background: #edf8f4;
-  color: var(--teal-dark);
-}
-
-.panel {
-  padding: 16px;
-}
-
-.panelHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 14px;
-  color: var(--teal-dark);
-}
-
-.panelTitle {
-  margin: 4px 0 0;
-  font-size: clamp(1.35rem, 2vw, 2.1rem);
-}
-
-.fieldGrid,
-.economicsGrid,
-.chipGrid {
-  display: grid;
-  gap: 10px;
-}
-
-.fieldGrid,
-.economicsGrid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.field,
-.metric {
-  display: grid;
-  gap: 8px;
-  border: 1px solid rgb(15 118 110 / 12%);
-  background: #fff;
-  padding: 12px;
-  min-width: 0;
-}
-
-.fieldWide {
-  grid-column: 1 / -1;
-}
-
-.field span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.field strong,
-.metric strong {
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: var(--teal-dark);
-  font-size: 0.98rem;
-}
-
-.metric strong {
-  font-size: 1.25rem;
-}
-
-.chipGrid {
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-
-.chipGrid span {
-  border: 1px solid rgb(15 118 110 / 14%);
-  background: #edf8f4;
-  padding: 10px 12px;
-  color: var(--teal-dark);
-  font-size: 0.78rem;
-  font-weight: 900;
-}
-
-@media (min-width: 780px) {
-  .kpiGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .layout {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1180px) {
-  .kpiGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 640px) {
-  .fieldGrid,
-  .economicsGrid {
-    grid-template-columns: 1fr;
-  }
 }
