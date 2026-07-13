@@ -42,8 +42,8 @@ export function ListingBulkImportPanel({ result }: ListingBulkImportPanelProps) 
             <p className="section-kicker">Agency onboarding</p>
             <h2>Bulk listing import</h2>
             <p>
-              Upload a CSV exported from an old CRM, spreadsheet, or partner system. The import is queued as a BullMQ job,
-              so agents can keep working while drafts are created in the background.
+              Upload a CSV exported from an old CRM, spreadsheet, or partner system. Files are stored in object storage and
+              imported by a BullMQ worker, so agents can keep working while drafts are created in the background.
             </p>
           </div>
 

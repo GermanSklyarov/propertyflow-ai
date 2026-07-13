@@ -8,6 +8,7 @@ import {
   applyPropertyImageAnalysisAsset,
   confirmPropertyImageUpload,
   createProperty,
+  createPropertyImportUploadUrl,
   createPropertyImageUploadUrl,
   enqueuePropertyImport,
   reviewPropertyDescriptionAsset,
@@ -98,15 +99,16 @@ export async function addPropertyImageAction(propertyId: string, formData: FormD
 export async function importPropertiesCsvAction(formData: FormData) {
   const csvFile = formData.get("listingsCsv");
   const pastedCsv = getOptionalString(formData, "csvText");
-  const csvText = csvFile instanceof File && csvFile.size > 0 ? await csvFile.text() : pastedCsv;
+  const hasCsvFile = csvFile instanceof File && csvFile.size > 0;
 
-  if (!csvText) {
+  if (!hasCsvFile && !pastedCsv) {
     redirect("/listings?importError=empty#import-listings");
   }
 
+  const objectUrl = hasCsvFile ? await uploadImportCsv(csvFile) : `data:text/csv;charset=utf-8,${encodeURIComponent(pastedCsv!)}`;
   const job = await enqueuePropertyImport({
     dryRun: formData.get("dryRun") === "on",
-    objectUrl: `data:text/csv;charset=utf-8,${encodeURIComponent(csvText)}`,
+    objectUrl,
     source: "csv"
   });
 
@@ -115,6 +117,26 @@ export async function importPropertiesCsvAction(formData: FormData) {
   const params = new URLSearchParams({ importJob: job.id });
 
   redirect(`/listings?${params.toString()}#import-listings`);
+}
+
+async function uploadImportCsv(file: File) {
+  const upload = await createPropertyImportUploadUrl({
+    filename: file.name,
+    mimeType: file.type || "text/csv",
+    sizeBytes: file.size
+  });
+
+  const uploadResponse = await fetch(upload.uploadUrl, {
+    method: upload.method,
+    headers: upload.headers,
+    body: file
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Failed to upload property import file: ${uploadResponse.status}`);
+  }
+
+  return upload.objectUrl;
 }
 
 function getRequiredString(formData: FormData, key: string) {

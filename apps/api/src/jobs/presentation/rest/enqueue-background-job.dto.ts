@@ -2,6 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import type {
   BackgroundJobName,
   ConciergeModelTrainJobPayload,
+  CreatePropertyImportUploadRequest,
   EnqueueBackgroundJobRequest,
   KnowledgeChunkEmbeddingJobPayload,
   KnowledgeDocumentIngestJobPayload,
@@ -163,6 +164,23 @@ export class PropertyImportPayloadDto implements PropertyImportJobPayload {
   @IsOptional()
   @IsBoolean()
   dryRun?: boolean;
+}
+
+export class CreatePropertyImportUploadDto implements CreatePropertyImportUploadRequest {
+  @ApiProperty({ type: String })
+  @IsString()
+  filename!: string;
+
+  @ApiProperty({ type: String })
+  @IsString()
+  mimeType!: string;
+
+  @ApiProperty({ required: false, type: Number, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  sizeBytes?: number;
 }
 
 export class PropertyAiDescriptionPayloadDto implements PropertyAiDescriptionJobPayload {

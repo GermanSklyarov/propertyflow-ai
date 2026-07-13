@@ -1,6 +1,11 @@
 import { Body, Controller, Get, HttpException, Inject, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiExtraModels, ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { BackgroundJobMonitorResponse, BackgroundJobSnapshot, RequestUser } from "@propertyflow/contracts";
+import type {
+  BackgroundJobMonitorResponse,
+  BackgroundJobSnapshot,
+  CreatePropertyImportUploadResponse,
+  RequestUser
+} from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
@@ -9,10 +14,12 @@ import { RolesGuard } from "../../../shared/auth/roles.guard.js";
 import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
+import { ObjectStorageService } from "../../../storage/object-storage.service.js";
 import { BackgroundJobPolicyService } from "../../application/background-job-policy.service.js";
 import { JobQueueService } from "../../application/job-queue.service.js";
 import {
   ConciergeModelTrainPayloadDto,
+  CreatePropertyImportUploadDto,
   EnqueueBackgroundJobDto,
   KnowledgeChunkEmbeddingPayloadDto,
   KnowledgeDocumentIngestPayloadDto,
@@ -45,6 +52,7 @@ export class JobsController {
   constructor(
     @Inject(JobQueueService) private readonly jobs: JobQueueService,
     @Inject(BackgroundJobPolicyService) private readonly jobPolicy: BackgroundJobPolicyService,
+    @Inject(ObjectStorageService) private readonly storage: ObjectStorageService,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(RealtimePublisherService) private readonly realtime: RealtimePublisherService
   ) {}
@@ -80,6 +88,34 @@ export class JobsController {
     });
 
     return job;
+  }
+
+  @Post("imports/upload-url")
+  @Roles("broker", "manager", "admin")
+  async createPropertyImportUploadUrl(
+    @TenantId() tenantId: string,
+    @Body() payload: CreatePropertyImportUploadDto
+  ): Promise<CreatePropertyImportUploadResponse> {
+    const objectKey = [
+      "tenants",
+      this.safePathSegment(tenantId),
+      "imports",
+      `${crypto.randomUUID()}-${this.safeFilename(payload.filename)}`
+    ].join("/");
+    const upload = await this.storage.createPresignedPutUrl({
+      objectKey,
+      contentType: payload.mimeType,
+      expiresInSeconds: 900
+    });
+    const read = await this.storage.createPresignedGetUrl({
+      objectKey,
+      expiresInSeconds: 3600
+    });
+
+    return {
+      ...upload,
+      objectUrl: read.objectUrl
+    };
   }
 
   private async auditRejectedJob(
@@ -119,6 +155,16 @@ export class JobsController {
         reason
       }
     });
+  }
+
+  private safePathSegment(value: string): string {
+    return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+  }
+
+  private safeFilename(filename: string): string {
+    const normalized = filename.trim().replace(/[^a-zA-Z0-9._-]/g, "-");
+
+    return normalized || "import.csv";
   }
 
   @Get()

@@ -279,6 +279,22 @@ export interface CreatePropertyImageUploadResponse {
   expiresInSeconds: number;
 }
 
+export interface CreatePropertyImportUploadRequest {
+  filename: string;
+  mimeType: string;
+  sizeBytes?: number;
+}
+
+export interface CreatePropertyImportUploadResponse {
+  bucket: string;
+  objectKey: string;
+  objectUrl: string;
+  uploadUrl: string;
+  method: "PUT";
+  headers: Record<string, string>;
+  expiresInSeconds: number;
+}
+
 export interface ConfirmPropertyImageUploadRequest {
   bucket?: string;
   objectKey: string;

@@ -5,6 +5,8 @@ import type {
   AiChatRequest,
   AiChatResponse,
   CreateKnowledgeDocumentRequest,
+  CreatePropertyImportUploadRequest,
+  CreatePropertyImportUploadResponse,
   CreatePropertyRequest,
   KnowledgeChunkEmbeddingJobPayload,
   KnowledgeChunkSearchRequest,
@@ -596,6 +598,25 @@ export async function enqueuePropertyImport(
   }
 
   return (await response.json()) as BackgroundJobSnapshot;
+}
+
+export async function createPropertyImportUploadUrl(
+  request: CreatePropertyImportUploadRequest
+): Promise<CreatePropertyImportUploadResponse> {
+  const response = await fetch(`${apiBaseUrl}/jobs/imports/upload-url`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create property import upload URL: ${response.status}`);
+  }
+
+  return (await response.json()) as CreatePropertyImportUploadResponse;
 }
 
 export async function getCurrentTenant(): Promise<TenantSnapshot> {
