@@ -46,106 +46,14 @@
   font-weight: 900;
 }
 
-.kpiGrid {
-  display: grid;
-  gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.kpiCard {
-  display: grid;
-  min-height: 136px;
-  align-content: space-between;
-  gap: 10px;
-  border: 1px solid rgb(15 118 110 / 14%);
-  background: rgb(255 255 255 / 84%);
-  padding: 14px;
-  box-shadow: 0 16px 42px rgb(37 50 46 / 6%);
-}
-
-.kpiCard span,
-.kpiCard small {
-  color: var(--muted);
-  font-size: 0.76rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.kpiCard strong {
-  color: var(--teal-dark);
-  font-size: clamp(1.8rem, 3vw, 3rem);
-  line-height: 0.95;
-}
-
-.kpiIcon,
-.toolIcon {
-  display: inline-grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgb(15 118 110 / 18%);
-  background: #edf8f4;
-  color: var(--teal-dark);
-}
-
-.layout {
-  display: grid;
-  gap: 14px;
-  align-items: start;
-}
-
-.toolsPanel,
-.guardrailPanel,
 .queuePanel,
-.jobsPanel,
-.resultPanel {
+.jobsPanel {
   border: 1px solid var(--line);
   background: var(--panel-strong);
   padding: 16px;
   box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
 }
 
-.resultPanel {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  border-color: rgb(15 118 110 / 18%);
-  background: #edf8f4;
-}
-
-.resultIcon {
-  display: inline-grid;
-  flex: 0 0 auto;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  border: 1px solid rgb(15 118 110 / 20%);
-  background: #fff;
-  color: var(--teal-dark);
-}
-
-.resultPanel h2 {
-  margin: 4px 0 0;
-  color: var(--teal-dark);
-  font-size: clamp(1.25rem, 2vw, 1.8rem);
-}
-
-.resultPanel p:last-child {
-  max-width: 820px;
-  margin: 6px 0 0;
-  color: #475955;
-  font-weight: 750;
-  line-height: 1.45;
-}
-
-.resultLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.resultLinks a,
 .reviewGroup a {
   display: inline-flex;
   min-height: 30px;
@@ -160,8 +68,6 @@
   text-transform: uppercase;
 }
 
-.resultLinks a:hover,
-.resultLinks a:focus-visible,
 .reviewGroup a:hover,
 .reviewGroup a:focus-visible {
   background: #edf8f4;
@@ -176,18 +82,11 @@
   margin-bottom: 14px;
 }
 
-.panelTitle,
-.sideTitle {
+.panelTitle {
   margin: 4px 0 0;
   font-size: clamp(1.35rem, 2vw, 2.1rem);
 }
 
-.toolGrid {
-  display: grid;
-  gap: 10px;
-}
-
-.toolCard,
 .operationRow {
   display: grid;
   gap: 12px;
@@ -196,14 +95,12 @@
   padding: 14px;
 }
 
-.toolCard h3,
 .operationRow h3 {
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.18;
 }
 
-.toolCard p,
 .operationRow p {
   margin: 0;
   color: #475955;
@@ -212,18 +109,6 @@
   line-height: 1.45;
 }
 
-.toolCard span {
-  width: max-content;
-  border: 1px solid rgb(15 118 110 / 14%);
-  background: #edf8f4;
-  padding: 6px 8px;
-  color: var(--teal-dark);
-  font-size: 0.7rem;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.guardrailList,
 .operationList,
 .jobList {
   display: grid;
@@ -319,28 +204,6 @@
   font-size: 0.84rem;
   font-weight: 750;
   line-height: 1.45;
-}
-
-.guardrailItem {
-  border: 1px solid rgb(15 118 110 / 14%);
-  background: #fff;
-  padding: 12px;
-}
-
-.guardrailItem strong {
-  display: block;
-  color: var(--teal-dark);
-  font-size: 1.45rem;
-  line-height: 1;
-}
-
-.guardrailItem span {
-  display: block;
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 0.74rem;
-  font-weight: 900;
-  text-transform: uppercase;
 }
 
 .actionGroup {
@@ -505,18 +368,6 @@
 }
 
 @media (min-width: 860px) {
-  .kpiGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
-  .layout {
-    grid-template-columns: minmax(0, 1fr) 320px;
-  }
-
-  .toolGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .operationRow {
     grid-template-columns: minmax(0, 1.12fr) minmax(210px, 0.58fr) minmax(220px, 0.54fr) minmax(190px, 0.4fr);
     align-items: start;
