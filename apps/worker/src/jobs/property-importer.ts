@@ -82,7 +82,7 @@ export class PropertyImporter {
     }
 
     const content = await this.readObjectText(job.data.objectUrl);
-    const rows = job.data.source === "json" ? parseJsonRows(content) : parseCsvRows(content);
+    const rows = job.data.source === "json" ? parseJsonRows(content) : parseCsvRows(content, job.data.columnMapping);
     const issues: ImportIssue[] = [];
     const propertyIds: string[] = [];
     let imported = 0;
@@ -327,7 +327,7 @@ function parseJsonRows(content: string): ImportRow[] {
   });
 }
 
-function parseCsvRows(content: string): ImportRow[] {
+function parseCsvRows(content: string, columnMapping: Record<string, string> | undefined): ImportRow[] {
   const records = parseCsvRecords(content).filter((record) => record.some((cell) => cell.trim().length > 0));
 
   if (records.length === 0) {
@@ -336,10 +336,23 @@ function parseCsvRows(content: string): ImportRow[] {
 
   const headers = records[0].map(normalizeHeader);
 
-  return records.slice(1).map((record, index) => ({
-    rowNumber: index + 2,
-    values: Object.fromEntries(headers.map((header, headerIndex) => [header, record[headerIndex]?.trim() ?? ""]))
-  }));
+  return records.slice(1).map((record, index) => {
+    const values = Object.fromEntries(headers.map((header, headerIndex) => [header, record[headerIndex]?.trim() ?? ""]));
+
+    for (const [canonicalColumn, sourceColumn] of Object.entries(columnMapping ?? {})) {
+      const normalizedCanonicalColumn = normalizeHeader(canonicalColumn);
+      const normalizedSourceColumn = normalizeHeader(sourceColumn);
+
+      if (values[normalizedSourceColumn] !== undefined) {
+        values[normalizedCanonicalColumn] = values[normalizedSourceColumn];
+      }
+    }
+
+    return {
+      rowNumber: index + 2,
+      values
+    };
+  });
 }
 
 function toImportedPropertyDraft(row: ImportRow): ImportedPropertyDraft {

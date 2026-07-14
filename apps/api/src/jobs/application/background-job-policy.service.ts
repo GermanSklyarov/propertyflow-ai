@@ -72,6 +72,7 @@ export class BackgroundJobPolicyService {
       case "properties.import":
         this.requireEnum(payload, "source", importSources);
         this.optionalString(payload, "objectUrl");
+        this.optionalStringRecord(payload, "columnMapping", 30);
         this.optionalBoolean(payload, "dryRun");
         if ((payload.source === "csv" || payload.source === "json") && !payload.objectUrl) {
           throw new BadRequestException("objectUrl is required for csv and json property imports");
@@ -160,6 +161,22 @@ export class BackgroundJobPolicyService {
   private optionalBoolean(payload: Record<string, unknown>, key: string): void {
     if (payload[key] !== undefined && typeof payload[key] !== "boolean") {
       throw new BadRequestException(`${key} must be a boolean`);
+    }
+  }
+
+  private optionalStringRecord(payload: Record<string, unknown>, key: string, maxKeys: number): void {
+    const value = payload[key];
+
+    if (value === undefined) {
+      return;
+    }
+
+    if (!isRecord(value) || Object.keys(value).length > maxKeys) {
+      throw new BadRequestException(`${key} must be an object with up to ${maxKeys} string values`);
+    }
+
+    if (!Object.values(value).every(isNonEmptyString)) {
+      throw new BadRequestException(`${key} values must be non-empty strings`);
     }
   }
 }

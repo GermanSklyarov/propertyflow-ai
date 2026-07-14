@@ -1,6 +1,7 @@
-import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import { FileSpreadsheet, Upload } from "lucide-react";
 import { importPropertiesCsvAction } from "@entities/listing/api/listing-actions";
 import type { BackgroundJobMonitorItem } from "@propertyflow/contracts";
+import { ListingBulkImportForm } from "./listing-bulk-import-form";
 import styles from "./listing-bulk-import-panel.module.css";
 
 interface ListingBulkImportPanelProps {
@@ -87,45 +88,14 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
             </div>
           ) : null}
 
-          <form action={importPropertiesCsvAction} className={styles.form}>
-            <label className={styles.fileDrop}>
-              <FileSpreadsheet size={20} />
-              <span>Upload CSV export</span>
-              <small>Use UTF-8 CSV. Required column: title. Unknown columns are ignored.</small>
-              <input accept=".csv,text/csv,text/plain" name="listingsCsv" type="file" />
-            </label>
+          <ListingBulkImportForm
+            action={importPropertiesCsvAction}
+            csvTemplateHref={csvTemplateHref}
+            templateColumns={templateColumns}
+          />
 
-            <label className={styles.csvPaste}>
-              <span>Or paste CSV rows</span>
-              <textarea
-                name="csvText"
-                placeholder="externalId,title,market,kind,listingType,priceThb,areaSqm&#10;crm-1001,Wongamat Sea View,pattaya,condo,sale,3500000,45"
-              />
-            </label>
-
-            <div className={styles.templatePanel}>
-              <div className={styles.templateHeader}>
-                <span>Accepted columns</span>
-                <a download="propertyflow-listings-import-template.csv" href={csvTemplateHref}>
-                  <Download size={15} />
-                  Download CSV template
-                </a>
-              </div>
-              <div className={styles.template}>
-                {templateColumns.map((column) => (
-                  <code key={column}>{column}</code>
-                ))}
-              </div>
-            </div>
-
-            <label className={styles.checkbox}>
-              <input name="dryRun" type="checkbox" />
-              <span>Dry-run only</span>
-              <small>Validate rows and progress through the job without creating listing drafts.</small>
-            </label>
-
-            {jobs.length ? (
-              <div className={styles.jobsPanel}>
+          {jobs.length ? (
+            <div className={styles.jobsPanel}>
                 <div className={styles.jobsHeader}>
                   <span>Recent import jobs</span>
                   <small>{jobs.length} visible</small>
@@ -179,16 +149,7 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
                   })}
                 </div>
               </div>
-            ) : null}
-
-            <div className={styles.actions}>
-              <button type="submit">
-                <Upload size={16} />
-                Queue import job
-              </button>
-              <small>After import, agents can open drafts, attach photos, run AI description, and publish.</small>
-            </div>
-          </form>
+          ) : null}
         </div>
       </details>
     </section>

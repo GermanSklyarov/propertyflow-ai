@@ -229,6 +229,75 @@
   font-weight: 900;
 }
 
+.mappingPanel {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+}
+
+.mappingHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mappingHeader span {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.mappingHeader small {
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 5px 7px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.mappingGrid {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mappingField {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.mappingField span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mappingField select {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.mappingField select:focus {
+  border-color: rgb(15 118 110 / 48%);
+  outline: 2px solid rgb(15 118 110 / 12%);
+}
+
 .checkbox {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -472,9 +541,14 @@
   }
 
   .templatePanel,
+  .mappingPanel,
   .checkbox,
   .jobsPanel,
   .actions {
     grid-column: 1 / -1;
+  }
+
+  .mappingGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

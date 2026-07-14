@@ -14,7 +14,7 @@ import type {
   SavedSearchAlertDigestJobPayload
 } from "@propertyflow/contracts";
 import { Type } from "class-transformer";
-import { IsArray, IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsArray, IsBoolean, IsIn, IsInt, IsObject, IsOptional, IsString, Max, Min } from "class-validator";
 
 const jobNames = [
   "knowledge.chunks.embed",
@@ -159,6 +159,11 @@ export class PropertyImportPayloadDto implements PropertyImportJobPayload {
   @IsOptional()
   @IsString()
   objectUrl?: string;
+
+  @ApiProperty({ additionalProperties: { type: "string" }, required: false, type: Object })
+  @IsOptional()
+  @IsObject()
+  columnMapping?: Record<string, string>;
 
   @ApiProperty({ required: false, type: Boolean })
   @IsOptional()

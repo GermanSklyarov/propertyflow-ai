@@ -107,6 +107,7 @@ export async function importPropertiesCsvAction(formData: FormData) {
 
   const objectUrl = hasCsvFile ? await uploadImportCsv(csvFile) : `data:text/csv;charset=utf-8,${encodeURIComponent(pastedCsv!)}`;
   const job = await enqueuePropertyImport({
+    columnMapping: getColumnMapping(formData),
     dryRun: formData.get("dryRun") === "on",
     objectUrl,
     source: "csv"
@@ -117,6 +118,31 @@ export async function importPropertiesCsvAction(formData: FormData) {
   const params = new URLSearchParams({ importJob: job.id });
 
   redirect(`/listings?${params.toString()}#import-listings`);
+}
+
+function getColumnMapping(formData: FormData) {
+  const value = getOptionalString(formData, "columnMapping");
+
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = JSON.parse(value) as unknown;
+
+  if (!isStringRecord(parsed)) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function isStringRecord(value: unknown): value is Record<string, string> {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    !Array.isArray(value) &&
+    Object.values(value).every((item) => typeof item === "string" && item.length > 0)
+  );
 }
 
 async function uploadImportCsv(file: File) {
