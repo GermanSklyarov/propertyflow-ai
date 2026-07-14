@@ -323,12 +323,19 @@ export class PropertyImporter {
     now: string,
     location: { latitude: number; longitude: number }
   ): Promise<string> {
+    const projectName = draft.projectName;
+
+    if (!projectName) {
+      throw new Error("Project name is required to upsert a project");
+    }
+
     const result = await client.query<{ id: string }>(
       `
         insert into property_projects (
           id,
           tenant_id,
           name,
+          normalized_name,
           market,
           status,
           developer,
@@ -345,14 +352,16 @@ export class PropertyImporter {
           $4,
           $5,
           $6,
-          st_setsrid(st_makepoint($7, $8), 4326)::geography,
-          $8,
           $7,
+          st_setsrid(st_makepoint($8, $9), 4326)::geography,
           $9,
+          $8,
           $10,
-          $11
+          $11,
+          $12
         )
-        on conflict (tenant_id, market, lower(name)) do update set
+        on conflict (tenant_id, market, normalized_name) do update set
+          name = excluded.name,
           status = excluded.status,
           developer = coalesce(excluded.developer, property_projects.developer),
           location = coalesce(property_projects.location, excluded.location),
@@ -368,7 +377,8 @@ export class PropertyImporter {
       [
         crypto.randomUUID(),
         tenantId,
-        draft.projectName,
+        projectName,
+        normalizeProjectName(projectName),
         draft.market,
         draft.projectStatus ?? "completed",
         draft.projectDeveloper ?? null,
@@ -532,6 +542,15 @@ function getAlias(values: Record<string, unknown>, keys: string[]) {
 
 function getString(value: unknown) {
   return typeof value === "string" ? value.trim() || undefined : undefined;
+}
+
+function normalizeProjectName(value: string) {
+  return value
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\b(?:the|condo|condominium|village|project|residence|residences)\b/gu, "")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "");
 }
 
 function getEnumValue<const T extends readonly string[]>(value: string | undefined, values: T, fallback: T[number]): T[number] {

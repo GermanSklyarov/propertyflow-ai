@@ -1,5 +1,6 @@
 import { Bot, Building2, Camera, ChevronDown, CircleDollarSign, FileScan, Plus } from "lucide-react";
 import { createPropertyAction } from "@entities/listing/api/listing-actions";
+import { ProjectAutocompleteField } from "./project-autocomplete-field";
 import styles from "./create-listing-form.module.css";
 
 const markets = [
@@ -22,13 +23,6 @@ const listingTypes = [
   { label: "Sale", value: "sale" },
   { label: "Rent", value: "rent" },
   { label: "Sale or rent", value: "sale_or_rent" }
-];
-
-const projectStatuses = [
-  { label: "Completed", value: "completed" },
-  { label: "Under construction", value: "under_construction" },
-  { label: "Planned", value: "planned" },
-  { label: "Paused", value: "paused" }
 ];
 
 export function CreateListingForm() {
@@ -149,26 +143,7 @@ export function CreateListingForm() {
                   Development project
                 </div>
 
-                <div className={styles.fieldGrid}>
-                  <label className={styles.wideField}>
-                    <span>Project / development name</span>
-                    <input name="projectName" placeholder="The Riviera Wongamat, Laguna Phuket, etc." />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Project status</span>
-                    <select defaultValue="completed" name="projectStatus">
-                      {projectStatuses.map((status) => (
-                        <option key={status.value} value={status.value}>
-                          {status.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span>Developer</span>
-                    <input name="projectDeveloper" placeholder="Developer name" />
-                  </label>
-                </div>
+                <ProjectAutocompleteField />
 
                 <div className={styles.aiNote}>
                   <Bot size={16} />

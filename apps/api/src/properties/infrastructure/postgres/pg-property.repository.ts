@@ -1,6 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
-import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
+import type {
+  PropertyPriceHistoryPoint,
+  PropertyProjectSearchRequest,
+  PropertyProjectSearchResponse,
+  PropertyProjectSuggestion,
+  PropertySearchRequest
+} from "@propertyflow/contracts";
 import type {
   Currency,
   Money,
@@ -61,6 +67,16 @@ interface PropertyPriceHistoryRow {
   price_currency: Currency;
   source: PropertyPriceHistoryPoint["source"];
   effective_date: Date;
+}
+
+interface PropertyProjectSuggestionRow {
+  id: string;
+  name: string;
+  market: ThailandMarket;
+  status: PropertyProjectStatus;
+  developer: string | null;
+  address: string | null;
+  listing_count: string;
 }
 
 @Injectable()
@@ -344,6 +360,65 @@ export class PgPropertyRepository implements PropertyRepository {
     return result.rows.map((row) => this.toSnapshot(row));
   }
 
+  async searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse> {
+    const normalizedQuery = filters.query ? normalizeProjectName(filters.query) : "";
+    const values: unknown[] = [tenantId];
+    const clauses = ["project.tenant_id = $1"];
+
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (filters.market) {
+      clauses.push(`project.market = ${addValue(filters.market)}`);
+    }
+
+    if (normalizedQuery) {
+      clauses.push(`project.normalized_name like ${addValue(`%${normalizedQuery}%`)}`);
+    }
+
+    const limit = Math.min(Math.max(filters.limit ?? 8, 1), 20);
+    const result = await this.pool.query<PropertyProjectSuggestionRow>(
+      `
+        select
+          project.id,
+          project.name,
+          project.market,
+          project.status,
+          project.developer,
+          project.address,
+          count(property.id)::text as listing_count
+        from property_projects project
+        left join properties property
+          on property.tenant_id = project.tenant_id and property.project_id = project.id
+        where ${clauses.join(" and ")}
+        group by project.id
+        order by
+          case when ${addValue(normalizedQuery)} <> '' and project.normalized_name = ${addValue(normalizedQuery)} then 0 else 1 end,
+          case when ${addValue(normalizedQuery)} <> '' and project.normalized_name like ${addValue(`${normalizedQuery}%`)} then 0 else 1 end,
+          count(property.id) desc,
+          project.name asc
+        limit ${addValue(limit)}
+      `,
+      values
+    );
+
+    return {
+      filters,
+      items: result.rows.map((row): PropertyProjectSuggestion => ({
+        id: row.id,
+        name: row.name,
+        market: row.market,
+        status: row.status,
+        developer: row.developer ?? undefined,
+        address: row.address ?? undefined,
+        listingCount: Number(row.listing_count)
+      })),
+      total: result.rows.length
+    };
+  }
+
   private orderBy(filters: PropertySearchRequest): string {
     if (filters.sort === "price-asc") {
       return "p.price_amount asc, p.created_at desc";
@@ -398,6 +473,7 @@ export class PgPropertyRepository implements PropertyRepository {
           id,
           tenant_id,
           name,
+          normalized_name,
           market,
           status,
           developer,
@@ -426,9 +502,11 @@ export class PgPropertyRepository implements PropertyRepository {
           $10,
           $11,
           $12,
-          $13
+          $13,
+          $14
         )
-        on conflict (tenant_id, market, lower(name)) do update set
+        on conflict (tenant_id, market, normalized_name) do update set
+          name = excluded.name,
           status = excluded.status,
           developer = coalesce(excluded.developer, property_projects.developer),
           address = coalesce(excluded.address, property_projects.address),
@@ -447,6 +525,7 @@ export class PgPropertyRepository implements PropertyRepository {
         project.id || crypto.randomUUID(),
         property.tenantId,
         project.name,
+        normalizeProjectName(project.name),
         project.market,
         project.status,
         project.developer ?? null,
@@ -605,4 +684,13 @@ export class PgPropertyRepository implements PropertyRepository {
       source: row.source
     };
   }
+}
+
+function normalizeProjectName(value: string) {
+  return value
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\b(?:the|condo|condominium|village|project|residence|residences)\b/gu, "")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "");
 }

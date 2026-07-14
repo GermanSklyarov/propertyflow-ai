@@ -30,6 +30,8 @@ import type {
   PropertyImageAnalysisResult,
   PropertyImageSnapshot,
   PropertyImportJobPayload,
+  PropertyProjectSearchRequest,
+  PropertyProjectSearchResponse,
   PropertySearchRequest,
   PropertySearchResponse,
   ReviewAiAssetRequest,
@@ -117,6 +119,36 @@ export async function getBackgroundJob(
   } catch {
     return null;
   }
+}
+
+export async function searchPropertyProjects(
+  request: PropertyProjectSearchRequest = { limit: 8 },
+  options: { revalidateSeconds?: number | false } = {}
+): Promise<PropertyProjectSearchResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/projects${toQueryString(request)}`, {
+      headers: demoHeaders,
+      ...(options.revalidateSeconds === false
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: options.revalidateSeconds ?? 10 } })
+    });
+
+    if (!response.ok) {
+      return demoPropertyProjectSearchResponse(request);
+    }
+
+    return (await response.json()) as PropertyProjectSearchResponse;
+  } catch {
+    return demoPropertyProjectSearchResponse(request);
+  }
+}
+
+function demoPropertyProjectSearchResponse(request: PropertyProjectSearchRequest): PropertyProjectSearchResponse {
+  return {
+    filters: request,
+    items: [],
+    total: 0
+  };
 }
 
 function demoBackgroundJobs(request: { states?: BackgroundJobState[] } = {}): BackgroundJobMonitorResponse {

@@ -1,5 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import type { PropertyPriceHistoryPoint, PropertySearchRequest } from "@propertyflow/contracts";
+import type {
+  PropertyPriceHistoryPoint,
+  PropertyProjectSearchRequest,
+  PropertyProjectSearchResponse,
+  PropertySearchRequest
+} from "@propertyflow/contracts";
 import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
 import type { PropertyRepository } from "../domain/property.repository.js";
 
@@ -173,6 +178,44 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       : sortedProperties.slice(offset);
   }
 
+  async searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse> {
+    const query = filters.query ? normalizeProjectName(filters.query) : "";
+    const projects = new Map<string, NonNullable<PropertySnapshot["project"]> & { listingCount: number }>();
+
+    for (const property of await this.list(tenantId)) {
+      if (!property.project || (filters.market && property.project.market !== filters.market)) {
+        continue;
+      }
+
+      const normalized = normalizeProjectName(property.project.name);
+
+      if (query && !normalized.includes(query)) {
+        continue;
+      }
+
+      const current = projects.get(property.project.id);
+      projects.set(property.project.id, {
+        ...property.project,
+        listingCount: (current?.listingCount ?? 0) + 1
+      });
+    }
+
+    const items = [...projects.values()]
+      .sort((left, right) => right.listingCount - left.listingCount || left.name.localeCompare(right.name))
+      .slice(0, Math.min(Math.max(filters.limit ?? 8, 1), 20))
+      .map((project) => ({
+        id: project.id,
+        name: project.name,
+        market: project.market,
+        status: project.status,
+        developer: project.developer,
+        address: project.address,
+        listingCount: project.listingCount
+      }));
+
+    return { filters, items, total: items.length };
+  }
+
   async addPriceHistoryPoint(
     tenantId: string,
     propertyId: string,
@@ -254,4 +297,13 @@ export class InMemoryPropertyRepository implements PropertyRepository {
 
     return score;
   }
+}
+
+function normalizeProjectName(value: string) {
+  return value
+    .normalize("NFKD")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/\b(?:the|condo|condominium|village|project|residence|residences)\b/gu, "")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, "");
 }

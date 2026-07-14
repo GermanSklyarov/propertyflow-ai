@@ -85,6 +85,7 @@ create table if not exists property_projects (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,
   name text not null,
+  normalized_name text not null,
   market text not null,
   status text not null default 'completed',
   developer text,
@@ -99,6 +100,7 @@ create table if not exists property_projects (
 );
 
 alter table property_projects add column if not exists status text not null default 'completed';
+alter table property_projects add column if not exists normalized_name text;
 alter table property_projects add column if not exists developer text;
 alter table property_projects add column if not exists address text;
 alter table property_projects add column if not exists completion_year integer;
@@ -107,8 +109,17 @@ alter table property_projects add column if not exists latitude double precision
 alter table property_projects add column if not exists longitude double precision;
 alter table property_projects add column if not exists amenities text[] not null default '{}';
 
-create unique index if not exists idx_property_projects_tenant_market_name
-  on property_projects (tenant_id, market, lower(name));
+update property_projects
+set normalized_name = regexp_replace(
+  regexp_replace(lower(replace(name, '&', 'and')), '\m(the|condo|condominium|village|project|residence|residences)\M', '', 'g'),
+  '[^[:alnum:]]+',
+  '',
+  'g'
+)
+where normalized_name is null or normalized_name = '';
+
+alter table property_projects alter column normalized_name set not null;
+
 create index if not exists idx_property_projects_tenant_status
   on property_projects (tenant_id, status);
 create index if not exists idx_property_projects_location
@@ -166,6 +177,39 @@ begin
   end if;
 end $$;
 
+with ranked_projects as (
+  select
+    id,
+    first_value(id) over (
+      partition by tenant_id, market, normalized_name
+      order by updated_at desc, created_at desc, id
+    ) as canonical_id
+  from property_projects
+)
+update properties property
+set project_id = ranked_projects.canonical_id
+from ranked_projects
+where property.project_id = ranked_projects.id
+  and ranked_projects.id <> ranked_projects.canonical_id;
+
+with ranked_projects as (
+  select
+    id,
+    first_value(id) over (
+      partition by tenant_id, market, normalized_name
+      order by updated_at desc, created_at desc, id
+    ) as canonical_id
+  from property_projects
+)
+delete from property_projects project
+using ranked_projects
+where project.id = ranked_projects.id
+  and ranked_projects.id <> ranked_projects.canonical_id;
+
+create unique index if not exists idx_property_projects_tenant_market_name
+  on property_projects (tenant_id, market, lower(name));
+create unique index if not exists idx_property_projects_tenant_market_normalized_name
+  on property_projects (tenant_id, market, normalized_name);
 create unique index if not exists idx_properties_tenant_external_id on properties (tenant_id, external_id) where external_id is not null;
 create index if not exists idx_properties_tenant_project on properties (tenant_id, project_id);
 create index if not exists idx_properties_tenant_status on properties (tenant_id, status);

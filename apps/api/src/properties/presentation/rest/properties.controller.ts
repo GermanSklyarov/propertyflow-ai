@@ -19,6 +19,7 @@ import type {
   PropertyImageGalleryResponse,
   PropertyImageSnapshot,
   PropertyPriceHistory,
+  PropertyProjectSearchResponse,
   CreatePropertyImageUploadResponse,
   GeneratedPropertyDescription,
   PropertyImageAnalysisResult,
@@ -43,7 +44,7 @@ import type {
   UpdatePropertyPriceResponse
 } from "@propertyflow/contracts";
 import type { RequestUser } from "@propertyflow/contracts";
-import type { PropertySnapshot } from "@propertyflow/domain";
+import type { PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
 import { LeadService } from "../../../leads/application/lead.service.js";
@@ -96,6 +97,7 @@ import { TrainPricingModelDto } from "./train-pricing-model.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
 import { UpdateSavedPropertySearchNotificationsDto } from "./update-saved-property-search-notifications.dto.js";
 import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
+import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
 @Controller("properties")
 @ApiTags("properties")
@@ -150,7 +152,9 @@ export class PropertiesController {
     @Inject(RealtimePublisherService)
     private readonly realtime: RealtimePublisherService,
     @Inject(SearchObservabilityService)
-    private readonly searchObservability: SearchObservabilityService
+    private readonly searchObservability: SearchObservabilityService,
+    @Inject(PROPERTY_REPOSITORY)
+    private readonly properties: PropertyRepository
   ) {}
 
   @Post()
@@ -192,6 +196,26 @@ export class PropertiesController {
     });
 
     return property;
+  }
+
+  @Get("projects")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Search development projects for listing creation autocomplete" })
+  @ApiQuery({ name: "market", required: false })
+  @ApiQuery({ name: "query", required: false })
+  @ApiQuery({ name: "limit", required: false })
+  @ApiOkResponse({ description: "Development project suggestions with listing counts" })
+  searchProjects(
+    @TenantId() tenantId: string,
+    @Query("market") market?: ThailandMarket,
+    @Query("query") query?: string,
+    @Query("limit") limit?: string
+  ): Promise<PropertyProjectSearchResponse> {
+    return this.properties.searchProjects(tenantId, {
+      limit: limit ? Number(limit) : undefined,
+      market,
+      query
+    });
   }
 
   @Get()

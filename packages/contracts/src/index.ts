@@ -324,6 +324,28 @@ export interface PropertyListResponse {
   items: PropertySnapshot[];
 }
 
+export interface PropertyProjectSuggestion {
+  id: string;
+  name: string;
+  market: ThailandMarket;
+  status: NonNullable<PropertySnapshot["project"]>["status"];
+  developer?: string;
+  address?: string;
+  listingCount: number;
+}
+
+export interface PropertyProjectSearchRequest {
+  market?: ThailandMarket;
+  query?: string;
+  limit?: number;
+}
+
+export interface PropertyProjectSearchResponse {
+  items: PropertyProjectSuggestion[];
+  total: number;
+  filters: PropertyProjectSearchRequest;
+}
+
 export type PropertySearchSort = "created-desc" | "ai-fit" | "price-asc" | "yield-desc" | "beach-asc";
 
 export interface PropertySearchRequest {
