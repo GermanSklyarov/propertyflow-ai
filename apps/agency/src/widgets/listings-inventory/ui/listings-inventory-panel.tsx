@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import {
+  AlertTriangle,
   Building2,
   CircleDollarSign,
   DraftingCompass,
@@ -26,8 +30,15 @@ import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
 import styles from "./listings-inventory-panel.module.css";
 
+type InventoryFilter = "all" | "missing-project";
+
 export function ListingsInventoryPanel({ listings }: { listings: PropertySnapshot[] }) {
+  const [filter, setFilter] = useState<InventoryFilter>("all");
   const summary = buildListingInventorySummary(listings);
+  const visibleListings = useMemo(
+    () => (filter === "missing-project" ? listings.filter((listing) => !listing.project) : listings),
+    [filter, listings]
+  );
 
   return (
     <>
@@ -41,6 +52,7 @@ export function ListingsInventoryPanel({ listings }: { listings: PropertySnapsho
           value={formatPercent(summary.averageYield, { maximumFractionDigits: 1 })}
         />
         <KpiCard icon={<Sparkles size={18} />} label="AI ready" note="Enough rich fields" value={`${summary.aiReady}/${listings.length}`} />
+        <KpiCard icon={<AlertTriangle size={18} />} label="Missing project" note="Cleanup queue" value={summary.missingProject} />
       </section>
 
       <section className={styles.layout}>
@@ -48,6 +60,7 @@ export function ListingsInventoryPanel({ listings }: { listings: PropertySnapsho
           <InventoryBreakdown title="Status" items={summary.byStatus} />
           <InventoryBreakdown title="Listing type" items={summary.byListingType} />
           <InventoryBreakdown title="Market" items={summary.byMarket} />
+          <InventoryBreakdown title="Project link" items={summary.byProjectLink} />
         </aside>
 
         <section className={styles.tablePanel} aria-label="Listings table">
@@ -56,13 +69,39 @@ export function ListingsInventoryPanel({ listings }: { listings: PropertySnapsho
               <p className="section-kicker">Agent workspace</p>
               <h2 className={styles.panelTitle}>Inventory queue</h2>
             </div>
-            <span className={styles.sortBadge}>Sorted by newest</span>
+            <div className={styles.tableActions}>
+              <div className={styles.filterToggle} aria-label="Inventory filter">
+                <button
+                  className={filter === "all" ? styles.filterActive : ""}
+                  onClick={() => setFilter("all")}
+                  type="button"
+                >
+                  All
+                  <span>{listings.length}</span>
+                </button>
+                <button
+                  className={filter === "missing-project" ? styles.filterActive : ""}
+                  onClick={() => setFilter("missing-project")}
+                  type="button"
+                >
+                  Missing project
+                  <span>{summary.missingProject}</span>
+                </button>
+              </div>
+              <span className={styles.sortBadge}>Sorted by newest</span>
+            </div>
           </div>
 
           <div className={styles.list}>
-            {listings.map((listing) => (
+            {visibleListings.map((listing) => (
               <ListingRow key={listing.id} listing={listing} />
             ))}
+            {visibleListings.length === 0 ? (
+              <div className={styles.emptyState}>
+                <Building2 size={18} />
+                <span>No listings match this inventory filter.</span>
+              </div>
+            ) : null}
           </div>
         </section>
       </section>

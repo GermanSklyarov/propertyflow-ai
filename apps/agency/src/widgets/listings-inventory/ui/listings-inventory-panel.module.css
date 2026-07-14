@@ -1,7 +1,7 @@
 .kpiGrid {
   display: grid;
   gap: 12px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
 }
 
 .kpiCard {
@@ -103,6 +103,54 @@
   margin-bottom: 14px;
 }
 
+.tableActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.filterToggle {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filterToggle button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #fff;
+  padding: 0 10px;
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.filterToggle button:hover,
+.filterToggle button:focus-visible,
+.filterActive {
+  border-color: rgb(15 118 110 / 32%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+}
+
+.filterToggle span {
+  display: inline-grid;
+  min-width: 24px;
+  min-height: 24px;
+  place-items: center;
+  background: rgb(15 118 110 / 9%);
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+}
+
 .panelTitle {
   margin: 4px 0 0;
   font-size: clamp(1.35rem, 2vw, 2.1rem);
@@ -120,6 +168,17 @@
 .list {
   display: grid;
   gap: 10px;
+}
+
+.emptyState {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px dashed rgb(15 118 110 / 22%);
+  background: #f6faf8;
+  padding: 16px;
+  color: var(--muted);
+  font-weight: 850;
 }
 
 .listingRow {
@@ -275,10 +334,6 @@
 }
 
 @media (min-width: 860px) {
-  .kpiGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-
   .layout {
     grid-template-columns: 280px minmax(0, 1fr);
   }

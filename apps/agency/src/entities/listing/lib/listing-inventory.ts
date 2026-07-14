@@ -9,7 +9,12 @@ export function buildListingInventorySummary(listings: PropertySnapshot[]) {
     averageYield: yields.reduce((sum, value) => sum + value, 0) / Math.max(1, yields.length),
     byListingType: countBy(listings, (listing) => listing.listingType),
     byMarket: countBy(listings, (listing) => listing.market),
+    byProjectLink: [
+      { label: "linked", count: listings.filter((listing) => listing.project).length },
+      { label: "missing", count: listings.filter((listing) => !listing.project).length }
+    ],
     byStatus: countBy(listings, (listing) => listing.status),
+    missingProject: listings.filter((listing) => !listing.project).length,
     rentalReady: listings.filter((listing) => listing.rentalPriceMonthly).length
   };
 }
