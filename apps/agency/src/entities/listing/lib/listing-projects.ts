@@ -14,6 +14,7 @@ export interface ListingProjectCoverageItem {
 export interface ListingProjectCoverageSummary {
   linkedListings: number;
   missingProjectListings: number;
+  missingProjectItems: Array<Pick<PropertySnapshot, "id" | "title" | "market" | "address" | "listingType">>;
   projects: ListingProjectCoverageItem[];
   statusCounts: Array<{
     label: NonNullable<PropertySnapshot["project"]>["status"];
@@ -64,6 +65,15 @@ export function buildListingProjectCoverage(listings: PropertySnapshot[]): Listi
 
   return {
     linkedListings,
+    missingProjectItems: listings
+      .filter((listing) => !listing.project)
+      .map((listing) => ({
+        address: listing.address,
+        id: listing.id,
+        listingType: listing.listingType,
+        market: listing.market,
+        title: listing.title
+      })),
     missingProjectListings: listings.length - linkedListings,
     projects: [...projects.values()].sort((left, right) => right.listingCount - left.listingCount || left.name.localeCompare(right.name)),
     statusCounts: [...statusCounts.entries()]
