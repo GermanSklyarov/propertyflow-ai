@@ -48,10 +48,22 @@ interface ImportIssue {
   title?: string;
 }
 
+export interface PropertyImportResult {
+  [key: string]: unknown;
+  dryRun: boolean;
+  imported: number;
+  issues: ImportIssue[];
+  propertyIds: string[];
+  skipped: number;
+  source: PropertyImportJobPayload["source"];
+  tenantId: string;
+  total: number;
+}
+
 export class PropertyImporter {
   constructor(private readonly pool: Pool) {}
 
-  async import(job: PropertyImportJob): Promise<Record<string, unknown>> {
+  async import(job: PropertyImportJob): Promise<PropertyImportResult | Record<string, unknown>> {
     if (job.data.source === "partner-api") {
       return {
         tenantId: job.data.tenantId,
@@ -70,6 +82,7 @@ export class PropertyImporter {
     const content = await this.readObjectText(job.data.objectUrl);
     const rows = job.data.source === "json" ? parseJsonRows(content) : parseCsvRows(content);
     const issues: ImportIssue[] = [];
+    const propertyIds: string[] = [];
     let imported = 0;
 
     await job.updateProgress({ imported, skipped: 0, total: rows.length });
@@ -79,7 +92,7 @@ export class PropertyImporter {
         const draft = toImportedPropertyDraft(row);
 
         if (!job.data.dryRun) {
-          await this.insertProperty(job.data.tenantId, draft);
+          propertyIds.push(await this.insertProperty(job.data.tenantId, draft));
         }
 
         imported += 1;
@@ -106,6 +119,7 @@ export class PropertyImporter {
       imported,
       skipped: issues.length,
       issues: issues.slice(0, 25),
+      propertyIds,
       total: rows.length
     };
   }
@@ -124,7 +138,7 @@ export class PropertyImporter {
     return response.text();
   }
 
-  private async insertProperty(tenantId: string, draft: ImportedPropertyDraft) {
+  private async insertProperty(tenantId: string, draft: ImportedPropertyDraft): Promise<string> {
     const propertyId = crypto.randomUUID();
     const now = new Date().toISOString();
     const location = marketCoordinates[draft.market];
@@ -272,6 +286,7 @@ export class PropertyImporter {
         [crypto.randomUUID(), tenantId, upsertResult.rows[0].id, draft.priceThb, now]
       );
       await client.query("commit");
+      return upsertResult.rows[0].id;
     } catch (error) {
       await client.query("rollback");
       throw error;

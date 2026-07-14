@@ -123,7 +123,7 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
                           <div className={styles.resultSummary}>
                             <strong>{result.dryRun ? "Dry-run complete" : "Import complete"}</strong>
                             <span>
-                              {result.imported} imported · {result.skipped} skipped · {result.total} rows
+                              {result.imported} imported · {result.skipped} skipped · {result.indexed} indexed · {result.total} rows
                             </span>
                           </div>
                         ) : null}
@@ -183,12 +183,13 @@ function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undef
   const imported = getProgressNumber(job.result.imported);
   const skipped = getProgressNumber(job.result.skipped);
   const total = getProgressNumber(job.result.total);
+  const indexed = getProgressNumber(job.result.indexed);
   const dryRun = job.result.dryRun === true;
   const issues = Array.isArray(job.result.issues)
     ? job.result.issues.filter(isImportIssue).slice(0, 3)
     : [];
 
-  return { dryRun, imported, issues, skipped, total };
+  return { dryRun, imported, indexed, issues, skipped, total };
 }
 
 function isProgressObject(value: BackgroundJobMonitorItem["progress"]): value is Record<string, unknown> {
@@ -202,6 +203,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 interface ImportJobResult {
   dryRun: boolean;
   imported: number;
+  indexed: number;
   issues: ImportIssue[];
   skipped: number;
   total: number;

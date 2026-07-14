@@ -137,7 +137,32 @@ export class PropertyflowWorker {
   }
 
   private async importProperties(job: PropertyImportJob): Promise<Record<string, unknown>> {
-    return this.propertyImporter.import(job);
+    const result = await this.propertyImporter.import(job);
+
+    if (!isPropertyImportResult(result) || result.dryRun || result.propertyIds.length === 0) {
+      return result;
+    }
+
+    const indexFailures: Array<{ propertyId: string; reason: string }> = [];
+    let indexed = 0;
+
+    for (const propertyId of result.propertyIds) {
+      try {
+        await this.searchIndexer.indexProperty(job.data.tenantId, propertyId);
+        indexed += 1;
+      } catch (error) {
+        indexFailures.push({
+          propertyId,
+          reason: error instanceof Error ? error.message : "Failed to index imported property"
+        });
+      }
+    }
+
+    return {
+      ...result,
+      indexed,
+      indexFailures: indexFailures.slice(0, 25)
+    };
   }
 
   private async ingestKnowledgeDocument(job: KnowledgeDocumentIngestJob): Promise<Record<string, unknown>> {
@@ -706,4 +731,11 @@ export class PropertyflowWorker {
 
 function assertNever(value: never): never {
   throw new Error(`Unsupported job name: ${String(value)}`);
+}
+
+function isPropertyImportResult(value: Record<string, unknown>): value is Record<string, unknown> & {
+  dryRun: boolean;
+  propertyIds: string[];
+} {
+  return Array.isArray(value.propertyIds) && typeof value.dryRun === "boolean";
 }
