@@ -3,7 +3,8 @@ import type {
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
-  PropertySearchRequest
+  PropertySearchRequest,
+  UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
 
 export const PROPERTY_REPOSITORY = Symbol("PROPERTY_REPOSITORY");
@@ -19,6 +20,11 @@ export interface PropertyRepository {
   ): Promise<PropertySnapshot | null>;
   updateAmenities(tenantId: string, propertyId: string, amenities: string[]): Promise<PropertySnapshot | null>;
   updatePrice(tenantId: string, propertyId: string, price: Money): Promise<PropertySnapshot | null>;
+  updateProject(
+    tenantId: string,
+    propertyId: string,
+    project: UpdatePropertyProjectRequest["project"]
+  ): Promise<PropertySnapshot | null>;
   updateStatus(tenantId: string, propertyId: string, status: PropertyStatus): Promise<PropertySnapshot | null>;
   list(tenantId: string): Promise<PropertySnapshot[]>;
   search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]>;

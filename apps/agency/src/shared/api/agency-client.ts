@@ -43,6 +43,7 @@ import type {
   TenantDashboardMetrics,
   TenantSnapshot,
   TenantUsageResponse,
+  UpdatePropertyProjectRequest,
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -279,6 +280,26 @@ export async function createProperty(request: CreatePropertyRequest): Promise<Pr
 
   if (!response.ok) {
     throw new Error(`Failed to create property: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertySnapshot;
+}
+
+export async function updatePropertyProject(
+  propertyId: string,
+  request: UpdatePropertyProjectRequest
+): Promise<PropertySnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/project`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update property project: ${response.status}`);
   }
 
   return (await response.json()) as PropertySnapshot;

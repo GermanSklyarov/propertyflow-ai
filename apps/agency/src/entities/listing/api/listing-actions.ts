@@ -12,7 +12,8 @@ import {
   createPropertyImageUploadUrl,
   enqueuePropertyImport,
   reviewPropertyDescriptionAsset,
-  reviewPropertyImageAnalysisAsset
+  reviewPropertyImageAnalysisAsset,
+  updatePropertyProject
 } from "@shared/api/agency-client";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
 import type { PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
@@ -105,6 +106,28 @@ export async function addPropertyImageAction(propertyId: string, formData: FormD
   if (analyzeImage) {
     redirect(`/listings/${propertyId}?queued=image-analysis#ai-image-analysis`);
   }
+}
+
+export async function updatePropertyProjectAction(propertyId: string, formData: FormData) {
+  const projectName = getOptionalString(formData, "projectName");
+
+  await updatePropertyProject(propertyId, {
+    note: getOptionalString(formData, "note"),
+    project: projectName
+      ? {
+          name: projectName,
+          status: getOptionalString(formData, "projectStatus") as PropertyProjectStatus | undefined,
+          developer: getOptionalString(formData, "projectDeveloper")
+        }
+      : null
+  });
+
+  revalidatePath("/projects");
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+
+  redirect(`/listings/${propertyId}?project=updated#development-project`);
 }
 
 export async function importPropertiesCsvAction(formData: FormData) {

@@ -1,0 +1,117 @@
+.panel {
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  padding: 16px;
+  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--teal-dark);
+}
+
+.header h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 2vw, 2.1rem);
+}
+
+.header p:not(:global(.section-kicker)) {
+  max-width: 680px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.currentProject,
+.missingProject {
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  padding: 12px;
+}
+
+.missingProject {
+  border-color: rgb(219 75 56 / 26%);
+  background: #fff8f5;
+}
+
+.currentProject strong,
+.missingProject strong {
+  color: var(--teal-dark);
+  font-size: 1rem;
+}
+
+.currentProject span,
+.missingProject span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+}
+
+.noteField {
+  display: grid;
+  gap: 6px;
+}
+
+.noteField span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.noteField input {
+  min-height: 42px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.saveButton {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 20%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-weight: 950;
+}
+
+.saveButton:hover,
+.saveButton:focus-visible {
+  background: var(--teal-dark);
+}
+
+.actions small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}

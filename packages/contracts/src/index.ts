@@ -109,6 +109,7 @@ export type AuditAction =
   | "property.price_training_dataset_viewed"
   | "property.price_recommended"
   | "property.price_updated"
+  | "property.project_updated"
   | "property.status_changed"
   | "saved_search.created"
   | "saved_search.deleted"
@@ -213,6 +214,11 @@ export interface UpdatePropertyStatusRequest {
 
 export interface UpdatePropertyPriceRequest {
   price: Money;
+  note?: string;
+}
+
+export interface UpdatePropertyProjectRequest {
+  project?: CreatePropertyRequest["project"] | null;
   note?: string;
 }
 
@@ -1799,6 +1805,7 @@ export type RealtimeEventType =
   | "property.images_updated"
   | "property.published"
   | "property.price_updated"
+  | "property.project_updated"
   | "property.status_changed"
   | "lead.created"
   | "lead.assigned"

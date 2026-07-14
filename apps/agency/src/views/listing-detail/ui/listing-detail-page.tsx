@@ -9,6 +9,7 @@ import {
 } from "@entities/listing/lib/listing-readiness";
 import { ListingAiDescriptionReviewPanel } from "@features/listing-ai-description-review/ui/listing-ai-description-review-panel";
 import { ListingImageAnalysisReviewPanel } from "@features/listing-image-analysis-review/ui/listing-image-analysis-review-panel";
+import { ListingProjectUpdatePanel } from "@features/listing-project-update/ui/listing-project-update-panel";
 import type { PropertyAiAssets, PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
@@ -73,6 +74,8 @@ export function ListingDetailPage({
         <ListingMediaPanel gallery={gallery} listingId={listing.id} listingTitle={listing.title} />
 
         <ListingOverviewPanel listing={listing} readiness={readiness} />
+
+        <ListingProjectUpdatePanel listing={listing} />
 
         <ListingPublicationPanel publication={publication} />
 

@@ -13,16 +13,31 @@ const projectStatuses = [
   { label: "Paused", value: "paused" }
 ] satisfies Array<{ label: string; value: PropertyProjectStatus }>;
 
-export function ProjectAutocompleteField() {
-  const [developer, setDeveloper] = useState("");
-  const [market, setMarket] = useState<ThailandMarket>("pattaya");
-  const [name, setName] = useState("");
-  const [status, setStatus] = useState<PropertyProjectStatus>("completed");
+interface ProjectAutocompleteFieldProps {
+  initialProject?: {
+    developer?: string;
+    name: string;
+    status: PropertyProjectStatus;
+  };
+  market?: ThailandMarket;
+}
+
+export function ProjectAutocompleteField({ initialProject, market: fixedMarket }: ProjectAutocompleteFieldProps = {}) {
+  const [developer, setDeveloper] = useState(initialProject?.developer ?? "");
+  const [market, setMarket] = useState<ThailandMarket>(fixedMarket ?? "pattaya");
+  const [name, setName] = useState(initialProject?.name ?? "");
+  const [status, setStatus] = useState<PropertyProjectStatus>(initialProject?.status ?? "completed");
   const [suggestions, setSuggestions] = useState<PropertyProjectSuggestion[]>([]);
   const [touched, setTouched] = useState(false);
+  const [selectedProjectName, setSelectedProjectName] = useState(initialProject?.name ?? "");
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (fixedMarket) {
+      setMarket(fixedMarket);
+      return;
+    }
+
     const form = containerRef.current?.closest("form");
     const marketField = form?.elements.namedItem("market") as HTMLSelectElement | null;
 
@@ -36,9 +51,14 @@ export function ProjectAutocompleteField() {
     marketField.addEventListener("change", syncMarket);
 
     return () => marketField.removeEventListener("change", syncMarket);
-  }, []);
+  }, [fixedMarket]);
 
   useEffect(() => {
+    if (selectedProjectName && normalizeProjectName(name) === normalizeProjectName(selectedProjectName)) {
+      setSuggestions([]);
+      return;
+    }
+
     if (name.trim().length < 2) {
       setSuggestions([]);
       return;
@@ -66,14 +86,15 @@ export function ProjectAutocompleteField() {
       controller.abort();
       window.clearTimeout(timeoutId);
     };
-  }, [market, name]);
+  }, [market, name, selectedProjectName]);
 
   function selectProject(project: PropertyProjectSuggestion) {
     setName(project.name);
     setStatus(project.status);
     setDeveloper(project.developer ?? "");
+    setSelectedProjectName(project.name);
     setSuggestions([]);
-    setTouched(true);
+    setTouched(false);
   }
 
   return (
@@ -88,6 +109,7 @@ export function ProjectAutocompleteField() {
             onBlur={() => window.setTimeout(() => setSuggestions([]), 160)}
             onChange={(event) => {
               setName(event.currentTarget.value);
+              setSelectedProjectName("");
               setTouched(true);
             }}
             onFocus={() => setTouched(true)}
@@ -131,4 +153,8 @@ export function ProjectAutocompleteField() {
       </label>
     </div>
   );
+}
+
+function normalizeProjectName(value: string) {
+  return value.trim().toLowerCase();
 }

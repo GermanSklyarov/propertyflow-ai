@@ -5,7 +5,8 @@ import type {
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
   PropertyProjectSuggestion,
-  PropertySearchRequest
+  PropertySearchRequest,
+  UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
 import type {
   Currency,
@@ -77,6 +78,12 @@ interface PropertyProjectSuggestionRow {
   developer: string | null;
   address: string | null;
   listing_count: string;
+}
+
+interface PropertyProjectContextRow {
+  market: ThailandMarket;
+  latitude: number;
+  longitude: number;
 }
 
 @Injectable()
@@ -248,6 +255,80 @@ export class PgPropertyRepository implements PropertyRepository {
     );
 
     return result.rows[0] ? this.findById(tenantId, result.rows[0].id) : null;
+  }
+
+  async updateProject(
+    tenantId: string,
+    propertyId: string,
+    project: UpdatePropertyProjectRequest["project"]
+  ): Promise<PropertySnapshot | null> {
+    if (!project) {
+      const result = await this.pool.query<{ id: string }>(
+        `
+          update properties
+          set project_id = null,
+              updated_at = $3
+          where tenant_id = $1 and id = $2
+          returning id
+        `,
+        [tenantId, propertyId, new Date().toISOString()]
+      );
+
+      return result.rows[0] ? this.findById(tenantId, result.rows[0].id) : null;
+    }
+
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+
+      const context = await client.query<PropertyProjectContextRow>(
+        `
+          select market, latitude, longitude
+          from properties
+          where tenant_id = $1 and id = $2
+          limit 1
+        `,
+        [tenantId, propertyId]
+      );
+
+      if (!context.rows[0]) {
+        await client.query("rollback");
+        return null;
+      }
+
+      const now = new Date().toISOString();
+      const projectId = await this.upsertProjectRecord(client, {
+        address: project.address,
+        amenities: project.amenities ?? [],
+        completionYear: project.completionYear,
+        developer: project.developer,
+        location: { latitude: context.rows[0].latitude, longitude: context.rows[0].longitude },
+        market: context.rows[0].market,
+        name: project.name,
+        status: project.status ?? "completed",
+        tenantId,
+        timestamp: now
+      });
+
+      await client.query(
+        `
+          update properties
+          set project_id = $3,
+              updated_at = $4
+          where tenant_id = $1 and id = $2
+        `,
+        [tenantId, propertyId, projectId, now]
+      );
+
+      await client.query("commit");
+      return this.findById(tenantId, propertyId);
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async updateStatus(
@@ -467,7 +548,38 @@ export class PgPropertyRepository implements PropertyRepository {
 
   private async upsertProject(property: PropertySnapshot): Promise<string> {
     const project = property.project!;
-    const result = await this.pool.query<{ id: string }>(
+    return this.upsertProjectRecord(this.pool, {
+      address: project.address,
+      amenities: project.amenities,
+      completionYear: project.completionYear,
+      developer: project.developer,
+      id: project.id,
+      location: project.location,
+      market: project.market,
+      name: project.name,
+      status: project.status,
+      tenantId: property.tenantId,
+      timestamp: project.updatedAt
+    });
+  }
+
+  private async upsertProjectRecord(
+    client: Pick<Pool, "query">,
+    project: {
+      address?: string;
+      amenities: string[];
+      completionYear?: number;
+      developer?: string;
+      id?: string;
+      location?: { latitude: number; longitude: number };
+      market: ThailandMarket;
+      name: string;
+      status: PropertyProjectStatus;
+      tenantId: string;
+      timestamp: string;
+    }
+  ): Promise<string> {
+    const result = await client.query<{ id: string }>(
       `
         insert into property_projects (
           id,
@@ -494,11 +606,11 @@ export class PgPropertyRepository implements PropertyRepository {
           $6,
           $7,
           $8,
-          case when $9::double precision is null or $10::double precision is null
-            then null
-            else st_setsrid(st_makepoint($10, $9), 4326)::geography
-          end,
           $9,
+          case when $10::double precision is null or $11::double precision is null
+            then null
+            else st_setsrid(st_makepoint($11, $10), 4326)::geography
+          end,
           $10,
           $11,
           $12,
@@ -522,8 +634,8 @@ export class PgPropertyRepository implements PropertyRepository {
         returning id
       `,
       [
-        project.id || crypto.randomUUID(),
-        property.tenantId,
+        project.id ?? crypto.randomUUID(),
+        project.tenantId,
         project.name,
         normalizeProjectName(project.name),
         project.market,
@@ -534,8 +646,8 @@ export class PgPropertyRepository implements PropertyRepository {
         project.location?.latitude ?? null,
         project.location?.longitude ?? null,
         project.amenities,
-        project.createdAt,
-        project.updatedAt
+        project.timestamp,
+        project.timestamp
       ]
     );
 

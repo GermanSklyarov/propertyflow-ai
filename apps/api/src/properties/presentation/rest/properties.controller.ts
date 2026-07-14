@@ -95,6 +95,7 @@ import { SearchPropertiesDto, toPropertySearchRequest } from "./search-propertie
 import { SubmitPriceRecommendationFeedbackDto } from "./submit-price-recommendation-feedback.dto.js";
 import { TrainPricingModelDto } from "./train-pricing-model.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
+import { UpdatePropertyProjectDto } from "./update-property-project.dto.js";
 import { UpdateSavedPropertySearchNotificationsDto } from "./update-saved-property-search-notifications.dto.js";
 import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
@@ -1189,6 +1190,59 @@ export class PropertiesController {
     });
 
     return result;
+  }
+
+  @Patch(":propertyId/project")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Attach, replace, or clear a listing development project" })
+  @ApiOkResponse({ description: "Updated listing with project snapshot" })
+  async updateProject(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: UpdatePropertyProjectDto
+  ): Promise<PropertySnapshot> {
+    const property = await this.properties.updateProject(tenantId, propertyId, payload.project ?? null);
+
+    if (!property) {
+      throw new BadRequestException("Property not found");
+    }
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.project_updated",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        note: payload.note,
+        projectId: property.project?.id ?? null,
+        projectName: property.project?.name ?? null,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.project_updated", {
+      propertyId,
+      title: property.title,
+      market: property.market,
+      project: property.project
+        ? {
+            id: property.project.id,
+            name: property.project.name,
+            status: property.project.status
+          }
+        : null
+    });
+
+    return property;
   }
 
   @Get(":propertyId/advisor")

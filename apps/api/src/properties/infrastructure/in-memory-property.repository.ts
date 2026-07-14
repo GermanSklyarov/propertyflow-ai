@@ -3,7 +3,8 @@ import type {
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
-  PropertySearchRequest
+  PropertySearchRequest,
+  UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
 import type { PropertyRepository } from "../domain/property.repository.js";
@@ -78,6 +79,45 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       ...property,
       price,
       updatedAt: new Date().toISOString()
+    };
+
+    this.properties.set(key, updated);
+
+    return updated;
+  }
+
+  async updateProject(
+    tenantId: string,
+    propertyId: string,
+    project: UpdatePropertyProjectRequest["project"]
+  ): Promise<PropertySnapshot | null> {
+    const key = this.key(tenantId, propertyId);
+    const property = this.properties.get(key);
+
+    if (!property) {
+      return null;
+    }
+
+    const now = new Date().toISOString();
+    const updated = {
+      ...property,
+      project: project
+        ? {
+            id: crypto.randomUUID(),
+            tenantId,
+            name: project.name,
+            market: property.market,
+            status: project.status ?? "completed",
+            developer: project.developer,
+            address: project.address,
+            completionYear: project.completionYear,
+            location: property.location,
+            amenities: project.amenities ?? [],
+            createdAt: now,
+            updatedAt: now
+          }
+        : undefined,
+      updatedAt: now
     };
 
     this.properties.set(key, updated);
