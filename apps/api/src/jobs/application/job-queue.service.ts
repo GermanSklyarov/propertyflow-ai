@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
-import { Queue } from "bullmq";
+import { Queue, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import {
   type BackgroundJobName,
@@ -46,30 +46,16 @@ export class JobQueueService implements OnModuleDestroy {
 
   async list(tenantId: string, states: BackgroundJobState[], limit = 50): Promise<BackgroundJobMonitorResponse> {
     const boundedLimit = Math.min(Math.max(limit, 1), 100);
-    const jobs = await this.queue.getJobs(states, 0, boundedLimit - 1, true);
+    const jobsByState = await Promise.all(
+      states.map((state) => this.queue.getJobs([state], 0, boundedLimit - 1, false))
+    );
+    const jobs = [...new Map(jobsByState.flat().map((job) => [job.id, job])).values()]
+      .sort((left, right) => (right.timestamp ?? 0) - (left.timestamp ?? 0))
+      .slice(0, boundedLimit);
     const items = await Promise.all(
       jobs
         .filter((job) => job.data.tenantId === tenantId)
-        .map(async (job): Promise<BackgroundJobMonitorItem> => {
-          const state = await job.getState();
-
-          return {
-            id: String(job.id),
-            name: job.name,
-            queue: PROPERTYFLOW_JOBS_QUEUE,
-            state: isBackgroundJobState(state) ? state : "unknown",
-            tenantId: job.data.tenantId,
-            requestedByUserId: job.data.requestedByUserId,
-            attemptsMade: job.attemptsMade,
-            progress: job.progress,
-            createdAt: job.timestamp ? new Date(job.timestamp).toISOString() : undefined,
-            processedAt: job.processedOn ? new Date(job.processedOn).toISOString() : undefined,
-            finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : undefined,
-            failedReason: job.failedReason,
-            payload: job.data,
-            result: job.returnvalue
-          };
-        })
+        .map((job) => this.toMonitorItem(job))
     );
 
     return {
@@ -79,9 +65,40 @@ export class JobQueueService implements OnModuleDestroy {
     };
   }
 
+  async get(tenantId: string, jobId: string): Promise<BackgroundJobMonitorItem | null> {
+    const job = await this.queue.getJob(jobId);
+
+    if (!job || job.data.tenantId !== tenantId) {
+      return null;
+    }
+
+    return this.toMonitorItem(job);
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.queue.close();
     this.connection.disconnect();
+  }
+
+  private async toMonitorItem(job: Job<BackgroundJobPayload, unknown, BackgroundJobName>): Promise<BackgroundJobMonitorItem> {
+    const state = await job.getState();
+
+    return {
+      id: String(job.id),
+      name: job.name,
+      queue: PROPERTYFLOW_JOBS_QUEUE,
+      state: isBackgroundJobState(state) ? state : "unknown",
+      tenantId: job.data.tenantId,
+      requestedByUserId: job.data.requestedByUserId,
+      attemptsMade: job.attemptsMade,
+      progress: job.progress,
+      createdAt: job.timestamp ? new Date(job.timestamp).toISOString() : undefined,
+      processedAt: job.processedOn ? new Date(job.processedOn).toISOString() : undefined,
+      finishedAt: job.finishedOn ? new Date(job.finishedOn).toISOString() : undefined,
+      failedReason: job.failedReason,
+      payload: job.data,
+      result: job.returnvalue
+    };
   }
 }
 

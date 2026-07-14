@@ -1,5 +1,6 @@
 import type {
   BackgroundJobMonitorResponse,
+  BackgroundJobMonitorItem,
   BackgroundJobSnapshot,
   BackgroundJobState,
   AiChatRequest,
@@ -71,12 +72,15 @@ export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetric
 }
 
 export async function listBackgroundJobs(
-  request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12 }
+  request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12 },
+  options: { revalidateSeconds?: number | false } = {}
 ): Promise<BackgroundJobMonitorResponse> {
   try {
     const response = await fetch(`${apiBaseUrl}/jobs${toQueryString(request)}`, {
       headers: demoHeaders,
-      next: { revalidate: 5 }
+      ...(options.revalidateSeconds === false
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: options.revalidateSeconds ?? 5 } })
     });
 
     if (!response.ok) {
@@ -86,6 +90,32 @@ export async function listBackgroundJobs(
     return (await response.json()) as BackgroundJobMonitorResponse;
   } catch {
     return demoBackgroundJobs(request);
+  }
+}
+
+export async function getBackgroundJob(
+  jobId: string,
+  options: { revalidateSeconds?: number | false } = {}
+): Promise<BackgroundJobMonitorItem | null> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}`, {
+      headers: demoHeaders,
+      ...(options.revalidateSeconds === false
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: options.revalidateSeconds ?? 5 } })
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return (await response.json()) as BackgroundJobMonitorItem;
+  } catch {
+    return null;
   }
 }
 

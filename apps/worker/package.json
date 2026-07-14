@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/main.ts"
+    "dev": "tsx watch src/main.ts"
   },
   "dependencies": {
     "@opensearch-project/opensearch": "^3.6.0",

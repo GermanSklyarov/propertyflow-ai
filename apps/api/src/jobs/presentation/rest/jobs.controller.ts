@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpException, Inject, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, HttpException, Inject, NotFoundException, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { ApiExtraModels, ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
+  BackgroundJobMonitorItem,
   BackgroundJobMonitorResponse,
   BackgroundJobSnapshot,
   CreatePropertyImportUploadResponse,
@@ -173,5 +174,17 @@ export class JobsController {
     const filters = toListJobsQuery(query);
 
     return this.jobs.list(tenantId, filters.states, filters.limit);
+  }
+
+  @Get(":jobId")
+  @Roles("broker", "manager", "admin")
+  async get(@TenantId() tenantId: string, @Param("jobId") jobId: string): Promise<BackgroundJobMonitorItem> {
+    const job = await this.jobs.get(tenantId, jobId);
+
+    if (!job) {
+      throw new NotFoundException("Background job not found");
+    }
+
+    return job;
   }
 }

@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "check": "tsc -p tsconfig.json --noEmit",
-    "dev": "tsx src/main.ts",
+    "dev": "tsx watch src/main.ts",
     "migrate": "tsx src/database/migrate.ts",
     "seed:demo": "tsx src/database/seed-demo-properties.ts",
     "smoke:indexing": "tsx src/smoke/indexing-flow.ts"
