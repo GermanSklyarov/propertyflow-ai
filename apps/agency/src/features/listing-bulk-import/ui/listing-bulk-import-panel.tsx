@@ -1,4 +1,4 @@
-import { FileSpreadsheet, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import { importPropertiesCsvAction } from "@entities/listing/api/listing-actions";
 import type { BackgroundJobMonitorItem } from "@propertyflow/contracts";
 import styles from "./listing-bulk-import-panel.module.css";
@@ -26,6 +26,28 @@ const templateColumns = [
   "amenities",
   "description"
 ];
+
+const csvTemplate = [
+  templateColumns.join(","),
+  [
+    "crm-1001",
+    "Wongamat Sea View Residence",
+    "pattaya",
+    "condo",
+    "sale_or_rent",
+    "3500000",
+    "24000",
+    "45",
+    "1",
+    "1",
+    "Wongamat Beach, Pattaya",
+    "pool|gym|sea view|fiber internet",
+    "High-floor condo near the beach with winter rental appeal"
+  ]
+    .map(csvCell)
+    .join(",")
+].join("\n");
+const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csvTemplate)}`;
 
 export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelProps) {
   return (
@@ -77,14 +99,23 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
               <span>Or paste CSV rows</span>
               <textarea
                 name="csvText"
-                placeholder="title,market,kind,listingType,priceThb,areaSqm&#10;Wongamat Sea View,pattaya,condo,sale,3500000,45"
+                placeholder="externalId,title,market,kind,listingType,priceThb,areaSqm&#10;crm-1001,Wongamat Sea View,pattaya,condo,sale,3500000,45"
               />
             </label>
 
-            <div className={styles.template}>
-              {templateColumns.map((column) => (
-                <code key={column}>{column}</code>
-              ))}
+            <div className={styles.templatePanel}>
+              <div className={styles.templateHeader}>
+                <span>Accepted columns</span>
+                <a download="propertyflow-listings-import-template.csv" href={csvTemplateHref}>
+                  <Download size={15} />
+                  Download CSV template
+                </a>
+              </div>
+              <div className={styles.template}>
+                {templateColumns.map((column) => (
+                  <code key={column}>{column}</code>
+                ))}
+              </div>
             </div>
 
             <label className={styles.checkbox}>
@@ -179,6 +210,10 @@ function getImportProgress(job: BackgroundJobMonitorItem) {
     skipped,
     total
   };
+}
+
+function csvCell(value: string) {
+  return `"${value.replaceAll('"', '""')}"`;
 }
 
 function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undefined {

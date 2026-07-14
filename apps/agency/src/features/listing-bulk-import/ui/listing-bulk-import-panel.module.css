@@ -168,6 +168,52 @@
   outline: 2px solid rgb(15 118 110 / 12%);
 }
 
+.templatePanel {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+}
+
+.templateHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.templateHeader span {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.templateHeader a {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 0 10px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.templateHeader a:hover,
+.templateHeader a:focus-visible {
+  border-color: rgb(15 118 110 / 34%);
+  background: #dff4ee;
+}
+
 .template {
   display: flex;
   flex-wrap: wrap;
@@ -425,7 +471,7 @@
     grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
   }
 
-  .template,
+  .templatePanel,
   .checkbox,
   .jobsPanel,
   .actions {
