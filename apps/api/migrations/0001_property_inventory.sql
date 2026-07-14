@@ -84,6 +84,7 @@ create index if not exists idx_tenant_users_tenant_role on tenant_users (tenant_
 create table if not exists properties (
   id uuid primary key,
   tenant_id text not null,
+  external_id text,
   title text not null,
   description text,
   kind text not null,
@@ -113,9 +114,11 @@ create table if not exists properties (
 );
 
 alter table properties add column if not exists listing_type text not null default 'sale';
+alter table properties add column if not exists external_id text;
 alter table properties add column if not exists rental_price_monthly_amount numeric(14, 2);
 alter table properties add column if not exists rental_price_monthly_currency text;
 
+create unique index if not exists idx_properties_tenant_external_id on properties (tenant_id, external_id) where external_id is not null;
 create index if not exists idx_properties_tenant_status on properties (tenant_id, status);
 create index if not exists idx_properties_tenant_listing_type on properties (tenant_id, listing_type);
 create index if not exists idx_properties_tenant_market on properties (tenant_id, market);

@@ -12,6 +12,7 @@ interface ListingBulkImportPanelProps {
 }
 
 const templateColumns = [
+  "externalId",
   "title",
   "market",
   "kind",

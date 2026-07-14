@@ -27,7 +27,9 @@
 - Add structured property filters.
 - Add natural-language query parser.
 - Add OpenSearch indexing.
-- Add vector retrieval for semantic matching.
+- Add pgvector-backed property embeddings for semantic matching.
+- Add background embedding refresh jobs for imported and edited listings.
+- Add hybrid ranking that combines structured filters, OpenSearch text score, pgvector similarity, and business signals.
 - Add explainable result ranking.
 
 ## Phase 4: AI Advisor
@@ -67,4 +69,3 @@
 - Add public REST API.
 - Add WebSocket collaboration and task updates.
 - Add billing-ready plan limits.
-

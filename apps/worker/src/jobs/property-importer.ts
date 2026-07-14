@@ -25,6 +25,7 @@ interface ImportedPropertyDraft {
   beachDistanceMeters?: number;
   bedrooms: number;
   description?: string;
+  externalId?: string;
   floor?: number;
   kind: PropertyKind;
   listingType: PropertyListingType;
@@ -132,11 +133,12 @@ export class PropertyImporter {
 
     try {
       await client.query("begin");
-      await client.query(
+      const upsertResult = await client.query<{ id: string }>(
         `
           insert into properties (
             id,
             tenant_id,
+            external_id,
             title,
             description,
             kind,
@@ -171,32 +173,60 @@ export class PropertyImporter {
             $5,
             $6,
             $7,
-            'draft',
             $8,
-            'THB',
+            'draft',
             $9,
-            case when $9::numeric is null then null else 'THB' end,
-            st_setsrid(st_makepoint($10, $11), 4326)::geography,
-            $11,
+            'THB',
             $10,
+            case when $10::numeric is null then null else 'THB' end,
+            st_setsrid(st_makepoint($11, $12), 4326)::geography,
             $12,
+            $11,
             $13,
             $14,
             $15,
             $16,
             $17,
             $18,
-            case when $18::numeric is null then null else 'THB' end,
             $19,
             case when $19::numeric is null then null else 'THB' end,
             $20,
+            case when $20::numeric is null then null else 'THB' end,
             $21,
-            $22
+            $22,
+            $23
           )
+          on conflict (tenant_id, external_id) where external_id is not null do update set
+            title = excluded.title,
+            description = excluded.description,
+            kind = excluded.kind,
+            listing_type = excluded.listing_type,
+            market = excluded.market,
+            price_amount = excluded.price_amount,
+            price_currency = excluded.price_currency,
+            rental_price_monthly_amount = excluded.rental_price_monthly_amount,
+            rental_price_monthly_currency = excluded.rental_price_monthly_currency,
+            location = excluded.location,
+            latitude = excluded.latitude,
+            longitude = excluded.longitude,
+            address = excluded.address,
+            bedrooms = excluded.bedrooms,
+            bathrooms = excluded.bathrooms,
+            area_sqm = excluded.area_sqm,
+            floor = excluded.floor,
+            beach_distance_meters = excluded.beach_distance_meters,
+            monthly_rent_estimate_amount = excluded.monthly_rent_estimate_amount,
+            monthly_rent_estimate_currency = excluded.monthly_rent_estimate_currency,
+            maintenance_fee_monthly_amount = excluded.maintenance_fee_monthly_amount,
+            maintenance_fee_monthly_currency = excluded.maintenance_fee_monthly_currency,
+            amenities = excluded.amenities,
+            updated_at = excluded.updated_at
+          returning id
         `,
         [
           propertyId,
           tenantId,
+          draft.externalId ?? null,
           draft.title,
           draft.description ?? null,
           draft.kind,
@@ -235,11 +265,11 @@ export class PropertyImporter {
             $3,
             $4,
             'THB',
-            'initial-listing',
+            'import',
             $5
           )
         `,
-        [crypto.randomUUID(), tenantId, propertyId, draft.priceThb, now]
+        [crypto.randomUUID(), tenantId, upsertResult.rows[0].id, draft.priceThb, now]
       );
       await client.query("commit");
     } catch (error) {
@@ -302,6 +332,7 @@ function toImportedPropertyDraft(row: ImportRow): ImportedPropertyDraft {
     beachDistanceMeters: getOptionalInteger(getAlias(row.values, ["beachdistancemeters", "beach_distance_meters"])),
     bedrooms: getInteger(row.values.bedrooms, 0),
     description: getString(row.values.description),
+    externalId: getString(getAlias(row.values, ["externalid", "external_id", "sourceid", "source_id", "listingid", "listing_id"])),
     floor: getOptionalInteger(row.values.floor),
     kind: getEnumValue(getString(row.values.kind), supportedKinds, "condo"),
     listingType: getEnumValue(getString(getAlias(row.values, ["listingtype", "listing_type"])), supportedListingTypes, "sale_or_rent"),
