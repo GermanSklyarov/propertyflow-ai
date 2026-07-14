@@ -1,0 +1,247 @@
+.panel {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: clamp(18px, 3vw, 28px);
+  box-shadow: 0 16px 40px rgb(37 50 46 / 6%);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.header h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.7rem, 3vw, 3rem);
+  line-height: 1;
+}
+
+.header p {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.coverageBadge {
+  display: grid;
+  min-width: 104px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 12px;
+  color: var(--teal-dark);
+  text-align: center;
+}
+
+.coverageBadge strong {
+  font-size: 1.55rem;
+  line-height: 1;
+}
+
+.coverageBadge span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summaryCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px 10px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #f6faf8;
+  padding: 12px;
+  color: var(--teal-dark);
+}
+
+.summaryCard strong {
+  color: var(--ink);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.summaryCard span {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.warningCard {
+  border-color: rgb(219 75 56 / 32%);
+  background: #fff3ee;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.32fr);
+  gap: 14px;
+}
+
+.projectList {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.projectRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  padding: 12px;
+}
+
+.projectTitle {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  min-width: 0;
+}
+
+.projectTitle svg {
+  margin-top: 2px;
+  color: var(--teal-dark);
+}
+
+.projectTitle h3 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectTitle p {
+  overflow: hidden;
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.projectStats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.projectStats span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  padding: 7px 8px;
+  color: var(--teal-dark);
+  font-size: 0.74rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.statusList {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border-left: 1px solid var(--line);
+  padding-left: 14px;
+}
+
+.statusList h3 {
+  margin: 0 0 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statusList p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.statusRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  padding: 9px 10px;
+}
+
+.statusRow span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.statusRow strong {
+  color: var(--teal-dark);
+  font-size: 1rem;
+}
+
+.emptyState {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  border: 1px dashed rgb(15 118 110 / 22%);
+  background: #f6faf8;
+  padding: 14px;
+  color: var(--muted);
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+@media (max-width: 900px) {
+  .header,
+  .body {
+    grid-template-columns: 1fr;
+  }
+
+  .coverageBadge {
+    justify-self: start;
+  }
+
+  .statusList {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+    padding-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .grid,
+  .projectRow {
+    grid-template-columns: 1fr;
+  }
+
+  .projectStats {
+    justify-content: flex-start;
+  }
+}

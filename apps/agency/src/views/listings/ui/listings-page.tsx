@@ -3,6 +3,7 @@ import { ListingBulkImportPanel } from "@features/listing-bulk-import/ui/listing
 import type { BackgroundJobMonitorItem } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { ListingsInventoryPanel } from "@widgets/listings-inventory/ui/listings-inventory-panel";
+import { ProjectCoveragePanel } from "@widgets/project-coverage/ui/project-coverage-panel";
 import styles from "./listings-page.module.css";
 
 interface ListingsPageProps {
@@ -33,6 +34,8 @@ export function ListingsPage({ importJobs, importResult, listings, total }: List
         <CreateListingForm />
 
         <ListingBulkImportPanel jobs={importJobs} result={importResult} />
+
+        <ProjectCoveragePanel listings={listings} />
 
         <ListingsInventoryPanel listings={listings} />
       </div>

@@ -1,6 +1,13 @@
 import { Pool } from "pg";
 import { loadAppConfig } from "@propertyflow/config";
-import type { Currency, PropertyKind, PropertyListingType, PropertyStatus, ThailandMarket } from "@propertyflow/domain";
+import type {
+  Currency,
+  PropertyKind,
+  PropertyListingType,
+  PropertyProjectStatus,
+  PropertyStatus,
+  ThailandMarket
+} from "@propertyflow/domain";
 
 type SeedMoney = {
   amount: number;
@@ -9,6 +16,7 @@ type SeedMoney = {
 
 type SeedProperty = {
   id: string;
+  projectId?: string;
   title: string;
   description: string;
   kind: PropertyKind;
@@ -32,12 +40,80 @@ type SeedProperty = {
   amenities: string[];
 };
 
+type SeedProject = {
+  id: string;
+  name: string;
+  normalizedName: string;
+  market: ThailandMarket;
+  status: PropertyProjectStatus;
+  developer?: string;
+  address: string;
+  completionYear?: number;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  amenities: string[];
+};
+
 const tenantId = process.env.SEED_TENANT_ID ?? "demo-agency";
 const now = new Date().toISOString();
+
+const demoProjects: SeedProject[] = [
+  {
+    id: "30000000-0000-4000-8000-000000000001",
+    name: "The Riviera Wongamat",
+    normalizedName: "rivierawongamat",
+    market: "pattaya",
+    status: "completed",
+    developer: "Riviera Group",
+    address: "Wongamat Beach, Pattaya",
+    completionYear: 2017,
+    location: { latitude: 12.9642, longitude: 100.8903 },
+    amenities: ["sea-view", "pool", "gym", "fiber-internet", "parking"]
+  },
+  {
+    id: "30000000-0000-4000-8000-000000000002",
+    name: "Copacabana Jomtien",
+    normalizedName: "copacabanajomtien",
+    market: "pattaya",
+    status: "completed",
+    developer: "Copacabana Group",
+    address: "Jomtien Second Road, Pattaya",
+    completionYear: 2022,
+    location: { latitude: 12.8898, longitude: 100.8759 },
+    amenities: ["pool", "kids-room", "parking", "balcony", "beach-access"]
+  },
+  {
+    id: "30000000-0000-4000-8000-000000000003",
+    name: "Grand Solaire Noble",
+    normalizedName: "grandsolairenoble",
+    market: "pattaya",
+    status: "under_construction",
+    developer: "SLS Development",
+    address: "Thappraya Road, Pattaya",
+    completionYear: 2026,
+    location: { latitude: 12.9187, longitude: 100.8654 },
+    amenities: ["pool", "gym", "sky-lounge", "security"]
+  },
+  {
+    id: "30000000-0000-4000-8000-000000000004",
+    name: "Laguna Phuket",
+    normalizedName: "lagunaphuket",
+    market: "phuket",
+    status: "completed",
+    developer: "Laguna Property",
+    address: "Bang Tao, Phuket",
+    completionYear: 2021,
+    location: { latitude: 7.9907, longitude: 98.2931 },
+    amenities: ["pool", "rental-management", "beach-club-access", "gym", "security"]
+  }
+];
 
 const demoProperties: SeedProperty[] = [
   {
     id: "10000000-0000-4000-8000-000000000001",
+    projectId: "30000000-0000-4000-8000-000000000001",
     title: "Wongamat Sea View Residence",
     description:
       "High-floor condo near Wongamat beach with sea view, fiber internet, pool, gym, and strong winter rental appeal.",
@@ -82,6 +158,7 @@ const demoProperties: SeedProperty[] = [
   },
   {
     id: "10000000-0000-4000-8000-000000000003",
+    projectId: "30000000-0000-4000-8000-000000000002",
     title: "Jomtien Family Corner Condo",
     description:
       "Quiet two-bedroom corner unit near Jomtien beach, international schools, supermarkets, and family-friendly restaurants.",
@@ -103,6 +180,7 @@ const demoProperties: SeedProperty[] = [
   },
   {
     id: "10000000-0000-4000-8000-000000000004",
+    projectId: "30000000-0000-4000-8000-000000000003",
     title: "Pratumnak Investment One-Bed",
     description:
       "Investor-friendly one-bedroom between Pattaya and Jomtien with proven short-stay demand and low monthly ownership costs.",
@@ -209,6 +287,7 @@ const demoProperties: SeedProperty[] = [
   },
   {
     id: "10000000-0000-4000-8000-000000000009",
+    projectId: "30000000-0000-4000-8000-000000000004",
     title: "Phuket Bang Tao Holiday Apartment",
     description:
       "Resort-style apartment near Bang Tao with beach clubs, restaurants, rental management, and strong seasonal occupancy.",
@@ -301,12 +380,16 @@ const pool = new Pool({
 try {
   await ensureTenantExists();
 
+  for (const project of demoProjects) {
+    await upsertProject(project);
+  }
+
   for (const property of demoProperties) {
     await upsertProperty(property);
     await upsertInitialPriceHistory(property);
   }
 
-  console.log(`Seeded ${demoProperties.length} demo properties for tenant "${tenantId}".`);
+  console.log(`Seeded ${demoProperties.length} demo properties and ${demoProjects.length} demo projects for tenant "${tenantId}".`);
 } finally {
   await pool.end();
 }
@@ -317,6 +400,73 @@ async function ensureTenantExists() {
   if (!result.rows[0]) {
     throw new Error(`Tenant "${tenantId}" does not exist. Run migrations before seeding demo properties.`);
   }
+}
+
+async function upsertProject(project: SeedProject) {
+  await pool.query(
+    `
+      insert into property_projects (
+        id,
+        tenant_id,
+        name,
+        normalized_name,
+        market,
+        status,
+        developer,
+        address,
+        completion_year,
+        location,
+        latitude,
+        longitude,
+        amenities,
+        created_at,
+        updated_at
+      ) values (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        st_setsrid(st_makepoint($10, $11), 4326)::geography,
+        $11,
+        $10,
+        $12,
+        $13,
+        $14
+      )
+      on conflict (tenant_id, market, normalized_name) do update set
+        name = excluded.name,
+        status = excluded.status,
+        developer = excluded.developer,
+        address = excluded.address,
+        completion_year = excluded.completion_year,
+        location = excluded.location,
+        latitude = excluded.latitude,
+        longitude = excluded.longitude,
+        amenities = excluded.amenities,
+        updated_at = excluded.updated_at
+    `,
+    [
+      project.id,
+      tenantId,
+      project.name,
+      project.normalizedName,
+      project.market,
+      project.status,
+      project.developer ?? null,
+      project.address,
+      project.completionYear ?? null,
+      project.location.longitude,
+      project.location.latitude,
+      project.amenities,
+      now,
+      now
+    ]
+  );
 }
 
 async function upsertProperty(property: SeedProperty) {
@@ -439,6 +589,13 @@ async function upsertProperty(property: SeedProperty) {
       now
     ]
   );
+
+  await pool.query("update properties set project_id = $1, updated_at = $2 where tenant_id = $3 and id = $4", [
+    property.projectId ?? null,
+    now,
+    tenantId,
+    property.id
+  ]);
 }
 
 async function upsertInitialPriceHistory(property: SeedProperty) {
