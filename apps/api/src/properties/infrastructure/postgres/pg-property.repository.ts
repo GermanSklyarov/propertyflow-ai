@@ -6,6 +6,7 @@ import type {
   Money,
   PropertyKind,
   PropertyListingType,
+  PropertyProjectStatus,
   PropertySnapshot,
   PropertyStatus,
   ThailandMarket
@@ -16,6 +17,7 @@ import type { PropertyRepository } from "../../domain/property.repository.js";
 interface PropertyRow {
   id: string;
   tenant_id: string;
+  project_id: string | null;
   title: string;
   description: string | null;
   kind: PropertyKind;
@@ -41,6 +43,17 @@ interface PropertyRow {
   amenities: string[];
   created_at: Date;
   updated_at: Date;
+  project_name: string | null;
+  project_market: ThailandMarket | null;
+  project_status: PropertyProjectStatus | null;
+  project_developer: string | null;
+  project_address: string | null;
+  project_completion_year: number | null;
+  project_latitude: number | null;
+  project_longitude: number | null;
+  project_amenities: string[] | null;
+  project_created_at: Date | null;
+  project_updated_at: Date | null;
 }
 
 interface PropertyPriceHistoryRow {
@@ -55,11 +68,13 @@ export class PgPropertyRepository implements PropertyRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
   async save(property: PropertySnapshot): Promise<PropertySnapshot> {
-    const result = await this.pool.query<PropertyRow>(
+    const projectId = property.project ? await this.upsertProject(property) : null;
+    const result = await this.pool.query<{ id: string }>(
       `
         insert into properties (
           id,
           tenant_id,
+          project_id,
           title,
           description,
           kind,
@@ -99,10 +114,10 @@ export class PgPropertyRepository implements PropertyRepository {
           $10,
           $11,
           $12,
-          st_setsrid(st_makepoint($13, $14), 4326)::geography,
-          $14,
           $13,
+          st_setsrid(st_makepoint($14, $15), 4326)::geography,
           $15,
+          $14,
           $16,
           $17,
           $18,
@@ -117,11 +132,12 @@ export class PgPropertyRepository implements PropertyRepository {
           $27,
           $28
         )
-        returning *
+        returning id
       `,
       [
         property.id,
         property.tenantId,
+        projectId,
         property.title,
         property.description ?? null,
         property.kind,
@@ -150,15 +166,14 @@ export class PgPropertyRepository implements PropertyRepository {
       ]
     );
 
-    return this.toSnapshot(result.rows[0]);
+    return (await this.findById(property.tenantId, result.rows[0].id))!;
   }
 
   async findById(tenantId: string, propertyId: string): Promise<PropertySnapshot | null> {
     const result = await this.pool.query<PropertyRow>(
       `
-        select *
-        from properties
-        where tenant_id = $1 and id = $2
+        ${this.selectPropertiesSql()}
+        where p.tenant_id = $1 and p.id = $2
         limit 1
       `,
       [tenantId, propertyId]
@@ -173,50 +188,50 @@ export class PgPropertyRepository implements PropertyRepository {
     title: string,
     description: string
   ): Promise<PropertySnapshot | null> {
-    const result = await this.pool.query<PropertyRow>(
+    const result = await this.pool.query<{ id: string }>(
       `
         update properties
         set title = $3,
             description = $4,
             updated_at = $5
         where tenant_id = $1 and id = $2
-        returning *
+        returning id
       `,
       [tenantId, propertyId, title, description, new Date().toISOString()]
     );
 
-    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+    return result.rows[0] ? this.findById(tenantId, result.rows[0].id) : null;
   }
 
   async updateAmenities(tenantId: string, propertyId: string, amenities: string[]): Promise<PropertySnapshot | null> {
-    const result = await this.pool.query<PropertyRow>(
+    const result = await this.pool.query<{ id: string }>(
       `
         update properties
         set amenities = $3,
             updated_at = $4
         where tenant_id = $1 and id = $2
-        returning *
+        returning id
       `,
       [tenantId, propertyId, amenities, new Date().toISOString()]
     );
 
-    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+    return result.rows[0] ? this.findById(tenantId, result.rows[0].id) : null;
   }
 
   async updatePrice(tenantId: string, propertyId: string, price: Money): Promise<PropertySnapshot | null> {
-    const result = await this.pool.query<PropertyRow>(
+    const result = await this.pool.query<{ id: string }>(
       `
         update properties
         set price_amount = $3,
             price_currency = $4,
             updated_at = $5
         where tenant_id = $1 and id = $2
-        returning *
+        returning id
       `,
       [tenantId, propertyId, price.amount, price.currency, new Date().toISOString()]
     );
 
-    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+    return result.rows[0] ? this.findById(tenantId, result.rows[0].id) : null;
   }
 
   async updateStatus(
@@ -224,18 +239,18 @@ export class PgPropertyRepository implements PropertyRepository {
     propertyId: string,
     status: PropertyStatus
   ): Promise<PropertySnapshot | null> {
-    const result = await this.pool.query<PropertyRow>(
+    const result = await this.pool.query<{ id: string }>(
       `
         update properties
         set status = $3,
             updated_at = $4
         where tenant_id = $1 and id = $2
-        returning *
+        returning id
       `,
       [tenantId, propertyId, status, new Date().toISOString()]
     );
 
-    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+    return result.rows[0] ? this.findById(tenantId, result.rows[0].id) : null;
   }
 
   async list(tenantId: string): Promise<PropertySnapshot[]> {
@@ -243,7 +258,7 @@ export class PgPropertyRepository implements PropertyRepository {
   }
 
   async search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]> {
-    const clauses = ["tenant_id = $1"];
+    const clauses = ["p.tenant_id = $1"];
     const values: unknown[] = [tenantId];
 
     const addValue = (value: unknown): string => {
@@ -252,58 +267,58 @@ export class PgPropertyRepository implements PropertyRepository {
     };
 
     if (filters.market) {
-      clauses.push(`market = ${addValue(filters.market)}`);
+      clauses.push(`p.market = ${addValue(filters.market)}`);
     }
 
     if (filters.listingType) {
-      clauses.push(`listing_type in (${addValue(filters.listingType)}, 'sale_or_rent')`);
+      clauses.push(`p.listing_type in (${addValue(filters.listingType)}, 'sale_or_rent')`);
     }
 
     if (filters.minPriceThb !== undefined) {
-      clauses.push(`price_currency = 'THB' and price_amount >= ${addValue(filters.minPriceThb)}`);
+      clauses.push(`p.price_currency = 'THB' and p.price_amount >= ${addValue(filters.minPriceThb)}`);
     }
 
     if (filters.maxPriceThb !== undefined) {
-      clauses.push(`price_currency = 'THB' and price_amount <= ${addValue(filters.maxPriceThb)}`);
+      clauses.push(`p.price_currency = 'THB' and p.price_amount <= ${addValue(filters.maxPriceThb)}`);
     }
 
     if (filters.minMonthlyRentThb !== undefined) {
       clauses.push(
-        `rental_price_monthly_currency = 'THB' and rental_price_monthly_amount >= ${addValue(filters.minMonthlyRentThb)}`
+        `p.rental_price_monthly_currency = 'THB' and p.rental_price_monthly_amount >= ${addValue(filters.minMonthlyRentThb)}`
       );
     }
 
     if (filters.maxMonthlyRentThb !== undefined) {
       clauses.push(
-        `rental_price_monthly_currency = 'THB' and rental_price_monthly_amount <= ${addValue(filters.maxMonthlyRentThb)}`
+        `p.rental_price_monthly_currency = 'THB' and p.rental_price_monthly_amount <= ${addValue(filters.maxMonthlyRentThb)}`
       );
     }
 
     if (filters.minBedrooms !== undefined) {
-      clauses.push(`bedrooms >= ${addValue(filters.minBedrooms)}`);
+      clauses.push(`p.bedrooms >= ${addValue(filters.minBedrooms)}`);
     }
 
     if (filters.minBathrooms !== undefined) {
-      clauses.push(`bathrooms >= ${addValue(filters.minBathrooms)}`);
+      clauses.push(`p.bathrooms >= ${addValue(filters.minBathrooms)}`);
     }
 
     if (filters.minAreaSqm !== undefined) {
-      clauses.push(`area_sqm >= ${addValue(filters.minAreaSqm)}`);
+      clauses.push(`p.area_sqm >= ${addValue(filters.minAreaSqm)}`);
     }
 
     if (filters.maxBeachDistanceMeters !== undefined) {
-      clauses.push(`beach_distance_meters <= ${addValue(filters.maxBeachDistanceMeters)}`);
+      clauses.push(`p.beach_distance_meters <= ${addValue(filters.maxBeachDistanceMeters)}`);
     }
 
     if (filters.requiredAmenities?.length) {
-      clauses.push(`amenities @> ${addValue(filters.requiredAmenities)}::text[]`);
+      clauses.push(`p.amenities @> ${addValue(filters.requiredAmenities)}::text[]`);
     }
 
     if (filters.near && filters.radiusMeters !== undefined) {
       const longitude = addValue(filters.near.longitude);
       const latitude = addValue(filters.near.latitude);
       const radius = addValue(filters.radiusMeters);
-      clauses.push(`st_dwithin(location, st_setsrid(st_makepoint(${longitude}, ${latitude}), 4326)::geography, ${radius})`);
+      clauses.push(`st_dwithin(p.location, st_setsrid(st_makepoint(${longitude}, ${latitude}), 4326)::geography, ${radius})`);
     }
 
     const paginationClauses: string[] = [];
@@ -318,8 +333,7 @@ export class PgPropertyRepository implements PropertyRepository {
 
     const result = await this.pool.query<PropertyRow>(
       `
-        select *
-        from properties
+        ${this.selectPropertiesSql()}
         where ${clauses.join(" and ")}
         order by ${this.orderBy(filters)}
         ${paginationClauses.join(" ")}
@@ -332,48 +346,142 @@ export class PgPropertyRepository implements PropertyRepository {
 
   private orderBy(filters: PropertySearchRequest): string {
     if (filters.sort === "price-asc") {
-      return "price_amount asc, created_at desc";
+      return "p.price_amount asc, p.created_at desc";
     }
 
     if (filters.sort === "yield-desc") {
       return `
         case
-          when monthly_rent_estimate_amount is not null and price_amount > 0
-            then monthly_rent_estimate_amount * 12 / price_amount
+          when p.monthly_rent_estimate_amount is not null and p.price_amount > 0
+            then p.monthly_rent_estimate_amount * 12 / p.price_amount
           else 0
         end desc,
-        created_at desc
+        p.created_at desc
       `;
     }
 
     if (filters.sort === "beach-asc") {
-      return "beach_distance_meters asc nulls last, created_at desc";
+      return "p.beach_distance_meters asc nulls last, p.created_at desc";
     }
 
     if (filters.sort === "ai-fit") {
       return `
         (
-          case when status = 'available' then 40 else 10 end
+          case when p.status = 'available' then 40 else 10 end
           + case
-              when beach_distance_meters is not null then greatest(0, 25 - beach_distance_meters::numeric / 100)
+              when p.beach_distance_meters is not null then greatest(0, 25 - p.beach_distance_meters::numeric / 100)
               else 0
             end
-          + case when amenities && array['fiber-internet', 'coworking-lounge']::text[] then 12 else 0 end
-          + case when amenities && array['sea-view', 'beachfront']::text[] then 10 else 0 end
+          + case when p.amenities && array['fiber-internet', 'coworking-lounge']::text[] then 12 else 0 end
+          + case when p.amenities && array['sea-view', 'beachfront']::text[] then 10 else 0 end
           + least(
               18,
               case
-                when monthly_rent_estimate_amount is not null and price_amount > 0
-                  then monthly_rent_estimate_amount * 12 / price_amount * 200
+                when p.monthly_rent_estimate_amount is not null and p.price_amount > 0
+                  then p.monthly_rent_estimate_amount * 12 / p.price_amount * 200
                 else 0
               end
             )
         ) desc,
-        created_at desc
+        p.created_at desc
       `;
     }
 
-    return "created_at desc";
+    return "p.created_at desc";
+  }
+
+  private async upsertProject(property: PropertySnapshot): Promise<string> {
+    const project = property.project!;
+    const result = await this.pool.query<{ id: string }>(
+      `
+        insert into property_projects (
+          id,
+          tenant_id,
+          name,
+          market,
+          status,
+          developer,
+          address,
+          completion_year,
+          location,
+          latitude,
+          longitude,
+          amenities,
+          created_at,
+          updated_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          case when $9::double precision is null or $10::double precision is null
+            then null
+            else st_setsrid(st_makepoint($10, $9), 4326)::geography
+          end,
+          $9,
+          $10,
+          $11,
+          $12,
+          $13
+        )
+        on conflict (tenant_id, market, lower(name)) do update set
+          status = excluded.status,
+          developer = coalesce(excluded.developer, property_projects.developer),
+          address = coalesce(excluded.address, property_projects.address),
+          completion_year = coalesce(excluded.completion_year, property_projects.completion_year),
+          location = coalesce(excluded.location, property_projects.location),
+          latitude = coalesce(excluded.latitude, property_projects.latitude),
+          longitude = coalesce(excluded.longitude, property_projects.longitude),
+          amenities = case
+            when cardinality(excluded.amenities) > 0 then excluded.amenities
+            else property_projects.amenities
+          end,
+          updated_at = excluded.updated_at
+        returning id
+      `,
+      [
+        project.id || crypto.randomUUID(),
+        property.tenantId,
+        project.name,
+        project.market,
+        project.status,
+        project.developer ?? null,
+        project.address ?? null,
+        project.completionYear ?? null,
+        project.location?.latitude ?? null,
+        project.location?.longitude ?? null,
+        project.amenities,
+        project.createdAt,
+        project.updatedAt
+      ]
+    );
+
+    return result.rows[0].id;
+  }
+
+  private selectPropertiesSql() {
+    return `
+      select
+        p.*,
+        project.name as project_name,
+        project.market as project_market,
+        project.status as project_status,
+        project.developer as project_developer,
+        project.address as project_address,
+        project.completion_year as project_completion_year,
+        project.latitude as project_latitude,
+        project.longitude as project_longitude,
+        project.amenities as project_amenities,
+        project.created_at as project_created_at,
+        project.updated_at as project_updated_at
+      from properties p
+      left join property_projects project
+        on project.tenant_id = p.tenant_id and project.id = p.project_id
+    `;
   }
 
   async addPriceHistoryPoint(
@@ -452,6 +560,25 @@ export class PgPropertyRepository implements PropertyRepository {
       monthlyRentEstimate: this.optionalMoney(row.monthly_rent_estimate_amount, row.monthly_rent_estimate_currency),
       maintenanceFeeMonthly: this.optionalMoney(row.maintenance_fee_monthly_amount, row.maintenance_fee_monthly_currency),
       amenities: row.amenities,
+      project: row.project_id && row.project_name && row.project_market && row.project_status && row.project_created_at && row.project_updated_at
+        ? {
+            id: row.project_id,
+            tenantId: row.tenant_id,
+            name: row.project_name,
+            market: row.project_market,
+            status: row.project_status,
+            developer: row.project_developer ?? undefined,
+            address: row.project_address ?? undefined,
+            completionYear: row.project_completion_year ?? undefined,
+            location:
+              row.project_latitude !== null && row.project_longitude !== null
+                ? { latitude: row.project_latitude, longitude: row.project_longitude }
+                : undefined,
+            amenities: row.project_amenities ?? [],
+            createdAt: row.project_created_at.toISOString(),
+            updatedAt: row.project_updated_at.toISOString()
+          }
+        : undefined,
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()
     };

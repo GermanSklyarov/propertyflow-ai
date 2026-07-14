@@ -18,7 +18,23 @@ export class CreatePropertyHandler implements ICommandHandler<CreatePropertyComm
       amenities: command.payload.amenities ?? [],
       createdAt: now,
       updatedAt: now,
-      ...command.payload
+      ...command.payload,
+      project: command.payload.project
+        ? {
+            id: crypto.randomUUID(),
+            tenantId: command.tenantId,
+            name: command.payload.project.name,
+            market: command.payload.market,
+            status: command.payload.project.status ?? "completed",
+            developer: command.payload.project.developer,
+            address: command.payload.project.address,
+            completionYear: command.payload.project.completionYear,
+            location: command.payload.location,
+            amenities: command.payload.project.amenities ?? [],
+            createdAt: now,
+            updatedAt: now
+          }
+        : undefined
     };
 
     const savedProperty = await this.properties.save(property);

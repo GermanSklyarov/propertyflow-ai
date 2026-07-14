@@ -16,6 +16,9 @@ interface ListingBulkImportPanelProps {
 const templateColumns = [
   "externalId",
   "title",
+  "projectName",
+  "projectStatus",
+  "projectDeveloper",
   "market",
   "kind",
   "listingType",
@@ -34,6 +37,9 @@ const csvTemplate = [
   [
     "crm-1001",
     "Wongamat Sea View Residence",
+    "The Riviera Wongamat",
+    "completed",
+    "Riviera Group",
     "pattaya",
     "condo",
     "sale_or_rent",

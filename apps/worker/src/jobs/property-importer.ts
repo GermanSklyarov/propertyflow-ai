@@ -1,13 +1,14 @@
 import type { Job } from "bullmq";
 import type { Pool } from "pg";
 import type { PropertyImportJobPayload } from "@propertyflow/contracts";
-import type { PropertyKind, PropertyListingType, ThailandMarket } from "@propertyflow/domain";
+import type { PropertyKind, PropertyListingType, PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
 
 type PropertyImportJob = Job<PropertyImportJobPayload, unknown, "properties.import">;
 
 const supportedMarkets = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"] as const;
 const supportedKinds = ["condo", "villa", "townhouse", "land", "commercial"] as const;
 const supportedListingTypes = ["sale", "rent", "sale_or_rent"] as const;
+const supportedProjectStatuses = ["planned", "under_construction", "completed", "paused"] as const;
 
 const marketCoordinates = {
   pattaya: { latitude: 12.9236, longitude: 100.8825 },
@@ -33,6 +34,9 @@ interface ImportedPropertyDraft {
   market: ThailandMarket;
   monthlyRentEstimateThb?: number;
   priceThb: number;
+  projectDeveloper?: string;
+  projectName?: string;
+  projectStatus?: PropertyProjectStatus;
   rentalPriceMonthlyThb?: number;
   title: string;
 }
@@ -159,11 +163,13 @@ export class PropertyImporter {
 
     try {
       await client.query("begin");
+      const projectId = draft.projectName ? await this.upsertProject(client, tenantId, draft, now, location) : null;
       const upsertResult = await client.query<{ id: string }>(
         `
           insert into properties (
             id,
             tenant_id,
+            project_id,
             external_id,
             title,
             description,
@@ -200,29 +206,31 @@ export class PropertyImporter {
             $6,
             $7,
             $8,
-            'draft',
             $9,
-            'THB',
+            'draft',
             $10,
-            case when $10::numeric is null then null else 'THB' end,
-            st_setsrid(st_makepoint($11, $12), 4326)::geography,
-            $12,
+            'THB',
             $11,
+            case when $11::numeric is null then null else 'THB' end,
+            st_setsrid(st_makepoint($12, $13), 4326)::geography,
             $13,
+            $12,
             $14,
             $15,
             $16,
             $17,
             $18,
             $19,
-            case when $19::numeric is null then null else 'THB' end,
             $20,
             case when $20::numeric is null then null else 'THB' end,
             $21,
+            case when $21::numeric is null then null else 'THB' end,
             $22,
-            $23
+            $23,
+            $24
           )
           on conflict (tenant_id, external_id) where external_id is not null do update set
+            project_id = excluded.project_id,
             title = excluded.title,
             description = excluded.description,
             kind = excluded.kind,
@@ -252,6 +260,7 @@ export class PropertyImporter {
         [
           propertyId,
           tenantId,
+          projectId,
           draft.externalId ?? null,
           draft.title,
           draft.description ?? null,
@@ -305,6 +314,73 @@ export class PropertyImporter {
     } finally {
       client.release();
     }
+  }
+
+  private async upsertProject(
+    client: Pick<Pool, "query">,
+    tenantId: string,
+    draft: ImportedPropertyDraft,
+    now: string,
+    location: { latitude: number; longitude: number }
+  ): Promise<string> {
+    const result = await client.query<{ id: string }>(
+      `
+        insert into property_projects (
+          id,
+          tenant_id,
+          name,
+          market,
+          status,
+          developer,
+          location,
+          latitude,
+          longitude,
+          amenities,
+          created_at,
+          updated_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          st_setsrid(st_makepoint($7, $8), 4326)::geography,
+          $8,
+          $7,
+          $9,
+          $10,
+          $11
+        )
+        on conflict (tenant_id, market, lower(name)) do update set
+          status = excluded.status,
+          developer = coalesce(excluded.developer, property_projects.developer),
+          location = coalesce(property_projects.location, excluded.location),
+          latitude = coalesce(property_projects.latitude, excluded.latitude),
+          longitude = coalesce(property_projects.longitude, excluded.longitude),
+          amenities = case
+            when cardinality(property_projects.amenities) = 0 then excluded.amenities
+            else property_projects.amenities
+          end,
+          updated_at = excluded.updated_at
+        returning id
+      `,
+      [
+        crypto.randomUUID(),
+        tenantId,
+        draft.projectName,
+        draft.market,
+        draft.projectStatus ?? "completed",
+        draft.projectDeveloper ?? null,
+        location.longitude,
+        location.latitude,
+        draft.amenities,
+        now,
+        now
+      ]
+    );
+
+    return result.rows[0].id;
   }
 }
 
@@ -384,6 +460,13 @@ function toImportedPropertyDraft(row: ImportRow): ImportedPropertyDraft {
       getAlias(row.values, ["monthlyrentestimatethb", "monthly_rent_estimate_thb", "rentestimate"])
     ),
     priceThb: getNumber(getAlias(row.values, ["pricethb", "price_thb", "price"]), 0),
+    projectDeveloper: getString(getAlias(row.values, ["projectdeveloper", "project_developer", "developer"])),
+    projectName: getString(getAlias(row.values, ["projectname", "project_name", "development", "compound"])),
+    projectStatus: getEnumValue(
+      getString(getAlias(row.values, ["projectstatus", "project_status", "construction_status"])),
+      supportedProjectStatuses,
+      "completed"
+    ),
     rentalPriceMonthlyThb: getOptionalNumber(
       getAlias(row.values, ["rentalpricemonthlythb", "rental_price_monthly_thb", "monthly_rent"])
     ),

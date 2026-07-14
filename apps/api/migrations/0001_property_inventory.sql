@@ -81,9 +81,43 @@ on conflict (tenant_id, id) do nothing;
 
 create index if not exists idx_tenant_users_tenant_role on tenant_users (tenant_id, role, status);
 
+create table if not exists property_projects (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  name text not null,
+  market text not null,
+  status text not null default 'completed',
+  developer text,
+  address text,
+  completion_year integer,
+  location geography(point, 4326),
+  latitude double precision,
+  longitude double precision,
+  amenities text[] not null default '{}',
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+alter table property_projects add column if not exists status text not null default 'completed';
+alter table property_projects add column if not exists developer text;
+alter table property_projects add column if not exists address text;
+alter table property_projects add column if not exists completion_year integer;
+alter table property_projects add column if not exists location geography(point, 4326);
+alter table property_projects add column if not exists latitude double precision;
+alter table property_projects add column if not exists longitude double precision;
+alter table property_projects add column if not exists amenities text[] not null default '{}';
+
+create unique index if not exists idx_property_projects_tenant_market_name
+  on property_projects (tenant_id, market, lower(name));
+create index if not exists idx_property_projects_tenant_status
+  on property_projects (tenant_id, status);
+create index if not exists idx_property_projects_location
+  on property_projects using gist (location);
+
 create table if not exists properties (
   id uuid primary key,
   tenant_id text not null,
+  project_id uuid,
   external_id text,
   title text not null,
   description text,
@@ -114,11 +148,26 @@ create table if not exists properties (
 );
 
 alter table properties add column if not exists listing_type text not null default 'sale';
+alter table properties add column if not exists project_id uuid;
 alter table properties add column if not exists external_id text;
 alter table properties add column if not exists rental_price_monthly_amount numeric(14, 2);
 alter table properties add column if not exists rental_price_monthly_currency text;
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'properties_project_id_fkey'
+  ) then
+    alter table properties
+      add constraint properties_project_id_fkey
+      foreign key (project_id) references property_projects(id) on delete set null;
+  end if;
+end $$;
+
 create unique index if not exists idx_properties_tenant_external_id on properties (tenant_id, external_id) where external_id is not null;
+create index if not exists idx_properties_tenant_project on properties (tenant_id, project_id);
 create index if not exists idx_properties_tenant_status on properties (tenant_id, status);
 create index if not exists idx_properties_tenant_listing_type on properties (tenant_id, listing_type);
 create index if not exists idx_properties_tenant_market on properties (tenant_id, market);

@@ -19,7 +19,8 @@ import {
 import {
   formatListingDistance,
   formatListingMoney,
-  formatListingType
+  formatListingType,
+  formatProjectStatus
 } from "@entities/listing/lib/listing-formatters";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
@@ -102,6 +103,12 @@ function ListingRow({ listing }: { listing: PropertySnapshot }) {
             <span>
               <Waves size={14} />
               {formatListingDistance(listing.beachDistanceMeters)}
+            </span>
+          ) : null}
+          {listing.project ? (
+            <span>
+              <Building2 size={14} />
+              {listing.project.name} · {formatProjectStatus(listing.project.status)}
             </span>
           ) : null}
         </div>

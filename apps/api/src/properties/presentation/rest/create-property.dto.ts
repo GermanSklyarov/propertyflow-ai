@@ -11,11 +11,12 @@ import {
   ValidateNested
 } from "class-validator";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
-import type { Currency, PropertyKind, PropertyListingType, ThailandMarket } from "@propertyflow/domain";
+import type { Currency, PropertyKind, PropertyListingType, PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
 
 const currencies: Currency[] = ["THB", "USD", "EUR"];
 const propertyKinds: PropertyKind[] = ["condo", "villa", "townhouse", "land", "commercial"];
 const propertyListingTypes: PropertyListingType[] = ["sale", "rent", "sale_or_rent"];
+const propertyProjectStatuses: PropertyProjectStatus[] = ["planned", "under_construction", "completed", "paused"];
 const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 
 class MoneyDto {
@@ -37,6 +38,32 @@ class GeoPointDto {
   @Min(-180)
   @Max(180)
   longitude!: number;
+}
+
+class PropertyProjectInputDto {
+  @IsString()
+  name!: string;
+
+  @IsOptional()
+  @IsIn(propertyProjectStatuses)
+  status?: PropertyProjectStatus;
+
+  @IsOptional()
+  @IsString()
+  developer?: string;
+
+  @IsOptional()
+  @IsString()
+  address?: string;
+
+  @IsOptional()
+  @IsInt()
+  completionYear?: number;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  amenities?: string[];
 }
 
 export class CreatePropertyDto implements CreatePropertyRequest {
@@ -109,4 +136,9 @@ export class CreatePropertyDto implements CreatePropertyRequest {
   @IsArray()
   @IsString({ each: true })
   amenities?: string[];
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => PropertyProjectInputDto)
+  project?: PropertyProjectInputDto;
 }

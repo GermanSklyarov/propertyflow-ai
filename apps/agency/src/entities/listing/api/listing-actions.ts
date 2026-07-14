@@ -15,7 +15,7 @@ import {
   reviewPropertyImageAnalysisAsset
 } from "@shared/api/agency-client";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
-import type { ThailandMarket } from "@propertyflow/domain";
+import type { PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
 
 const marketCoordinates = {
   pattaya: { latitude: 12.9236, longitude: 100.8825 },
@@ -33,6 +33,8 @@ export async function createPropertyAction(formData: FormData) {
   const monthlyRentEstimateThb = getOptionalNumber(formData, "monthlyRentEstimateThb") ?? rentalPriceMonthlyThb;
   const maintenanceFeeMonthlyThb = getOptionalNumber(formData, "maintenanceFeeMonthlyThb");
   const amenities = getAmenities(formData);
+  const projectName = getOptionalString(formData, "projectName");
+  const projectStatus = getOptionalString(formData, "projectStatus") as PropertyProjectStatus | undefined;
   const images = getImageFiles(formData);
   const analyzeImages = formData.get("analyzeImages") === "on";
   const chanoteExtraction = await extractChanoteData(formData);
@@ -55,7 +57,16 @@ export async function createPropertyAction(formData: FormData) {
     beachDistanceMeters: getOptionalInteger(formData, "beachDistanceMeters"),
     ...(monthlyRentEstimateThb !== undefined ? { monthlyRentEstimate: { amount: monthlyRentEstimateThb, currency: "THB" } } : {}),
     ...(maintenanceFeeMonthlyThb !== undefined ? { maintenanceFeeMonthly: { amount: maintenanceFeeMonthlyThb, currency: "THB" } } : {}),
-    ...(amenities.length ? { amenities } : {})
+    ...(amenities.length ? { amenities } : {}),
+    ...(projectName
+      ? {
+          project: {
+            name: projectName,
+            status: projectStatus,
+            developer: getOptionalString(formData, "projectDeveloper")
+          }
+        }
+      : {})
   });
 
   await Promise.all(images.map((file) => uploadCreatedPropertyImage(property.id, file, analyzeImages)));

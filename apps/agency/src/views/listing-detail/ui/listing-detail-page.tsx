@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
 import {
   buildListingNextActions,
@@ -49,6 +50,12 @@ export function ListingDetailPage({
             </Link>
             <p className="section-kicker">Listing workspace</p>
             <h1 className={styles.title}>{listing.title}</h1>
+            {listing.project ? (
+              <p className="section-kicker">
+                {listing.project.name} · {formatProjectStatus(listing.project.status)}
+                {listing.project.developer ? ` · ${listing.project.developer}` : ""}
+              </p>
+            ) : null}
             <p className={styles.subtitle}>{listing.description ?? "No description yet. Run AI enrichment before publishing."}</p>
           </div>
           <span className={`${styles.statusBadge} ${styles[`status-${listing.status}`]}`}>{formatBucket(listing.status)}</span>

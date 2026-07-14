@@ -24,6 +24,13 @@ const listingTypes = [
   { label: "Sale or rent", value: "sale_or_rent" }
 ];
 
+const projectStatuses = [
+  { label: "Completed", value: "completed" },
+  { label: "Under construction", value: "under_construction" },
+  { label: "Planned", value: "planned" },
+  { label: "Paused", value: "paused" }
+];
+
 export function CreateListingForm() {
   return (
     <section className={styles.panel} id="create-listing">
@@ -133,6 +140,39 @@ export function CreateListingForm() {
                 <div className={styles.aiNote}>
                   <Bot size={16} />
                   <span>Extracted address and area fill blank fields. Owner details stay in the agent note until reviewed.</span>
+                </div>
+              </div>
+
+              <div className={styles.subSection}>
+                <div className={styles.sectionTitle}>
+                  <Building2 size={16} />
+                  Development project
+                </div>
+
+                <div className={styles.fieldGrid}>
+                  <label className={styles.wideField}>
+                    <span>Project / development name</span>
+                    <input name="projectName" placeholder="The Riviera Wongamat, Laguna Phuket, etc." />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Project status</span>
+                    <select defaultValue="completed" name="projectStatus">
+                      {projectStatuses.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span>Developer</span>
+                    <input name="projectDeveloper" placeholder="Developer name" />
+                  </label>
+                </div>
+
+                <div className={styles.aiNote}>
+                  <Bot size={16} />
+                  <span>Listings can share project-level developer, construction status, location, and amenities.</span>
                 </div>
               </div>
             </section>

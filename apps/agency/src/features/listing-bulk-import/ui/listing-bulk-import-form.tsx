@@ -14,7 +14,10 @@ interface ListingBulkImportFormProps {
 
 const columnSynonyms: Record<string, string[]> = {
   externalId: ["externalid", "external_id", "sourceid", "source_id", "listingid", "listing_id", "reference", "ref", "crm_id"],
-  title: ["title", "name", "property_name", "listing_title", "project", "project_name"],
+  title: ["title", "name", "property_name", "listing_title", "unit_name"],
+  projectName: ["projectname", "project_name", "project", "development", "compound", "village"],
+  projectStatus: ["projectstatus", "project_status", "construction_status", "completion_status"],
+  projectDeveloper: ["projectdeveloper", "project_developer", "developer", "developer_name"],
   market: ["market", "city", "area", "location", "province", "destination"],
   kind: ["kind", "type", "property_type", "asset_type", "category"],
   listingType: ["listingtype", "listing_type", "intent", "transaction", "deal_type", "offer_type"],

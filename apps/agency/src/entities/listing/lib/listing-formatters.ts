@@ -14,6 +14,17 @@ export function formatListingType(value: PropertySnapshot["listingType"]) {
   return labels[value];
 }
 
+export function formatProjectStatus(value: NonNullable<PropertySnapshot["project"]>["status"]) {
+  const labels = {
+    completed: "Completed",
+    paused: "Paused",
+    planned: "Planned",
+    under_construction: "Under construction"
+  } satisfies Record<NonNullable<PropertySnapshot["project"]>["status"], string>;
+
+  return labels[value];
+}
+
 export function formatListingMoney(value: PropertySnapshot["price"]) {
   return new Intl.NumberFormat("en", {
     currency: value.currency,

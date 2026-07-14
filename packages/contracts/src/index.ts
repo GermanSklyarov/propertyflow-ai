@@ -4,6 +4,7 @@ import type {
   PropertyKind,
   PropertyListingType,
   PropertyPurpose,
+  PropertyProjectStatus,
   PropertySnapshot,
   ThailandMarket
 } from "@propertyflow/domain";
@@ -195,6 +196,14 @@ export interface CreatePropertyRequest {
   monthlyRentEstimate?: Money;
   maintenanceFeeMonthly?: Money;
   amenities?: string[];
+  project?: {
+    name: string;
+    status?: PropertyProjectStatus;
+    developer?: string;
+    address?: string;
+    completionYear?: number;
+    amenities?: string[];
+  };
 }
 
 export interface UpdatePropertyStatusRequest {

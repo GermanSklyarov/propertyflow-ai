@@ -8,6 +8,8 @@ export type PropertyListingType = "sale" | "rent" | "sale_or_rent";
 
 export type PropertyStatus = "draft" | "available" | "reserved" | "sold" | "rented" | "archived";
 
+export type PropertyProjectStatus = "planned" | "under_construction" | "completed" | "paused";
+
 export type ThailandMarket = "pattaya" | "phuket" | "bangkok" | "hua-hin" | "koh-samui";
 
 export interface Money {
@@ -18,6 +20,21 @@ export interface Money {
 export interface GeoPoint {
   latitude: number;
   longitude: number;
+}
+
+export interface PropertyProjectSnapshot {
+  id: string;
+  tenantId: string;
+  name: string;
+  market: ThailandMarket;
+  status: PropertyProjectStatus;
+  developer?: string;
+  address?: string;
+  completionYear?: number;
+  location?: GeoPoint;
+  amenities: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface PropertySnapshot {
@@ -41,6 +58,7 @@ export interface PropertySnapshot {
   monthlyRentEstimate?: Money;
   maintenanceFeeMonthly?: Money;
   amenities: string[];
+  project?: PropertyProjectSnapshot;
   createdAt: string;
   updatedAt: string;
 }
