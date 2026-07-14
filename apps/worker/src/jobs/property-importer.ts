@@ -54,6 +54,8 @@ export interface PropertyImportResult {
   imported: number;
   issues: ImportIssue[];
   propertyIds: string[];
+  rowsMissingExternalId: number;
+  rowsWithExternalId: number;
   skipped: number;
   source: PropertyImportJobPayload["source"];
   tenantId: string;
@@ -84,12 +86,20 @@ export class PropertyImporter {
     const issues: ImportIssue[] = [];
     const propertyIds: string[] = [];
     let imported = 0;
+    let rowsMissingExternalId = 0;
+    let rowsWithExternalId = 0;
 
     await job.updateProgress({ imported, skipped: 0, total: rows.length });
 
     for (const [index, row] of rows.entries()) {
       try {
         const draft = toImportedPropertyDraft(row);
+
+        if (draft.externalId) {
+          rowsWithExternalId += 1;
+        } else {
+          rowsMissingExternalId += 1;
+        }
 
         if (!job.data.dryRun) {
           propertyIds.push(await this.insertProperty(job.data.tenantId, draft));
@@ -120,6 +130,8 @@ export class PropertyImporter {
       skipped: issues.length,
       issues: issues.slice(0, 25),
       propertyIds,
+      rowsMissingExternalId,
+      rowsWithExternalId,
       total: rows.length
     };
   }

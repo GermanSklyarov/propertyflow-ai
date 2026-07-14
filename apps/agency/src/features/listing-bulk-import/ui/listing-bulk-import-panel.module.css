@@ -345,6 +345,22 @@
   font-weight: 900;
 }
 
+.importWarning {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  border: 1px solid rgb(194 138 33 / 24%);
+  background: #fff8e8;
+  padding: 8px;
+}
+
+.importWarning strong,
+.importWarning span {
+  color: #74521a;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
 .issueList {
   display: grid;
   gap: 5px;

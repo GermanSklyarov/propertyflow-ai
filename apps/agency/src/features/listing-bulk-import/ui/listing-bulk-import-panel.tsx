@@ -127,6 +127,12 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
                             </span>
                           </div>
                         ) : null}
+                        {result?.rowsMissingExternalId ? (
+                          <div className={styles.importWarning}>
+                            <strong>{result.rowsMissingExternalId} rows without externalId</strong>
+                            <span>They can create duplicate drafts on recurring CRM imports.</span>
+                          </div>
+                        ) : null}
                         {result?.issues?.length ? (
                           <div className={styles.issueList}>
                             {result.issues.map((issue) => (
@@ -184,12 +190,14 @@ function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undef
   const skipped = getProgressNumber(job.result.skipped);
   const total = getProgressNumber(job.result.total);
   const indexed = getProgressNumber(job.result.indexed);
+  const rowsMissingExternalId = getProgressNumber(job.result.rowsMissingExternalId);
+  const rowsWithExternalId = getProgressNumber(job.result.rowsWithExternalId);
   const dryRun = job.result.dryRun === true;
   const issues = Array.isArray(job.result.issues)
     ? job.result.issues.filter(isImportIssue).slice(0, 3)
     : [];
 
-  return { dryRun, imported, indexed, issues, skipped, total };
+  return { dryRun, imported, indexed, issues, rowsMissingExternalId, rowsWithExternalId, skipped, total };
 }
 
 function isProgressObject(value: BackgroundJobMonitorItem["progress"]): value is Record<string, unknown> {
@@ -205,6 +213,8 @@ interface ImportJobResult {
   imported: number;
   indexed: number;
   issues: ImportIssue[];
+  rowsMissingExternalId: number;
+  rowsWithExternalId: number;
   skipped: number;
   total: number;
 }
