@@ -69,3 +69,12 @@
 - Add public REST API.
 - Add WebSocket collaboration and task updates.
 - Add billing-ready plan limits.
+
+## Phase 9: Agency Growth Automation
+
+- Add AI social post generation for LINE VOOM, Facebook, Instagram, and generic reposting workflows.
+- Generate channel-specific captions, hooks, CTAs, hashtags, and short/long variants from listing data.
+- Support multilingual post drafts in English, Russian, Thai, and Chinese.
+- Reuse AI-selected gallery photos and image-analysis tags when composing posts.
+- Add approval workflow: draft, review, approved, published.
+- Track generated posts, source channels, UTM tags, leads, and conversion back to the listing and agent.
