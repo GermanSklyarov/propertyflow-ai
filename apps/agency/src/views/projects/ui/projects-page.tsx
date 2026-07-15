@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { formatListingType, formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { createPropertyProjectAction } from "@entities/project/api/project-actions";
+import { ProjectNameDedupeField } from "@features/project-create/ui/project-name-dedupe-field";
 import type { PropertyProjectSearchResponse, PropertySearchResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./projects-page.module.css";
@@ -23,13 +24,6 @@ const markets = [
   { label: "Bangkok", value: "bangkok" },
   { label: "Hua Hin", value: "hua-hin" },
   { label: "Koh Samui", value: "koh-samui" }
-];
-
-const projectStatuses = [
-  { label: "Completed", value: "completed" },
-  { label: "Under construction", value: "under_construction" },
-  { label: "Planned", value: "planned" },
-  { label: "Paused", value: "paused" }
 ];
 
 export function ProjectsPage({
@@ -86,10 +80,7 @@ export function ProjectsPage({
                   <ChevronDown size={15} />
                 </summary>
                 <form action={createPropertyProjectAction} className={styles.projectForm}>
-                  <label className={styles.wideField}>
-                    <span>Project name</span>
-                    <input name="name" placeholder="The Riviera Wongamat" required />
-                  </label>
+                  <ProjectNameDedupeField />
                   <label>
                     <span>Market</span>
                     <select defaultValue="pattaya" name="market">
@@ -99,20 +90,6 @@ export function ProjectsPage({
                         </option>
                       ))}
                     </select>
-                  </label>
-                  <label>
-                    <span>Status</span>
-                    <select defaultValue="completed" name="status">
-                      {projectStatuses.map((status) => (
-                        <option key={status.value} value={status.value}>
-                          {status.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    <span>Developer</span>
-                    <input name="developer" placeholder="Riviera Group" />
                   </label>
                   <label>
                     <span>Completion year</span>
