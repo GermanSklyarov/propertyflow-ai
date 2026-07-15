@@ -4,6 +4,7 @@ import { ApiHeader, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nest
 import type { FastifyReply } from "fastify";
 import type {
   AiAdvisorSummary,
+  AmenitySuggestionResponse,
   BackgroundJobSnapshot,
   InvestmentAnalysis,
   IndexedPropertySearchResponse,
@@ -60,6 +61,7 @@ import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { CreatePropertyCommand } from "../../application/commands/create-property.command.js";
 import { GetPropertyQuery } from "../../application/queries/get-property.query.js";
 import { ListPropertiesQuery } from "../../application/queries/list-properties.query.js";
+import { AmenitySuggestionsService } from "../../application/services/amenity-suggestions.service.js";
 import { AiPropertyAdvisorService } from "../../application/services/ai-property-advisor.service.js";
 import { IndexedPropertySearchService } from "../../application/services/indexed-property-search.service.js";
 import { InvestmentCalculatorService } from "../../application/services/investment-calculator.service.js";
@@ -115,6 +117,8 @@ export class PropertiesController {
     private readonly commandBus: CommandBus,
     @Inject(QueryBus)
     private readonly queryBus: QueryBus,
+    @Inject(AmenitySuggestionsService)
+    private readonly amenitySuggestions: AmenitySuggestionsService,
     @Inject(AiPropertyAdvisorService)
     private readonly advisor: AiPropertyAdvisorService,
     @Inject(IndexedPropertySearchService)
@@ -200,6 +204,23 @@ export class PropertiesController {
     });
 
     return property;
+  }
+
+  @Get("amenities")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Search reusable amenity labels for listing and project forms" })
+  @ApiQuery({ name: "query", required: false })
+  @ApiQuery({ name: "limit", required: false })
+  @ApiOkResponse({ description: "Normalized amenity suggestions deduplicated across listings and projects" })
+  searchAmenities(
+    @TenantId() tenantId: string,
+    @Query("query") query?: string,
+    @Query("limit") limit?: string
+  ): Promise<AmenitySuggestionResponse> {
+    return this.amenitySuggestions.search(tenantId, {
+      limit: parseOptionalNumber(limit),
+      query
+    });
   }
 
   @Get("projects")

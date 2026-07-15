@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import type {
+  AmenitySuggestionRequest,
+  AmenitySuggestionResponse,
   CreatePropertyProjectRequest,
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
@@ -11,6 +13,7 @@ import type {
   UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
+import { buildAmenitySuggestions, type RawAmenitySuggestion } from "../domain/amenity-suggestions.js";
 import type { PropertyRepository } from "../domain/property.repository.js";
 
 @Injectable()
@@ -334,6 +337,7 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         status: project.status,
         developer: project.developer,
         address: project.address,
+        amenities: project.amenities,
         listingCount: project.listingCount,
         rentCount: project.rentCount,
         saleCount: project.saleCount
@@ -349,6 +353,28 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       items,
       total: sortedProjects.length
     };
+  }
+
+  async searchAmenities(tenantId: string, filters: AmenitySuggestionRequest): Promise<AmenitySuggestionResponse> {
+    const rawAmenities: RawAmenitySuggestion[] = [];
+
+    for (const property of await this.list(tenantId)) {
+      for (const amenity of property.amenities) {
+        rawAmenities.push({ label: amenity, source: "listing" });
+      }
+    }
+
+    for (const project of this.projects.values()) {
+      if (project.tenantId !== tenantId) {
+        continue;
+      }
+
+      for (const amenity of project.amenities ?? []) {
+        rawAmenities.push({ label: amenity, source: "project" });
+      }
+    }
+
+    return buildAmenitySuggestions(rawAmenities, filters);
   }
 
   async createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion> {
@@ -378,6 +404,7 @@ export class InMemoryPropertyRepository implements PropertyRepository {
     return (
       result.items.find((item) => item.id === snapshot.id) ?? {
         id: snapshot.id,
+        amenities: snapshot.amenities,
         listingCount: 0,
         market: snapshot.market,
         name: snapshot.name,
@@ -404,6 +431,7 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       status: project.status,
       developer: project.developer,
       address: project.address,
+      amenities: project.amenities,
       listingCount: linkedListings.length,
       rentCount: linkedListings.filter((property) => property.listingType === "rent" || property.listingType === "sale_or_rent").length,
       saleCount: linkedListings.filter((property) => property.listingType === "sale" || property.listingType === "sale_or_rent").length

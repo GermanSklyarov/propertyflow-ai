@@ -5,6 +5,8 @@ import type {
   BackgroundJobState,
   AiChatRequest,
   AiChatResponse,
+  AmenitySuggestionRequest,
+  AmenitySuggestionResponse,
   CreateKnowledgeDocumentRequest,
   CreatePropertyImportUploadRequest,
   CreatePropertyImportUploadResponse,
@@ -199,6 +201,36 @@ export async function updatePropertyProjectRecord(
   }
 
   return (await response.json()) as PropertyProjectSuggestion;
+}
+
+export async function searchAmenities(
+  request: AmenitySuggestionRequest = { limit: 12 },
+  options: { revalidateSeconds?: number | false } = {}
+): Promise<AmenitySuggestionResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/amenities${toQueryString(request)}`, {
+      headers: demoHeaders,
+      ...(options.revalidateSeconds === false
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: options.revalidateSeconds ?? 10 } })
+    });
+
+    if (!response.ok) {
+      return demoAmenitySuggestions(request);
+    }
+
+    return (await response.json()) as AmenitySuggestionResponse;
+  } catch {
+    return demoAmenitySuggestions(request);
+  }
+}
+
+function demoAmenitySuggestions(request: AmenitySuggestionRequest): AmenitySuggestionResponse {
+  return {
+    filters: request,
+    items: [],
+    total: 0
+  };
 }
 
 function demoPropertyProjectSearchResponse(request: PropertyProjectSearchRequest): PropertyProjectSearchResponse {

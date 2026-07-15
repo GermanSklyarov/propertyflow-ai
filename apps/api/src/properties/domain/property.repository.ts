@@ -1,5 +1,7 @@
 import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
 import type {
+  AmenitySuggestionRequest,
+  AmenitySuggestionResponse,
   CreatePropertyProjectRequest,
   PropertyPriceHistoryPoint,
   PropertyProjectSuggestion,
@@ -33,6 +35,7 @@ export interface PropertyRepository {
   list(tenantId: string): Promise<PropertySnapshot[]>;
   search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]>;
   searchPage(tenantId: string, filters: PropertySearchRequest): Promise<PropertySearchResponse>;
+  searchAmenities(tenantId: string, filters: AmenitySuggestionRequest): Promise<AmenitySuggestionResponse>;
   createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion>;
   findProjectById(tenantId: string, projectId: string): Promise<PropertyProjectSuggestion | null>;
   searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse>;

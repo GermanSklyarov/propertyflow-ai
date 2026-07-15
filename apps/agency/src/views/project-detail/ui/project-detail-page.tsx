@@ -3,6 +3,7 @@ import { ArrowLeft, Building2, Home, KeyRound, MapPin, Ruler, Sparkles } from "l
 import { formatListingMoney, formatListingType, formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { buildListingCoverImageSrc } from "@entities/listing/lib/listing-media";
 import { updatePropertyProjectRecordAction } from "@entities/project/api/project-actions";
+import { AmenitiesSuggestionField } from "@features/project-create/ui/amenities-suggestion-field";
 import type { PropertyProjectSuggestion, PropertySearchResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./project-detail-page.module.css";
@@ -93,10 +94,7 @@ export function ProjectDetailPage({
                 <span>Address or area</span>
                 <input defaultValue={project.address ?? ""} name="address" placeholder="Wongamat Beach, Pattaya" />
               </label>
-              <label className={styles.wideField}>
-                <span>Shared amenities</span>
-                <input name="amenities" placeholder="pool, gym, lobby, parking" />
-              </label>
+              <AmenitiesSuggestionField className={styles.wideField} defaultValue={project.amenities?.join(", ") ?? ""} />
               <button type="submit">Save project</button>
             </form>
           </section>

@@ -357,6 +357,7 @@ export interface PropertyProjectSuggestion {
   status: NonNullable<PropertySnapshot["project"]>["status"];
   developer?: string;
   address?: string;
+  amenities?: string[];
   listingCount: number;
   rentCount?: number;
   saleCount?: number;
@@ -379,6 +380,26 @@ export interface PropertyProjectSearchResponse {
       count: number;
     }>;
   };
+}
+
+export type AmenitySuggestionSource = "listing" | "project";
+
+export interface AmenitySuggestion {
+  label: string;
+  normalized: string;
+  count: number;
+  sources: AmenitySuggestionSource[];
+}
+
+export interface AmenitySuggestionRequest {
+  query?: string;
+  limit?: number;
+}
+
+export interface AmenitySuggestionResponse {
+  items: AmenitySuggestion[];
+  total: number;
+  filters: AmenitySuggestionRequest;
 }
 
 export type PropertySearchSort =

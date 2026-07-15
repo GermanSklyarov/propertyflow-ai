@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { formatListingType, formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { createPropertyProjectAction } from "@entities/project/api/project-actions";
+import { AmenitiesSuggestionField } from "@features/project-create/ui/amenities-suggestion-field";
 import { ProjectNameDedupeField } from "@features/project-create/ui/project-name-dedupe-field";
 import type { PropertyProjectSearchResponse, PropertySearchResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
@@ -99,10 +100,7 @@ export function ProjectsPage({
                     <span>Address or area</span>
                     <input name="address" placeholder="Wongamat Beach, Pattaya" />
                   </label>
-                  <label className={styles.wideField}>
-                    <span>Shared amenities</span>
-                    <input name="amenities" placeholder="pool, gym, lobby, parking" />
-                  </label>
+                  <AmenitiesSuggestionField className={styles.wideField} />
                   <button type="submit">
                     <Building2 size={15} />
                     Create project

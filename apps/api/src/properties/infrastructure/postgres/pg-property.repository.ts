@@ -1,6 +1,8 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
 import type {
+  AmenitySuggestionRequest,
+  AmenitySuggestionResponse,
   CreatePropertyProjectRequest,
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
@@ -22,6 +24,7 @@ import type {
   ThailandMarket
 } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
+import { buildAmenitySuggestions, type RawAmenitySuggestion } from "../../domain/amenity-suggestions.js";
 import type { PropertyRepository } from "../../domain/property.repository.js";
 
 interface PropertyRow {
@@ -83,6 +86,7 @@ interface PropertyProjectSuggestionRow {
   status: PropertyProjectStatus;
   developer: string | null;
   address: string | null;
+  amenities: string[] | null;
   listing_count: string;
   rent_count: string;
   sale_count: string;
@@ -547,6 +551,7 @@ export class PgPropertyRepository implements PropertyRepository {
           project.status,
           project.developer,
           project.address,
+          project.amenities,
           count(property.id)::text as listing_count,
           count(property.id) filter (where property.listing_type in ('rent', 'sale_or_rent'))::text as rent_count,
           count(property.id) filter (where property.listing_type in ('sale', 'sale_or_rent'))::text as sale_count
@@ -582,11 +587,33 @@ export class PgPropertyRepository implements PropertyRepository {
         developer: row.developer ?? undefined,
         address: row.address ?? undefined,
         listingCount: Number(row.listing_count),
+        amenities: row.amenities ?? undefined,
         rentCount: Number(row.rent_count),
         saleCount: Number(row.sale_count)
       })),
       total: Number(countResult.rows[0]?.count ?? 0)
     };
+  }
+
+  async searchAmenities(tenantId: string, filters: AmenitySuggestionRequest): Promise<AmenitySuggestionResponse> {
+    const result = await this.pool.query<{ label: string; source: "listing" | "project" }>(
+      `
+        select amenity.label, amenity.source
+        from (
+          select unnest(p.amenities) as label, 'listing'::text as source
+          from properties p
+          where p.tenant_id = $1
+          union all
+          select unnest(project.amenities) as label, 'project'::text as source
+          from property_projects project
+          where project.tenant_id = $1
+        ) amenity
+        where amenity.label is not null and btrim(amenity.label) <> ''
+      `,
+      [tenantId]
+    );
+
+    return buildAmenitySuggestions(result.rows as RawAmenitySuggestion[], filters);
   }
 
   async createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion> {
@@ -612,6 +639,7 @@ export class PgPropertyRepository implements PropertyRepository {
       result.items.find((item) => item.id === projectId) ??
       result.items[0] ?? {
         id: projectId,
+        amenities: project.amenities ?? [],
         listingCount: 0,
         market: project.market,
         name: project.name,
@@ -632,6 +660,7 @@ export class PgPropertyRepository implements PropertyRepository {
           project.status,
           project.developer,
           project.address,
+          project.amenities,
           count(property.id)::text as listing_count,
           count(property.id) filter (where property.listing_type in ('rent', 'sale_or_rent'))::text as rent_count,
           count(property.id) filter (where property.listing_type in ('sale', 'sale_or_rent'))::text as sale_count
@@ -657,6 +686,7 @@ export class PgPropertyRepository implements PropertyRepository {
       developer: row.developer ?? undefined,
       address: row.address ?? undefined,
       listingCount: Number(row.listing_count),
+      amenities: row.amenities ?? undefined,
       rentCount: Number(row.rent_count),
       saleCount: Number(row.sale_count)
     };
