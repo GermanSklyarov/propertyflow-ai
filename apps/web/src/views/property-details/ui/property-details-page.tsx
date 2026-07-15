@@ -21,6 +21,7 @@ import {
 } from "@entities/property/model/property-price-history";
 import { LeadCaptureForm } from "@features/lead-capture/ui/lead-capture-form";
 import { formatCompactThb } from "@shared/lib/format-money";
+import { PropertyGallery } from "./property-gallery";
 import styles from "./property-details-page.module.css";
 
 export function PropertyDetailsPage({
@@ -35,6 +36,13 @@ export function PropertyDetailsPage({
   const brief = buildPropertyBrief(property);
   const economics = buildPropertyEconomics(property);
   const media = buildPropertyMedia(property, gallery);
+  const galleryImages = media.images.map((image, index) => ({
+    alt: image.caption ?? `${property.title} photo ${index + 1}`,
+    caption: index === 0 ? "Cover photo" : `Photo ${index + 1}`,
+    id: image.id,
+    isCover: index === 0,
+    src: buildPublicGalleryImageSrc(image)
+  }));
   const priceHistory = buildPropertyPriceHistory(property);
   const priceHistoryBars = getPriceHistoryBars(priceHistory);
 
@@ -46,7 +54,7 @@ export function PropertyDetailsPage({
         <div className={styles.heroMedia}>
           <img
             className="block size-full object-cover"
-            src={media.cover.imageUrl}
+            src={buildPublicGalleryImageSrc(media.cover)}
             alt={media.cover.caption ?? property.title}
           />
         </div>
@@ -85,28 +93,18 @@ export function PropertyDetailsPage({
       >
         <div className="grid content-start gap-[18px]">
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">
-            <div className="flex items-start justify-between gap-[18px]">
+            <div className={styles.galleryHeader}>
               <div>
                 <p className="section-kicker">Property gallery</p>
-                <h2 className="mt-2 max-w-[720px] text-[clamp(1.55rem,2.8vw,2.7rem)] leading-tight">
+                <h2 className={styles.galleryTitle}>
                   {media.title}
                 </h2>
               </div>
-              <span className="border border-[var(--line)] bg-[#edf8f4] px-3 py-2 text-[0.78rem] font-black uppercase text-[var(--teal-dark)]">
+              <span className={styles.galleryCount}>
                 {media.images.length} photos
               </span>
             </div>
-            <div className={`mt-[18px] grid gap-3 ${styles.galleryGrid}`}>
-              {media.images.map((image, index) => (
-                <figure className={index === 0 ? styles.galleryHero : styles.galleryThumb} key={image.id}>
-                  <img
-                    src={buildPublicGalleryImageSrc(image)}
-                    alt={image.caption ?? `${property.title} photo ${index + 1}`}
-                  />
-                  <figcaption>{index === 0 ? "Cover photo" : `Photo ${index + 1}`}</figcaption>
-                </figure>
-              ))}
-            </div>
+            <PropertyGallery images={galleryImages} />
           </section>
 
           <section className="border border-[var(--line)] bg-white p-[clamp(18px,2vw,26px)] shadow-[0_16px_42px_rgba(37,50,46,0.08)]">

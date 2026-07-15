@@ -18,6 +18,30 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.galleryHeader {
+  display: grid;
+  gap: 14px;
+}
+
+.galleryTitle {
+  max-width: 720px;
+  margin: 8px 0 0;
+  font-size: clamp(1.45rem, 7vw, 2.45rem);
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.galleryCount {
+  width: fit-content;
+  border: 1px solid var(--line);
+  background: #edf8f4;
+  padding: 10px 12px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .galleryGrid {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -81,6 +105,11 @@
 
   .twoColumn {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .galleryHeader {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: flex-start;
   }
 
   .galleryGrid {
