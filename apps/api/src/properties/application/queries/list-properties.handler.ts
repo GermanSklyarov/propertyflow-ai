@@ -9,12 +9,6 @@ export class ListPropertiesHandler implements IQueryHandler<ListPropertiesQuery,
   constructor(@Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository) {}
 
   async execute(query: ListPropertiesQuery): Promise<PropertySearchResponse> {
-    const items = await this.properties.search(query.tenantId, query.filters);
-
-    return {
-      items,
-      total: items.length,
-      filters: query.filters
-    };
+    return this.properties.searchPage(query.tenantId, query.filters);
   }
 }

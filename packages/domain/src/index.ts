@@ -58,6 +58,11 @@ export interface PropertySnapshot {
   monthlyRentEstimate?: Money;
   maintenanceFeeMonthly?: Money;
   amenities: string[];
+  coverImage?: {
+    id: string;
+    imageUrl: string;
+    objectKey?: string;
+  };
   project?: PropertyProjectSnapshot;
   createdAt: string;
   updatedAt: string;

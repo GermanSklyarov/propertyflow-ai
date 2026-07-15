@@ -6,7 +6,16 @@ import type { PropertyListingType, ThailandMarket } from "@propertyflow/domain";
 
 const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const propertyListingTypes: PropertyListingType[] = ["sale", "rent", "sale_or_rent"];
-const propertySearchSorts: PropertySearchSort[] = ["created-desc", "ai-fit", "price-asc", "yield-desc", "beach-asc"];
+const propertySearchSorts: PropertySearchSort[] = [
+  "created-desc",
+  "ai-fit",
+  "price-asc",
+  "price-desc",
+  "rent-asc",
+  "yield-desc",
+  "beach-asc"
+];
+const projectLinkFilters = ["all", "linked", "missing"] as const;
 
 export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> {
   @IsOptional()
@@ -121,6 +130,14 @@ export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> 
   @IsIn(propertySearchSorts)
   sort?: PropertySearchSort;
 
+  @IsOptional()
+  @IsString()
+  query?: string;
+
+  @IsOptional()
+  @IsIn(projectLinkFilters)
+  projectLink?: PropertySearchRequest["projectLink"];
+
   toSearchRequest(): PropertySearchRequest {
     return toPropertySearchRequest(this);
   }
@@ -152,6 +169,8 @@ export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySea
     maxBeachDistanceMeters: toOptionalNumber(query.maxBeachDistanceMeters),
     requiredAmenities: toOptionalStringArray(query.requiredAmenities),
     radiusMeters,
+    query: toOptionalString(query.query),
+    projectLink: query.projectLink,
     limit: toOptionalNumber(query.limit),
     offset: toOptionalNumber(query.offset),
     sort: query.sort
@@ -165,6 +184,12 @@ export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySea
   }
 
   return filters;
+}
+
+function toOptionalString(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : undefined;
 }
 
 function toOptionalNumber(value: number | string | undefined): number | undefined {

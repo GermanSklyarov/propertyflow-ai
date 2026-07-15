@@ -1,4 +1,3 @@
-import { IsOptional, IsString } from "class-validator";
 import type { IndexedPropertySearchRequest } from "@propertyflow/contracts";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 
@@ -6,10 +5,6 @@ export class IndexedSearchPropertiesDto
   extends SearchPropertiesDto
   implements Omit<IndexedPropertySearchRequest, "near">
 {
-  @IsOptional()
-  @IsString()
-  query?: string;
-
   toIndexedSearchRequest(): IndexedPropertySearchRequest {
     return toIndexedPropertySearchRequest(this);
   }

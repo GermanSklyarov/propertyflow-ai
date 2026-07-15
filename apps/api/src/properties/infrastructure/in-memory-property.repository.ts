@@ -3,6 +3,7 @@ import type {
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
+  PropertySearchResponse,
   PropertySearchRequest,
   UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
@@ -153,6 +154,10 @@ export class InMemoryPropertyRepository implements PropertyRepository {
   }
 
   async search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]> {
+    return (await this.searchPage(tenantId, filters)).items;
+  }
+
+  async searchPage(tenantId: string, filters: PropertySearchRequest): Promise<PropertySearchResponse> {
     const properties = await this.list(tenantId);
 
     const filteredProperties = properties.filter((property) => {
@@ -207,15 +212,33 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         return false;
       }
 
+      if (filters.projectLink === "linked" && !property.project) {
+        return false;
+      }
+
+      if (filters.projectLink === "missing" && property.project) {
+        return false;
+      }
+
+      if (filters.query && !this.matchesSmartQuery(property, filters.query)) {
+        return false;
+      }
+
       return true;
     });
 
     const sortedProperties = this.sortProperties(filteredProperties, filters);
     const offset = filters.offset ?? 0;
+    const items =
+      filters.limit !== undefined
+        ? sortedProperties.slice(offset, offset + filters.limit)
+        : sortedProperties.slice(offset);
 
-    return filters.limit !== undefined
-      ? sortedProperties.slice(offset, offset + filters.limit)
-      : sortedProperties.slice(offset);
+    return {
+      filters,
+      items,
+      total: filteredProperties.length
+    };
   }
 
   async searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse> {
@@ -290,6 +313,14 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         return left.price.amount - right.price.amount;
       }
 
+      if (filters.sort === "price-desc") {
+        return right.price.amount - left.price.amount;
+      }
+
+      if (filters.sort === "rent-asc") {
+        return this.rent(left) - this.rent(right);
+      }
+
       if (filters.sort === "yield-desc") {
         return this.grossYield(right) - this.grossYield(left);
       }
@@ -307,11 +338,55 @@ export class InMemoryPropertyRepository implements PropertyRepository {
   }
 
   private grossYield(property: PropertySnapshot): number {
-    if (!property.monthlyRentEstimate?.amount || !property.price.amount) {
+    const rent = property.rentalPriceMonthly ?? property.monthlyRentEstimate;
+
+    if (!rent?.amount || !property.price.amount) {
       return 0;
     }
 
-    return (property.monthlyRentEstimate.amount * 12) / property.price.amount;
+    return (rent.amount * 12) / property.price.amount;
+  }
+
+  private rent(property: PropertySnapshot): number {
+    return property.rentalPriceMonthly?.amount ?? property.monthlyRentEstimate?.amount ?? Number.MAX_SAFE_INTEGER;
+  }
+
+  private matchesSmartQuery(property: PropertySnapshot, query: string): boolean {
+    const parsed = parseInventoryQuery(query);
+
+    if (parsed.bedrooms !== undefined && property.bedrooms !== parsed.bedrooms) {
+      return false;
+    }
+
+    if (parsed.maxRentMonthly !== undefined && this.rent(property) > parsed.maxRentMonthly) {
+      return false;
+    }
+
+    if (parsed.maxPrice !== undefined && property.price.amount > parsed.maxPrice) {
+      return false;
+    }
+
+    if (parsed.requiresMissingProject && property.project) {
+      return false;
+    }
+
+    const haystack = [
+      property.title,
+      property.description,
+      property.kind,
+      property.listingType,
+      property.market,
+      property.status,
+      property.address,
+      property.project?.name,
+      property.project?.developer,
+      ...property.amenities
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return parsed.tokens.every((token) => haystack.includes(token));
   }
 
   private beachDistance(property: PropertySnapshot): number {
@@ -346,4 +421,67 @@ function normalizeProjectName(value: string) {
     .replace(/&/g, "and")
     .replace(/\b(?:the|condo|condominium|village|project|residence|residences)\b/gu, "")
     .replace(/[^\p{Letter}\p{Number}]+/gu, "");
+}
+
+function parseInventoryQuery(query?: string) {
+  const raw = query?.trim().toLowerCase() ?? "";
+  const bedroomMatch = raw.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms|bd)\b/);
+  const maxRentMatch = raw.match(
+    /\b(?:under|below|max|up to)\s*(\d+(?:\.\d+)?)\s*(k)?\s*(?:\/?\s*month|monthly|rent|thb\/mo|k\/mo)\b/
+  );
+  const maxPriceMatch =
+    raw.match(/\b(?:under|below|max|up to)\s*(\d+(?:\.\d+)?)\s*(m|million|mln)\b/) ??
+    raw.match(/\b(?:under|below|max|up to)\s*(\d+(?:\.\d+)?)\s*(?:thb|baht|sale|price)\b/);
+  const ignoredTokens = new Set([
+    "a",
+    "an",
+    "and",
+    "baht",
+    "below",
+    "for",
+    "max",
+    "month",
+    "monthly",
+    "price",
+    "rent",
+    "sale",
+    "thb",
+    "under",
+    "up",
+    "to",
+    "with"
+  ]);
+  const tokens = raw
+    .replace(/\b\d+(?:\.\d+)?\s*(?:k|m|million|mln)?\b/g, " ")
+    .replace(/\b(?:bed|beds|bedroom|bedrooms|bd|month|monthly|thb\/mo|k\/mo)\b/g, " ")
+    .split(/[^a-z0-9-]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 1 && !ignoredTokens.has(token));
+
+  return {
+    bedrooms: bedroomMatch ? Number(bedroomMatch[1]) : undefined,
+    maxPrice: maxPriceMatch ? parseMoneyAmount(maxPriceMatch[1], maxPriceMatch[2]) : undefined,
+    maxRentMonthly: maxRentMatch ? parseMoneyAmount(maxRentMatch[1], maxRentMatch[2]) : undefined,
+    raw,
+    requiresMissingProject: /\b(?:missing project|no project|without project|unlinked)\b/.test(raw),
+    tokens
+  };
+}
+
+function parseMoneyAmount(value: string, suffix?: string) {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return undefined;
+  }
+
+  if (suffix === "m" || suffix === "million" || suffix === "mln") {
+    return amount * 1_000_000;
+  }
+
+  if (suffix === "k") {
+    return amount * 1_000;
+  }
+
+  return amount;
 }

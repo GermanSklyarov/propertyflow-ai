@@ -352,7 +352,14 @@ export interface PropertyProjectSearchResponse {
   filters: PropertyProjectSearchRequest;
 }
 
-export type PropertySearchSort = "created-desc" | "ai-fit" | "price-asc" | "yield-desc" | "beach-asc";
+export type PropertySearchSort =
+  | "created-desc"
+  | "ai-fit"
+  | "price-asc"
+  | "price-desc"
+  | "rent-asc"
+  | "yield-desc"
+  | "beach-asc";
 
 export interface PropertySearchRequest {
   market?: ThailandMarket;
@@ -368,6 +375,8 @@ export interface PropertySearchRequest {
   requiredAmenities?: string[];
   near?: GeoPoint;
   radiusMeters?: number;
+  query?: string;
+  projectLink?: "all" | "linked" | "missing";
   limit?: number;
   offset?: number;
   sort?: PropertySearchSort;

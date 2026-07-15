@@ -1,22 +1,23 @@
 import { CreateListingForm } from "@features/listing-create/ui/create-listing-form";
 import { ListingBulkImportPanel } from "@features/listing-bulk-import/ui/listing-bulk-import-panel";
-import type { BackgroundJobMonitorItem } from "@propertyflow/contracts";
+import type { BackgroundJobMonitorItem, PropertySearchResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { ListingsInventoryPanel } from "@widgets/listings-inventory/ui/listings-inventory-panel";
 import { ProjectCoveragePanel } from "@widgets/project-coverage/ui/project-coverage-panel";
 import styles from "./listings-page.module.css";
 
 interface ListingsPageProps {
+  coverageListings: PropertySnapshot[];
   importJobs: BackgroundJobMonitorItem[];
   importResult?: {
     error?: "empty";
     jobId?: string;
   };
-  listings: PropertySnapshot[];
+  inventory: PropertySearchResponse;
   total: number;
 }
 
-export function ListingsPage({ importJobs, importResult, listings, total }: ListingsPageProps) {
+export function ListingsPage({ coverageListings, importJobs, importResult, inventory, total }: ListingsPageProps) {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -35,9 +36,9 @@ export function ListingsPage({ importJobs, importResult, listings, total }: List
 
         <ListingBulkImportPanel jobs={importJobs} result={importResult} />
 
-        <ProjectCoveragePanel listings={listings} />
+        <ProjectCoveragePanel listings={coverageListings} />
 
-        <ListingsInventoryPanel listings={listings} />
+        <ListingsInventoryPanel response={inventory} />
       </div>
     </main>
   );

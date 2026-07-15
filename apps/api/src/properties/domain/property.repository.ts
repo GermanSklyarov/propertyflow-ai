@@ -3,6 +3,7 @@ import type {
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
+  PropertySearchResponse,
   PropertySearchRequest,
   UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
@@ -28,6 +29,7 @@ export interface PropertyRepository {
   updateStatus(tenantId: string, propertyId: string, status: PropertyStatus): Promise<PropertySnapshot | null>;
   list(tenantId: string): Promise<PropertySnapshot[]>;
   search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]>;
+  searchPage(tenantId: string, filters: PropertySearchRequest): Promise<PropertySearchResponse>;
   searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse>;
   addPriceHistoryPoint(
     tenantId: string,

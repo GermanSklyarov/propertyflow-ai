@@ -5,6 +5,7 @@ import type {
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
   PropertyProjectSuggestion,
+  PropertySearchResponse,
   PropertySearchRequest,
   UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
@@ -48,6 +49,9 @@ interface PropertyRow {
   maintenance_fee_monthly_amount: string | null;
   maintenance_fee_monthly_currency: Currency | null;
   amenities: string[];
+  cover_image_id: string | null;
+  cover_image_url: string | null;
+  cover_object_key: string | null;
   created_at: Date;
   updated_at: Date;
   project_name: string | null;
@@ -355,6 +359,10 @@ export class PgPropertyRepository implements PropertyRepository {
   }
 
   async search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]> {
+    return (await this.searchPage(tenantId, filters)).items;
+  }
+
+  async searchPage(tenantId: string, filters: PropertySearchRequest): Promise<PropertySearchResponse> {
     const clauses = ["p.tenant_id = $1"];
     const values: unknown[] = [tenantId];
 
@@ -418,6 +426,16 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`st_dwithin(p.location, st_setsrid(st_makepoint(${longitude}, ${latitude}), 4326)::geography, ${radius})`);
     }
 
+    if (filters.projectLink === "linked") {
+      clauses.push("p.project_id is not null");
+    }
+
+    if (filters.projectLink === "missing") {
+      clauses.push("p.project_id is null");
+    }
+
+    this.applySmartQuery(clauses, addValue, filters.query);
+
     const paginationClauses: string[] = [];
 
     if (filters.limit !== undefined) {
@@ -428,17 +446,30 @@ export class PgPropertyRepository implements PropertyRepository {
       paginationClauses.push(`offset ${addValue(filters.offset)}`);
     }
 
+    const whereSql = clauses.join(" and ");
+    const countResult = await this.pool.query<{ count: string }>(
+      `
+        select count(*)::text as count
+        ${this.fromSearchPropertiesSql()}
+        where ${whereSql}
+      `,
+      values
+    );
     const result = await this.pool.query<PropertyRow>(
       `
         ${this.selectPropertiesSql()}
-        where ${clauses.join(" and ")}
+        where ${whereSql}
         order by ${this.orderBy(filters)}
         ${paginationClauses.join(" ")}
       `,
       values
     );
 
-    return result.rows.map((row) => this.toSnapshot(row));
+    return {
+      filters,
+      items: result.rows.map((row) => this.toSnapshot(row)),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
   }
 
   async searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse> {
@@ -505,11 +536,19 @@ export class PgPropertyRepository implements PropertyRepository {
       return "p.price_amount asc, p.created_at desc";
     }
 
+    if (filters.sort === "price-desc") {
+      return "p.price_amount desc, p.created_at desc";
+    }
+
+    if (filters.sort === "rent-asc") {
+      return "coalesce(p.rental_price_monthly_amount, p.monthly_rent_estimate_amount) asc nulls last, p.created_at desc";
+    }
+
     if (filters.sort === "yield-desc") {
       return `
         case
-          when p.monthly_rent_estimate_amount is not null and p.price_amount > 0
-            then p.monthly_rent_estimate_amount * 12 / p.price_amount
+          when coalesce(p.rental_price_monthly_amount, p.monthly_rent_estimate_amount) is not null and p.price_amount > 0
+            then coalesce(p.rental_price_monthly_amount, p.monthly_rent_estimate_amount) * 12 / p.price_amount
           else 0
         end desc,
         p.created_at desc
@@ -544,6 +583,50 @@ export class PgPropertyRepository implements PropertyRepository {
     }
 
     return "p.created_at desc";
+  }
+
+  private applySmartQuery(clauses: string[], addValue: (value: unknown) => string, query?: string) {
+    const parsed = parseInventoryQuery(query);
+
+    if (!parsed.raw) {
+      return;
+    }
+
+    if (parsed.bedrooms !== undefined) {
+      clauses.push(`p.bedrooms = ${addValue(parsed.bedrooms)}`);
+    }
+
+    if (parsed.maxRentMonthly !== undefined) {
+      clauses.push(
+        `coalesce(p.rental_price_monthly_amount, p.monthly_rent_estimate_amount) <= ${addValue(parsed.maxRentMonthly)}`
+      );
+    }
+
+    if (parsed.maxPrice !== undefined) {
+      clauses.push(`p.price_amount <= ${addValue(parsed.maxPrice)}`);
+    }
+
+    if (parsed.requiresMissingProject) {
+      clauses.push("p.project_id is null");
+    }
+
+    parsed.tokens.forEach((token) => {
+      clauses.push(`
+        concat_ws(
+          ' ',
+          p.title,
+          p.description,
+          p.kind,
+          p.listing_type,
+          p.market,
+          p.status,
+          p.address,
+          project.name,
+          project.developer,
+          array_to_string(p.amenities, ' ')
+        ) ilike ${addValue(`%${token}%`)}
+      `);
+    });
   }
 
   private async upsertProject(property: PropertySnapshot): Promise<string> {
@@ -658,6 +741,9 @@ export class PgPropertyRepository implements PropertyRepository {
     return `
       select
         p.*,
+        cover_image.id as cover_image_id,
+        cover_image.image_url as cover_image_url,
+        cover_image.object_key as cover_object_key,
         project.name as project_name,
         project.market as project_market,
         project.status as project_status,
@@ -669,6 +755,29 @@ export class PgPropertyRepository implements PropertyRepository {
         project.amenities as project_amenities,
         project.created_at as project_created_at,
         project.updated_at as project_updated_at
+      ${this.fromPropertiesSql()}
+    `;
+  }
+
+  private fromPropertiesSql() {
+    return `
+      from properties p
+      left join lateral (
+        select id, image_url, object_key
+        from property_images
+        where tenant_id = p.tenant_id
+          and property_id = p.id
+          and deleted_at is null
+        order by position asc, created_at asc
+        limit 1
+      ) cover_image on true
+      left join property_projects project
+        on project.tenant_id = p.tenant_id and project.id = p.project_id
+    `;
+  }
+
+  private fromSearchPropertiesSql() {
+    return `
       from properties p
       left join property_projects project
         on project.tenant_id = p.tenant_id and project.id = p.project_id
@@ -751,6 +860,14 @@ export class PgPropertyRepository implements PropertyRepository {
       monthlyRentEstimate: this.optionalMoney(row.monthly_rent_estimate_amount, row.monthly_rent_estimate_currency),
       maintenanceFeeMonthly: this.optionalMoney(row.maintenance_fee_monthly_amount, row.maintenance_fee_monthly_currency),
       amenities: row.amenities,
+      coverImage:
+        row.cover_image_id && row.cover_image_url
+          ? {
+              id: row.cover_image_id,
+              imageUrl: row.cover_image_url,
+              objectKey: row.cover_object_key ?? undefined
+            }
+          : undefined,
       project: row.project_id && row.project_name && row.project_market && row.project_status && row.project_created_at && row.project_updated_at
         ? {
             id: row.project_id,
@@ -796,6 +913,69 @@ export class PgPropertyRepository implements PropertyRepository {
       source: row.source
     };
   }
+}
+
+function parseInventoryQuery(query?: string) {
+  const raw = query?.trim().toLowerCase() ?? "";
+  const bedroomMatch = raw.match(/\b(\d+)\s*(?:bed|beds|bedroom|bedrooms|bd)\b/);
+  const maxRentMatch = raw.match(
+    /\b(?:under|below|max|up to)\s*(\d+(?:\.\d+)?)\s*(k)?\s*(?:\/?\s*month|monthly|rent|thb\/mo|k\/mo)\b/
+  );
+  const maxPriceMatch =
+    raw.match(/\b(?:under|below|max|up to)\s*(\d+(?:\.\d+)?)\s*(m|million|mln)\b/) ??
+    raw.match(/\b(?:under|below|max|up to)\s*(\d+(?:\.\d+)?)\s*(?:thb|baht|sale|price)\b/);
+  const ignoredTokens = new Set([
+    "a",
+    "an",
+    "and",
+    "baht",
+    "below",
+    "for",
+    "max",
+    "month",
+    "monthly",
+    "price",
+    "rent",
+    "sale",
+    "thb",
+    "under",
+    "up",
+    "to",
+    "with"
+  ]);
+  const tokens = raw
+    .replace(/\b\d+(?:\.\d+)?\s*(?:k|m|million|mln)?\b/g, " ")
+    .replace(/\b(?:bed|beds|bedroom|bedrooms|bd|month|monthly|thb\/mo|k\/mo)\b/g, " ")
+    .split(/[^a-z0-9-]+/)
+    .map((token) => token.trim())
+    .filter((token) => token.length > 1 && !ignoredTokens.has(token));
+
+  return {
+    bedrooms: bedroomMatch ? Number(bedroomMatch[1]) : undefined,
+    maxPrice: maxPriceMatch ? parseMoneyAmount(maxPriceMatch[1], maxPriceMatch[2]) : undefined,
+    maxRentMonthly: maxRentMatch ? parseMoneyAmount(maxRentMatch[1], maxRentMatch[2]) : undefined,
+    raw,
+    requiresMissingProject: /\b(?:missing project|no project|without project|unlinked)\b/.test(raw),
+    tokens
+  };
+}
+
+function parseMoneyAmount(value: string, suffix?: string) {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return undefined;
+  }
+
+  if (suffix === "m" || suffix === "million" || suffix === "mln") {
+    return amount * 1_000_000;
+  }
+
+  if (suffix === "k") {
+    return amount * 1_000;
+  }
+
+  return amount;
 }
 
 function normalizeProjectName(value: string) {

@@ -91,6 +91,7 @@
 }
 
 .tablePanel {
+  scroll-margin-top: 18px;
   padding: 16px;
 }
 
@@ -117,7 +118,7 @@
   gap: 6px;
 }
 
-.filterToggle button {
+.filterToggle a {
   display: inline-flex;
   min-height: 40px;
   align-items: center;
@@ -130,11 +131,12 @@
   font: inherit;
   font-size: 0.76rem;
   font-weight: 950;
+  text-decoration: none;
   text-transform: uppercase;
 }
 
-.filterToggle button:hover,
-.filterToggle button:focus-visible,
+.filterToggle a:hover,
+.filterToggle a:focus-visible,
 .filterActive {
   border-color: rgb(15 118 110 / 32%);
   background: #edf8f4;
@@ -156,13 +158,80 @@
   font-size: clamp(1.35rem, 2vw, 2.1rem);
 }
 
-.sortBadge {
+.inventoryToolbar {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.searchBox,
+.sortControl,
+.resultMeta {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
   border: 1px solid rgb(15 118 110 / 18%);
-  background: #edf8f4;
-  padding: 10px 12px;
+  background: #fff;
   color: var(--teal-dark);
+}
+
+.searchBox {
+  gap: 9px;
+  padding: 0 12px;
+}
+
+.searchBox input,
+.sortControl select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #13211e;
+  font: inherit;
+  font-weight: 800;
+}
+
+.searchBox input::placeholder {
+  color: rgb(97 111 107 / 70%);
+}
+
+.sortControl {
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.sortControl select {
+  cursor: pointer;
+}
+
+.resultMeta {
+  justify-content: center;
+  min-width: 96px;
+  padding: 0 12px;
+  background: #edf8f4;
   font-size: 0.78rem;
-  font-weight: 900;
+  font-weight: 950;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.applyButton {
+  min-height: 44px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.applyButton:hover,
+.applyButton:focus-visible {
+  background: var(--teal-dark);
 }
 
 .list {
@@ -183,10 +252,11 @@
 
 .listingRow {
   display: grid;
-  gap: 14px;
+  gap: 0;
+  overflow: hidden;
+  min-width: 0;
   border: 1px solid var(--line);
   background: #fff;
-  padding: 14px;
   color: inherit;
   text-decoration: none;
   transition:
@@ -202,6 +272,43 @@
   transform: translateY(-1px);
 }
 
+.mediaFrame {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: #edf8f4;
+}
+
+.mediaFrame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.mediaFrame span {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: rgb(255 255 255 / 88%);
+  padding: 7px 9px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.rowBody {
+  display: grid;
+  min-width: 0;
+  overflow: hidden;
+  gap: 14px;
+  padding: 14px;
+}
+
 .listingMain {
   display: grid;
   min-width: 0;
@@ -213,6 +320,10 @@
   min-width: 0;
   align-items: flex-start;
   gap: 10px;
+}
+
+.titleRow > div {
+  min-width: 0;
 }
 
 .kindIcon {
@@ -230,16 +341,19 @@
   margin: 0;
   font-size: 1.05rem;
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .address {
   display: inline-flex;
+  max-width: 100%;
   margin: 5px 0 0;
   align-items: center;
   gap: 5px;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 850;
+  overflow-wrap: anywhere;
 }
 
 .description {
@@ -249,6 +363,10 @@
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.45;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .metaRow,
@@ -273,15 +391,23 @@
   font-weight: 900;
 }
 
+.metaRow .missingProjectPill {
+  border-color: rgb(234 179 8 / 38%);
+  background: #fff8e8;
+  color: #6f4d11;
+}
+
 .commercials {
   display: grid;
   align-content: center;
   gap: 7px;
+  min-width: 0;
 }
 
 .commercials strong {
   color: #e05a40;
   font-size: 1.08rem;
+  overflow-wrap: anywhere;
 }
 
 .commercials small {
@@ -333,13 +459,127 @@
   color: var(--muted);
 }
 
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.pagination a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #fff;
+  padding: 0 12px;
+  color: var(--teal-dark);
+  font: inherit;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.pagination a:not(.paginationDisabled):hover,
+.pagination a:not(.paginationDisabled):focus-visible {
+  border-color: rgb(15 118 110 / 32%);
+  background: #edf8f4;
+}
+
+.paginationDisabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
 @media (min-width: 860px) {
   .layout {
     grid-template-columns: 280px minmax(0, 1fr);
   }
+}
 
+@media (min-width: 1280px) {
   .listingRow {
-    grid-template-columns: minmax(0, 1.35fr) minmax(140px, 0.35fr) minmax(300px, 0.75fr);
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+  }
+
+  .mediaFrame {
+    aspect-ratio: 4 / 3;
+  }
+
+  .rowBody {
+    grid-template-columns: minmax(0, 1fr) minmax(140px, 180px) minmax(180px, 240px);
     align-items: center;
+  }
+}
+
+@media (min-width: 1120px) {
+  .inventoryToolbar {
+    grid-template-columns: minmax(260px, 1fr) minmax(200px, 240px) minmax(96px, auto) auto;
+    align-items: center;
+  }
+}
+
+@media (min-width: 720px) and (max-width: 1119px) {
+  .inventoryToolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 220px);
+  }
+
+  .resultMeta,
+  .applyButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1119px) {
+  .signals {
+    align-content: start;
+  }
+}
+
+@media (max-width: 1279px) {
+  .rowBody {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .commercials {
+    align-content: start;
+  }
+
+  .signals {
+    align-content: start;
+  }
+}
+
+@media (max-width: 719px) {
+  .tableHeader,
+  .tableActions,
+  .filterToggle {
+    align-items: stretch;
+  }
+
+  .tableActions,
+  .filterToggle,
+  .filterToggle a,
+  .applyButton {
+    width: 100%;
+  }
+
+  .filterToggle {
+    display: grid;
+  }
+
+  .filterToggle a {
+    justify-content: space-between;
+  }
+
+  .mediaFrame {
+    aspect-ratio: 16 / 11;
   }
 }
