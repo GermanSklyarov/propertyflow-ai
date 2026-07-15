@@ -1,6 +1,8 @@
 import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
 import type {
+  CreatePropertyProjectRequest,
   PropertyPriceHistoryPoint,
+  PropertyProjectSuggestion,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
   PropertySearchResponse,
@@ -30,6 +32,7 @@ export interface PropertyRepository {
   list(tenantId: string): Promise<PropertySnapshot[]>;
   search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]>;
   searchPage(tenantId: string, filters: PropertySearchRequest): Promise<PropertySearchResponse>;
+  createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion>;
   searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse>;
   addPriceHistoryPoint(
     tenantId: string,

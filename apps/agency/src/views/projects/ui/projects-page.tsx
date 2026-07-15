@@ -1,9 +1,25 @@
 import Link from "next/link";
-import { AlertTriangle, Building2, CircleDot, Home, KeyRound } from "lucide-react";
+import { AlertTriangle, Building2, ChevronDown, CircleDot, Home, KeyRound, Plus } from "lucide-react";
 import { formatListingType, formatProjectStatus } from "@entities/listing/lib/listing-formatters";
+import { createPropertyProjectAction } from "@entities/project/api/project-actions";
 import type { PropertyProjectSearchResponse, PropertySearchResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./projects-page.module.css";
+
+const markets = [
+  { label: "Pattaya", value: "pattaya" },
+  { label: "Phuket", value: "phuket" },
+  { label: "Bangkok", value: "bangkok" },
+  { label: "Hua Hin", value: "hua-hin" },
+  { label: "Koh Samui", value: "koh-samui" }
+];
+
+const projectStatuses = [
+  { label: "Completed", value: "completed" },
+  { label: "Under construction", value: "under_construction" },
+  { label: "Planned", value: "planned" },
+  { label: "Paused", value: "paused" }
+];
 
 export function ProjectsPage({
   missingListings,
@@ -41,15 +57,65 @@ export function ProjectsPage({
         </section>
 
         <section className={styles.layout}>
-          <section className={styles.panel}>
+          <section className={styles.panel} id="project-directory">
             <div className={styles.panelHeader}>
               <div>
                 <p className="section-kicker">Canonical records</p>
                 <h2>Project directory</h2>
               </div>
-              <Link className={styles.headerLink} href="/listings#create-listing">
-                Add listing
-              </Link>
+              <details className={styles.createProject}>
+                <summary className={styles.headerLink}>
+                  <Plus size={15} />
+                  Add project
+                  <ChevronDown size={15} />
+                </summary>
+                <form action={createPropertyProjectAction} className={styles.projectForm}>
+                  <label className={styles.wideField}>
+                    <span>Project name</span>
+                    <input name="name" placeholder="The Riviera Wongamat" required />
+                  </label>
+                  <label>
+                    <span>Market</span>
+                    <select defaultValue="pattaya" name="market">
+                      {markets.map((market) => (
+                        <option key={market.value} value={market.value}>
+                          {market.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Status</span>
+                    <select defaultValue="completed" name="status">
+                      {projectStatuses.map((status) => (
+                        <option key={status.value} value={status.value}>
+                          {status.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>Developer</span>
+                    <input name="developer" placeholder="Riviera Group" />
+                  </label>
+                  <label>
+                    <span>Completion year</span>
+                    <input min={1900} name="completionYear" placeholder="2025" type="number" />
+                  </label>
+                  <label className={styles.wideField}>
+                    <span>Address or area</span>
+                    <input name="address" placeholder="Wongamat Beach, Pattaya" />
+                  </label>
+                  <label className={styles.wideField}>
+                    <span>Shared amenities</span>
+                    <input name="amenities" placeholder="pool, gym, lobby, parking" />
+                  </label>
+                  <button type="submit">
+                    <Building2 size={15} />
+                    Create project
+                  </button>
+                </form>
+              </details>
             </div>
 
             <div className={styles.projectList}>

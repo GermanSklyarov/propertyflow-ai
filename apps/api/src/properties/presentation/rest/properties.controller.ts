@@ -19,6 +19,7 @@ import type {
   PropertyImageGalleryResponse,
   PropertyImageSnapshot,
   PropertyPriceHistory,
+  PropertyProjectSuggestion,
   PropertyProjectSearchResponse,
   CreatePropertyImageUploadResponse,
   GeneratedPropertyDescription,
@@ -82,6 +83,7 @@ import { ComparePropertiesDto } from "./compare-properties.dto.js";
 import { CreateLeadFromSavedSearchDto } from "./create-lead-from-saved-search.dto.js";
 import { CreatePropertyDto } from "./create-property.dto.js";
 import { CreatePropertyImageUploadDto } from "./create-property-image-upload.dto.js";
+import { CreatePropertyProjectDto } from "./create-property-project.dto.js";
 import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto.js";
 import { CreateSavedSearchAlertDigestJobDto } from "./create-saved-search-alert-digest-job.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
@@ -220,6 +222,33 @@ export class PropertiesController {
       offset: parseOptionalNumber(offset),
       query
     });
+  }
+
+  @Post("projects")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Create or reuse a canonical development project" })
+  @ApiOkResponse({ description: "Created or existing development project" })
+  async createProject(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Body() payload: CreatePropertyProjectDto
+  ): Promise<PropertyProjectSuggestion> {
+    const project = await this.properties.createProject(tenantId, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.project_created",
+      resourceType: "property",
+      resourceId: project.id,
+      metadata: {
+        market: project.market,
+        name: project.name,
+        status: project.status
+      }
+    });
+
+    return project;
   }
 
   @Get()

@@ -109,6 +109,7 @@ export type AuditAction =
   | "property.price_training_dataset_viewed"
   | "property.price_recommended"
   | "property.price_updated"
+  | "property.project_created"
   | "property.project_updated"
   | "property.status_changed"
   | "saved_search.created"
@@ -220,6 +221,16 @@ export interface UpdatePropertyPriceRequest {
 export interface UpdatePropertyProjectRequest {
   project?: CreatePropertyRequest["project"] | null;
   note?: string;
+}
+
+export interface CreatePropertyProjectRequest {
+  name: string;
+  market: ThailandMarket;
+  status?: PropertyProjectStatus;
+  developer?: string;
+  address?: string;
+  completionYear?: number;
+  amenities?: string[];
 }
 
 export interface PropertyStatusEventSnapshot {

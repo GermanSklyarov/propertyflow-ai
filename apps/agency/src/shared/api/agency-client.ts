@@ -8,6 +8,7 @@ import type {
   CreateKnowledgeDocumentRequest,
   CreatePropertyImportUploadRequest,
   CreatePropertyImportUploadResponse,
+  CreatePropertyProjectRequest,
   CreatePropertyRequest,
   KnowledgeChunkEmbeddingJobPayload,
   KnowledgeChunkSearchRequest,
@@ -30,6 +31,7 @@ import type {
   PropertyImageAnalysisResult,
   PropertyImageSnapshot,
   PropertyImportJobPayload,
+  PropertyProjectSuggestion,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
   PropertySearchRequest,
@@ -142,6 +144,23 @@ export async function searchPropertyProjects(
   } catch {
     return demoPropertyProjectSearchResponse(request);
   }
+}
+
+export async function createPropertyProject(request: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion> {
+  const response = await fetch(`${apiBaseUrl}/properties/projects`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create property project: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyProjectSuggestion;
 }
 
 function demoPropertyProjectSearchResponse(request: PropertyProjectSearchRequest): PropertyProjectSearchResponse {

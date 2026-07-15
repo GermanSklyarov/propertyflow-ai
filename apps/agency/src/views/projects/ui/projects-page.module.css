@@ -37,6 +37,9 @@
 
 .totalBadge,
 .headerLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   border: 1px solid rgb(15 118 110 / 18%);
   background: #edf8f4;
   padding: 10px 12px;
@@ -50,6 +53,90 @@
 .headerLink:focus-visible {
   border-color: rgb(15 118 110 / 42%);
   background: #dff3ed;
+}
+
+.createProject {
+  position: relative;
+}
+
+.createProject summary {
+  cursor: pointer;
+  list-style: none;
+}
+
+.createProject summary::-webkit-details-marker {
+  display: none;
+}
+
+.projectForm {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 10px);
+  right: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(180px, 1fr));
+  gap: 10px;
+  width: min(640px, calc(100vw - 56px));
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 16px;
+  box-shadow: 0 22px 54px rgb(37 50 46 / 14%);
+}
+
+.projectForm label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.projectForm label span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.projectForm input,
+.projectForm select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 11px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.projectForm input:focus,
+.projectForm select:focus {
+  outline: 2px solid rgb(15 118 110 / 22%);
+  outline-offset: 2px;
+}
+
+.wideField {
+  grid-column: 1 / -1;
+}
+
+.projectForm button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--teal-dark);
+  background: #0f766e;
+  padding: 12px 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.projectForm button:hover,
+.projectForm button:focus-visible {
+  background: #0b5f59;
 }
 
 .kpiGrid {
@@ -291,6 +378,12 @@
   .layout {
     grid-template-columns: 1fr;
   }
+
+  .projectForm {
+    position: static;
+    width: 100%;
+    margin-top: 10px;
+  }
 }
 
 @media (max-width: 680px) {
@@ -302,6 +395,10 @@
 
   .totalBadge {
     justify-self: start;
+  }
+
+  .projectForm {
+    grid-template-columns: 1fr;
   }
 
   .projectStats {

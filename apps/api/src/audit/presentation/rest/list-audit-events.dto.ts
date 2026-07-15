@@ -32,6 +32,7 @@ const auditActions = [
   "property.price_training_dataset_viewed",
   "property.price_recommended",
   "property.price_updated",
+  "property.project_created",
   "property.project_updated",
   "property.status_changed",
   "saved_search.created",

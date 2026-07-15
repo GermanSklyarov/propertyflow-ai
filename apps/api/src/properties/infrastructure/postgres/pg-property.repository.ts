@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
 import type {
+  CreatePropertyProjectRequest,
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
@@ -581,6 +582,39 @@ export class PgPropertyRepository implements PropertyRepository {
       })),
       total: Number(countResult.rows[0]?.count ?? 0)
     };
+  }
+
+  async createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion> {
+    const timestamp = new Date().toISOString();
+    const projectId = await this.upsertProjectRecord(this.pool, {
+      address: project.address,
+      amenities: project.amenities ?? [],
+      completionYear: project.completionYear,
+      developer: project.developer,
+      market: project.market,
+      name: project.name,
+      status: project.status ?? "completed",
+      tenantId,
+      timestamp
+    });
+    const result = await this.searchProjects(tenantId, {
+      limit: 1,
+      market: project.market,
+      query: project.name
+    });
+
+    return (
+      result.items.find((item) => item.id === projectId) ??
+      result.items[0] ?? {
+        id: projectId,
+        listingCount: 0,
+        market: project.market,
+        name: project.name,
+        rentCount: 0,
+        saleCount: 0,
+        status: project.status ?? "completed"
+      }
+    );
   }
 
   private orderBy(filters: PropertySearchRequest): string {

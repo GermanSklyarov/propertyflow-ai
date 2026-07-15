@@ -1,8 +1,10 @@
 import { Injectable } from "@nestjs/common";
 import type {
+  CreatePropertyProjectRequest,
   PropertyPriceHistoryPoint,
   PropertyProjectSearchRequest,
   PropertyProjectSearchResponse,
+  PropertyProjectSuggestion,
   PropertySearchResponse,
   PropertySearchRequest,
   UpdatePropertyProjectRequest
@@ -13,10 +15,16 @@ import type { PropertyRepository } from "../domain/property.repository.js";
 @Injectable()
 export class InMemoryPropertyRepository implements PropertyRepository {
   private readonly properties = new Map<string, PropertySnapshot>();
+  private readonly projects = new Map<string, NonNullable<PropertySnapshot["project"]>>();
   private readonly priceHistory = new Map<string, PropertyPriceHistoryPoint[]>();
 
   async save(property: PropertySnapshot): Promise<PropertySnapshot> {
     this.properties.set(this.key(property.tenantId, property.id), property);
+
+    if (property.project) {
+      this.projects.set(this.key(property.tenantId, property.project.id), property.project);
+    }
+
     return property;
   }
 
@@ -122,6 +130,10 @@ export class InMemoryPropertyRepository implements PropertyRepository {
     };
 
     this.properties.set(key, updated);
+
+    if (updated.project) {
+      this.projects.set(this.key(tenantId, updated.project.id), updated.project);
+    }
 
     return updated;
   }
@@ -258,6 +270,25 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       NonNullable<PropertySnapshot["project"]> & { listingCount: number; rentCount: number; saleCount: number }
     >();
 
+    for (const project of this.projects.values()) {
+      if (project.tenantId !== tenantId || (filters.market && project.market !== filters.market)) {
+        continue;
+      }
+
+      const normalized = normalizeProjectName(project.name);
+
+      if (query && !normalized.includes(query)) {
+        continue;
+      }
+
+      projects.set(project.id, {
+        ...project,
+        listingCount: 0,
+        rentCount: 0,
+        saleCount: 0
+      });
+    }
+
     for (const property of await this.list(tenantId)) {
       if (!property.project || (filters.market && property.project.market !== filters.market)) {
         continue;
@@ -313,6 +344,43 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       items,
       total: sortedProjects.length
     };
+  }
+
+  async createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion> {
+    const normalized = normalizeProjectName(project.name);
+    const existing = [...this.projects.values()].find(
+      (item) => item.tenantId === tenantId && item.market === project.market && normalizeProjectName(item.name) === normalized
+    );
+    const now = new Date().toISOString();
+    const snapshot = {
+      amenities: project.amenities ?? existing?.amenities ?? [],
+      createdAt: existing?.createdAt ?? now,
+      id: existing?.id ?? crypto.randomUUID(),
+      tenantId,
+      name: project.name,
+      market: project.market,
+      status: project.status ?? existing?.status ?? "completed",
+      developer: project.developer ?? existing?.developer,
+      address: project.address ?? existing?.address,
+      completionYear: project.completionYear ?? existing?.completionYear,
+      updatedAt: now
+    } satisfies NonNullable<PropertySnapshot["project"]>;
+
+    this.projects.set(this.key(tenantId, snapshot.id), snapshot);
+
+    const result = await this.searchProjects(tenantId, { limit: 1, market: project.market, query: project.name });
+
+    return (
+      result.items.find((item) => item.id === snapshot.id) ?? {
+        id: snapshot.id,
+        listingCount: 0,
+        market: snapshot.market,
+        name: snapshot.name,
+        rentCount: 0,
+        saleCount: 0,
+        status: snapshot.status
+      }
+    );
   }
 
   async addPriceHistoryPoint(
