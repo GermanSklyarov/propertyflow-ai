@@ -1,13 +1,23 @@
 import { AlertTriangle, Building2, CircleDot, Home, KeyRound } from "lucide-react";
 import { buildListingProjectCoverage } from "@entities/listing/lib/listing-projects";
 import { formatProjectStatus } from "@entities/listing/lib/listing-formatters";
+import type { PropertySearchResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./project-coverage-panel.module.css";
 
-export function ProjectCoveragePanel({ listings }: { listings: PropertySnapshot[] }) {
+export function ProjectCoveragePanel({
+  listings,
+  projectLinkFacets
+}: {
+  listings: PropertySnapshot[];
+  projectLinkFacets?: NonNullable<PropertySearchResponse["facets"]>["projectLink"];
+}) {
   const coverage = buildListingProjectCoverage(listings);
-  const coverageRate = listings.length > 0 ? Math.round((coverage.linkedListings / listings.length) * 100) : 0;
+  const totalListings = projectLinkFacets?.all ?? listings.length;
+  const linkedListings = projectLinkFacets?.linked ?? coverage.linkedListings;
+  const missingProjectListings = projectLinkFacets?.missing ?? coverage.missingProjectListings;
+  const coverageRate = totalListings > 0 ? Math.round((linkedListings / totalListings) * 100) : 0;
   const topProjects = coverage.projects.slice(0, 4);
 
   return (
@@ -28,16 +38,16 @@ export function ProjectCoveragePanel({ listings }: { listings: PropertySnapshot[
         <div className={styles.summaryCard}>
           <Building2 size={18} />
           <strong>{coverage.projects.length}</strong>
-          <span>known projects</span>
+          <span>preview projects</span>
         </div>
         <div className={styles.summaryCard}>
           <Home size={18} />
-          <strong>{coverage.linkedListings}</strong>
+          <strong>{linkedListings}</strong>
           <span>linked listings</span>
         </div>
-        <div className={`${styles.summaryCard} ${coverage.missingProjectListings > 0 ? styles.warningCard : ""}`}>
+        <div className={`${styles.summaryCard} ${missingProjectListings > 0 ? styles.warningCard : ""}`}>
           <AlertTriangle size={18} />
-          <strong>{coverage.missingProjectListings}</strong>
+          <strong>{missingProjectListings}</strong>
           <span>missing project</span>
         </div>
       </div>

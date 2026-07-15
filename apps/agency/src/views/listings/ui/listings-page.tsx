@@ -15,10 +15,19 @@ interface ListingsPageProps {
   };
   inventory?: PropertySearchResponse;
   inventoryError?: string;
+  projectLinkFacets?: NonNullable<PropertySearchResponse["facets"]>["projectLink"];
   total: number;
 }
 
-export function ListingsPage({ coverageListings, importJobs, importResult, inventory, inventoryError, total }: ListingsPageProps) {
+export function ListingsPage({
+  coverageListings,
+  importJobs,
+  importResult,
+  inventory,
+  inventoryError,
+  projectLinkFacets,
+  total
+}: ListingsPageProps) {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -37,7 +46,7 @@ export function ListingsPage({ coverageListings, importJobs, importResult, inven
 
         <ListingBulkImportPanel jobs={importJobs} result={importResult} />
 
-        <ProjectCoveragePanel listings={coverageListings} />
+        <ProjectCoveragePanel listings={coverageListings} projectLinkFacets={projectLinkFacets} />
 
         <ListingsInventoryPanel error={inventoryError} response={inventory} />
       </div>

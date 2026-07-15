@@ -54,6 +54,7 @@ export default async function AgencyListingsPage({
       importResult={importResult}
       inventory={inventory}
       inventoryError={inventoryError}
+      projectLinkFacets={coverage?.facets?.projectLink ?? inventory?.facets?.projectLink}
       total={coverage?.total ?? inventory?.total ?? 0}
     />
   );
