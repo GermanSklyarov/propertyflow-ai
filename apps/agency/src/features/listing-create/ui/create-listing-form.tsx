@@ -1,5 +1,6 @@
 import { Bot, Building2, Camera, ChevronDown, CircleDollarSign, FileScan, Plus } from "lucide-react";
 import { createPropertyAction } from "@entities/listing/api/listing-actions";
+import { FileDropField } from "./file-drop-field";
 import { ProjectAutocompleteField } from "./project-autocomplete-field";
 import styles from "./create-listing-form.module.css";
 
@@ -105,12 +106,13 @@ export function CreateListingForm() {
                 </div>
 
                 <div className={styles.chanoteGrid}>
-                  <label className={styles.fileDrop}>
-                    <FileScan size={19} />
-                    <span>Upload Chanote</span>
-                    <small>PDF, image, or text file. Text files can be parsed immediately; images/PDFs are kept as OCR-ready context.</small>
-                    <input accept="image/*,.pdf,.txt,text/plain" name="chanoteFile" type="file" />
-                  </label>
+                  <FileDropField
+                    accept="image/*,.pdf,.txt,text/plain"
+                    description="PDF, image, or text file. Text files can be parsed immediately; images/PDFs are kept as OCR-ready context."
+                    icon={<FileScan size={19} />}
+                    name="chanoteFile"
+                    title="Upload Chanote"
+                  />
                   <label className={styles.wideField}>
                     <span>OCR text or agent transcription</span>
                     <textarea
@@ -161,12 +163,15 @@ export function CreateListingForm() {
                 </div>
               </div>
 
-              <label className={styles.fileDrop}>
-                <Camera size={19} />
-                <span>Upload photos</span>
-                <small>Multiple images supported. They will be attached after the draft is created.</small>
-                <input accept="image/*" multiple name="imageFiles" type="file" />
-              </label>
+              <FileDropField
+                accept="image/*"
+                description="Multiple images supported. They will be attached after the draft is created."
+                icon={<Camera size={19} />}
+                multiple
+                name="imageFiles"
+                title="Upload photos"
+                variant="photo"
+              />
 
               <label className={styles.checkbox}>
                 <input defaultChecked name="analyzeImages" type="checkbox" />
