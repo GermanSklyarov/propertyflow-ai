@@ -224,6 +224,10 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         return false;
       }
 
+      if (filters.projectId && property.project?.id !== filters.projectId) {
+        return false;
+      }
+
       if (filters.query && !this.matchesSmartQuery(property, filters.query)) {
         return false;
       }

@@ -135,6 +135,10 @@ export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> 
   query?: string;
 
   @IsOptional()
+  @IsString()
+  projectId?: string;
+
+  @IsOptional()
   @IsIn(projectLinkFilters)
   projectLink?: PropertySearchRequest["projectLink"];
 
@@ -170,6 +174,7 @@ export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySea
     requiredAmenities: toOptionalStringArray(query.requiredAmenities),
     radiusMeters,
     query: toOptionalString(query.query),
+    projectId: toOptionalString(query.projectId),
     projectLink: query.projectLink,
     limit: toOptionalNumber(query.limit),
     offset: toOptionalNumber(query.offset),

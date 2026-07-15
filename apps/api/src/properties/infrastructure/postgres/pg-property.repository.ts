@@ -422,6 +422,10 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`p.amenities @> ${addValue(filters.requiredAmenities)}::text[]`);
     }
 
+    if (filters.projectId) {
+      clauses.push(`p.project_id = ${addValue(filters.projectId)}`);
+    }
+
     if (filters.near && filters.radiusMeters !== undefined) {
       const longitude = addValue(filters.near.longitude);
       const latitude = addValue(filters.near.latitude);

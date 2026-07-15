@@ -396,6 +396,7 @@ export interface PropertySearchRequest {
   near?: GeoPoint;
   radiusMeters?: number;
   query?: string;
+  projectId?: string;
   projectLink?: "all" | "linked" | "missing";
   limit?: number;
   offset?: number;

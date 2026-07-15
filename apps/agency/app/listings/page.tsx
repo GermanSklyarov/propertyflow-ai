@@ -14,6 +14,7 @@ export default async function AgencyListingsPage({
     importError?: "empty";
     importJob?: string;
     page?: string;
+    projectId?: string;
     projectLink?: PropertySearchRequest["projectLink"];
     query?: string;
     sort?: PropertySearchSort;
@@ -30,6 +31,7 @@ export default async function AgencyListingsPage({
   const inventoryRequest: PropertySearchRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
+    projectId: query.projectId?.trim() || undefined,
     projectLink,
     query: query.query?.trim() || undefined,
     sort

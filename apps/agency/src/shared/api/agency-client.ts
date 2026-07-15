@@ -1346,6 +1346,10 @@ function demoPropertySearchResponse(filters: PropertySearchRequest): PropertySea
       return false;
     }
 
+    if (filters.projectId && property.project?.id !== filters.projectId) {
+      return false;
+    }
+
     if (filters.query && !matchesDemoSmartQuery(property, filters.query)) {
       return false;
     }

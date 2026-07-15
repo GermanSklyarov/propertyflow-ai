@@ -132,6 +132,7 @@ export function ListingsInventoryPanel({ error, response }: { error?: string; re
               </select>
             </label>
             <input name="projectLink" type="hidden" value={filters.projectLink ?? "all"} />
+            {filters.projectId ? <input name="projectId" type="hidden" value={filters.projectId} /> : null}
             <span className={styles.resultMeta}>
               {firstVisible}-{lastVisible} of {response.total}
             </span>
@@ -198,6 +199,7 @@ function InventoryLoadError({ message }: { message: string }) {
 
 function inventoryHref(filters: PropertySearchRequest, patch: Partial<PropertySearchRequest> & { page?: number }) {
   const nextFilters = {
+    projectId: filters.projectId,
     projectLink: filters.projectLink,
     query: filters.query,
     sort: filters.sort,
@@ -215,6 +217,10 @@ function inventoryHref(filters: PropertySearchRequest, patch: Partial<PropertySe
 
   if (nextFilters.projectLink && nextFilters.projectLink !== "all") {
     params.set("projectLink", nextFilters.projectLink);
+  }
+
+  if (nextFilters.projectId) {
+    params.set("projectId", nextFilters.projectId);
   }
 
   if (nextFilters.page && nextFilters.page > 1) {

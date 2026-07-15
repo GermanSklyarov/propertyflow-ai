@@ -144,7 +144,9 @@ export function ProjectsPage({
                         <Building2 size={18} />
                       </span>
                       <div>
-                        <h3>{project.name}</h3>
+                        <h3>
+                          <Link href={`/listings?projectId=${encodeURIComponent(project.id)}#inventory`}>{project.name}</Link>
+                        </h3>
                         <p>
                           {formatBucket(project.market)} · {formatProjectStatus(project.status)}
                           {project.developer ? ` · ${project.developer}` : ""}
@@ -152,7 +154,7 @@ export function ProjectsPage({
                       </div>
                     </div>
                     <div className={styles.projectStats}>
-                      <span>{project.listingCount} listings</span>
+                      <Link href={`/listings?projectId=${encodeURIComponent(project.id)}#inventory`}>{project.listingCount} listings</Link>
                       <span>
                         <Home size={14} />
                         {project.saleCount ?? 0} sale
