@@ -621,6 +621,46 @@ export class PgPropertyRepository implements PropertyRepository {
     );
   }
 
+  async findProjectById(tenantId: string, projectId: string): Promise<PropertyProjectSuggestion | null> {
+    const result = await this.pool.query<PropertyProjectSuggestionRow>(
+      `
+        select
+          project.id,
+          project.name,
+          project.market,
+          project.status,
+          project.developer,
+          project.address,
+          count(property.id)::text as listing_count,
+          count(property.id) filter (where property.listing_type in ('rent', 'sale_or_rent'))::text as rent_count,
+          count(property.id) filter (where property.listing_type in ('sale', 'sale_or_rent'))::text as sale_count
+        from property_projects project
+        left join properties property
+          on property.tenant_id = project.tenant_id and property.project_id = project.id
+        where project.tenant_id = $1 and project.id = $2
+        group by project.id
+      `,
+      [tenantId, projectId]
+    );
+    const row = result.rows[0];
+
+    if (!row) {
+      return null;
+    }
+
+    return {
+      id: row.id,
+      name: row.name,
+      market: row.market,
+      status: row.status,
+      developer: row.developer ?? undefined,
+      address: row.address ?? undefined,
+      listingCount: Number(row.listing_count),
+      rentCount: Number(row.rent_count),
+      saleCount: Number(row.sale_count)
+    };
+  }
+
   private orderBy(filters: PropertySearchRequest): string {
     if (filters.sort === "price-asc") {
       return "p.price_amount asc, p.created_at desc";

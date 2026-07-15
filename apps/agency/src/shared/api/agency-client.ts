@@ -146,6 +146,23 @@ export async function searchPropertyProjects(
   }
 }
 
+export async function getPropertyProject(projectId: string): Promise<PropertyProjectSuggestion | null> {
+  const response = await fetch(`${apiBaseUrl}/properties/projects/${encodeURIComponent(projectId)}`, {
+    headers: demoHeaders,
+    cache: "no-store"
+  });
+
+  if (response.status === 404) {
+    return null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Failed to load property project: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyProjectSuggestion;
+}
+
 export async function createPropertyProject(request: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion> {
   const response = await fetch(`${apiBaseUrl}/properties/projects`, {
     method: "POST",

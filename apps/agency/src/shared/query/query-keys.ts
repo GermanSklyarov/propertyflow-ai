@@ -20,6 +20,7 @@ export const queryKeys = {
   },
   projects: {
     all: ["projects"] as const,
+    detail: (projectId: string) => [...queryKeys.projects.all, "detail", projectId] as const,
     list: (filters: object) => [...queryKeys.projects.all, "list", filters] as const
   },
   jobs: {

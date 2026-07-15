@@ -145,7 +145,7 @@ export function ProjectsPage({
                       </span>
                       <div>
                         <h3>
-                          <Link href={`/listings?projectId=${encodeURIComponent(project.id)}#inventory`}>{project.name}</Link>
+                          <Link href={`/projects/${encodeURIComponent(project.id)}`}>{project.name}</Link>
                         </h3>
                         <p>
                           {formatBucket(project.market)} · {formatProjectStatus(project.status)}

@@ -33,6 +33,7 @@ export interface PropertyRepository {
   search(tenantId: string, filters: PropertySearchRequest): Promise<PropertySnapshot[]>;
   searchPage(tenantId: string, filters: PropertySearchRequest): Promise<PropertySearchResponse>;
   createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion>;
+  findProjectById(tenantId: string, projectId: string): Promise<PropertyProjectSuggestion | null>;
   searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse>;
   addPriceHistoryPoint(
     tenantId: string,

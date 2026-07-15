@@ -387,6 +387,28 @@ export class InMemoryPropertyRepository implements PropertyRepository {
     );
   }
 
+  async findProjectById(tenantId: string, projectId: string): Promise<PropertyProjectSuggestion | null> {
+    const project = this.projects.get(this.key(tenantId, projectId));
+
+    if (!project) {
+      return null;
+    }
+
+    const linkedListings = (await this.list(tenantId)).filter((property) => property.project?.id === projectId);
+
+    return {
+      id: project.id,
+      name: project.name,
+      market: project.market,
+      status: project.status,
+      developer: project.developer,
+      address: project.address,
+      listingCount: linkedListings.length,
+      rentCount: linkedListings.filter((property) => property.listingType === "rent" || property.listingType === "sale_or_rent").length,
+      saleCount: linkedListings.filter((property) => property.listingType === "sale" || property.listingType === "sale_or_rent").length
+    };
+  }
+
   async addPriceHistoryPoint(
     tenantId: string,
     propertyId: string,

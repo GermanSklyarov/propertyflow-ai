@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, Get, Inject, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Delete, Get, Inject, NotFoundException, Param, Patch, Post, Query, Res, UseGuards } from "@nestjs/common";
 import { CommandBus, QueryBus } from "@nestjs/cqrs";
 import { ApiHeader, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 import type { FastifyReply } from "fastify";
@@ -222,6 +222,20 @@ export class PropertiesController {
       offset: parseOptionalNumber(offset),
       query
     });
+  }
+
+  @Get("projects/:projectId")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Get one canonical development project" })
+  @ApiOkResponse({ description: "Development project with listing counts" })
+  async projectById(@TenantId() tenantId: string, @Param("projectId") projectId: string): Promise<PropertyProjectSuggestion> {
+    const project = await this.properties.findProjectById(tenantId, projectId);
+
+    if (!project) {
+      throw new NotFoundException("Project not found");
+    }
+
+    return project;
   }
 
   @Post("projects")
