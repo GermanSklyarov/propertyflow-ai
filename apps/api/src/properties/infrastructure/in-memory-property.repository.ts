@@ -160,7 +160,7 @@ export class InMemoryPropertyRepository implements PropertyRepository {
   async searchPage(tenantId: string, filters: PropertySearchRequest): Promise<PropertySearchResponse> {
     const properties = await this.list(tenantId);
 
-    const filteredProperties = properties.filter((property) => {
+    const facetProperties = properties.filter((property) => {
       if (filters.market && property.market !== filters.market) {
         return false;
       }
@@ -212,15 +212,18 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         return false;
       }
 
+      if (filters.query && !this.matchesSmartQuery(property, filters.query)) {
+        return false;
+      }
+
+      return true;
+    });
+    const filteredProperties = facetProperties.filter((property) => {
       if (filters.projectLink === "linked" && !property.project) {
         return false;
       }
 
       if (filters.projectLink === "missing" && property.project) {
-        return false;
-      }
-
-      if (filters.query && !this.matchesSmartQuery(property, filters.query)) {
         return false;
       }
 
@@ -235,6 +238,13 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         : sortedProperties.slice(offset);
 
     return {
+      facets: {
+        projectLink: {
+          all: facetProperties.length,
+          linked: facetProperties.filter((property) => property.project).length,
+          missing: facetProperties.filter((property) => !property.project).length
+        }
+      },
       filters,
       items,
       total: filteredProperties.length

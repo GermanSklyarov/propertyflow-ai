@@ -426,6 +426,9 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`st_dwithin(p.location, st_setsrid(st_makepoint(${longitude}, ${latitude}), 4326)::geography, ${radius})`);
     }
 
+    this.applySmartQuery(clauses, addValue, filters.query);
+    const facetValues = [...values];
+
     if (filters.projectLink === "linked") {
       clauses.push("p.project_id is not null");
     }
@@ -433,8 +436,6 @@ export class PgPropertyRepository implements PropertyRepository {
     if (filters.projectLink === "missing") {
       clauses.push("p.project_id is null");
     }
-
-    this.applySmartQuery(clauses, addValue, filters.query);
 
     const countValues = [...values];
     const paginationClauses: string[] = [];
@@ -448,6 +449,17 @@ export class PgPropertyRepository implements PropertyRepository {
     }
 
     const whereSql = clauses.join(" and ");
+    const facetResult = await this.pool.query<{ all_count: string; linked_count: string; missing_count: string }>(
+      `
+        select
+          count(*)::text as all_count,
+          count(*) filter (where p.project_id is not null)::text as linked_count,
+          count(*) filter (where p.project_id is null)::text as missing_count
+        ${this.fromSearchPropertiesSql()}
+        where ${clauses.slice(0, filters.projectLink === "linked" || filters.projectLink === "missing" ? -1 : undefined).join(" and ")}
+      `,
+      facetValues
+    );
     const countResult = await this.pool.query<{ count: string }>(
       `
         select count(*)::text as count
@@ -467,6 +479,13 @@ export class PgPropertyRepository implements PropertyRepository {
     );
 
     return {
+      facets: {
+        projectLink: {
+          all: Number(facetResult.rows[0]?.all_count ?? 0),
+          linked: Number(facetResult.rows[0]?.linked_count ?? 0),
+          missing: Number(facetResult.rows[0]?.missing_count ?? 0)
+        }
+      },
       filters,
       items: result.rows.map((row) => this.toSnapshot(row)),
       total: Number(countResult.rows[0]?.count ?? 0)

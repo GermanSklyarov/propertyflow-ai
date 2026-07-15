@@ -386,6 +386,13 @@ export interface PropertySearchResponse {
   items: PropertySnapshot[];
   total: number;
   filters: PropertySearchRequest;
+  facets?: {
+    projectLink: {
+      all: number;
+      linked: number;
+      missing: number;
+    };
+  };
 }
 
 export const PROPERTY_SEARCH_INDEX = "propertyflow-properties-v1";

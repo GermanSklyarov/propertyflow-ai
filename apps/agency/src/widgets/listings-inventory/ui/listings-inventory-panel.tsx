@@ -56,6 +56,11 @@ export function ListingsInventoryPanel({ error, response }: { error?: string; re
   const firstVisible = listings.length ? (currentPage - 1) * pageSize + 1 : 0;
   const lastVisible = Math.min((currentPage - 1) * pageSize + listings.length, response.total);
   const summary = buildListingInventorySummary(listings);
+  const projectLinkFacets = response.facets?.projectLink ?? {
+    all: response.total,
+    linked: response.total - summary.missingProject,
+    missing: summary.missingProject
+  };
 
   return (
     <>
@@ -93,14 +98,14 @@ export function ListingsInventoryPanel({ error, response }: { error?: string; re
                   href={inventoryHref(filters, { page: 1, projectLink: "all" })}
                 >
                   All
-                  <span>{response.total}</span>
+                  <span>{projectLinkFacets.all}</span>
                 </Link>
                 <Link
                   className={filters.projectLink === "missing" ? styles.filterActive : ""}
                   href={inventoryHref(filters, { page: 1, projectLink: "missing" })}
                 >
                   Missing project
-                  <span>{filters.projectLink === "missing" ? response.total : summary.missingProject}</span>
+                  <span>{projectLinkFacets.missing}</span>
                 </Link>
               </div>
             </div>
