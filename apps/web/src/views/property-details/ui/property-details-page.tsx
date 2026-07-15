@@ -97,9 +97,12 @@ export function PropertyDetailsPage({
               </span>
             </div>
             <div className={`mt-[18px] grid gap-3 ${styles.galleryGrid}`}>
-              {media.images.slice(0, 4).map((image, index) => (
+              {media.images.map((image, index) => (
                 <figure className={index === 0 ? styles.galleryHero : styles.galleryThumb} key={image.id}>
-                  <img src={image.imageUrl} alt={image.caption ?? `${property.title} photo ${index + 1}`} />
+                  <img
+                    src={buildPublicGalleryImageSrc(image)}
+                    alt={image.caption ?? `${property.title} photo ${index + 1}`}
+                  />
                   <figcaption>{index === 0 ? "Cover photo" : `Photo ${index + 1}`}</figcaption>
                 </figure>
               ))}
@@ -304,8 +307,9 @@ function buildPropertyMedia(property: PropertySnapshot, gallery: PropertyImageGa
     caption: property.title,
     id: `${property.id}-fallback-cover`,
     imageUrl: propertyImage(property, true),
-    position: 0
-  } satisfies Pick<PropertyImageSnapshot, "caption" | "id" | "imageUrl" | "position">;
+    position: 0,
+    propertyId: property.id
+  } satisfies Pick<PropertyImageSnapshot, "caption" | "id" | "imageUrl" | "position" | "propertyId">;
   const images = activeImages.length ? activeImages : [fallbackCover];
 
   return {
@@ -313,6 +317,16 @@ function buildPropertyMedia(property: PropertySnapshot, gallery: PropertyImageGa
     images,
     title: activeImages.length ? "Synced from agency media library." : "Preview image until agency photos are uploaded."
   };
+}
+
+function buildPublicGalleryImageSrc(
+  image: Pick<PropertyImageSnapshot, "id" | "imageUrl" | "objectKey" | "propertyId">
+) {
+  if (!image.objectKey) {
+    return image.imageUrl;
+  }
+
+  return `/api/property-images/${encodeURIComponent(image.propertyId)}/${encodeURIComponent(image.id)}`;
 }
 
 function BriefColumn({

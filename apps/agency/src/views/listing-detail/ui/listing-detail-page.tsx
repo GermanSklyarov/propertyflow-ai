@@ -52,7 +52,7 @@ export function ListingDetailPage({
             <p className="section-kicker">Listing workspace</p>
             <h1 className={styles.title}>{listing.title}</h1>
             {listing.project ? (
-              <p className="section-kicker">
+              <p className={`${styles.projectLine} section-kicker`}>
                 {listing.project.name} · {formatProjectStatus(listing.project.status)}
                 {listing.project.developer ? ` · ${listing.project.developer}` : ""}
               </p>

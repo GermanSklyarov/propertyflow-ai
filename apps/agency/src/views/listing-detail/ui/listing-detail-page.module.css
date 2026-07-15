@@ -70,7 +70,14 @@
   max-width: 980px;
   margin: 0;
   font-size: clamp(2rem, 4vw, 4.4rem);
-  line-height: 0.96;
+  line-height: 1.02;
+}
+
+.projectLine {
+  max-width: 980px;
+  margin-top: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .subtitle {
