@@ -1,14 +1,23 @@
 import Link from "next/link";
 import { AlertTriangle, Building2, CircleDot, Home, KeyRound } from "lucide-react";
-import { buildListingProjectCoverage } from "@entities/listing/lib/listing-projects";
 import { formatListingType, formatProjectStatus } from "@entities/listing/lib/listing-formatters";
-import type { PropertySnapshot } from "@propertyflow/domain";
+import type { PropertyProjectSearchResponse, PropertySearchResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./projects-page.module.css";
 
-export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]; total: number }) {
-  const coverage = buildListingProjectCoverage(listings);
-  const linkedRate = total > 0 ? Math.round((coverage.linkedListings / total) * 100) : 0;
+export function ProjectsPage({
+  missingListings,
+  projects
+}: {
+  missingListings: PropertySearchResponse;
+  projects: PropertyProjectSearchResponse;
+}) {
+  const projectLinkFacets = missingListings.facets?.projectLink;
+  const linkedListings = projectLinkFacets?.linked ?? 0;
+  const missingProjectListings = projectLinkFacets?.missing ?? missingListings.total;
+  const totalListings = projectLinkFacets?.all ?? linkedListings + missingProjectListings;
+  const linkedRate = totalListings > 0 ? Math.round((linkedListings / totalListings) * 100) : 0;
+  const statusCounts = projects.facets?.status ?? buildProjectStatusCounts(projects.items);
 
   return (
     <main className={styles.page}>
@@ -21,13 +30,13 @@ export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]
               Normalize project names, spot missing links, and keep imported listings attached to the same development record.
             </p>
           </div>
-          <span className={styles.totalBadge}>{coverage.projects.length} projects</span>
+          <span className={styles.totalBadge}>{projects.total} projects</span>
         </header>
 
         <section className={styles.kpiGrid} aria-label="Project registry health">
-          <MetricCard icon={<Building2 size={18} />} label="Known projects" value={coverage.projects.length} />
-          <MetricCard icon={<Home size={18} />} label="Linked listings" value={coverage.linkedListings} />
-          <MetricCard icon={<AlertTriangle size={18} />} label="Missing project" tone="warning" value={coverage.missingProjectListings} />
+          <MetricCard icon={<Building2 size={18} />} label="Known projects" value={projects.total} />
+          <MetricCard icon={<Home size={18} />} label="Linked listings" value={linkedListings} />
+          <MetricCard icon={<AlertTriangle size={18} />} label="Missing project" tone="warning" value={missingProjectListings} />
           <MetricCard icon={<CircleDot size={18} />} label="Portfolio linked" value={`${linkedRate}%`} />
         </section>
 
@@ -44,8 +53,8 @@ export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]
             </div>
 
             <div className={styles.projectList}>
-              {coverage.projects.length ? (
-                coverage.projects.map((project) => (
+              {projects.items.length ? (
+                projects.items.map((project) => (
                   <article className={styles.projectCard} key={project.id}>
                     <div className={styles.projectTitle}>
                       <span className={styles.projectIcon}>
@@ -63,11 +72,11 @@ export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]
                       <span>{project.listingCount} listings</span>
                       <span>
                         <Home size={14} />
-                        {project.saleCount} sale
+                        {project.saleCount ?? 0} sale
                       </span>
                       <span>
                         <KeyRound size={14} />
-                        {project.rentCount} rent
+                        {project.rentCount ?? 0} rent
                       </span>
                     </div>
                   </article>
@@ -87,8 +96,8 @@ export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]
                 </div>
               </div>
               <div className={styles.statusList}>
-                {coverage.statusCounts.length ? (
-                  coverage.statusCounts.map((item) => (
+                {statusCounts.length ? (
+                  statusCounts.map((item) => (
                     <div className={styles.statusRow} key={item.label}>
                       <span>{formatProjectStatus(item.label)}</span>
                       <strong>{item.count}</strong>
@@ -108,7 +117,7 @@ export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]
                 </div>
               </div>
               <div className={styles.gapList}>
-                {coverage.missingProjectItems.slice(0, 6).map((listing) => (
+                {missingListings.items.slice(0, 6).map((listing) => (
                   <Link className={styles.gapRow} href={`/listings/${listing.id}`} key={listing.id}>
                     <AlertTriangle size={15} />
                     <span>
@@ -120,7 +129,7 @@ export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]
                     </span>
                   </Link>
                 ))}
-                {coverage.missingProjectItems.length === 0 ? <p>No missing project links.</p> : null}
+                {missingListings.items.length === 0 ? <p>No missing project links.</p> : null}
               </div>
             </section>
           </aside>
@@ -128,6 +137,18 @@ export function ProjectsPage({ listings, total }: { listings: PropertySnapshot[]
       </div>
     </main>
   );
+}
+
+function buildProjectStatusCounts(projects: PropertyProjectSearchResponse["items"]) {
+  const counts = new Map<PropertyProjectSearchResponse["items"][number]["status"], number>();
+
+  for (const project of projects) {
+    counts.set(project.status, (counts.get(project.status) ?? 0) + 1);
+  }
+
+  return [...counts.entries()]
+    .map(([label, count]) => ({ count, label }))
+    .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label));
 }
 
 function MetricCard({

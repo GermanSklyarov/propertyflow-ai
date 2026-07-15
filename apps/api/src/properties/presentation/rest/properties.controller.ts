@@ -205,16 +205,19 @@ export class PropertiesController {
   @ApiQuery({ name: "market", required: false })
   @ApiQuery({ name: "query", required: false })
   @ApiQuery({ name: "limit", required: false })
+  @ApiQuery({ name: "offset", required: false })
   @ApiOkResponse({ description: "Development project suggestions with listing counts" })
   searchProjects(
     @TenantId() tenantId: string,
     @Query("market") market?: ThailandMarket,
     @Query("query") query?: string,
-    @Query("limit") limit?: string
+    @Query("limit") limit?: string,
+    @Query("offset") offset?: string
   ): Promise<PropertyProjectSearchResponse> {
     return this.properties.searchProjects(tenantId, {
-      limit: limit ? Number(limit) : undefined,
+      limit: parseOptionalNumber(limit),
       market,
+      offset: parseOptionalNumber(offset),
       query
     });
   }
@@ -1722,4 +1725,14 @@ export class PropertiesController {
 
     return `Lead created from saved search "${savedSearchTitle}".${propertyContext}`;
   }
+}
+
+function parseOptionalNumber(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+
+  return Number.isFinite(parsed) ? parsed : undefined;
 }

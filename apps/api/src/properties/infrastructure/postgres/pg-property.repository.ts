@@ -82,6 +82,8 @@ interface PropertyProjectSuggestionRow {
   developer: string | null;
   address: string | null;
   listing_count: string;
+  rent_count: string;
+  sale_count: string;
 }
 
 interface PropertyProjectContextRow {
@@ -510,7 +512,26 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`project.normalized_name like ${addValue(`%${normalizedQuery}%`)}`);
     }
 
-    const limit = Math.min(Math.max(filters.limit ?? 8, 1), 20);
+    const limit = Math.min(Math.max(filters.limit ?? 8, 1), 100);
+    const offset = Math.max(filters.offset ?? 0, 0);
+    const countResult = await this.pool.query<{ count: string }>(
+      `
+        select count(*)::text as count
+        from property_projects project
+        where ${clauses.join(" and ")}
+      `,
+      values
+    );
+    const statusResult = await this.pool.query<{ count: string; status: PropertyProjectStatus }>(
+      `
+        select project.status, count(*)::text as count
+        from property_projects project
+        where ${clauses.join(" and ")}
+        group by project.status
+        order by count(*) desc, project.status asc
+      `,
+      values
+    );
     const result = await this.pool.query<PropertyProjectSuggestionRow>(
       `
         select
@@ -520,7 +541,9 @@ export class PgPropertyRepository implements PropertyRepository {
           project.status,
           project.developer,
           project.address,
-          count(property.id)::text as listing_count
+          count(property.id)::text as listing_count,
+          count(property.id) filter (where property.listing_type in ('rent', 'sale_or_rent'))::text as rent_count,
+          count(property.id) filter (where property.listing_type in ('sale', 'sale_or_rent'))::text as sale_count
         from property_projects project
         left join properties property
           on property.tenant_id = project.tenant_id and property.project_id = project.id
@@ -532,11 +555,18 @@ export class PgPropertyRepository implements PropertyRepository {
           count(property.id) desc,
           project.name asc
         limit ${addValue(limit)}
+        offset ${addValue(offset)}
       `,
       values
     );
 
     return {
+      facets: {
+        status: statusResult.rows.map((row) => ({
+          count: Number(row.count),
+          label: row.status
+        }))
+      },
       filters,
       items: result.rows.map((row): PropertyProjectSuggestion => ({
         id: row.id,
@@ -545,9 +575,11 @@ export class PgPropertyRepository implements PropertyRepository {
         status: row.status,
         developer: row.developer ?? undefined,
         address: row.address ?? undefined,
-        listingCount: Number(row.listing_count)
+        listingCount: Number(row.listing_count),
+        rentCount: Number(row.rent_count),
+        saleCount: Number(row.sale_count)
       })),
-      total: result.rows.length
+      total: Number(countResult.rows[0]?.count ?? 0)
     };
   }
 

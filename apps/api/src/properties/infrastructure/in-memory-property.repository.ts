@@ -253,7 +253,10 @@ export class InMemoryPropertyRepository implements PropertyRepository {
 
   async searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse> {
     const query = filters.query ? normalizeProjectName(filters.query) : "";
-    const projects = new Map<string, NonNullable<PropertySnapshot["project"]> & { listingCount: number }>();
+    const projects = new Map<
+      string,
+      NonNullable<PropertySnapshot["project"]> & { listingCount: number; rentCount: number; saleCount: number }
+    >();
 
     for (const property of await this.list(tenantId)) {
       if (!property.project || (filters.market && property.project.market !== filters.market)) {
@@ -269,13 +272,25 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       const current = projects.get(property.project.id);
       projects.set(property.project.id, {
         ...property.project,
-        listingCount: (current?.listingCount ?? 0) + 1
+        listingCount: (current?.listingCount ?? 0) + 1,
+        rentCount: (current?.rentCount ?? 0) + (property.listingType === "rent" || property.listingType === "sale_or_rent" ? 1 : 0),
+        saleCount: (current?.saleCount ?? 0) + (property.listingType === "sale" || property.listingType === "sale_or_rent" ? 1 : 0)
       });
     }
 
-    const items = [...projects.values()]
-      .sort((left, right) => right.listingCount - left.listingCount || left.name.localeCompare(right.name))
-      .slice(0, Math.min(Math.max(filters.limit ?? 8, 1), 20))
+    const sortedProjects = [...projects.values()].sort(
+      (left, right) => right.listingCount - left.listingCount || left.name.localeCompare(right.name)
+    );
+    const statusCounts = new Map<NonNullable<PropertySnapshot["project"]>["status"], number>();
+
+    for (const project of sortedProjects) {
+      statusCounts.set(project.status, (statusCounts.get(project.status) ?? 0) + 1);
+    }
+
+    const offset = Math.max(filters.offset ?? 0, 0);
+    const limit = Math.min(Math.max(filters.limit ?? 8, 1), 100);
+    const items = sortedProjects
+      .slice(offset, offset + limit)
       .map((project) => ({
         id: project.id,
         name: project.name,
@@ -283,10 +298,21 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         status: project.status,
         developer: project.developer,
         address: project.address,
-        listingCount: project.listingCount
+        listingCount: project.listingCount,
+        rentCount: project.rentCount,
+        saleCount: project.saleCount
       }));
 
-    return { filters, items, total: items.length };
+    return {
+      facets: {
+        status: [...statusCounts.entries()]
+          .map(([label, count]) => ({ count, label }))
+          .sort((left, right) => right.count - left.count || left.label.localeCompare(right.label))
+      },
+      filters,
+      items,
+      total: sortedProjects.length
+    };
   }
 
   async addPriceHistoryPoint(

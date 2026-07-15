@@ -146,6 +146,7 @@ export async function searchPropertyProjects(
 
 function demoPropertyProjectSearchResponse(request: PropertyProjectSearchRequest): PropertyProjectSearchResponse {
   return {
+    facets: { status: [] },
     filters: request,
     items: [],
     total: 0

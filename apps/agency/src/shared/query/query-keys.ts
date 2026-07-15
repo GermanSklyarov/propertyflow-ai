@@ -18,6 +18,10 @@ export const queryKeys = {
     images: (propertyId: string) => [...queryKeys.listings.all, "images", propertyId] as const,
     list: (filters: object) => [...queryKeys.listings.all, "list", filters] as const
   },
+  projects: {
+    all: ["projects"] as const,
+    list: (filters: object) => [...queryKeys.projects.all, "list", filters] as const
+  },
   jobs: {
     all: ["jobs"] as const,
     list: (filters: object) => [...queryKeys.jobs.all, "list", filters] as const

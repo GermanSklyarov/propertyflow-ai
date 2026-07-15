@@ -338,18 +338,27 @@ export interface PropertyProjectSuggestion {
   developer?: string;
   address?: string;
   listingCount: number;
+  rentCount?: number;
+  saleCount?: number;
 }
 
 export interface PropertyProjectSearchRequest {
   market?: ThailandMarket;
   query?: string;
   limit?: number;
+  offset?: number;
 }
 
 export interface PropertyProjectSearchResponse {
   items: PropertyProjectSuggestion[];
   total: number;
   filters: PropertyProjectSearchRequest;
+  facets?: {
+    status: Array<{
+      label: NonNullable<PropertySnapshot["project"]>["status"];
+      count: number;
+    }>;
+  };
 }
 
 export type PropertySearchSort =
