@@ -213,6 +213,69 @@
   line-height: 1;
 }
 
+.directoryToolbar {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) minmax(180px, 0.38fr) auto auto;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.searchBox,
+.marketSelect,
+.resultMeta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 12px;
+  color: var(--teal-dark);
+}
+
+.searchBox input,
+.marketSelect select {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 13px 0;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.searchBox input:focus,
+.marketSelect select:focus {
+  outline: 0;
+}
+
+.resultMeta {
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.applyButton {
+  border: 1px solid var(--teal-dark);
+  background: #0f766e;
+  padding: 0 18px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.applyButton:hover,
+.applyButton:focus-visible {
+  background: #0b5f59;
+}
+
 .projectList {
   display: grid;
   gap: 10px;
@@ -272,6 +335,7 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 6px;
+  min-width: 0;
 }
 
 .projectStats span {
@@ -370,13 +434,52 @@
   line-height: 1.45;
 }
 
-@media (max-width: 1100px) {
-  .kpiGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+}
 
+.pagination a,
+.pagination span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #fff;
+  padding: 10px 12px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-decoration: none;
+}
+
+.pagination a:hover,
+.pagination a:focus-visible {
+  border-color: rgb(15 118 110 / 42%);
+  background: #edf8f4;
+}
+
+.pagination span {
+  background: #edf8f4;
+}
+
+.paginationDisabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
   .layout {
     grid-template-columns: 1fr;
+  }
+
+  .createProject {
+    position: static;
   }
 
   .projectForm {
@@ -386,10 +489,35 @@
   }
 }
 
+@media (max-width: 1100px) {
+  .kpiGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .directoryToolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.45fr);
+  }
+
+  .resultMeta,
+  .applyButton {
+    justify-content: center;
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 860px) {
+  .projectCard {
+    grid-template-columns: 1fr;
+  }
+
+  .projectStats {
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 680px) {
   .header,
-  .kpiGrid,
-  .projectCard {
+  .kpiGrid {
     grid-template-columns: 1fr;
   }
 
@@ -399,6 +527,15 @@
 
   .projectForm {
     grid-template-columns: 1fr;
+  }
+
+  .directoryToolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .resultMeta,
+  .applyButton {
+    justify-content: center;
   }
 
   .projectStats {

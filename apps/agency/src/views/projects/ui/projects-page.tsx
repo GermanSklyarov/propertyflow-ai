@@ -1,5 +1,16 @@
 import Link from "next/link";
-import { AlertTriangle, Building2, ChevronDown, CircleDot, Home, KeyRound, Plus } from "lucide-react";
+import {
+  AlertTriangle,
+  Building2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  CircleDot,
+  Home,
+  KeyRound,
+  Plus,
+  Search
+} from "lucide-react";
 import { formatListingType, formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { createPropertyProjectAction } from "@entities/project/api/project-actions";
 import type { PropertyProjectSearchResponse, PropertySearchResponse } from "@propertyflow/contracts";
@@ -34,6 +45,11 @@ export function ProjectsPage({
   const totalListings = projectLinkFacets?.all ?? linkedListings + missingProjectListings;
   const linkedRate = totalListings > 0 ? Math.round((linkedListings / totalListings) * 100) : 0;
   const statusCounts = projects.facets?.status ?? buildProjectStatusCounts(projects.items);
+  const pageSize = projects.filters.limit ?? (projects.items.length || 1);
+  const currentPage = Math.floor((projects.filters.offset ?? 0) / pageSize) + 1;
+  const pageCount = Math.max(1, Math.ceil(projects.total / pageSize));
+  const firstVisible = projects.items.length ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastVisible = Math.min((currentPage - 1) * pageSize + projects.items.length, projects.total);
 
   return (
     <main className={styles.page}>
@@ -118,6 +134,30 @@ export function ProjectsPage({
               </details>
             </div>
 
+            <form action="/projects#project-directory" className={styles.directoryToolbar} method="get">
+              <label className={styles.searchBox}>
+                <Search size={17} />
+                <input defaultValue={projects.filters.query ?? ""} name="query" placeholder="Search project or developer" type="search" />
+              </label>
+              <label className={styles.marketSelect}>
+                <Building2 size={16} />
+                <select defaultValue={projects.filters.market ?? "all"} name="market">
+                  <option value="all">All markets</option>
+                  {markets.map((market) => (
+                    <option key={market.value} value={market.value}>
+                      {market.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className={styles.resultMeta}>
+                {firstVisible}-{lastVisible} of {projects.total}
+              </span>
+              <button className={styles.applyButton} type="submit">
+                Apply
+              </button>
+            </form>
+
             <div className={styles.projectList}>
               {projects.items.length ? (
                 projects.items.map((project) => (
@@ -151,6 +191,30 @@ export function ProjectsPage({
                 <div className={styles.emptyState}>No projects yet. Create or import listings with project names to start the registry.</div>
               )}
             </div>
+
+            {pageCount > 1 ? (
+              <div className={styles.pagination} aria-label="Project directory pagination">
+                <Link
+                  aria-disabled={currentPage === 1}
+                  className={currentPage === 1 ? styles.paginationDisabled : ""}
+                  href={projectDirectoryHref(projects.filters, Math.max(1, currentPage - 1))}
+                >
+                  <ChevronLeft size={16} />
+                  Prev
+                </Link>
+                <span>
+                  Page {currentPage} of {pageCount}
+                </span>
+                <Link
+                  aria-disabled={currentPage === pageCount}
+                  className={currentPage === pageCount ? styles.paginationDisabled : ""}
+                  href={projectDirectoryHref(projects.filters, Math.min(pageCount, currentPage + 1))}
+                >
+                  Next
+                  <ChevronRight size={16} />
+                </Link>
+              </div>
+            ) : null}
           </section>
 
           <aside className={styles.sidePanel}>
@@ -203,6 +267,26 @@ export function ProjectsPage({
       </div>
     </main>
   );
+}
+
+function projectDirectoryHref(filters: PropertyProjectSearchResponse["filters"], page: number) {
+  const params = new URLSearchParams();
+
+  if (filters.query) {
+    params.set("query", filters.query);
+  }
+
+  if (filters.market) {
+    params.set("market", filters.market);
+  }
+
+  if (page > 1) {
+    params.set("page", String(page));
+  }
+
+  const query = params.toString();
+
+  return query ? `/projects?${query}#project-directory` : "/projects#project-directory";
 }
 
 function buildProjectStatusCounts(projects: PropertyProjectSearchResponse["items"]) {
