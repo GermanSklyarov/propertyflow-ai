@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Building2, Home, KeyRound, MapPin, Ruler, Sparkles } from "lucide-react";
 import { formatListingMoney, formatListingType, formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { buildListingCoverImageSrc } from "@entities/listing/lib/listing-media";
+import { updatePropertyProjectRecordAction } from "@entities/project/api/project-actions";
 import type { PropertyProjectSuggestion, PropertySearchResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./project-detail-page.module.css";
@@ -13,6 +14,8 @@ export function ProjectDetailPage({
   listings: PropertySearchResponse;
   project: PropertyProjectSuggestion;
 }) {
+  const updateAction = updatePropertyProjectRecordAction.bind(null, project.id);
+
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -55,6 +58,47 @@ export function ProjectDetailPage({
               <Fact label="Developer" value={project.developer ?? "Not captured yet"} />
               <Fact label="Address / area" value={project.address ?? "Use listing addresses until project address is confirmed."} />
             </div>
+          </section>
+
+          <section className={styles.panel}>
+            <div className={styles.panelHeader}>
+              <div>
+                <p className="section-kicker">Canonical edit</p>
+                <h2>Update project record</h2>
+              </div>
+            </div>
+            <form action={updateAction} className={styles.projectForm}>
+              <label>
+                <span>Project name</span>
+                <input defaultValue={project.name} name="name" required />
+              </label>
+              <label>
+                <span>Status</span>
+                <select defaultValue={project.status} name="status">
+                  <option value="planned">Planned</option>
+                  <option value="under_construction">Under construction</option>
+                  <option value="completed">Completed</option>
+                  <option value="paused">Paused</option>
+                </select>
+              </label>
+              <label>
+                <span>Developer</span>
+                <input defaultValue={project.developer ?? ""} name="developer" placeholder="Developer or group" />
+              </label>
+              <label>
+                <span>Completion year</span>
+                <input min={1900} name="completionYear" placeholder="2026" type="number" />
+              </label>
+              <label className={styles.wideField}>
+                <span>Address or area</span>
+                <input defaultValue={project.address ?? ""} name="address" placeholder="Wongamat Beach, Pattaya" />
+              </label>
+              <label className={styles.wideField}>
+                <span>Shared amenities</span>
+                <input name="amenities" placeholder="pool, gym, lobby, parking" />
+              </label>
+              <button type="submit">Save project</button>
+            </form>
           </section>
 
           <section className={styles.panel}>

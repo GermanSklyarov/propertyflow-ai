@@ -7,6 +7,7 @@ import type {
   PropertyProjectSearchResponse,
   PropertySearchResponse,
   PropertySearchRequest,
+  UpdatePropertyProjectRecordRequest,
   UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
 
@@ -35,6 +36,11 @@ export interface PropertyRepository {
   createProject(tenantId: string, project: CreatePropertyProjectRequest): Promise<PropertyProjectSuggestion>;
   findProjectById(tenantId: string, projectId: string): Promise<PropertyProjectSuggestion | null>;
   searchProjects(tenantId: string, filters: PropertyProjectSearchRequest): Promise<PropertyProjectSearchResponse>;
+  updateProjectRecord(
+    tenantId: string,
+    projectId: string,
+    project: UpdatePropertyProjectRecordRequest
+  ): Promise<PropertyProjectSuggestion | null>;
   addPriceHistoryPoint(
     tenantId: string,
     propertyId: string,

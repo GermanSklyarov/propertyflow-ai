@@ -233,6 +233,15 @@ export interface CreatePropertyProjectRequest {
   amenities?: string[];
 }
 
+export interface UpdatePropertyProjectRecordRequest {
+  name?: string;
+  status?: PropertyProjectStatus;
+  developer?: string;
+  address?: string;
+  completionYear?: number;
+  amenities?: string[];
+}
+
 export interface PropertyStatusEventSnapshot {
   id: string;
   tenantId: string;

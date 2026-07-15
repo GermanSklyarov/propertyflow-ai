@@ -97,6 +97,7 @@ import { SearchPropertiesDto, toPropertySearchRequest } from "./search-propertie
 import { SubmitPriceRecommendationFeedbackDto } from "./submit-price-recommendation-feedback.dto.js";
 import { TrainPricingModelDto } from "./train-pricing-model.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
+import { UpdatePropertyProjectRecordDto } from "./update-property-project-record.dto.js";
 import { UpdatePropertyProjectDto } from "./update-property-project.dto.js";
 import { UpdateSavedPropertySearchNotificationsDto } from "./update-saved-property-search-notifications.dto.js";
 import { UpdatePropertyStatusDto } from "./update-property-status.dto.js";
@@ -234,6 +235,44 @@ export class PropertiesController {
     if (!project) {
       throw new NotFoundException("Project not found");
     }
+
+    return project;
+  }
+
+  @Patch("projects/:projectId")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Update a canonical development project" })
+  @ApiOkResponse({ description: "Updated development project with listing counts" })
+  async updateProjectRecord(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("projectId") projectId: string,
+    @Body() payload: UpdatePropertyProjectRecordDto
+  ): Promise<PropertyProjectSuggestion> {
+    const project = await this.properties.updateProjectRecord(tenantId, projectId, payload);
+
+    if (!project) {
+      throw new NotFoundException("Project not found");
+    }
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.project_updated",
+      resourceType: "property",
+      resourceId: project.id,
+      metadata: {
+        market: project.market,
+        name: project.name,
+        status: project.status
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.project_updated", {
+      projectId: project.id,
+      name: project.name,
+      status: project.status
+    });
 
     return project;
   }

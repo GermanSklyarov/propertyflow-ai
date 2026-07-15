@@ -2,8 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createPropertyProject } from "@shared/api/agency-client";
-import type { CreatePropertyProjectRequest } from "@propertyflow/contracts";
+import { createPropertyProject, updatePropertyProjectRecord } from "@shared/api/agency-client";
+import type { CreatePropertyProjectRequest, UpdatePropertyProjectRecordRequest } from "@propertyflow/contracts";
 import type { PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
 
 export async function createPropertyProjectAction(formData: FormData) {
@@ -26,6 +26,27 @@ export async function createPropertyProjectAction(formData: FormData) {
   revalidatePath("/listings");
 
   redirect("/projects?created=project#project-directory");
+}
+
+export async function updatePropertyProjectRecordAction(projectId: string, formData: FormData) {
+  const name = getRequiredString(formData, "name");
+  const status = getOptionalString(formData, "status") as PropertyProjectStatus | undefined;
+  const amenities = getAmenities(formData);
+
+  await updatePropertyProjectRecord(projectId, {
+    name,
+    status,
+    developer: getOptionalString(formData, "developer"),
+    address: getOptionalString(formData, "address"),
+    completionYear: getOptionalNumber(formData, "completionYear"),
+    amenities
+  } satisfies UpdatePropertyProjectRecordRequest);
+
+  revalidatePath("/projects");
+  revalidatePath(`/projects/${projectId}`);
+  revalidatePath("/listings");
+
+  redirect(`/projects/${projectId}?updated=project`);
 }
 
 function getRequiredString(formData: FormData, key: string) {

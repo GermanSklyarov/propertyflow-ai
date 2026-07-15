@@ -7,6 +7,7 @@ import type {
   PropertyProjectSuggestion,
   PropertySearchResponse,
   PropertySearchRequest,
+  UpdatePropertyProjectRecordRequest,
   UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot, PropertyStatus } from "@propertyflow/domain";
@@ -407,6 +408,44 @@ export class InMemoryPropertyRepository implements PropertyRepository {
       rentCount: linkedListings.filter((property) => property.listingType === "rent" || property.listingType === "sale_or_rent").length,
       saleCount: linkedListings.filter((property) => property.listingType === "sale" || property.listingType === "sale_or_rent").length
     };
+  }
+
+  async updateProjectRecord(
+    tenantId: string,
+    projectId: string,
+    project: UpdatePropertyProjectRecordRequest
+  ): Promise<PropertyProjectSuggestion | null> {
+    const key = this.key(tenantId, projectId);
+    const existing = this.projects.get(key);
+
+    if (!existing) {
+      return null;
+    }
+
+    const updated = {
+      ...existing,
+      name: project.name ?? existing.name,
+      status: project.status ?? existing.status,
+      developer: project.developer,
+      address: project.address,
+      completionYear: project.completionYear,
+      amenities: project.amenities ?? existing.amenities,
+      updatedAt: new Date().toISOString()
+    } satisfies NonNullable<PropertySnapshot["project"]>;
+
+    this.projects.set(key, updated);
+
+    for (const [propertyKey, property] of this.properties.entries()) {
+      if (property.tenantId === tenantId && property.project?.id === projectId) {
+        this.properties.set(propertyKey, {
+          ...property,
+          project: updated,
+          updatedAt: updated.updatedAt
+        });
+      }
+    }
+
+    return this.findProjectById(tenantId, projectId);
   }
 
   async addPriceHistoryPoint(

@@ -8,6 +8,7 @@ import type {
   PropertyProjectSuggestion,
   PropertySearchResponse,
   PropertySearchRequest,
+  UpdatePropertyProjectRecordRequest,
   UpdatePropertyProjectRequest
 } from "@propertyflow/contracts";
 import type {
@@ -659,6 +660,48 @@ export class PgPropertyRepository implements PropertyRepository {
       rentCount: Number(row.rent_count),
       saleCount: Number(row.sale_count)
     };
+  }
+
+  async updateProjectRecord(
+    tenantId: string,
+    projectId: string,
+    project: UpdatePropertyProjectRecordRequest
+  ): Promise<PropertyProjectSuggestion | null> {
+    const existing = await this.findProjectById(tenantId, projectId);
+
+    if (!existing) {
+      return null;
+    }
+
+    await this.pool.query(
+      `
+        update property_projects
+        set
+          name = $3,
+          normalized_name = $4,
+          status = $5,
+          developer = $6,
+          address = $7,
+          completion_year = $8,
+          amenities = $9,
+          updated_at = $10
+        where tenant_id = $1 and id = $2
+      `,
+      [
+        tenantId,
+        projectId,
+        project.name ?? existing.name,
+        normalizeProjectName(project.name ?? existing.name),
+        project.status ?? existing.status,
+        project.developer ?? null,
+        project.address ?? null,
+        project.completionYear ?? null,
+        project.amenities ?? [],
+        new Date().toISOString()
+      ]
+    );
+
+    return this.findProjectById(tenantId, projectId);
   }
 
   private orderBy(filters: PropertySearchRequest): string {

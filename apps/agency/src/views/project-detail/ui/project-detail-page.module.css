@@ -134,6 +134,54 @@
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
+.projectForm {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.projectForm label {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.projectForm label span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.projectForm input,
+.projectForm select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 11px 12px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 850;
+}
+
+.projectForm button {
+  justify-self: start;
+  border: 1px solid var(--teal-dark);
+  background: #0f766e;
+  padding: 12px 16px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.wideField {
+  grid-column: 1 / -1;
+}
+
 .fact {
   display: grid;
   gap: 8px;
