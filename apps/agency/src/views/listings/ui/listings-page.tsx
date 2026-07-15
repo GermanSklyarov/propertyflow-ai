@@ -13,11 +13,12 @@ interface ListingsPageProps {
     error?: "empty";
     jobId?: string;
   };
-  inventory: PropertySearchResponse;
+  inventory?: PropertySearchResponse;
+  inventoryError?: string;
   total: number;
 }
 
-export function ListingsPage({ coverageListings, importJobs, importResult, inventory, total }: ListingsPageProps) {
+export function ListingsPage({ coverageListings, importJobs, importResult, inventory, inventoryError, total }: ListingsPageProps) {
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
@@ -38,7 +39,7 @@ export function ListingsPage({ coverageListings, importJobs, importResult, inven
 
         <ProjectCoveragePanel listings={coverageListings} />
 
-        <ListingsInventoryPanel response={inventory} />
+        <ListingsInventoryPanel error={inventoryError} response={inventory} />
       </div>
     </main>
   );

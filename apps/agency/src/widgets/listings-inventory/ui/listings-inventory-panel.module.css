@@ -264,6 +264,27 @@
   font-weight: 850;
 }
 
+.errorState {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  border: 1px solid rgb(239 68 68 / 22%);
+  background: #fff7f5;
+  padding: 18px;
+  color: #7f1d1d;
+}
+
+.errorState h2 {
+  margin: 4px 0 6px;
+  color: #13211e;
+  font-size: 1.2rem;
+}
+
+.errorState span {
+  color: #6f3b35;
+  font-weight: 800;
+}
+
 .listingRow {
   display: grid;
   gap: 0;

@@ -436,6 +436,7 @@ export class PgPropertyRepository implements PropertyRepository {
 
     this.applySmartQuery(clauses, addValue, filters.query);
 
+    const countValues = [...values];
     const paginationClauses: string[] = [];
 
     if (filters.limit !== undefined) {
@@ -453,7 +454,7 @@ export class PgPropertyRepository implements PropertyRepository {
         ${this.fromSearchPropertiesSql()}
         where ${whereSql}
       `,
-      values
+      countValues
     );
     const result = await this.pool.query<PropertyRow>(
       `

@@ -259,12 +259,12 @@ export async function listProperties(
     });
 
     if (!response.ok) {
-      return demoPropertySearchResponse(request);
+      throw new Error(`Failed to load properties: ${response.status}`);
     }
 
     return (await response.json()) as PropertySearchResponse;
-  } catch {
-    return demoPropertySearchResponse(request);
+  } catch (error) {
+    throw error instanceof Error ? error : new Error("Failed to load properties");
   }
 }
 

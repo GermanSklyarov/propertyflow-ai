@@ -35,21 +35,30 @@ export default async function AgencyListingsPage({
     sort
   };
   const coverageRequest: PropertySearchRequest = { limit: 200, sort: "created-desc" };
-  const [jobs, inventory, coverage] = await Promise.all([
+  const [jobsResult, inventoryResult, coverageResult] = await Promise.allSettled([
     queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 })),
     queryClient.ensureQueryData(listingsQueryOptions(inventoryRequest)),
     queryClient.ensureQueryData(listingsQueryOptions(coverageRequest))
   ]);
   const importResult = query.importJob || query.importError ? { error: query.importError, jobId: query.importJob } : undefined;
+  const jobs = jobsResult.status === "fulfilled" ? jobsResult.value : { items: [] };
+  const inventory = inventoryResult.status === "fulfilled" ? inventoryResult.value : undefined;
+  const coverage = coverageResult.status === "fulfilled" ? coverageResult.value : undefined;
+  const inventoryError = inventoryResult.status === "rejected" ? toErrorMessage(inventoryResult.reason) : undefined;
   const importJobs = jobs.items.filter((job) => job.name === "properties.import").slice(0, 5);
 
   return (
     <ListingsPage
-      coverageListings={coverage.items}
+      coverageListings={coverage?.items ?? []}
       importJobs={importJobs}
       importResult={importResult}
       inventory={inventory}
-      total={coverage.total}
+      inventoryError={inventoryError}
+      total={coverage?.total ?? inventory?.total ?? 0}
     />
   );
+}
+
+function toErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Failed to load listings";
 }

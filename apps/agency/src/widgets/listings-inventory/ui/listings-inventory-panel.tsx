@@ -43,7 +43,11 @@ const sortLabels: Record<PropertySearchSort, string> = {
   "yield-desc": "Yield strongest"
 };
 
-export function ListingsInventoryPanel({ response }: { response: PropertySearchResponse }) {
+export function ListingsInventoryPanel({ error, response }: { error?: string; response?: PropertySearchResponse }) {
+  if (!response) {
+    return <InventoryLoadError message={error ?? "Backend is unavailable. Start the API server and retry."} />;
+  }
+
   const listings = response.items;
   const filters = response.filters;
   const pageSize = filters.limit ?? (listings.length || 1);
@@ -169,6 +173,21 @@ export function ListingsInventoryPanel({ response }: { response: PropertySearchR
         </section>
       </section>
     </>
+  );
+}
+
+function InventoryLoadError({ message }: { message: string }) {
+  return (
+    <section className={styles.tablePanel} id="inventory" aria-label="Listings loading error">
+      <div className={styles.errorState}>
+        <AlertTriangle size={20} />
+        <div>
+          <p className="section-kicker">Inventory unavailable</p>
+          <h2>Could not load listings</h2>
+          <span>{message}</span>
+        </div>
+      </div>
+    </section>
   );
 }
 
