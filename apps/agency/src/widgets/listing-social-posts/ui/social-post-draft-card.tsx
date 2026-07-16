@@ -46,6 +46,26 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
           <span key={tag}>{tag}</span>
         ))}
       </div>
+      <div className={styles.mediaPlan}>
+        <strong>{draft.mediaPlan.summary}</strong>
+        {draft.mediaPlan.items.length ? (
+          <div className={styles.mediaStrip} aria-label={`${draft.label} recommended photos`}>
+            {draft.mediaPlan.items.slice(0, 5).map((item) => (
+              <figure key={item.imageId}>
+                <img src={item.imageUrl} alt={item.caption ?? `${draft.label} ${item.role} photo`} />
+                <figcaption>{item.role}</figcaption>
+              </figure>
+            ))}
+          </div>
+        ) : null}
+        {draft.mediaPlan.warnings.length ? (
+          <ul>
+            {draft.mediaPlan.warnings.map((warning) => (
+              <li key={warning}>{warning}</li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
       <div className={styles.cardActions}>
         <details className={styles.editDetails}>
           <summary className={`${styles.actionButton} ${styles.secondaryAction}`}>

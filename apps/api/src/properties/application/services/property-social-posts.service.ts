@@ -2,11 +2,14 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   GeneratePropertySocialPostsRequest,
   GeneratePropertySocialPostsResponse,
+  PropertyImageSnapshot,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
+  PropertySocialPostMediaPlan,
   PropertySocialPostLocale
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot } from "@propertyflow/domain";
+import { PROPERTY_IMAGES_REPOSITORY, type PropertyImagesRepository } from "../../domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
 const allChannels: PropertySocialPostChannel[] = ["line-voom", "facebook", "instagram"];
@@ -86,7 +89,10 @@ const copyByLocale = {
 
 @Injectable()
 export class PropertySocialPostsService {
-  constructor(@Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository) {}
+  constructor(
+    @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
+    @Inject(PROPERTY_IMAGES_REPOSITORY) private readonly images: PropertyImagesRepository
+  ) {}
 
   async generateDrafts(
     tenantId: string,
@@ -101,18 +107,20 @@ export class PropertySocialPostsService {
 
     const locale = request.locale ?? "en";
     const channels = request.channels?.length ? request.channels : allChannels;
-    const publicPhotoCount = request.publicPhotoCount ?? (property.coverImage ? 1 : 0);
+    const gallery = await this.images.listByPropertyId(tenantId, propertyId);
+    const publicPhotoCount = request.publicPhotoCount ?? gallery.length;
 
     return {
       propertyId,
       locale,
-      drafts: channels.map((channel) => buildDraft(property, channel, locale, publicPhotoCount))
+      drafts: channels.map((channel) => buildDraft(property, gallery, channel, locale, publicPhotoCount))
     };
   }
 }
 
 function buildDraft(
   listing: PropertySnapshot,
+  gallery: PropertyImageSnapshot[],
   channel: PropertySocialPostChannel,
   locale: PropertySocialPostLocale,
   publicPhotoCount: number
@@ -125,6 +133,7 @@ function buildDraft(
   const status: PropertySocialPostDraft["status"] = listing.description && publicPhotoCount > 0 ? "ready" : "review";
   const hashtags = buildHashtags(listing);
   const description = buildShortDescription(listing, locale);
+  const mediaPlan = buildMediaPlan(channel, gallery, publicPhotoCount);
 
   if (channel === "line-voom") {
     return {
@@ -135,6 +144,7 @@ function buildDraft(
       hook: copy.lineVoomHook(listing.title),
       label: "LINE VOOM",
       locale,
+      mediaPlan,
       status
     };
   }
@@ -148,6 +158,7 @@ function buildDraft(
       hook: `${listing.title}: ${priceLine}`,
       label: "Facebook",
       locale,
+      mediaPlan,
       status
     };
   }
@@ -160,7 +171,39 @@ function buildDraft(
     hook: copy.instagramHook(listing.title, market),
     label: "Instagram",
     locale,
+    mediaPlan,
     status
+  };
+}
+
+function buildMediaPlan(
+  channel: PropertySocialPostChannel,
+  gallery: PropertyImageSnapshot[],
+  publicPhotoCount: number
+): PropertySocialPostMediaPlan {
+  const limit = channel === "instagram" ? 5 : channel === "facebook" ? 8 : 4;
+  const selected = gallery.slice(0, limit);
+  const warnings = [];
+
+  if (!publicPhotoCount || !selected.length) {
+    warnings.push("Add public gallery photos before publishing this post.");
+  }
+
+  if (channel === "instagram" && selected.length < 3) {
+    warnings.push("Instagram carousel works best with at least 3 photos.");
+  }
+
+  return {
+    items: selected.map((image, index) => ({
+      caption: image.caption,
+      imageId: image.id,
+      imageUrl: image.imageUrl,
+      role: index === 0 ? "cover" : "carousel"
+    })),
+    summary: selected.length
+      ? `${selected.length} recommended photo${selected.length === 1 ? "" : "s"} from the public gallery`
+      : "No public gallery photos selected",
+    warnings
   };
 }
 

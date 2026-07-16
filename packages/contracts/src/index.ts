@@ -1170,6 +1170,19 @@ export interface GeneratePropertySocialPostsRequest {
   publicPhotoCount?: number;
 }
 
+export interface PropertySocialPostMediaItem {
+  imageId: string;
+  imageUrl: string;
+  caption?: string;
+  role: "cover" | "carousel";
+}
+
+export interface PropertySocialPostMediaPlan {
+  items: PropertySocialPostMediaItem[];
+  summary: string;
+  warnings: string[];
+}
+
 export interface PropertySocialPostDraft {
   body: string;
   channel: PropertySocialPostChannel;
@@ -1178,6 +1191,7 @@ export interface PropertySocialPostDraft {
   hook: string;
   label: string;
   locale: PropertySocialPostLocale;
+  mediaPlan: PropertySocialPostMediaPlan;
   status: "ready" | "review";
 }
 
