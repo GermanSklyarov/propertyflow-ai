@@ -3,6 +3,7 @@ import { createPropertyAction } from "@entities/listing/api/listing-actions";
 import { AmenitiesSuggestionField } from "@features/project-create/ui/amenities-suggestion-field";
 import { FileDropField } from "./file-drop-field";
 import { ProjectAutocompleteField } from "./project-autocomplete-field";
+import { CreateListingWizard } from "./create-listing-wizard";
 import styles from "./create-listing-form.module.css";
 
 const markets = [
@@ -53,7 +54,7 @@ export function CreateListingForm() {
             <Building2 size={21} />
           </div>
 
-          <form action={createPropertyAction} className={styles.form}>
+          <CreateListingWizard action={createPropertyAction}>
             <section className={styles.step}>
               <div className={styles.stepHeader}>
                 <span>1</span>
@@ -180,79 +181,73 @@ export function CreateListingForm() {
               </label>
             </section>
 
-            <details className={styles.advanced}>
-              <summary>
-                <span>
-                  <Bot size={16} />
-                  Add optional details
-                </span>
-                <small>Useful if you already know them; otherwise AI and later review can fill gaps.</small>
-                <ChevronDown size={16} />
-              </summary>
-
-              <div className={styles.advancedBody}>
-                <div className={styles.fieldGrid}>
-                  <label className={styles.field}>
-                    <span>Bedrooms</span>
-                    <input min={0} name="bedrooms" placeholder="1" type="number" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Bathrooms</span>
-                    <input min={0} name="bathrooms" placeholder="1" type="number" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Floor</span>
-                    <input min={0} name="floor" placeholder="12" type="number" />
-                  </label>
-                  <label className={styles.wideField}>
-                    <span>Agent note</span>
-                    <textarea name="description" placeholder="Raw note: view, condition, buyer/renter angle, owner comments." />
-                  </label>
-                </div>
-
-                <div className={styles.commercialGrid}>
-                  <div className={styles.sectionTitle}>
-                    <CircleDollarSign size={16} />
-                    Commercial signals
-                  </div>
-                  <label className={styles.field}>
-                    <span>Target sale price THB</span>
-                    <input min={0} name="priceThb" placeholder="3500000" step="1000" type="number" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Monthly rent THB</span>
-                    <input min={0} name="rentalPriceMonthlyThb" placeholder="24000" step="500" type="number" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Rent estimate THB</span>
-                    <input min={0} name="monthlyRentEstimateThb" placeholder="26000" step="500" type="number" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Maintenance/mo THB</span>
-                    <input min={0} name="maintenanceFeeMonthlyThb" placeholder="2200" step="100" type="number" />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Beach distance m</span>
-                    <input min={0} name="beachDistanceMeters" placeholder="450" type="number" />
-                  </label>
-                  <AmenitiesSuggestionField
-                    className={styles.wideField}
-                    label="Amenities"
-                    listenForProjectAmenities
-                    placeholder="pool, gym, sea view, fiber internet"
-                  />
+            <section className={styles.step}>
+              <div className={styles.stepHeader}>
+                <span>3</span>
+                <div>
+                  <h3>Details and economics</h3>
+                  <p>Add what the agent already knows. AI and later review can fill the rest after the draft exists.</p>
                 </div>
               </div>
-            </details>
 
-            <div className={styles.actions}>
-              <button type="submit">
-                <Plus size={16} />
-                Create AI-ready draft
-              </button>
-              <small>Next: review the created listing, approve AI photo signals, generate copy, and publish.</small>
-            </div>
-          </form>
+              <div className={styles.fieldGrid}>
+                <label className={styles.field}>
+                  <span>Bedrooms</span>
+                  <input min={0} name="bedrooms" placeholder="1" type="number" />
+                </label>
+                <label className={styles.field}>
+                  <span>Bathrooms</span>
+                  <input min={0} name="bathrooms" placeholder="1" type="number" />
+                </label>
+                <label className={styles.field}>
+                  <span>Floor</span>
+                  <input min={0} name="floor" placeholder="12" type="number" />
+                </label>
+                <label className={styles.wideField}>
+                  <span>Agent note</span>
+                  <textarea name="description" placeholder="Raw note: view, condition, buyer/renter angle, owner comments." />
+                </label>
+              </div>
+
+              <div className={styles.commercialGrid}>
+                <div className={styles.sectionTitle}>
+                  <CircleDollarSign size={16} />
+                  Commercial signals
+                </div>
+                <label className={styles.field}>
+                  <span>Target sale price THB</span>
+                  <input min={0} name="priceThb" placeholder="3500000" step="1000" type="number" />
+                </label>
+                <label className={styles.field}>
+                  <span>Monthly rent THB</span>
+                  <input min={0} name="rentalPriceMonthlyThb" placeholder="24000" step="500" type="number" />
+                </label>
+                <label className={styles.field}>
+                  <span>Rent estimate THB</span>
+                  <input min={0} name="monthlyRentEstimateThb" placeholder="26000" step="500" type="number" />
+                </label>
+                <label className={styles.field}>
+                  <span>Maintenance/mo THB</span>
+                  <input min={0} name="maintenanceFeeMonthlyThb" placeholder="2200" step="100" type="number" />
+                </label>
+                <label className={styles.field}>
+                  <span>Beach distance m</span>
+                  <input min={0} name="beachDistanceMeters" placeholder="450" type="number" />
+                </label>
+                <AmenitiesSuggestionField
+                  className={styles.wideField}
+                  label="Amenities"
+                  listenForProjectAmenities
+                  placeholder="pool, gym, sea view, fiber internet"
+                />
+              </div>
+
+              <div className={styles.aiNote}>
+                <Bot size={16} />
+                <span>Next: create the draft, then review AI photo signals, generate copy, and publish.</span>
+              </div>
+            </section>
+          </CreateListingWizard>
         </div>
       </details>
     </section>

@@ -90,6 +90,129 @@
   gap: 14px;
 }
 
+.wizardTabs {
+  display: grid;
+  gap: 8px;
+}
+
+.wizardTab {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+  color: var(--ink);
+  text-align: left;
+}
+
+.wizardTab span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  grid-row: 1 / span 2;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.wizardTab strong,
+.wizardTab small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.wizardTab strong {
+  color: var(--teal-dark);
+  font-size: 0.86rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.wizardTab small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.wizardTab:hover,
+.wizardTab:focus-visible,
+.wizardTabActive {
+  border-color: rgb(15 118 110 / 34%);
+  background: #edf8f4;
+}
+
+.stepViewport {
+  display: grid;
+}
+
+.stepPanel {
+  min-width: 0;
+}
+
+.wizardFooter {
+  display: grid;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 12px;
+}
+
+.wizardFooter button {
+  display: inline-flex;
+  min-height: 40px;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: #fff;
+  padding: 0 14px;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.wizardFooter button:hover:not(:disabled),
+.wizardFooter button:focus-visible:not(:disabled) {
+  background: #edf8f4;
+}
+
+.wizardFooter button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.wizardFooter small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
+.wizardFooter .nextButton,
+.wizardFooter .submitButton {
+  background: var(--teal);
+  color: #fff;
+}
+
+.wizardFooter .nextButton:hover,
+.wizardFooter .nextButton:focus-visible,
+.wizardFooter .submitButton:hover,
+.wizardFooter .submitButton:focus-visible {
+  background: var(--teal-dark);
+}
+
 .step,
 .advanced {
   border: 1px solid rgb(15 118 110 / 14%);
@@ -484,6 +607,14 @@
 }
 
 @media (min-width: 780px) {
+  .wizardTabs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .wizardFooter {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
   .fieldGrid,
   .commercialGrid,
   .chanoteGrid,
