@@ -52,6 +52,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
+  margin-bottom: 14px;
 }
 
 .chipGrid span {
@@ -61,4 +62,74 @@
   color: var(--teal-dark);
   font-size: 0.78rem;
   font-weight: 900;
+}
+
+.form {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 14px;
+}
+
+.noteField {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.noteField span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.noteField input {
+  min-height: 42px;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.noteField input:focus {
+  border-color: rgb(15 118 110 / 48%);
+  outline: 2px solid rgb(15 118 110 / 12%);
+  outline-offset: 0;
+}
+
+.form button {
+  display: inline-flex;
+  min-height: 42px;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.form button:hover,
+.form button:focus-visible {
+  background: var(--teal-dark);
+}
+
+@media (min-width: 820px) {
+  .form {
+    align-items: end;
+    grid-template-columns: minmax(0, 1.2fr) minmax(220px, 0.8fr) auto;
+  }
 }

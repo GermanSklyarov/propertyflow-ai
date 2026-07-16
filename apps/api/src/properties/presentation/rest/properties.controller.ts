@@ -72,6 +72,7 @@ import { PriceHistoryService } from "../../application/services/price-history.se
 import { PriceRecommendationFeedbackService } from "../../application/services/price-recommendation-feedback.service.js";
 import { PriceRecommendationService } from "../../application/services/price-recommendation.service.js";
 import { PropertyAiAssetsService } from "../../application/services/property-ai-assets.service.js";
+import { PropertyAmenitiesService } from "../../application/services/property-amenities.service.js";
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
 import { PropertyImagesService } from "../../application/services/property-images.service.js";
 import { PropertyPublicationService } from "../../application/services/property-publication.service.js";
@@ -98,6 +99,7 @@ import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 import { SubmitPriceRecommendationFeedbackDto } from "./submit-price-recommendation-feedback.dto.js";
 import { TrainPricingModelDto } from "./train-pricing-model.dto.js";
+import { UpdatePropertyAmenitiesDto } from "./update-property-amenities.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
 import { UpdatePropertyProjectRecordDto } from "./update-property-project-record.dto.js";
 import { UpdatePropertyProjectDto } from "./update-property-project.dto.js";
@@ -139,6 +141,8 @@ export class PropertiesController {
     private readonly priceRecommendation: PriceRecommendationService,
     @Inject(PropertyAiAssetsService)
     private readonly aiAssets: PropertyAiAssetsService,
+    @Inject(PropertyAmenitiesService)
+    private readonly propertyAmenities: PropertyAmenitiesService,
     @Inject(PropertyComparisonService)
     private readonly propertyComparison: PropertyComparisonService,
     @Inject(PropertyImagesService)
@@ -1346,6 +1350,49 @@ export class PropertiesController {
             status: property.project.status
           }
         : null
+    });
+
+    return property;
+  }
+
+  @Patch(":propertyId/amenities")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Update client-facing listing amenities" })
+  @ApiOkResponse({ description: "Updated listing with normalized amenity tags" })
+  async updateAmenities(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: UpdatePropertyAmenitiesDto
+  ): Promise<PropertySnapshot> {
+    const property = await this.propertyAmenities.update(tenantId, propertyId, payload);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.amenities_updated",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        amenities: property.amenities,
+        note: payload.note,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.amenities_updated", {
+      propertyId,
+      title: property.title,
+      market: property.market,
+      amenities: property.amenities,
+      source: "agent-update"
     });
 
     return property;

@@ -23,6 +23,7 @@ import { PriceHistoryService } from "./application/services/price-history.servic
 import { PriceRecommendationFeedbackService } from "./application/services/price-recommendation-feedback.service.js";
 import { PriceRecommendationService } from "./application/services/price-recommendation.service.js";
 import { PropertyAiAssetsService } from "./application/services/property-ai-assets.service.js";
+import { PropertyAmenitiesService } from "./application/services/property-amenities.service.js";
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
 import { PropertyImagesService } from "./application/services/property-images.service.js";
 import { PropertyPublicationService } from "./application/services/property-publication.service.js";
@@ -79,6 +80,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     PriceRecommendationFeedbackService,
     PriceRecommendationService,
     PropertyAiAssetsService,
+    PropertyAmenitiesService,
     PropertyComparisonService,
     PropertyImagesService,
     PropertyPublicationService,

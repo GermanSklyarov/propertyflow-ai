@@ -13,6 +13,7 @@ import {
   enqueuePropertyImport,
   reviewPropertyDescriptionAsset,
   reviewPropertyImageAnalysisAsset,
+  updatePropertyAmenities,
   updatePropertyProject
 } from "@shared/api/agency-client";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
@@ -128,6 +129,19 @@ export async function updatePropertyProjectAction(propertyId: string, formData: 
   revalidatePath(`/properties/${propertyId}`);
 
   redirect(`/listings/${propertyId}?project=updated#development-project`);
+}
+
+export async function updatePropertyAmenitiesAction(propertyId: string, formData: FormData) {
+  await updatePropertyAmenities(propertyId, {
+    amenities: getAmenities(formData),
+    note: getOptionalString(formData, "note")
+  });
+
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+
+  redirect(`/listings/${propertyId}?amenities=updated#amenities`);
 }
 
 export async function importPropertiesCsvAction(formData: FormData) {

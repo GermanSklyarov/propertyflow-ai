@@ -23,6 +23,7 @@ import styles from "./listing-detail-page.module.css";
 export function ListingDetailPage({
   appliedDescriptionAssetId,
   appliedImageAnalysisAssetId,
+  amenitiesUpdated,
   aiAssets,
   gallery,
   listing,
@@ -30,6 +31,7 @@ export function ListingDetailPage({
 }: {
   appliedDescriptionAssetId?: string;
   appliedImageAnalysisAssetId?: string;
+  amenitiesUpdated?: boolean;
   aiAssets: PropertyAiAssets;
   gallery: PropertyImageGalleryResponse;
   listing: PropertySnapshot;
@@ -96,7 +98,12 @@ export function ListingDetailPage({
           queuedImageAnalysis={queuedImageAnalysis}
         />
 
-        <ListingAmenitiesPanel amenities={listing.amenities} appliedImageAnalysisAssetId={appliedImageAnalysisAssetId} />
+        <ListingAmenitiesPanel
+          amenities={listing.amenities}
+          appliedImageAnalysisAssetId={appliedImageAnalysisAssetId}
+          listingId={listing.id}
+          updated={amenitiesUpdated}
+        />
       </div>
     </main>
   );

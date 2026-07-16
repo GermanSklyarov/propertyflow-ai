@@ -47,6 +47,7 @@ import type {
   TenantDashboardMetrics,
   TenantSnapshot,
   TenantUsageResponse,
+  UpdatePropertyAmenitiesRequest,
   UpdatePropertyProjectRecordRequest,
   UpdatePropertyProjectRequest,
   UpdateTenantSettingsRequest
@@ -390,6 +391,26 @@ export async function updatePropertyProject(
 
   if (!response.ok) {
     throw new Error(`Failed to update property project: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertySnapshot;
+}
+
+export async function updatePropertyAmenities(
+  propertyId: string,
+  request: UpdatePropertyAmenitiesRequest
+): Promise<PropertySnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/amenities`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update property amenities: ${response.status}`);
   }
 
   return (await response.json()) as PropertySnapshot;

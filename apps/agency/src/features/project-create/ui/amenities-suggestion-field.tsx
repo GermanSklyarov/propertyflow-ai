@@ -7,10 +7,14 @@ import styles from "./amenities-suggestion-field.module.css";
 
 export function AmenitiesSuggestionField({
   className,
-  defaultValue = ""
+  defaultValue = "",
+  label = "Shared amenities",
+  placeholder = "pool, gym, lobby, parking"
 }: {
   className?: string;
   defaultValue?: string;
+  label?: string;
+  placeholder?: string;
 }) {
   const [focused, setFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<AmenitySuggestionResponse["items"]>([]);
@@ -64,7 +68,7 @@ export function AmenitiesSuggestionField({
 
   return (
     <label className={`${styles.field} ${className ?? ""}`}>
-      <span>Shared amenities</span>
+      <span>{label}</span>
       <div className={styles.lookupInput}>
         <Sparkles size={16} />
         <input
@@ -76,7 +80,7 @@ export function AmenitiesSuggestionField({
             setFocused(true);
           }}
           onFocus={() => setFocused(true)}
-          placeholder="pool, gym, lobby, parking"
+          placeholder={placeholder}
           value={value}
         />
       </div>

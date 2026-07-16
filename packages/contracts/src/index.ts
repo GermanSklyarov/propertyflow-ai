@@ -99,6 +99,7 @@ export type AuditAction =
   | "property.ai_image_analysis_applied"
   | "property.ai_asset_reviewed"
   | "property.ai_search"
+  | "property.amenities_updated"
   | "property.compared"
   | "property.image_added"
   | "property.image_delete_previewed"
@@ -220,6 +221,11 @@ export interface UpdatePropertyPriceRequest {
 
 export interface UpdatePropertyProjectRequest {
   project?: CreatePropertyRequest["project"] | null;
+  note?: string;
+}
+
+export interface UpdatePropertyAmenitiesRequest {
+  amenities: string[];
   note?: string;
 }
 
