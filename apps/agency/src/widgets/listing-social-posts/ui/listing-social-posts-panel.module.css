@@ -1,0 +1,138 @@
+.panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  padding: 16px;
+  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 2vw, 2.1rem);
+}
+
+.counter {
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #ecfdf3;
+  padding: 10px 12px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.grid {
+  display: grid;
+  gap: 12px;
+}
+
+.card {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 14px;
+}
+
+.cardHeader {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
+
+.icon {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #ecfdf3;
+  color: var(--teal-dark);
+}
+
+.cardHeader strong {
+  display: block;
+  min-width: 0;
+  color: var(--ink);
+  font-size: 1.05rem;
+  overflow-wrap: anywhere;
+}
+
+.cardHeader small {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.ready {
+  color: #14785d;
+}
+
+.review {
+  color: #8a5b10;
+}
+
+.hook,
+.body,
+.cta {
+  margin: 0;
+  line-height: 1.45;
+}
+
+.hook {
+  color: var(--teal-dark);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.body {
+  color: #475955;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.cta {
+  border-left: 3px solid var(--teal);
+  padding-left: 10px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.tags {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal-dark);
+}
+
+.tags span {
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #ecfdf3;
+  padding: 6px 8px;
+  font-size: 0.74rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 980px) {
+  .grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

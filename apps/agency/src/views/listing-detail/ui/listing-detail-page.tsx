@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
+import { buildListingSocialPostDrafts } from "@entities/listing/lib/listing-social-posts";
 import {
   buildListingNextActions,
   buildListingPublicationSummary,
@@ -18,6 +19,7 @@ import { ListingAmenitiesPanel } from "@widgets/listing-amenities/ui/listing-ame
 import { ListingMediaPanel } from "@widgets/listing-media/ui/listing-media-panel";
 import { ListingOverviewPanel } from "@widgets/listing-overview/ui/listing-overview-panel";
 import { ListingPublicationPanel } from "@widgets/listing-publication/ui/listing-publication-panel";
+import { ListingSocialPostsPanel } from "@widgets/listing-social-posts/ui/listing-social-posts-panel";
 import styles from "./listing-detail-page.module.css";
 
 export function ListingDetailPage({
@@ -41,6 +43,7 @@ export function ListingDetailPage({
   const publication = buildListingPublicationSummary(listing, media.activeCount);
   const readiness = buildListingReadiness(listing);
   const nextActions = buildListingNextActions(listing, readiness.score);
+  const socialPostDrafts = buildListingSocialPostDrafts(listing, { publicPhotoCount: media.activeCount });
 
   return (
     <main className={styles.page} id="listing-brief">
@@ -80,6 +83,8 @@ export function ListingDetailPage({
         <ListingProjectUpdatePanel listing={listing} />
 
         <ListingPublicationPanel publication={publication} />
+
+        <ListingSocialPostsPanel drafts={socialPostDrafts} />
 
         <ListingAgentGuidancePanel nextActions={nextActions} readiness={readiness} />
 
