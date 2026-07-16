@@ -1,6 +1,12 @@
-import type { PropertySearchRequest } from "@propertyflow/contracts";
+import type { GeneratePropertySocialPostsRequest, PropertySearchRequest } from "@propertyflow/contracts";
 import { queryOptions } from "@tanstack/react-query";
-import { getProperty, getPropertyAiAssets, getPropertyImages, listProperties } from "@shared/api/agency-client";
+import {
+  generatePropertySocialPostDrafts,
+  getProperty,
+  getPropertyAiAssets,
+  getPropertyImages,
+  listProperties
+} from "@shared/api/agency-client";
 import { queryKeys } from "@shared/query/query-keys";
 
 const defaultListingRequest = { limit: 30, sort: "created-desc" } satisfies PropertySearchRequest;
@@ -30,5 +36,12 @@ export function listingAiAssetsQueryOptions(propertyId: string) {
   return queryOptions({
     queryKey: queryKeys.listings.aiAssets(propertyId),
     queryFn: () => getPropertyAiAssets(propertyId)
+  });
+}
+
+export function listingSocialPostsQueryOptions(propertyId: string, request: GeneratePropertySocialPostsRequest = {}) {
+  return queryOptions({
+    queryKey: queryKeys.listings.socialPosts(propertyId, request),
+    queryFn: () => generatePropertySocialPostDrafts(propertyId, request)
   });
 }

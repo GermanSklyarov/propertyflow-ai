@@ -3,6 +3,8 @@ import type {
   BackgroundJobMonitorItem,
   BackgroundJobSnapshot,
   BackgroundJobState,
+  GeneratePropertySocialPostsRequest,
+  GeneratePropertySocialPostsResponse,
   AiChatRequest,
   AiChatResponse,
   AmenitySuggestionRequest,
@@ -527,6 +529,26 @@ export async function confirmPropertyImageUpload(
   }
 
   return (await response.json()) as PropertyImageSnapshot;
+}
+
+export async function generatePropertySocialPostDrafts(
+  propertyId: string,
+  request: GeneratePropertySocialPostsRequest
+): Promise<GeneratePropertySocialPostsResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/drafts`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to generate property social post drafts: ${response.status}`);
+  }
+
+  return (await response.json()) as GeneratePropertySocialPostsResponse;
 }
 
 export async function reviewPropertyImageAnalysisAsset(

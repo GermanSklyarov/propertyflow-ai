@@ -22,6 +22,7 @@ import type {
   PropertyPriceHistory,
   PropertyProjectSuggestion,
   PropertyProjectSearchResponse,
+  GeneratePropertySocialPostsResponse,
   CreatePropertyImageUploadResponse,
   GeneratedPropertyDescription,
   PropertyImageAnalysisResult,
@@ -76,6 +77,7 @@ import { PropertyAmenitiesService } from "../../application/services/property-am
 import { PropertyComparisonService } from "../../application/services/property-comparison.service.js";
 import { PropertyImagesService } from "../../application/services/property-images.service.js";
 import { PropertyPublicationService } from "../../application/services/property-publication.service.js";
+import { PropertySocialPostsService } from "../../application/services/property-social-posts.service.js";
 import { RentalYieldService } from "../../application/services/rental-yield.service.js";
 import { SavedSearchLeadCoverageService } from "../../application/services/saved-search-lead-coverage.service.js";
 import { SavedPropertySearchService } from "../../application/services/saved-property-search.service.js";
@@ -89,6 +91,7 @@ import { CreatePropertyImageUploadDto } from "./create-property-image-upload.dto
 import { CreatePropertyProjectDto } from "./create-property-project.dto.js";
 import { CreateSavedPropertySearchDto } from "./create-saved-property-search.dto.js";
 import { CreateSavedSearchAlertDigestJobDto } from "./create-saved-search-alert-digest-job.dto.js";
+import { GeneratePropertySocialPostsDto } from "./generate-property-social-posts.dto.js";
 import { IndexedSearchPropertiesDto, toIndexedPropertySearchRequest } from "./indexed-search-properties.dto.js";
 import { ListSavedSearchAlertRunsDto } from "./list-saved-search-alert-runs.dto.js";
 import { ListSavedSearchLeadCoverageDto } from "./list-saved-search-lead-coverage.dto.js";
@@ -150,6 +153,8 @@ export class PropertiesController {
     private readonly propertyImages: PropertyImagesService,
     @Inject(PropertyPublicationService)
     private readonly publication: PropertyPublicationService,
+    @Inject(PropertySocialPostsService)
+    private readonly socialPosts: PropertySocialPostsService,
     @Inject(RentalYieldService)
     private readonly rentalYield: RentalYieldService,
     @Inject(SavedSearchLeadCoverageService)
@@ -1165,6 +1170,34 @@ export class PropertiesController {
         }
       });
     }
+
+    return result;
+  }
+
+  @Post(":propertyId/social-posts/drafts")
+  @ApiOperation({ summary: "Generate channel-specific social post drafts for a property" })
+  @ApiOkResponse({ description: "Generated social post drafts for agency review" })
+  @Roles("agent", "broker", "manager", "admin")
+  async generateSocialPostDrafts(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: GeneratePropertySocialPostsDto
+  ): Promise<GeneratePropertySocialPostsResponse> {
+    const result = await this.socialPosts.generateDrafts(tenantId, propertyId, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.social_posts_generated",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        channels: result.drafts.map((draft) => draft.channel),
+        locale: result.locale,
+        readyDrafts: result.drafts.filter((draft) => draft.status === "ready").length
+      }
+    });
 
     return result;
   }

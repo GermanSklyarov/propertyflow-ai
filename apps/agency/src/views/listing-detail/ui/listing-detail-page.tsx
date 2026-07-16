@@ -2,7 +2,6 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { formatProjectStatus } from "@entities/listing/lib/listing-formatters";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
-import { buildListingSocialPostDrafts } from "@entities/listing/lib/listing-social-posts";
 import {
   buildListingNextActions,
   buildListingPublicationSummary,
@@ -11,7 +10,7 @@ import {
 import { ListingAiDescriptionReviewPanel } from "@features/listing-ai-description-review/ui/listing-ai-description-review-panel";
 import { ListingImageAnalysisReviewPanel } from "@features/listing-image-analysis-review/ui/listing-image-analysis-review-panel";
 import { ListingProjectUpdatePanel } from "@features/listing-project-update/ui/listing-project-update-panel";
-import type { PropertyAiAssets, PropertyImageGalleryResponse } from "@propertyflow/contracts";
+import type { PropertyAiAssets, PropertyImageGalleryResponse, PropertySocialPostDraft } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import { ListingAgentGuidancePanel } from "@widgets/listing-agent-guidance/ui/listing-agent-guidance-panel";
@@ -29,6 +28,7 @@ export function ListingDetailPage({
   aiAssets,
   gallery,
   listing,
+  socialPostDrafts,
   queuedImageAnalysis = false
 }: {
   appliedDescriptionAssetId?: string;
@@ -37,13 +37,13 @@ export function ListingDetailPage({
   aiAssets: PropertyAiAssets;
   gallery: PropertyImageGalleryResponse;
   listing: PropertySnapshot;
+  socialPostDrafts: PropertySocialPostDraft[];
   queuedImageAnalysis?: boolean;
 }) {
   const media = buildListingMediaSummary(gallery);
   const publication = buildListingPublicationSummary(listing, media.activeCount);
   const readiness = buildListingReadiness(listing);
   const nextActions = buildListingNextActions(listing, readiness.score);
-  const socialPostDrafts = buildListingSocialPostDrafts(listing, { publicPhotoCount: media.activeCount });
 
   return (
     <main className={styles.page} id="listing-brief">

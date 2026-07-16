@@ -1,8 +1,8 @@
 import { Hash, Megaphone, MessageCircle, Sparkles } from "lucide-react";
-import type { ListingSocialPostDraft } from "@entities/listing/lib/listing-social-posts";
+import type { PropertySocialPostDraft } from "@propertyflow/contracts";
 import styles from "./listing-social-posts-panel.module.css";
 
-export function ListingSocialPostsPanel({ drafts }: { drafts: ListingSocialPostDraft[] }) {
+export function ListingSocialPostsPanel({ drafts }: { drafts: PropertySocialPostDraft[] }) {
   return (
     <section className={styles.panel} aria-label="Social post drafts">
       <div className={styles.header}>

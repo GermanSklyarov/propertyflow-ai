@@ -16,7 +16,8 @@ export const queryKeys = {
     aiAssets: (propertyId: string) => [...queryKeys.listings.all, "ai-assets", propertyId] as const,
     detail: (propertyId: string) => [...queryKeys.listings.all, "detail", propertyId] as const,
     images: (propertyId: string) => [...queryKeys.listings.all, "images", propertyId] as const,
-    list: (filters: object) => [...queryKeys.listings.all, "list", filters] as const
+    list: (filters: object) => [...queryKeys.listings.all, "list", filters] as const,
+    socialPosts: (propertyId: string, filters: object) => [...queryKeys.listings.all, "social-posts", propertyId, filters] as const
   },
   projects: {
     all: ["projects"] as const,

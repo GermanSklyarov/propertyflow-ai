@@ -112,6 +112,7 @@ export type AuditAction =
   | "property.price_updated"
   | "property.project_created"
   | "property.project_updated"
+  | "property.social_posts_generated"
   | "property.status_changed"
   | "saved_search.created"
   | "saved_search.deleted"
@@ -1157,6 +1158,33 @@ export interface PropertyAiAssets {
   propertyId: string;
   descriptions: GeneratedPropertyDescription[];
   imageAnalysis: PropertyImageAnalysisResult[];
+}
+
+export type PropertySocialPostChannel = "line-voom" | "facebook" | "instagram";
+
+export type PropertySocialPostLocale = "en" | "ru" | "th" | "zh";
+
+export interface GeneratePropertySocialPostsRequest {
+  channels?: PropertySocialPostChannel[];
+  locale?: PropertySocialPostLocale;
+  publicPhotoCount?: number;
+}
+
+export interface PropertySocialPostDraft {
+  body: string;
+  channel: PropertySocialPostChannel;
+  cta: string;
+  hashtags: string[];
+  hook: string;
+  label: string;
+  locale: PropertySocialPostLocale;
+  status: "ready" | "review";
+}
+
+export interface GeneratePropertySocialPostsResponse {
+  propertyId: string;
+  locale: PropertySocialPostLocale;
+  drafts: PropertySocialPostDraft[];
 }
 
 export interface PropertyPriceHistoryPoint {

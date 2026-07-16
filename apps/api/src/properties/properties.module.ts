@@ -27,6 +27,7 @@ import { PropertyAmenitiesService } from "./application/services/property-amenit
 import { PropertyComparisonService } from "./application/services/property-comparison.service.js";
 import { PropertyImagesService } from "./application/services/property-images.service.js";
 import { PropertyPublicationService } from "./application/services/property-publication.service.js";
+import { PropertySocialPostsService } from "./application/services/property-social-posts.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
 import { SavedSearchLeadCoverageService } from "./application/services/saved-search-lead-coverage.service.js";
@@ -84,6 +85,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     PropertyComparisonService,
     PropertyImagesService,
     PropertyPublicationService,
+    PropertySocialPostsService,
     RentalYieldService,
     SavedSearchLeadCoverageService,
     SavedPropertySearchService,
