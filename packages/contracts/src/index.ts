@@ -1189,6 +1189,19 @@ export interface PropertySocialPostReadinessCheck {
   ready: boolean;
 }
 
+export interface PropertySocialPostUtm {
+  campaign: string;
+  content: string;
+  medium: "social";
+  source: PropertySocialPostChannel;
+}
+
+export interface PropertySocialPostPublicationPlan {
+  nextAction: string;
+  trackingSlug: string;
+  utm: PropertySocialPostUtm;
+}
+
 export interface PropertySocialPostDraft {
   body: string;
   channel: PropertySocialPostChannel;
@@ -1198,6 +1211,7 @@ export interface PropertySocialPostDraft {
   label: string;
   locale: PropertySocialPostLocale;
   mediaPlan: PropertySocialPostMediaPlan;
+  publicationPlan: PropertySocialPostPublicationPlan;
   readiness: PropertySocialPostReadinessCheck[];
   status: "ready" | "review";
 }

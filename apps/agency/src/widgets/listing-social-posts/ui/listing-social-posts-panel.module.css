@@ -241,6 +241,71 @@
   color: #8a5b10;
 }
 
+.publicationPlan {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f6fbf9;
+  padding: 10px;
+}
+
+.publicationPlan > div:first-child {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  color: var(--teal-dark);
+}
+
+.publicationPlan strong {
+  min-width: 0;
+  font-size: 0.78rem;
+  overflow-wrap: anywhere;
+}
+
+.publicationPlan p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.publicationPlan dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+
+.publicationPlan dl div {
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 7px;
+}
+
+.publicationPlan dt,
+.publicationPlan dd {
+  margin: 0;
+}
+
+.publicationPlan dt {
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.publicationPlan dd {
+  margin-top: 3px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
 .mediaPlan {
   display: grid;
   min-width: 0;
@@ -416,5 +481,11 @@
 
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .publicationPlan dl {
+    grid-template-columns: 1fr;
   }
 }

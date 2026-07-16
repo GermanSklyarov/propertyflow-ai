@@ -104,6 +104,16 @@ describe("PropertySocialPostsService", () => {
     expect(response.drafts[0].hashtags).toContain("#PattayaProperty");
     expect(response.drafts[0].mediaPlan.items).toHaveLength(3);
     expect(response.drafts[0].mediaPlan.items[0]).toMatchObject({ imageId: "image-1", role: "cover" });
+    expect(response.drafts[0].publicationPlan).toEqual({
+      nextAction: "Publish to LINE VOOM and use the tracking slug for reply attribution.",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+      utm: {
+        campaign: "pattaya-sale-or-rent-property-1",
+        content: "line-voom-en",
+        medium: "social",
+        source: "line-voom"
+      }
+    });
     expect(response.drafts[0].readiness).toEqual([
       { key: "copy", label: "Listing copy available", ready: true },
       { key: "media", label: "3 photos selected", ready: true },
@@ -138,6 +148,7 @@ describe("PropertySocialPostsService", () => {
     expect(response.drafts[0].body).toContain("вариант для продажи или аренды");
     expect(response.drafts[0].body).toContain("45 кв.м");
     expect(response.drafts[0].cta).toContain("Facebook");
+    expect(response.drafts[0].publicationPlan.utm.content).toBe("facebook-ru");
   });
 
   it("throws when the listing is not visible to the tenant", async () => {

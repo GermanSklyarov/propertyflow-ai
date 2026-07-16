@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Clipboard, Hash, Megaphone, MessageCircle, Pencil, Sparkles } from "lucide-react";
+import { CheckCircle2, Clipboard, Hash, Link2, Megaphone, MessageCircle, Pencil, Sparkles } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft } from "@propertyflow/contracts";
@@ -62,6 +62,27 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
             {check.label}
           </span>
         ))}
+      </div>
+      <div className={styles.publicationPlan}>
+        <div>
+          <Link2 size={15} />
+          <strong>{draft.publicationPlan.trackingSlug}</strong>
+        </div>
+        <p>{draft.publicationPlan.nextAction}</p>
+        <dl>
+          <div>
+            <dt>Source</dt>
+            <dd>{draft.publicationPlan.utm.source}</dd>
+          </div>
+          <div>
+            <dt>Campaign</dt>
+            <dd>{draft.publicationPlan.utm.campaign}</dd>
+          </div>
+          <div>
+            <dt>Content</dt>
+            <dd>{draft.publicationPlan.utm.content}</dd>
+          </div>
+        </dl>
       </div>
       <div className={styles.mediaPlan}>
         <strong>{draft.mediaPlan.summary}</strong>

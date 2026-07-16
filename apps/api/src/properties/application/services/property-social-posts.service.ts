@@ -6,6 +6,7 @@ import type {
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostMediaPlan,
+  PropertySocialPostPublicationPlan,
   PropertySocialPostReadinessCheck,
   PropertySocialPostLocale
 } from "@propertyflow/contracts";
@@ -135,6 +136,7 @@ function buildDraft(
   const hashtags = buildHashtags(listing);
   const description = buildShortDescription(listing, locale);
   const mediaPlan = buildMediaPlan(channel, gallery, publicPhotoCount);
+  const publicationPlan = buildPublicationPlan(listing, channel, locale);
   const readiness = buildReadiness(listing, hashtags, mediaPlan);
 
   if (channel === "line-voom") {
@@ -147,6 +149,7 @@ function buildDraft(
       label: "LINE VOOM",
       locale,
       mediaPlan,
+      publicationPlan,
       readiness,
       status
     };
@@ -162,6 +165,7 @@ function buildDraft(
       label: "Facebook",
       locale,
       mediaPlan,
+      publicationPlan,
       readiness,
       status
     };
@@ -176,9 +180,42 @@ function buildDraft(
     label: "Instagram",
     locale,
     mediaPlan,
+    publicationPlan,
     readiness,
     status
   };
+}
+
+function buildPublicationPlan(
+  listing: PropertySnapshot,
+  channel: PropertySocialPostChannel,
+  locale: PropertySocialPostLocale
+): PropertySocialPostPublicationPlan {
+  const campaign = `${slugify(listing.market)}-${slugify(listing.listingType)}-${slugify(listing.id)}`;
+  const content = `${slugify(channel)}-${locale}`;
+
+  return {
+    nextAction: buildNextAction(channel),
+    trackingSlug: `${campaign}-${content}`,
+    utm: {
+      campaign,
+      content,
+      medium: "social",
+      source: channel
+    }
+  };
+}
+
+function buildNextAction(channel: PropertySocialPostChannel) {
+  if (channel === "line-voom") {
+    return "Publish to LINE VOOM and use the tracking slug for reply attribution.";
+  }
+
+  if (channel === "facebook") {
+    return "Publish with a lead form or message CTA, then tag incoming leads with this campaign.";
+  }
+
+  return "Publish as a carousel and keep the UTM content code with the campaign notes.";
 }
 
 function buildReadiness(
@@ -336,4 +373,12 @@ function toHashtag(value: string) {
     .filter(Boolean);
 
   return `#${words.map((word) => `${word.slice(0, 1).toUpperCase()}${word.slice(1).toLowerCase()}`).join("")}`;
+}
+
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 72);
 }
