@@ -48,6 +48,8 @@ import type {
   TenantSnapshot,
   TenantUsageResponse,
   UpdatePropertyAmenitiesRequest,
+  UpdateGeneratedPropertyDescriptionRequest,
+  UpdatePropertyImageAnalysisRequest,
   UpdatePropertyProjectRecordRequest,
   UpdatePropertyProjectRequest,
   UpdateTenantSettingsRequest
@@ -548,6 +550,27 @@ export async function reviewPropertyImageAnalysisAsset(
   return (await response.json()) as PropertyImageAnalysisResult;
 }
 
+export async function updatePropertyImageAnalysisAsset(
+  propertyId: string,
+  assetId: string,
+  request: UpdatePropertyImageAnalysisRequest
+): Promise<PropertyImageAnalysisResult> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/image-analysis/${assetId}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update image analysis asset: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageAnalysisResult;
+}
+
 export async function reviewPropertyDescriptionAsset(
   propertyId: string,
   assetId: string,
@@ -564,6 +587,27 @@ export async function reviewPropertyDescriptionAsset(
 
   if (!response.ok) {
     throw new Error(`Failed to review description asset: ${response.status}`);
+  }
+
+  return (await response.json()) as GeneratedPropertyDescription;
+}
+
+export async function updatePropertyDescriptionAsset(
+  propertyId: string,
+  assetId: string,
+  request: UpdateGeneratedPropertyDescriptionRequest
+): Promise<GeneratedPropertyDescription> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/descriptions/${assetId}`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update description asset: ${response.status}`);
   }
 
   return (await response.json()) as GeneratedPropertyDescription;

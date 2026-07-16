@@ -99,6 +99,7 @@ import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
 import { SubmitPriceRecommendationFeedbackDto } from "./submit-price-recommendation-feedback.dto.js";
 import { TrainPricingModelDto } from "./train-pricing-model.dto.js";
+import { UpdateGeneratedPropertyDescriptionDto, UpdatePropertyImageAnalysisDto } from "./update-ai-asset.dto.js";
 import { UpdatePropertyAmenitiesDto } from "./update-property-amenities.dto.js";
 import { UpdatePropertyPriceDto } from "./update-property-price.dto.js";
 import { UpdatePropertyProjectRecordDto } from "./update-property-project-record.dto.js";
@@ -1678,6 +1679,35 @@ export class PropertiesController {
     return result;
   }
 
+  @Patch(":propertyId/ai-assets/descriptions/:assetId")
+  @ApiOperation({ summary: "Edit a generated property description before approval" })
+  @ApiOkResponse({ description: "Edited generated description asset" })
+  @Roles("agent", "broker", "manager", "admin")
+  async updateDescriptionAsset(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("assetId") assetId: string,
+    @Body() payload: UpdateGeneratedPropertyDescriptionDto
+  ): Promise<GeneratedPropertyDescription> {
+    const result = await this.aiAssets.updateDescription(tenantId, propertyId, assetId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_asset_reviewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        assetType: "description",
+        assetId,
+        status: "edited"
+      }
+    });
+
+    return result;
+  }
+
   @Post(":propertyId/ai-assets/descriptions/:assetId/apply")
   @Roles("agent", "broker", "manager", "admin")
   async applyDescriptionAsset(
@@ -1731,6 +1761,35 @@ export class PropertiesController {
         assetType: "image-analysis",
         assetId,
         status: payload.status
+      }
+    });
+
+    return result;
+  }
+
+  @Patch(":propertyId/ai-assets/image-analysis/:assetId")
+  @ApiOperation({ summary: "Edit detected image-analysis features before approval" })
+  @ApiOkResponse({ description: "Edited image analysis asset" })
+  @Roles("agent", "broker", "manager", "admin")
+  async updateImageAnalysisAsset(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("assetId") assetId: string,
+    @Body() payload: UpdatePropertyImageAnalysisDto
+  ): Promise<PropertyImageAnalysisResult> {
+    const result = await this.aiAssets.updateImageAnalysis(tenantId, propertyId, assetId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.ai_asset_reviewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        assetType: "image-analysis",
+        assetId,
+        status: "edited"
       }
     });
 

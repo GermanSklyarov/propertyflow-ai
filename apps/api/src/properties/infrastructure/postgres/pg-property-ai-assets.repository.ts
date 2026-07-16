@@ -4,7 +4,9 @@ import type {
   PropertyAiAssets,
   PropertyImageAnalysisResult,
   RequestUser,
-  ReviewAiAssetRequest
+  ReviewAiAssetRequest,
+  UpdateGeneratedPropertyDescriptionRequest,
+  UpdatePropertyImageAnalysisRequest
 } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
@@ -130,6 +132,40 @@ export class PgPropertyAiAssetsRepository implements PropertyAiAssetsRepository 
     return result.rows[0] ? this.toDescription(result.rows[0]) : null;
   }
 
+  async updateDescription(
+    tenantId: string,
+    propertyId: string,
+    assetId: string,
+    request: UpdateGeneratedPropertyDescriptionRequest,
+    user: RequestUser
+  ): Promise<GeneratedPropertyDescription | null> {
+    const result = await this.pool.query<DescriptionRow>(
+      `
+        update property_generated_descriptions
+        set title = $4,
+            description = $5,
+            review_status = 'draft',
+            reviewed_by_user_id = $6,
+            reviewed_at = $7,
+            review_note = $8
+        where tenant_id = $1 and property_id = $2 and id = $3
+        returning id, property_id, locale, title, description, source, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
+      `,
+      [
+        tenantId,
+        propertyId,
+        assetId,
+        request.title,
+        request.description,
+        user.id,
+        new Date().toISOString(),
+        request.note ?? "Edited by agent"
+      ]
+    );
+
+    return result.rows[0] ? this.toDescription(result.rows[0]) : null;
+  }
+
   async reviewImageAnalysis(
     tenantId: string,
     propertyId: string,
@@ -148,6 +184,40 @@ export class PgPropertyAiAssetsRepository implements PropertyAiAssetsRepository 
         returning id, property_id, property_image_id, image_url, detected_features, confidence, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
       `,
       [tenantId, propertyId, assetId, request.status, user.id, new Date().toISOString(), request.note ?? null]
+    );
+
+    return result.rows[0] ? this.toImageAnalysis(result.rows[0]) : null;
+  }
+
+  async updateImageAnalysis(
+    tenantId: string,
+    propertyId: string,
+    assetId: string,
+    request: UpdatePropertyImageAnalysisRequest,
+    user: RequestUser
+  ): Promise<PropertyImageAnalysisResult | null> {
+    const result = await this.pool.query<ImageAnalysisRow>(
+      `
+        update property_image_analysis
+        set detected_features = $4,
+            confidence = $5,
+            review_status = 'draft',
+            reviewed_by_user_id = $6,
+            reviewed_at = $7,
+            review_note = $8
+        where tenant_id = $1 and property_id = $2 and id = $3
+        returning id, property_id, property_image_id, image_url, detected_features, confidence, review_status, reviewed_by_user_id, reviewed_at, review_note, created_at
+      `,
+      [
+        tenantId,
+        propertyId,
+        assetId,
+        request.detectedFeatures,
+        request.confidence ?? 0,
+        user.id,
+        new Date().toISOString(),
+        request.note ?? "Edited by agent"
+      ]
     );
 
     return result.rows[0] ? this.toImageAnalysis(result.rows[0]) : null;

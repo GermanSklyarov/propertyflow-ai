@@ -4,7 +4,9 @@ import type {
   PropertyAiAssets,
   PropertyImageAnalysisResult,
   RequestUser,
-  ReviewAiAssetRequest
+  ReviewAiAssetRequest,
+  UpdateGeneratedPropertyDescriptionRequest,
+  UpdatePropertyImageAnalysisRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import {
@@ -12,6 +14,7 @@ import {
   type PropertyAiAssetsRepository
 } from "../../domain/property-ai-assets.repository.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
+import { normalizeAmenities } from "./property-amenities.service.js";
 
 export interface ApplyImageAnalysisResult {
   property: PropertySnapshot;
@@ -59,6 +62,81 @@ export class PropertyAiAssetsService {
     await this.ensurePropertyExists(tenantId, propertyId);
 
     const result = await this.aiAssets.reviewImageAnalysis(tenantId, propertyId, assetId, request, user);
+
+    if (!result) {
+      throw new NotFoundException("AI image analysis asset not found");
+    }
+
+    return result;
+  }
+
+  async updateDescription(
+    tenantId: string,
+    propertyId: string,
+    assetId: string,
+    request: UpdateGeneratedPropertyDescriptionRequest,
+    user: RequestUser
+  ): Promise<GeneratedPropertyDescription> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const title = request.title.trim();
+    const description = request.description.trim();
+
+    if (!title || !description) {
+      throw new BadRequestException("AI description title and description are required");
+    }
+
+    const result = await this.aiAssets.updateDescription(
+      tenantId,
+      propertyId,
+      assetId,
+      {
+        ...request,
+        description,
+        title
+      },
+      user
+    );
+
+    if (!result) {
+      throw new NotFoundException("AI description asset not found");
+    }
+
+    return result;
+  }
+
+  async updateImageAnalysis(
+    tenantId: string,
+    propertyId: string,
+    assetId: string,
+    request: UpdatePropertyImageAnalysisRequest,
+    user: RequestUser
+  ): Promise<PropertyImageAnalysisResult> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const currentAsset = await this.aiAssets.findImageAnalysisById(tenantId, propertyId, assetId);
+
+    if (!currentAsset) {
+      throw new NotFoundException("AI image analysis asset not found");
+    }
+
+    const detectedFeatures = normalizeAmenities(request.detectedFeatures);
+
+    if (!detectedFeatures.length) {
+      throw new BadRequestException("At least one detected feature is required");
+    }
+
+    const result = await this.aiAssets.updateImageAnalysis(
+      tenantId,
+      propertyId,
+      assetId,
+      {
+        ...request,
+        confidence: request.confidence ?? currentAsset.confidence,
+        detectedFeatures
+      },
+      user
+    );
 
     if (!result) {
       throw new NotFoundException("AI image analysis asset not found");

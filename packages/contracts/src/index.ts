@@ -1141,6 +1141,18 @@ export interface ReviewAiAssetRequest {
   note?: string;
 }
 
+export interface UpdateGeneratedPropertyDescriptionRequest {
+  title: string;
+  description: string;
+  note?: string;
+}
+
+export interface UpdatePropertyImageAnalysisRequest {
+  detectedFeatures: string[];
+  confidence?: number;
+  note?: string;
+}
+
 export interface PropertyAiAssets {
   propertyId: string;
   descriptions: GeneratedPropertyDescription[];

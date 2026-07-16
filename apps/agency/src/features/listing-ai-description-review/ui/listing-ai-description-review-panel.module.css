@@ -169,6 +169,34 @@
   background: #fff1f0;
 }
 
+.editButton {
+  border-color: rgb(15 118 110 / 18%);
+  color: var(--teal-dark);
+  list-style: none;
+}
+
+.editButton::-webkit-details-marker {
+  display: none;
+}
+
+.editButton:hover,
+.editButton:focus-visible {
+  border-color: rgb(15 118 110 / 36%);
+  background: #edf8f4;
+}
+
+.saveButton {
+  border-color: rgb(15 118 110 / 28%);
+  background: var(--teal);
+  color: #fff;
+}
+
+.saveButton:not(:disabled):hover,
+.saveButton:not(:disabled):focus-visible {
+  background: var(--teal-dark);
+  color: #fff;
+}
+
 .appliedButton {
   border-color: rgb(22 163 74 / 28%);
   background: #ecfdf3;
@@ -186,6 +214,55 @@
   background: #fff;
   cursor: not-allowed;
   opacity: 0.45;
+}
+
+.editDetails {
+  min-width: 0;
+}
+
+.editDetails[open] {
+  flex: 1 1 100%;
+}
+
+.editForm {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f8fbf8;
+  padding: 12px;
+}
+
+.editForm label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.editForm label span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.editForm input,
+.editForm textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.editForm textarea {
+  resize: vertical;
 }
 
 .emptyAnalysis {

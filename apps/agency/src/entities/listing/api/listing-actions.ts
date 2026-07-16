@@ -13,7 +13,9 @@ import {
   enqueuePropertyImport,
   reviewPropertyDescriptionAsset,
   reviewPropertyImageAnalysisAsset,
+  updatePropertyDescriptionAsset,
   updatePropertyAmenities,
+  updatePropertyImageAnalysisAsset,
   updatePropertyProject
 } from "@shared/api/agency-client";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
@@ -446,6 +448,18 @@ export async function reviewPropertyImageAnalysisAction(
   revalidatePath(`/properties/${propertyId}`);
 }
 
+export async function updatePropertyImageAnalysisAction(propertyId: string, assetId: string, formData: FormData) {
+  await updatePropertyImageAnalysisAsset(propertyId, assetId, {
+    detectedFeatures: getAmenities(formData),
+    note: getOptionalString(formData, "note")
+  });
+
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+
+  redirect(`/listings/${propertyId}?asset=edited&type=image-analysis#ai-image-analysis`);
+}
+
 export async function applyPropertyImageAnalysisAction(propertyId: string, assetId: string) {
   await applyPropertyImageAnalysisAsset(propertyId, assetId);
 
@@ -464,6 +478,19 @@ export async function reviewPropertyDescriptionAction(
 
   revalidatePath(`/listings/${propertyId}`);
   revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function updatePropertyDescriptionAction(propertyId: string, assetId: string, formData: FormData) {
+  await updatePropertyDescriptionAsset(propertyId, assetId, {
+    description: getRequiredString(formData, "description"),
+    note: getOptionalString(formData, "note"),
+    title: getRequiredString(formData, "title")
+  });
+
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+
+  redirect(`/listings/${propertyId}?asset=edited&type=description#ai-descriptions`);
 }
 
 export async function applyPropertyDescriptionAction(propertyId: string, assetId: string) {

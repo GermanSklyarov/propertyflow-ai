@@ -1,7 +1,8 @@
-import { Check, CheckCircle2, ScanSearch, Sparkles, X } from "lucide-react";
+import { Check, CheckCircle2, Pencil, Save, ScanSearch, Sparkles, X } from "lucide-react";
 import {
   applyPropertyImageAnalysisAction,
-  reviewPropertyImageAnalysisAction
+  reviewPropertyImageAnalysisAction,
+  updatePropertyImageAnalysisAction
 } from "@entities/listing/api/listing-actions";
 import { buildGalleryImageSrc } from "@entities/listing/lib/listing-media";
 import type { PropertyImageAnalysisResult, PropertyImageGalleryResponse } from "@propertyflow/contracts";
@@ -78,6 +79,23 @@ export function ListingImageAnalysisReviewPanel({
                         <span>Reject</span>
                       </button>
                     </form>
+                    <details className={styles.editDetails}>
+                      <summary className={`${styles.analysisActionButton} ${styles.editButton}`}>
+                        <Pencil size={14} />
+                        <span>Edit</span>
+                      </summary>
+                      <form className={styles.editForm} action={updatePropertyImageAnalysisAction.bind(null, propertyId, asset.id)}>
+                        <label>
+                          <span>Detected features</span>
+                          <textarea name="amenities" defaultValue={asset.detectedFeatures.join(", ")} required rows={3} />
+                        </label>
+                        <input name="note" type="hidden" value="Edited image analysis features before review" />
+                        <button className={`${styles.analysisActionButton} ${styles.saveButton}`} type="submit">
+                          <Save size={14} />
+                          <span>Save edits</span>
+                        </button>
+                      </form>
+                    </details>
                     <form action={applyPropertyImageAnalysisAction.bind(null, propertyId, asset.id)}>
                       <button
                         className={`${styles.analysisActionButton} ${

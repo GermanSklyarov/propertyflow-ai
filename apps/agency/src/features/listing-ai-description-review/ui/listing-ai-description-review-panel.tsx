@@ -1,7 +1,8 @@
-import { Check, CheckCircle2, FileText, Sparkles, X } from "lucide-react";
+import { Check, CheckCircle2, FileText, Pencil, Save, Sparkles, X } from "lucide-react";
 import {
   applyPropertyDescriptionAction,
-  reviewPropertyDescriptionAction
+  reviewPropertyDescriptionAction,
+  updatePropertyDescriptionAction
 } from "@entities/listing/api/listing-actions";
 import type { GeneratedPropertyDescription } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
@@ -50,6 +51,27 @@ export function ListingAiDescriptionReviewPanel({
                     <span>Reject</span>
                   </button>
                 </form>
+                <details className={styles.editDetails}>
+                  <summary className={`${styles.analysisActionButton} ${styles.editButton}`}>
+                    <Pencil size={14} />
+                    <span>Edit</span>
+                  </summary>
+                  <form className={styles.editForm} action={updatePropertyDescriptionAction.bind(null, propertyId, asset.id)}>
+                    <label>
+                      <span>Title</span>
+                      <input name="title" defaultValue={asset.title} required />
+                    </label>
+                    <label>
+                      <span>Description</span>
+                      <textarea name="description" defaultValue={asset.description} required rows={5} />
+                    </label>
+                    <input name="note" type="hidden" value="Edited generated description before review" />
+                    <button className={`${styles.analysisActionButton} ${styles.saveButton}`} type="submit">
+                      <Save size={14} />
+                      <span>Save edits</span>
+                    </button>
+                  </form>
+                </details>
                 <form action={applyPropertyDescriptionAction.bind(null, propertyId, asset.id)}>
                   <button
                     className={`${styles.analysisActionButton} ${
