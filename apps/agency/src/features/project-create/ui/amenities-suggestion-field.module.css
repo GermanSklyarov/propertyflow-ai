@@ -38,6 +38,36 @@
   outline: 0;
 }
 
+.inheritedAmenities {
+  display: grid;
+  gap: 0.55rem;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #f0fbf7;
+  padding: 0.75rem;
+}
+
+.inheritedAmenities strong {
+  color: var(--color-primary);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.inheritedAmenities div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.inheritedAmenities span {
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #ffffff;
+  color: var(--color-primary);
+  font-size: 0.76rem;
+  font-weight: 850;
+  padding: 0.3rem 0.5rem;
+}
+
 .suggestionList {
   background: #ffffff;
   border: 1px solid var(--color-border);

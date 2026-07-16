@@ -1,5 +1,6 @@
 import { Bot, Building2, Camera, ChevronDown, CircleDollarSign, FileScan, Plus } from "lucide-react";
 import { createPropertyAction } from "@entities/listing/api/listing-actions";
+import { AmenitiesSuggestionField } from "@features/project-create/ui/amenities-suggestion-field";
 import { FileDropField } from "./file-drop-field";
 import { ProjectAutocompleteField } from "./project-autocomplete-field";
 import styles from "./create-listing-form.module.css";
@@ -145,7 +146,7 @@ export function CreateListingForm() {
                   Development project
                 </div>
 
-                <ProjectAutocompleteField />
+                <ProjectAutocompleteField broadcastProjectAmenities />
 
                 <div className={styles.aiNote}>
                   <Bot size={16} />
@@ -234,10 +235,12 @@ export function CreateListingForm() {
                     <span>Beach distance m</span>
                     <input min={0} name="beachDistanceMeters" placeholder="450" type="number" />
                   </label>
-                  <label className={styles.wideField}>
-                    <span>Amenities</span>
-                    <input name="amenities" placeholder="pool, gym, sea view, fiber internet" />
-                  </label>
+                  <AmenitiesSuggestionField
+                    className={styles.wideField}
+                    label="Amenities"
+                    listenForProjectAmenities
+                    placeholder="pool, gym, sea view, fiber internet"
+                  />
                 </div>
               </div>
             </details>

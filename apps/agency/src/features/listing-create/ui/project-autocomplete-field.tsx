@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Building2, Search } from "lucide-react";
 import type { PropertyProjectSearchResponse, PropertyProjectSuggestion } from "@propertyflow/contracts";
 import type { PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
+import { projectAmenitiesSelectedEvent } from "../model/project-amenities-events";
 import styles from "./create-listing-form.module.css";
 
 const projectStatuses = [
@@ -14,6 +15,7 @@ const projectStatuses = [
 ] satisfies Array<{ label: string; value: PropertyProjectStatus }>;
 
 interface ProjectAutocompleteFieldProps {
+  broadcastProjectAmenities?: boolean;
   initialProject?: {
     developer?: string;
     name: string;
@@ -22,7 +24,11 @@ interface ProjectAutocompleteFieldProps {
   market?: ThailandMarket;
 }
 
-export function ProjectAutocompleteField({ initialProject, market: fixedMarket }: ProjectAutocompleteFieldProps = {}) {
+export function ProjectAutocompleteField({
+  broadcastProjectAmenities = false,
+  initialProject,
+  market: fixedMarket
+}: ProjectAutocompleteFieldProps = {}) {
   const [developer, setDeveloper] = useState(initialProject?.developer ?? "");
   const [market, setMarket] = useState<ThailandMarket>(fixedMarket ?? "pattaya");
   const [name, setName] = useState(initialProject?.name ?? "");
@@ -95,6 +101,19 @@ export function ProjectAutocompleteField({ initialProject, market: fixedMarket }
     setSelectedProjectName(project.name);
     setSuggestions([]);
     setTouched(false);
+    broadcastAmenities(project.amenities ?? []);
+  }
+
+  function broadcastAmenities(amenities: string[]) {
+    if (!broadcastProjectAmenities) {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent(projectAmenitiesSelectedEvent, {
+        detail: { amenities }
+      })
+    );
   }
 
   return (
@@ -111,6 +130,7 @@ export function ProjectAutocompleteField({ initialProject, market: fixedMarket }
               setName(event.currentTarget.value);
               setSelectedProjectName("");
               setTouched(true);
+              broadcastAmenities([]);
             }}
             onFocus={() => setTouched(true)}
             placeholder="Start typing: Riviera, Laguna, Copacabana..."

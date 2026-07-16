@@ -1,25 +1,45 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ListPlus, Sparkles } from "lucide-react";
 import type { AmenitySuggestionResponse } from "@propertyflow/contracts";
+import { projectAmenitiesSelectedEvent } from "@features/listing-create/model/project-amenities-events";
 import styles from "./amenities-suggestion-field.module.css";
 
 export function AmenitiesSuggestionField({
   className,
   defaultValue = "",
   label = "Shared amenities",
+  listenForProjectAmenities = false,
   placeholder = "pool, gym, lobby, parking"
 }: {
   className?: string;
   defaultValue?: string;
   label?: string;
+  listenForProjectAmenities?: boolean;
   placeholder?: string;
 }) {
   const [focused, setFocused] = useState(false);
+  const [projectAmenities, setProjectAmenities] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<AmenitySuggestionResponse["items"]>([]);
   const [value, setValue] = useState(defaultValue);
+  const inputRef = useRef<HTMLInputElement>(null);
   const activeToken = useMemo(() => value.split(",").at(-1)?.trim() ?? "", [value]);
+
+  useEffect(() => {
+    if (!listenForProjectAmenities) {
+      return;
+    }
+
+    function handleProjectAmenities(event: Event) {
+      const detail = (event as CustomEvent<{ amenities?: string[] }>).detail;
+      setProjectAmenities(detail?.amenities ?? []);
+    }
+
+    window.addEventListener(projectAmenitiesSelectedEvent, handleProjectAmenities);
+
+    return () => window.removeEventListener(projectAmenitiesSelectedEvent, handleProjectAmenities);
+  }, [listenForProjectAmenities]);
 
   useEffect(() => {
     if (activeToken.length < 2) {
@@ -61,9 +81,10 @@ export function AmenitiesSuggestionField({
       nextAmenities.push(label);
     }
 
-    setValue(nextAmenities.join(", "));
+    setValue(formatAmenitiesForNextInput(nextAmenities));
     setSuggestions([]);
-    setFocused(false);
+    setFocused(true);
+    window.requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   return (
@@ -73,6 +94,7 @@ export function AmenitiesSuggestionField({
         <Sparkles size={16} />
         <input
           autoComplete="off"
+          ref={inputRef}
           name="amenities"
           onBlur={() => window.setTimeout(() => setFocused(false), 160)}
           onChange={(event) => {
@@ -84,6 +106,16 @@ export function AmenitiesSuggestionField({
           value={value}
         />
       </div>
+      {listenForProjectAmenities && projectAmenities.length ? (
+        <div className={styles.inheritedAmenities}>
+          <strong>Already covered by selected project</strong>
+          <div>
+            {projectAmenities.map((amenity) => (
+              <span key={amenity}>{amenity}</span>
+            ))}
+          </div>
+        </div>
+      ) : null}
       {focused && suggestions.length ? (
         <div className={styles.suggestionList}>
           {suggestions.map((amenity) => (
@@ -117,4 +149,8 @@ function splitAmenities(value: string) {
 
 function normalizeAmenity(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function formatAmenitiesForNextInput(amenities: string[]) {
+  return amenities.length ? `${amenities.join(", ")}, ` : "";
 }
