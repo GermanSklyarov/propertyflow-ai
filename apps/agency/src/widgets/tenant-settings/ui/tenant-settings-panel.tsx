@@ -1,4 +1,17 @@
-import { BadgeCheck, Building2, CircleDot, Code2, Globe2, KeyRound, Palette, ShieldCheck, SlidersHorizontal, Users } from "lucide-react";
+import {
+  BadgeCheck,
+  Building2,
+  CheckCircle2,
+  CircleDot,
+  Code2,
+  Globe2,
+  KeyRound,
+  Palette,
+  ShieldAlert,
+  ShieldCheck,
+  SlidersHorizontal,
+  Users
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { UpdateTenantSettingsForm } from "@features/tenant-settings-update/ui/update-tenant-settings-form";
 import type { TenantSnapshot, TenantUsageMetric, TenantUsageResponse } from "@propertyflow/contracts";
@@ -14,6 +27,9 @@ export function TenantSettingsPanel({
   tenant: TenantSnapshot;
   usage: TenantUsageResponse;
 }) {
+  const readinessItems = buildReadinessItems(tenant, usage);
+  const completedReadiness = readinessItems.filter((item) => item.done).length;
+
   return (
     <>
       <section className={styles.kpiGrid} aria-label="Tenant settings overview">
@@ -65,6 +81,23 @@ export function TenantSettingsPanel({
             <Field label="Logo URL" value={tenant.branding.logoUrl ?? "not configured"} />
           </div>
         </section>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <div>
+            <p className="section-kicker">Launch readiness</p>
+            <h2 className={styles.panelTitle}>Workspace setup checklist</h2>
+          </div>
+          <span className={styles.statusBadge}>
+            {completedReadiness}/{readinessItems.length} ready
+          </span>
+        </div>
+        <div className={styles.readinessGrid}>
+          {readinessItems.map((item) => (
+            <ReadinessCard item={item} key={item.label} />
+          ))}
+        </div>
       </section>
 
       <section className={styles.panel}>
@@ -129,6 +162,26 @@ export function TenantSettingsPanel({
         </section>
       </section>
     </>
+  );
+}
+
+interface ReadinessItem {
+  done: boolean;
+  label: string;
+  note: string;
+}
+
+function ReadinessCard({ item }: { item: ReadinessItem }) {
+  const Icon = item.done ? CheckCircle2 : ShieldAlert;
+
+  return (
+    <article className={`${styles.readinessCard} ${item.done ? styles.readinessDone : styles.readinessAction}`}>
+      <Icon size={18} />
+      <div>
+        <strong>{item.label}</strong>
+        <span>{item.note}</span>
+      </div>
+    </article>
   );
 }
 
@@ -220,4 +273,46 @@ function formatUsageKey(value: TenantUsageMetric["key"]) {
 
 function formatDomainStatus(value: TenantSnapshot["domainStatus"]) {
   return value ? value.replaceAll("-", " ") : "not configured";
+}
+
+function buildReadinessItems(tenant: TenantSnapshot, usage: TenantUsageResponse): ReadinessItem[] {
+  const propertyUsage = getUsage(usage.items, "properties");
+  const agentUsage = getUsage(usage.items, "agents");
+  const apiUsage = getUsage(usage.items, "publicApiRequestsMonthly");
+
+  return [
+    {
+      done: Boolean(tenant.branding.displayName && tenant.branding.primaryColor),
+      label: "Brand identity",
+      note: tenant.branding.logoUrl ? "Display name, color, and logo are configured." : "Add a logo when the agency brand is ready."
+    },
+    {
+      done: tenant.domainStatus === "verified",
+      label: "Client domain",
+      note: tenant.customDomain
+        ? `Domain ${tenant.customDomain} is ${formatDomainStatus(tenant.domainStatus)}.`
+        : "Add a custom domain before a public client launch."
+    },
+    {
+      done: Boolean(propertyUsage && propertyUsage.used > 0 && propertyUsage.utilizationRate < 90),
+      label: "Inventory capacity",
+      note: propertyUsage
+        ? `${formatNumber(propertyUsage.used)} of ${formatNumber(propertyUsage.limit)} listings used.`
+        : "Property usage is not available yet."
+    },
+    {
+      done: Boolean(agentUsage && agentUsage.used > 0 && agentUsage.utilizationRate < 95),
+      label: "Team seats",
+      note: agentUsage
+        ? `${formatNumber(agentUsage.used)} of ${formatNumber(agentUsage.limit)} agent seats used.`
+        : "Agent seat usage is not available yet."
+    },
+    {
+      done: Boolean(apiUsage && apiUsage.utilizationRate < 80),
+      label: "Integration headroom",
+      note: apiUsage
+        ? `${formatNumber(apiUsage.remaining)} public API calls remain this period.`
+        : "Public API usage is not available yet."
+    }
+  ];
 }

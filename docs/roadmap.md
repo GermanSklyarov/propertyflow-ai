@@ -70,6 +70,15 @@
 - Add WebSocket collaboration and task updates.
 - Add billing-ready plan limits.
 
+## Phase 8.5: Multi-Tenant Intelligence Layer
+
+- Keep tenant-owned operational data isolated: listings, leads, media, documents, chats, notes, pricing, analytics, and jobs.
+- Add shared canonical records for projects, developers, amenities, neighborhoods, and POI where cross-agency learning improves data quality.
+- Bridge tenant records to canonical records with tenant-specific aliases, overrides, visibility, and confidence scores.
+- Add deduplication workflows for project and amenity candidates before they become canonical records.
+- Split AI retrieval into tenant-private context and global market/context layers so answers cannot leak another agency's data.
+- Add tenant-scoped storage prefixes, WebSocket rooms, background jobs, audit events, and repository tests for cross-tenant access boundaries.
+
 ## Phase 9: Agency Growth Automation
 
 - Add AI social post generation for LINE VOOM, Facebook, Instagram, and generic reposting workflows.
