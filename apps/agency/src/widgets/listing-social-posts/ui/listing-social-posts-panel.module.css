@@ -30,6 +30,85 @@
   text-transform: uppercase;
 }
 
+.controls {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 12px;
+}
+
+.localeControl {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.localeControl span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.localeControl select {
+  width: 100%;
+  min-height: 42px;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #fff;
+  padding: 0 12px;
+  color: var(--ink);
+  font: inherit;
+  font-weight: 900;
+}
+
+.channelControls {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.channelControls label {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 0 10px;
+  color: var(--teal-dark);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.channelControls input {
+  accent-color: var(--teal);
+}
+
+.applyButton {
+  min-height: 42px;
+  border: 1px solid rgb(15 118 110 / 24%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.applyButton:hover,
+.applyButton:focus-visible {
+  background: var(--teal-dark);
+}
+
 .grid {
   display: grid;
   gap: 12px;
@@ -236,6 +315,11 @@
 }
 
 @media (min-width: 980px) {
+  .controls {
+    grid-template-columns: minmax(180px, 0.5fr) minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }

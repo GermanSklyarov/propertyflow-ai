@@ -76,6 +76,24 @@ describe("PropertySocialPostsService", () => {
     expect(response.drafts[0].body).toContain("45 sqm");
   });
 
+  it("uses locale-specific copy when a locale is requested", async () => {
+    const repository = {
+      findById: vi.fn().mockResolvedValue({ ...listing, description: undefined })
+    } as unknown as PropertyRepository;
+    const service = new PropertySocialPostsService(repository);
+
+    const response = await service.generateDrafts("demo-agency", "property-1", {
+      channels: ["facebook"],
+      locale: "ru",
+      publicPhotoCount: 2
+    });
+
+    expect(response.locale).toBe("ru");
+    expect(response.drafts[0].body).toContain("вариант для продажи или аренды");
+    expect(response.drafts[0].body).toContain("45 кв.м");
+    expect(response.drafts[0].cta).toContain("Facebook");
+  });
+
   it("throws when the listing is not visible to the tenant", async () => {
     const repository = {
       findById: vi.fn().mockResolvedValue(null)

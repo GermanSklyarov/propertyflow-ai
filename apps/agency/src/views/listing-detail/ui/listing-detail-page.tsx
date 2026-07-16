@@ -10,7 +10,13 @@ import {
 import { ListingAiDescriptionReviewPanel } from "@features/listing-ai-description-review/ui/listing-ai-description-review-panel";
 import { ListingImageAnalysisReviewPanel } from "@features/listing-image-analysis-review/ui/listing-image-analysis-review-panel";
 import { ListingProjectUpdatePanel } from "@features/listing-project-update/ui/listing-project-update-panel";
-import type { PropertyAiAssets, PropertyImageGalleryResponse, PropertySocialPostDraft } from "@propertyflow/contracts";
+import type {
+  PropertyAiAssets,
+  PropertyImageGalleryResponse,
+  PropertySocialPostChannel,
+  PropertySocialPostDraft,
+  PropertySocialPostLocale
+} from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import { ListingAgentGuidancePanel } from "@widgets/listing-agent-guidance/ui/listing-agent-guidance-panel";
@@ -28,6 +34,8 @@ export function ListingDetailPage({
   aiAssets,
   gallery,
   listing,
+  selectedSocialChannels,
+  selectedSocialLocale,
   socialPostDrafts,
   queuedImageAnalysis = false
 }: {
@@ -37,6 +45,8 @@ export function ListingDetailPage({
   aiAssets: PropertyAiAssets;
   gallery: PropertyImageGalleryResponse;
   listing: PropertySnapshot;
+  selectedSocialChannels: PropertySocialPostChannel[];
+  selectedSocialLocale: PropertySocialPostLocale;
   socialPostDrafts: PropertySocialPostDraft[];
   queuedImageAnalysis?: boolean;
 }) {
@@ -84,7 +94,11 @@ export function ListingDetailPage({
 
         <ListingPublicationPanel publication={publication} />
 
-        <ListingSocialPostsPanel drafts={socialPostDrafts} />
+        <ListingSocialPostsPanel
+          drafts={socialPostDrafts}
+          selectedChannels={selectedSocialChannels}
+          selectedLocale={selectedSocialLocale}
+        />
 
         <ListingAgentGuidancePanel nextActions={nextActions} readiness={readiness} />
 

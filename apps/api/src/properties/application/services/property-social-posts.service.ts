@@ -10,6 +10,79 @@ import type { Money, PropertySnapshot } from "@propertyflow/domain";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 
 const allChannels: PropertySocialPostChannel[] = ["line-voom", "facebook", "instagram"];
+const copyByLocale = {
+  en: {
+    addAmenities: "Add amenities before publishing to strengthen the post.",
+    facebookCta: "Use this draft for a Facebook post with gallery photos and a lead form link.",
+    instagramCta: "Pair with the cover photo and first three gallery images for carousel publishing.",
+    lineVoomCta: "Message the agency for availability, viewing slots, and updated ownership costs.",
+    highlights: "Highlights",
+    lineVoomHook: (title: string) => `${title} is ready for a LINE VOOM property spotlight.`,
+    instagramHook: (title: string, market: string) => `${title} in ${market}`,
+    instagramBody: (market: string, priceLine: string, amenityLine: string) =>
+      `${market} property pick. ${priceLine}. ${amenityLine}`,
+    facebookBody: (title: string, listingType: string, market: string, description: string, amenityLine: string) =>
+      `${title} gives clients a clear ${listingType.toLowerCase()} option in ${market}. ${description} ${amenityLine}`,
+    fallback: (listing: PropertySnapshot) =>
+      `${listing.areaSqm} sqm ${formatBucket(listing.kind)} with ${listing.bedrooms} bedroom${listing.bedrooms === 1 ? "" : "s"}.`
+  },
+  ru: {
+    addAmenities: "Добавьте удобства перед публикацией, чтобы пост выглядел сильнее.",
+    facebookCta: "Используйте этот черновик для Facebook вместе с галереей и ссылкой на лид-форму.",
+    instagramCta: "Опубликуйте как карусель с обложкой и первыми фото из галереи.",
+    lineVoomCta: "Напишите агентству, чтобы уточнить доступность, просмотры и расходы владения.",
+    highlights: "Преимущества",
+    lineVoomHook: (title: string) => `${title}: готовый черновик для LINE VOOM.`,
+    instagramHook: (title: string, market: string) => `${title} в локации ${market}`,
+    instagramBody: (market: string, priceLine: string, amenityLine: string) =>
+      `Объект в Таиланде: ${market}. ${priceLine}. ${amenityLine}`,
+    facebookBody: (title: string, listingType: string, market: string, description: string, amenityLine: string) =>
+      `${title} — вариант ${listingType.toLowerCase()} в локации ${market}. ${description} ${amenityLine}`,
+    fallback: (listing: PropertySnapshot) =>
+      `${listing.areaSqm} кв.м, ${formatBucket(listing.kind)}, ${listing.bedrooms} спальн${listing.bedrooms === 1 ? "я" : "и"}.`
+  },
+  th: {
+    addAmenities: "เพิ่มสิ่งอำนวยความสะดวกก่อนเผยแพร่ เพื่อให้โพสต์น่าสนใจขึ้น.",
+    facebookCta: "ใช้ร่างนี้สำหรับโพสต์ Facebook พร้อมรูปแกลเลอรีและลิงก์ฟอร์มลูกค้า.",
+    instagramCta: "ใช้คู่กับรูปปกและรูปแรก ๆ ในแกลเลอรีสำหรับโพสต์แบบ carousel.",
+    lineVoomCta: "ติดต่อเอเจนซี่เพื่อเช็กสถานะ นัดชม และค่าใช้จ่ายล่าสุด.",
+    highlights: "จุดเด่น",
+    lineVoomHook: (title: string) => `${title} พร้อมเป็นโพสต์ LINE VOOM.`,
+    instagramHook: (title: string, market: string) => `${title} ใน ${market}`,
+    instagramBody: (market: string, priceLine: string, amenityLine: string) =>
+      `อสังหาริมทรัพย์ใน ${market}. ${priceLine}. ${amenityLine}`,
+    facebookBody: (title: string, listingType: string, market: string, description: string, amenityLine: string) =>
+      `${title} เป็นตัวเลือก${listingType.toLowerCase()}ใน ${market}. ${description} ${amenityLine}`,
+    fallback: (listing: PropertySnapshot) =>
+      `${listing.areaSqm} ตร.ม. ${formatBucket(listing.kind)} ${listing.bedrooms} ห้องนอน.`
+  },
+  zh: {
+    addAmenities: "发布前请补充设施亮点，让帖子更有说服力。",
+    facebookCta: "可将此草稿用于 Facebook，并搭配图库照片和线索表单链接。",
+    instagramCta: "建议搭配封面图和前三张图库照片做轮播发布。",
+    lineVoomCta: "联系代理确认房源状态、看房时间和最新持有成本。",
+    highlights: "亮点",
+    lineVoomHook: (title: string) => `${title} 已准备好用于 LINE VOOM 推广。`,
+    instagramHook: (title: string, market: string) => `${title}，位于 ${market}`,
+    instagramBody: (market: string, priceLine: string, amenityLine: string) =>
+      `${market} 泰国房源推荐。${priceLine}。${amenityLine}`,
+    facebookBody: (title: string, listingType: string, market: string, description: string, amenityLine: string) =>
+      `${title} 是 ${market} 的${listingType.toLowerCase()}选择。${description} ${amenityLine}`,
+    fallback: (listing: PropertySnapshot) =>
+      `${listing.areaSqm} 平米 ${formatBucket(listing.kind)}，${listing.bedrooms} 间卧室。`
+  }
+} satisfies Record<PropertySocialPostLocale, {
+  addAmenities: string;
+  facebookCta: string;
+  instagramCta: string;
+  lineVoomCta: string;
+  highlights: string;
+  lineVoomHook: (title: string) => string;
+  instagramHook: (title: string, market: string) => string;
+  instagramBody: (market: string, priceLine: string, amenityLine: string) => string;
+  facebookBody: (title: string, listingType: string, market: string, description: string, amenityLine: string) => string;
+  fallback: (listing: PropertySnapshot) => string;
+}>;
 
 @Injectable()
 export class PropertySocialPostsService {
@@ -47,17 +120,19 @@ function buildDraft(
   const priceLine = buildPriceLine(listing);
   const market = formatBucket(listing.market);
   const projectLine = listing.project ? `${listing.project.name}, ${market}` : market;
-  const amenityLine = buildAmenityLine(listing);
+  const copy = copyByLocale[locale];
+  const amenityLine = buildAmenityLine(listing, locale);
   const status: PropertySocialPostDraft["status"] = listing.description && publicPhotoCount > 0 ? "ready" : "review";
   const hashtags = buildHashtags(listing);
+  const description = buildShortDescription(listing, locale);
 
   if (channel === "line-voom") {
     return {
-      body: `${projectLine}. ${priceLine}. ${amenityLine} ${buildShortDescription(listing)}`,
+      body: `${projectLine}. ${priceLine}. ${amenityLine} ${description}`,
       channel,
-      cta: "Message the agency for availability, viewing slots, and updated ownership costs.",
+      cta: copy.lineVoomCta,
       hashtags,
-      hook: `${listing.title} is ready for a LINE VOOM property spotlight.`,
+      hook: copy.lineVoomHook(listing.title),
       label: "LINE VOOM",
       locale,
       status
@@ -66,11 +141,9 @@ function buildDraft(
 
   if (channel === "facebook") {
     return {
-      body: `${listing.title} gives clients a clear ${formatListingType(listing.listingType).toLowerCase()} option in ${market}. ${buildShortDescription(
-        listing
-      )} ${amenityLine}`,
+      body: copy.facebookBody(listing.title, formatListingType(listing.listingType, locale), market, description, amenityLine),
       channel,
-      cta: "Use this draft for a Facebook post with gallery photos and a lead form link.",
+      cta: copy.facebookCta,
       hashtags,
       hook: `${listing.title}: ${priceLine}`,
       label: "Facebook",
@@ -80,11 +153,11 @@ function buildDraft(
   }
 
   return {
-    body: `${market} property pick. ${priceLine}. ${amenityLine}`,
+    body: copy.instagramBody(market, priceLine, amenityLine),
     channel,
-    cta: "Pair with the cover photo and first three gallery images for carousel publishing.",
+    cta: copy.instagramCta,
     hashtags,
-    hook: `${listing.title} in ${market}`,
+    hook: copy.instagramHook(listing.title, market),
     label: "Instagram",
     locale,
     status
@@ -103,21 +176,22 @@ function buildPriceLine(listing: PropertySnapshot) {
   return formatMoney(listing.price);
 }
 
-function buildAmenityLine(listing: PropertySnapshot) {
+function buildAmenityLine(listing: PropertySnapshot, locale: PropertySocialPostLocale) {
   const amenities = [...listing.amenities, ...(listing.project?.amenities ?? [])]
     .map(formatBucket)
     .filter(Boolean)
     .slice(0, 4);
+  const copy = copyByLocale[locale];
 
   if (!amenities.length) {
-    return "Add amenities before publishing to strengthen the post.";
+    return copy.addAmenities;
   }
 
-  return `Highlights: ${amenities.join(", ")}.`;
+  return `${copy.highlights}: ${amenities.join(", ")}.`;
 }
 
-function buildShortDescription(listing: PropertySnapshot) {
-  const fallback = `${listing.areaSqm} sqm ${formatBucket(listing.kind)} with ${listing.bedrooms} bedroom${listing.bedrooms === 1 ? "" : "s"}.`;
+function buildShortDescription(listing: PropertySnapshot, locale: PropertySocialPostLocale) {
+  const fallback = copyByLocale[locale].fallback(listing);
   const source = listing.description?.trim() || fallback;
 
   return source.length > 180 ? `${source.slice(0, 177).trim()}...` : source;
@@ -138,14 +212,31 @@ function buildHashtags(listing: PropertySnapshot) {
     .slice(0, 5);
 }
 
-function formatListingType(value: PropertySnapshot["listingType"]) {
+function formatListingType(value: PropertySnapshot["listingType"], locale: PropertySocialPostLocale) {
   const labels = {
-    rent: "For rent",
-    sale: "For sale",
-    sale_or_rent: "Sale or rent"
-  } satisfies Record<PropertySnapshot["listingType"], string>;
+    en: {
+      rent: "For rent",
+      sale: "For sale",
+      sale_or_rent: "Sale or rent"
+    },
+    ru: {
+      rent: "для аренды",
+      sale: "для продажи",
+      sale_or_rent: "для продажи или аренды"
+    },
+    th: {
+      rent: "ให้เช่า",
+      sale: "ขาย",
+      sale_or_rent: "ขายหรือให้เช่า"
+    },
+    zh: {
+      rent: "出租",
+      sale: "出售",
+      sale_or_rent: "出售或出租"
+    }
+  } satisfies Record<PropertySocialPostLocale, Record<PropertySnapshot["listingType"], string>>;
 
-  return labels[value];
+  return labels[locale][value];
 }
 
 function formatMoney(value: Money) {
