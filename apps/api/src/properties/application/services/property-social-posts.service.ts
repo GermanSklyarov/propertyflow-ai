@@ -6,6 +6,7 @@ import type {
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostMediaPlan,
+  PropertySocialPostReadinessCheck,
   PropertySocialPostLocale
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot } from "@propertyflow/domain";
@@ -134,6 +135,7 @@ function buildDraft(
   const hashtags = buildHashtags(listing);
   const description = buildShortDescription(listing, locale);
   const mediaPlan = buildMediaPlan(channel, gallery, publicPhotoCount);
+  const readiness = buildReadiness(listing, hashtags, mediaPlan);
 
   if (channel === "line-voom") {
     return {
@@ -145,6 +147,7 @@ function buildDraft(
       label: "LINE VOOM",
       locale,
       mediaPlan,
+      readiness,
       status
     };
   }
@@ -159,6 +162,7 @@ function buildDraft(
       label: "Facebook",
       locale,
       mediaPlan,
+      readiness,
       status
     };
   }
@@ -172,8 +176,33 @@ function buildDraft(
     label: "Instagram",
     locale,
     mediaPlan,
+    readiness,
     status
   };
+}
+
+function buildReadiness(
+  listing: PropertySnapshot,
+  hashtags: string[],
+  mediaPlan: PropertySocialPostMediaPlan
+): PropertySocialPostReadinessCheck[] {
+  return [
+    {
+      key: "copy",
+      label: listing.description ? "Listing copy available" : "Description missing",
+      ready: Boolean(listing.description)
+    },
+    {
+      key: "media",
+      label: mediaPlan.items.length ? `${mediaPlan.items.length} photos selected` : "Gallery photos missing",
+      ready: mediaPlan.items.length > 0
+    },
+    {
+      key: "hashtags",
+      label: hashtags.length >= 3 ? `${hashtags.length} hashtags ready` : "Hashtags need review",
+      ready: hashtags.length >= 3
+    }
+  ];
 }
 
 function buildMediaPlan(

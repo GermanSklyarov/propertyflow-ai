@@ -1183,6 +1183,12 @@ export interface PropertySocialPostMediaPlan {
   warnings: string[];
 }
 
+export interface PropertySocialPostReadinessCheck {
+  key: "copy" | "media" | "hashtags";
+  label: string;
+  ready: boolean;
+}
+
 export interface PropertySocialPostDraft {
   body: string;
   channel: PropertySocialPostChannel;
@@ -1192,6 +1198,7 @@ export interface PropertySocialPostDraft {
   label: string;
   locale: PropertySocialPostLocale;
   mediaPlan: PropertySocialPostMediaPlan;
+  readiness: PropertySocialPostReadinessCheck[];
   status: "ready" | "review";
 }
 

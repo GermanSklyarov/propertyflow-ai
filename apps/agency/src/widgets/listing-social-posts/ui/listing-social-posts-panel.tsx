@@ -65,7 +65,7 @@ export function ListingSocialPostsPanel({
       </form>
       <div className={styles.grid}>
         {drafts.map((draft) => (
-          <SocialPostDraftCard draft={draft} key={draft.channel} />
+          <SocialPostDraftCard draft={draft} key={`${draft.channel}-${draft.locale}`} />
         ))}
       </div>
     </section>

@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, Clipboard, Hash, Megaphone, MessageCircle, Pencil, Sparkles } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft } from "@propertyflow/contracts";
 import styles from "./listing-social-posts-panel.module.css";
@@ -12,6 +12,7 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
   const [hashtags, setHashtags] = useState(draft.hashtags.join(" "));
   const [hook, setHook] = useState(draft.hook);
   const [copied, setCopied] = useState(false);
+  const initialHashtags = draft.hashtags.join(" ");
   const tagItems = useMemo(() => hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean), [hashtags]);
   const copyText = composeSocialPostText({
     body,
@@ -19,6 +20,14 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
     hashtags: tagItems,
     hook
   });
+
+  useEffect(() => {
+    setBody(draft.body);
+    setCta(draft.cta);
+    setHashtags(initialHashtags);
+    setHook(draft.hook);
+    setCopied(false);
+  }, [draft.body, draft.cta, draft.hook, initialHashtags]);
 
   async function copyDraft() {
     await navigator.clipboard.writeText(copyText);
@@ -44,6 +53,14 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
         <Hash size={15} />
         {tagItems.map((tag) => (
           <span key={tag}>{tag}</span>
+        ))}
+      </div>
+      <div className={styles.readiness} aria-label={`${draft.label} readiness`}>
+        {draft.readiness.map((check) => (
+          <span className={check.ready ? styles.readinessReady : styles.readinessReview} key={check.key}>
+            <CheckCircle2 size={13} />
+            {check.label}
+          </span>
         ))}
       </div>
       <div className={styles.mediaPlan}>

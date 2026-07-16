@@ -210,6 +210,37 @@
   overflow-wrap: anywhere;
 }
 
+.readiness {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.readiness span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  padding: 0 8px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.readinessReady {
+  background: #ecfdf3;
+  color: #14785d;
+}
+
+.readinessReview {
+  background: #fff8e8;
+  color: #8a5b10;
+}
+
 .mediaPlan {
   display: grid;
   min-width: 0;

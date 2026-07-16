@@ -104,6 +104,11 @@ describe("PropertySocialPostsService", () => {
     expect(response.drafts[0].hashtags).toContain("#PattayaProperty");
     expect(response.drafts[0].mediaPlan.items).toHaveLength(3);
     expect(response.drafts[0].mediaPlan.items[0]).toMatchObject({ imageId: "image-1", role: "cover" });
+    expect(response.drafts[0].readiness).toEqual([
+      { key: "copy", label: "Listing copy available", ready: true },
+      { key: "media", label: "3 photos selected", ready: true },
+      { key: "hashtags", label: "4 hashtags ready", ready: true }
+    ]);
     expect(repository.findById).toHaveBeenCalledWith("demo-agency", "property-1");
     expect(imageRepository.listByPropertyId).toHaveBeenCalledWith("demo-agency", "property-1");
   });
@@ -116,6 +121,8 @@ describe("PropertySocialPostsService", () => {
     expect(response.drafts.every((draft) => draft.status === "review")).toBe(true);
     expect(response.drafts[0].body).toContain("45 sqm");
     expect(response.drafts[0].mediaPlan.warnings).toContain("Add public gallery photos before publishing this post.");
+    expect(response.drafts[0].readiness).toContainEqual({ key: "copy", label: "Description missing", ready: false });
+    expect(response.drafts[0].readiness).toContainEqual({ key: "media", label: "Gallery photos missing", ready: false });
   });
 
   it("uses locale-specific copy when a locale is requested", async () => {
