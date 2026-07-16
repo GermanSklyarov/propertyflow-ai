@@ -131,6 +131,110 @@
   overflow-wrap: anywhere;
 }
 
+.cardActions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.actionButton {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  padding: 0 11px;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.actionButton svg {
+  flex: 0 0 auto;
+}
+
+.primaryAction {
+  background: var(--teal);
+  color: #fff;
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  background: var(--teal-dark);
+}
+
+.secondaryAction {
+  background: #fff;
+  color: var(--teal-dark);
+  list-style: none;
+}
+
+.secondaryAction::-webkit-details-marker {
+  display: none;
+}
+
+.secondaryAction:hover,
+.secondaryAction:focus-visible {
+  background: #edf8f4;
+}
+
+.editDetails {
+  min-width: 0;
+}
+
+.editDetails[open] {
+  flex: 1 1 100%;
+}
+
+.editForm {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  margin-top: 10px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f8fbf8;
+  padding: 12px;
+}
+
+.editForm label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.editForm label span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.editForm input,
+.editForm textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.editForm textarea {
+  resize: vertical;
+}
+
 @media (min-width: 980px) {
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
