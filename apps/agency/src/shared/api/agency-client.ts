@@ -59,6 +59,8 @@ import type {
   TenantDashboardMetrics,
   TenantSnapshot,
   TenantUsageResponse,
+  UpdateLeadFollowUpRequest,
+  UpdateLeadStatusRequest,
   UpdatePropertyAmenitiesRequest,
   UpdateGeneratedPropertyDescriptionRequest,
   UpdatePropertyImageAnalysisRequest,
@@ -369,6 +371,40 @@ export async function addLeadNote(leadId: string, payload: CreateLeadNoteRequest
   }
 
   return (await response.json()) as LeadNoteSnapshot;
+}
+
+export async function updateLeadStatus(leadId: string, payload: UpdateLeadStatusRequest): Promise<LeadSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/status`, {
+    method: "PATCH",
+    headers: {
+      ...demoHeaders,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update lead status: ${response.status}`);
+  }
+
+  return (await response.json()) as LeadSnapshot;
+}
+
+export async function updateLeadFollowUp(leadId: string, payload: UpdateLeadFollowUpRequest): Promise<LeadSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/follow-up`, {
+    method: "PATCH",
+    headers: {
+      ...demoHeaders,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update lead follow-up: ${response.status}`);
+  }
+
+  return (await response.json()) as LeadSnapshot;
 }
 
 export async function listProperties(

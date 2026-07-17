@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { LeadWorkflowPanel } from "@features/lead-workflow-update/ui/lead-workflow-panel";
 import type { LeadNotesResponse, LeadSnapshot, LeadTimelineResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import { LeadActivityPanel } from "@widgets/lead-activity/ui/lead-activity-panel";
@@ -32,6 +33,8 @@ export function LeadDetailPage({
         </header>
 
         <LeadOverviewPanel lead={lead} />
+
+        <LeadWorkflowPanel lead={lead} />
 
         <LeadActivityPanel leadId={lead.id} notes={notes} timeline={timeline} />
       </div>
