@@ -22,6 +22,7 @@ export function SocialPostDraftReviewModal({
   draft,
   hashtags,
   hook,
+  leadCaptureUrl,
   publication,
   publicationStatus,
   publishedUrl,
@@ -48,6 +49,7 @@ export function SocialPostDraftReviewModal({
   draft: PropertySocialPostDraft;
   hashtags: string;
   hook: string;
+  leadCaptureUrl: string;
   publication?: PropertySocialPostPublication;
   publicationStatus: SocialPostPublicationStatus;
   publishedUrl: string;
@@ -173,6 +175,10 @@ export function SocialPostDraftReviewModal({
                 <span title={draft.publicationPlan.trackingSlug}>{shortenIdentifier(draft.publicationPlan.trackingSlug)}</span>
               </div>
               <p>{draft.publicationPlan.nextAction}</p>
+              <label className={styles.leadCaptureLink}>
+                <span>Lead form link</span>
+                <input readOnly value={leadCaptureUrl} />
+              </label>
               <dl>
                 <div>
                   <dt>Source</dt>

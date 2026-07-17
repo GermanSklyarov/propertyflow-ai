@@ -215,6 +215,8 @@ describe("PropertySocialPostsService", () => {
     expect(response.drafts[0].mediaPlan.items).toHaveLength(3);
     expect(response.drafts[0].mediaPlan.items[0]).toMatchObject({ imageId: "image-1", role: "cover" });
     expect(response.drafts[0].publicationPlan).toEqual({
+      leadCapturePath:
+        "/properties/property-1?pf_source=social-post&pf_tracking=pattaya-sale-or-rent-property-1-line-voom-en&utm_campaign=pattaya-sale-or-rent-property-1&utm_content=line-voom-en&utm_medium=social&utm_source=line-voom#lead-capture",
       nextAction: "Publish to LINE VOOM and use the tracking slug for reply attribution.",
       trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
       utm: {

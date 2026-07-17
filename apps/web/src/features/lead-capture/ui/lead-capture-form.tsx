@@ -3,7 +3,9 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, Send } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
+import type { PropertySocialPostChannel } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { createWebsiteLeadMutationOptions } from "@entities/lead/api/lead-mutations";
 import {
@@ -19,6 +21,7 @@ import {
 import styles from "./lead-capture-form.module.css";
 
 export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
+  const searchParams = useSearchParams();
   const leadMutation = useMutation(createWebsiteLeadMutationOptions());
   const lead = leadMutation.data ?? null;
   const fallbackIntent = getFallbackLeadIntent(property);
@@ -50,14 +53,20 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
   }
 
   function submit(values: LeadCaptureFormValues) {
+    const socialAttribution = getSocialPostAttribution(searchParams);
+
     leadMutation.mutate({
       propertyId: property.id,
       contactName: values.contactName,
       contactEmail: values.contactEmail || undefined,
       contactPhone: values.contactPhone || undefined,
       preferredLocale: "en",
+      source: socialAttribution ? "social-post" : "website",
       attributionSearchSource: "ai",
       attributionSearchQuery: `${values.intent}:${property.title}`,
+      attributionSocialPostCampaign: socialAttribution?.campaign,
+      attributionSocialPostChannel: socialAttribution?.channel,
+      attributionSocialPostTrackingSlug: socialAttribution?.trackingSlug,
       message: values.message || getDefaultLeadMessage(property, values.intent),
     });
   }
@@ -192,4 +201,25 @@ export function LeadCaptureForm({ property }: { property: PropertySnapshot }) {
       </form>
     </section>
   );
+}
+
+function getSocialPostAttribution(searchParams: Pick<URLSearchParams, "get">) {
+  const source = searchParams.get("pf_source");
+  const trackingSlug = searchParams.get("pf_tracking")?.trim();
+  const channel = searchParams.get("utm_source")?.trim();
+  const campaign = searchParams.get("utm_campaign")?.trim();
+
+  if (source !== "social-post" || !trackingSlug || !isSocialPostChannel(channel)) {
+    return null;
+  }
+
+  return {
+    campaign: campaign || undefined,
+    channel,
+    trackingSlug
+  };
+}
+
+function isSocialPostChannel(value: string | null | undefined): value is PropertySocialPostChannel {
+  return value === "line-voom" || value === "facebook" || value === "instagram";
 }

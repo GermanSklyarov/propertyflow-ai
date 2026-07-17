@@ -357,10 +357,20 @@ function buildPublicationPlan(
 ): PropertySocialPostPublicationPlan {
   const campaign = `${slugify(listing.market)}-${slugify(listing.listingType)}-${slugify(listing.id)}`;
   const content = `${slugify(channel)}-${locale}`;
+  const trackingSlug = `${campaign}-${content}`;
+  const searchParams = new URLSearchParams({
+    pf_source: "social-post",
+    pf_tracking: trackingSlug,
+    utm_campaign: campaign,
+    utm_content: content,
+    utm_medium: "social",
+    utm_source: channel
+  });
 
   return {
+    leadCapturePath: `/properties/${encodeURIComponent(listing.id)}?${searchParams.toString()}#lead-capture`,
     nextAction: buildNextAction(channel),
-    trackingSlug: `${campaign}-${content}`,
+    trackingSlug,
     utm: {
       campaign,
       content,

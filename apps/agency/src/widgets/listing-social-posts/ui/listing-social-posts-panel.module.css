@@ -476,6 +476,34 @@
   line-height: 1.35;
 }
 
+.leadCaptureLink {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  padding: 0 10px;
+}
+
+.leadCaptureLink span {
+  color: var(--muted);
+  font-size: 0.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.leadCaptureLink input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 8px;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .publicationPlan dl {
   display: grid;
   grid-template-columns: 1fr;

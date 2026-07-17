@@ -1202,6 +1202,7 @@ export interface PropertySocialPostUtm {
 }
 
 export interface PropertySocialPostPublicationPlan {
+  leadCapturePath: string;
   nextAction: string;
   trackingSlug: string;
   utm: PropertySocialPostUtm;

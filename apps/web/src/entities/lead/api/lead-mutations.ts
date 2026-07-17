@@ -4,6 +4,6 @@ import { createWebsiteLead } from "@shared/api/propertyflow-client";
 
 export function createWebsiteLeadMutationOptions() {
   return mutationOptions({
-    mutationFn: (request: Omit<CreateLeadRequest, "source">) => createWebsiteLead(request)
+    mutationFn: (request: Omit<CreateLeadRequest, "source"> & { source?: CreateLeadRequest["source"] }) => createWebsiteLead(request)
   });
 }

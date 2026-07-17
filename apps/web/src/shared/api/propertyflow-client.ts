@@ -194,10 +194,12 @@ export async function createSavedPropertySearch(
   }
 }
 
-export async function createWebsiteLead(request: Omit<CreateLeadRequest, "source">): Promise<LeadSnapshot> {
+export async function createWebsiteLead(
+  request: Omit<CreateLeadRequest, "source"> & { source?: CreateLeadRequest["source"] }
+): Promise<LeadSnapshot> {
   const payload: CreateLeadRequest = {
     ...request,
-    source: "website"
+    source: request.source ?? "website"
   };
 
   try {

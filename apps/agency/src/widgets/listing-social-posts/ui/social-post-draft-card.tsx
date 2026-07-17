@@ -3,7 +3,7 @@
 import { CheckCircle2, Clipboard, Eye, Hash, Megaphone, MessageCircle, Send, Sparkles } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
-import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
+import { buildPublicLeadCaptureUrl, composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostReview } from "@propertyflow/contracts";
 import { recordPropertySocialPostPublication, recordPropertySocialPostReview, savePropertySocialPostDraft } from "@shared/api/agency-client";
 import {
@@ -54,11 +54,13 @@ export function SocialPostDraftCard({
   const canRequestReview = workflowStage === "draft" && !isPublished;
   const canApprove = (workflowStage === "draft" || workflowStage === "review") && !isPublished;
   const canPublish = workflowStage === "approved" && !isPublished;
+  const leadCaptureUrl = buildPublicLeadCaptureUrl(draft.publicationPlan.leadCapturePath);
   const copyText = composeSocialPostText({
     body,
     cta,
     hashtags: tagItems,
-    hook
+    hook,
+    leadCaptureUrl
   });
 
   useEffect(() => {
@@ -209,6 +211,7 @@ export function SocialPostDraftCard({
           canRequestReview={canRequestReview}
           cta={cta}
           draft={draft}
+          leadCaptureUrl={leadCaptureUrl}
           hashtags={hashtags}
           hook={hook}
           publication={publication}
