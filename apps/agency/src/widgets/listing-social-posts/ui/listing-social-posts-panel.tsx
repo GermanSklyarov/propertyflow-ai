@@ -2,6 +2,7 @@ import type {
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostLocale,
+  PropertySocialPostPublication,
   PropertySocialPostPublicationListResponse
 } from "@propertyflow/contracts";
 import { SocialPostDraftCard } from "./social-post-draft-card";
@@ -93,10 +94,24 @@ export function ListingSocialPostsPanel({
       </div>
       <div className={styles.grid}>
         {drafts.map((draft) => (
-          <SocialPostDraftCard draft={draft} key={`${draft.channel}-${draft.locale}`} propertyId={propertyId} />
+          <SocialPostDraftCard
+            draft={draft}
+            key={`${draft.channel}-${draft.locale}`}
+            propertyId={propertyId}
+            publication={findDraftPublication(draft, publications.items)}
+          />
         ))}
       </div>
     </section>
+  );
+}
+
+function findDraftPublication(draft: PropertySocialPostDraft, publications: PropertySocialPostPublication[]) {
+  return publications.find(
+    (publication) =>
+      publication.channel === draft.channel &&
+      publication.locale === draft.locale &&
+      publication.trackingSlug === draft.publicationPlan.trackingSlug
   );
 }
 

@@ -4,21 +4,30 @@ import { CheckCircle2, Clipboard, Eye, Hash, Link2, Megaphone, MessageCircle, Pe
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
-import type { PropertySocialPostDraft, PropertySocialPostWorkflowStage } from "@propertyflow/contracts";
+import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostWorkflowStage } from "@propertyflow/contracts";
 import { recordPropertySocialPostPublication } from "@shared/api/agency-client";
 import styles from "./listing-social-posts-panel.module.css";
 
 type WorkflowStageKey = PropertySocialPostDraft["approvalWorkflow"]["currentStage"];
 
-export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySocialPostDraft; propertyId: string }) {
+export function SocialPostDraftCard({
+  draft,
+  propertyId,
+  publication
+}: {
+  draft: PropertySocialPostDraft;
+  propertyId: string;
+  publication?: PropertySocialPostPublication;
+}) {
   const router = useRouter();
+  const initialPublicationStatus = publication ? "published" : "idle";
   const [body, setBody] = useState(draft.body);
   const [cta, setCta] = useState(draft.cta);
   const [hashtags, setHashtags] = useState(draft.hashtags.join(" "));
   const [hook, setHook] = useState(draft.hook);
   const [copied, setCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [publicationStatus, setPublicationStatus] = useState<"idle" | "saving" | "published" | "error">("idle");
+  const [publicationStatus, setPublicationStatus] = useState<"idle" | "saving" | "published" | "error">(initialPublicationStatus);
   const [workflowStage, setWorkflowStage] = useState<WorkflowStageKey>(draft.approvalWorkflow.currentStage);
   const initialHashtags = draft.hashtags.join(" ");
   const tagItems = useMemo(() => hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean), [hashtags]);
@@ -26,9 +35,10 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
     () => getWorkflowStages(draft.approvalWorkflow.stages, publicationStatus === "published" ? "published" : workflowStage),
     [draft.approvalWorkflow.stages, publicationStatus, workflowStage]
   );
-  const canRequestReview = workflowStage === "draft" && publicationStatus !== "published";
-  const canApprove = (workflowStage === "draft" || workflowStage === "review") && publicationStatus !== "published";
-  const canPublish = workflowStage === "approved" && publicationStatus !== "published";
+  const isPublished = publicationStatus === "published";
+  const canRequestReview = workflowStage === "draft" && !isPublished;
+  const canApprove = (workflowStage === "draft" || workflowStage === "review") && !isPublished;
+  const canPublish = workflowStage === "approved" && !isPublished;
   const copyText = composeSocialPostText({
     body,
     cta,
@@ -43,9 +53,9 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
     setHook(draft.hook);
     setCopied(false);
     setDetailsOpen(false);
-    setPublicationStatus("idle");
-    setWorkflowStage(draft.approvalWorkflow.currentStage);
-  }, [draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags]);
+    setPublicationStatus(initialPublicationStatus);
+    setWorkflowStage(publication ? "published" : draft.approvalWorkflow.currentStage);
+  }, [draft.approvalWorkflow.currentStage, draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags, initialPublicationStatus, publication]);
 
   async function copyDraft() {
     await navigator.clipboard.writeText(copyText);
@@ -82,7 +92,9 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
         </span>
         <div>
           <strong>{draft.label}</strong>
-          <small className={draft.status === "ready" ? styles.ready : styles.review}>{draft.status === "ready" ? "Ready draft" : "Needs review"}</small>
+          <small className={isPublished ? styles.ready : draft.status === "ready" ? styles.ready : styles.review}>
+            {isPublished ? "Published" : draft.status === "ready" ? "Ready draft" : "Needs review"}
+          </small>
         </div>
       </div>
       <p className={styles.hook}>{hook}</p>
@@ -91,6 +103,7 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
         <span className={styles.workflowBadge}>{formatWorkflowStage(getCurrentWorkflowLabel(workflowStages))}</span>
         <span>{draft.mediaPlan.items.length} photos</span>
         <span>{tagItems.length} tags</span>
+        {publication ? <span title={publication.publishedAt}>Live {formatShortDate(publication.publishedAt)}</span> : null}
       </div>
       <div className={`${styles.tags} ${styles.compactTags}`} aria-label={`${draft.label} hashtags`}>
         <Hash size={15} />
@@ -118,7 +131,7 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
         </button>
         <button
           className={`${styles.actionButton} ${styles.secondaryAction}`}
-          disabled={!canPublish || publicationStatus === "saving"}
+          disabled={!canPublish || publicationStatus === "saving" || isPublished}
           type="button"
           onClick={markPublished}
         >
@@ -137,7 +150,10 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
           >
             <div className={styles.modalHeader}>
               <div>
-                <p className="section-kicker">{draft.label}</p>
+                <p className="section-kicker">
+                  {draft.label}
+                  {publication ? ` · published ${formatShortDate(publication.publishedAt)}` : ""}
+                </p>
                 <h3>Review social post</h3>
               </div>
               <button aria-label="Close social post review" type="button" onClick={() => setDetailsOpen(false)}>
@@ -318,6 +334,15 @@ function formatPublicationStatus(status: "idle" | "saving" | "published" | "erro
   }
 
   return "Mark published";
+}
+
+function formatShortDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
 }
 
 function getWorkflowNote(
