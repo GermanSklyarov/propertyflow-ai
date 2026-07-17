@@ -243,21 +243,25 @@
 }
 
 .hook {
+  display: -webkit-box;
   color: var(--teal-dark);
   font-size: 1rem;
   font-weight: 900;
-  min-height: 4.35em;
+  min-height: 2.9em;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .body {
   display: -webkit-box;
-  min-height: 8.15em;
+  min-height: 4.1em;
   overflow: hidden;
   color: #475955;
   font-size: 0.94rem;
   font-weight: 700;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 6;
+  -webkit-line-clamp: 3;
 }
 
 .cta {
@@ -284,6 +288,36 @@
   font-size: 0.74rem;
   font-weight: 900;
   overflow-wrap: anywhere;
+}
+
+.compactTags {
+  min-height: 31px;
+}
+
+.compactMeta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+  color: var(--muted);
+}
+
+.compactMeta span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f6fbf9;
+  padding: 0 8px;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.compactMeta .workflowBadge {
+  background: #ecfdf3;
+  color: var(--teal-dark);
 }
 
 .readiness {
@@ -326,7 +360,8 @@
 }
 
 .publicationPlan summary,
-.mediaPlan summary {
+.mediaPlan summary,
+.planHeader {
   display: inline-flex;
   min-width: 0;
   min-height: 40px;
@@ -351,6 +386,16 @@
 }
 
 .publicationPlan summary span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planHeader span {
   min-width: 0;
   color: var(--muted);
   font-size: 0.72rem;
@@ -694,6 +739,16 @@
   padding: 12px;
 }
 
+.editFormHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .editForm label {
   display: grid;
   min-width: 0;
@@ -725,6 +780,92 @@
   resize: vertical;
 }
 
+.modalBackdrop {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: auto;
+  background: rgb(16 33 29 / 58%);
+  padding: 24px;
+}
+
+.postModal {
+  display: grid;
+  width: min(1040px, 100%);
+  max-height: calc(100vh - 48px);
+  min-width: 0;
+  overflow: auto;
+  border: 1px solid rgb(15 118 110 / 20%);
+  background: #fff;
+  box-shadow: 0 24px 80px rgb(16 33 29 / 28%);
+}
+
+.modalHeader {
+  position: sticky;
+  z-index: 2;
+  top: 0;
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid rgb(15 118 110 / 12%);
+  background: rgb(255 255 255 / 94%);
+  padding: 18px;
+}
+
+.modalHeader h3 {
+  margin: 3px 0 0;
+  color: var(--ink);
+  font-size: clamp(1.35rem, 3vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.modalHeader button {
+  display: inline-flex;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #fff;
+  color: var(--teal-dark);
+  cursor: pointer;
+}
+
+.modalHeader button:hover,
+.modalHeader button:focus-visible {
+  background: #edf8f4;
+}
+
+.modalGrid {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.modalColumn {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 12px;
+}
+
+.modalColumn .hook,
+.modalColumn .body {
+  display: block;
+  min-height: 0;
+  overflow: visible;
+  -webkit-line-clamp: unset;
+}
+
+.modalColumn .body {
+  font-size: 0.98rem;
+}
+
 @media (min-width: 980px) {
   .controls {
     grid-template-columns: minmax(180px, 0.5fr) minmax(0, 1fr) auto;
@@ -734,9 +875,26 @@
   .grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .modalGrid {
+    grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  }
 }
 
 @media (max-width: 520px) {
+  .modalBackdrop {
+    padding: 10px;
+  }
+
+  .postModal {
+    max-height: calc(100vh - 20px);
+  }
+
+  .modalHeader,
+  .modalGrid {
+    padding: 14px;
+  }
+
   .publicationPlan dl {
     grid-template-columns: 1fr;
   }
