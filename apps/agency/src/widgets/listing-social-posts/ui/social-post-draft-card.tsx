@@ -4,9 +4,11 @@ import { CheckCircle2, Clipboard, Hash, Link2, Megaphone, MessageCircle, Pencil,
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
-import type { PropertySocialPostDraft } from "@propertyflow/contracts";
+import type { PropertySocialPostDraft, PropertySocialPostWorkflowStage } from "@propertyflow/contracts";
 import { recordPropertySocialPostPublication } from "@shared/api/agency-client";
 import styles from "./listing-social-posts-panel.module.css";
+
+type WorkflowStageKey = PropertySocialPostDraft["approvalWorkflow"]["currentStage"];
 
 export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySocialPostDraft; propertyId: string }) {
   const router = useRouter();
@@ -16,8 +18,16 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
   const [hook, setHook] = useState(draft.hook);
   const [copied, setCopied] = useState(false);
   const [publicationStatus, setPublicationStatus] = useState<"idle" | "saving" | "published" | "error">("idle");
+  const [workflowStage, setWorkflowStage] = useState<WorkflowStageKey>(draft.approvalWorkflow.currentStage);
   const initialHashtags = draft.hashtags.join(" ");
   const tagItems = useMemo(() => hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean), [hashtags]);
+  const workflowStages = useMemo(
+    () => getWorkflowStages(draft.approvalWorkflow.stages, publicationStatus === "published" ? "published" : workflowStage),
+    [draft.approvalWorkflow.stages, publicationStatus, workflowStage]
+  );
+  const canRequestReview = workflowStage === "draft" && publicationStatus !== "published";
+  const canApprove = (workflowStage === "draft" || workflowStage === "review") && publicationStatus !== "published";
+  const canPublish = workflowStage === "approved" && publicationStatus !== "published";
   const copyText = composeSocialPostText({
     body,
     cta,
@@ -32,6 +42,7 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
     setHook(draft.hook);
     setCopied(false);
     setPublicationStatus("idle");
+    setWorkflowStage(draft.approvalWorkflow.currentStage);
   }, [draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags]);
 
   async function copyDraft() {
@@ -41,6 +52,10 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
   }
 
   async function markPublished() {
+    if (!canPublish) {
+      return;
+    }
+
     setPublicationStatus("saving");
 
     try {
@@ -113,20 +128,28 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
           <strong>Approval flow</strong>
         </div>
         <ol>
-          {draft.approvalWorkflow.stages.map((stage) => (
+          {workflowStages.map((stage) => (
             <li className={styles[`workflow${capitalizeWorkflowState(stage.state)}`]} key={stage.key}>
               {formatWorkflowStage(stage.label)}
             </li>
           ))}
         </ol>
-        <p>{draft.approvalWorkflow.reviewNote}</p>
-        {draft.approvalWorkflow.allowedActions.length ? (
-          <div className={styles.workflowActions}>
+        <p>{getWorkflowNote(workflowStage, publicationStatus, draft.approvalWorkflow.reviewNote)}</p>
+        <div className={styles.workflowActions}>
+          <button disabled={!canRequestReview} type="button" onClick={() => setWorkflowStage("review")}>
+            <Send size={13} />
+            <span>Request review</span>
+          </button>
+          <button disabled={!canApprove} type="button" onClick={() => setWorkflowStage("approved")}>
+            <CheckCircle2 size={13} />
+            <span>Approve</span>
+          </button>
+          <div aria-label="Available workflow actions">
             {draft.approvalWorkflow.allowedActions.map((action) => (
               <span key={action}>{formatWorkflowAction(action)}</span>
             ))}
           </div>
-        ) : null}
+        </div>
       </div>
       <details className={styles.mediaPlan}>
         <summary>{draft.mediaPlan.summary}</summary>
@@ -179,7 +202,7 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
         </button>
         <button
           className={`${styles.actionButton} ${styles.secondaryAction}`}
-          disabled={publicationStatus === "saving" || publicationStatus === "published"}
+          disabled={!canPublish || publicationStatus === "saving"}
           type="button"
           onClick={markPublished}
         >
@@ -189,6 +212,25 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
       </div>
     </article>
   );
+}
+
+function getWorkflowStages(stages: PropertySocialPostWorkflowStage[], currentStage: WorkflowStageKey) {
+  const order: WorkflowStageKey[] = ["draft", "review", "approved", "published"];
+  const currentIndex = order.indexOf(currentStage);
+
+  return stages.map((stage) => {
+    const stageIndex = order.indexOf(stage.key);
+
+    if (stageIndex < currentIndex) {
+      return { ...stage, state: "complete" as const };
+    }
+
+    if (stageIndex === currentIndex) {
+      return { ...stage, state: "current" as const };
+    }
+
+    return { ...stage, state: "pending" as const };
+  });
 }
 
 function capitalizeWorkflowState(value: PropertySocialPostDraft["approvalWorkflow"]["stages"][number]["state"]) {
@@ -224,4 +266,32 @@ function formatPublicationStatus(status: "idle" | "saving" | "published" | "erro
   }
 
   return "Mark published";
+}
+
+function getWorkflowNote(
+  stage: WorkflowStageKey,
+  publicationStatus: "idle" | "saving" | "published" | "error",
+  fallback: string
+) {
+  if (publicationStatus === "published") {
+    return "Published and tracked for lead attribution.";
+  }
+
+  if (publicationStatus === "saving") {
+    return "Saving publication marker...";
+  }
+
+  if (publicationStatus === "error") {
+    return "Publication marker failed. Check the API and retry.";
+  }
+
+  if (stage === "approved") {
+    return "Approved for publishing. Mark it as published after the agent posts it.";
+  }
+
+  if (stage === "review") {
+    return "Queued for manager review before this post goes live.";
+  }
+
+  return fallback;
 }

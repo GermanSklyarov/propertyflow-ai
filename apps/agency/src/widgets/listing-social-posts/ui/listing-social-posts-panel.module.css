@@ -513,18 +513,56 @@
 
 .workflowActions {
   display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.workflowActions button,
+.workflowActions span {
+  display: inline-flex;
+  min-height: 30px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(15 118 110 / 16%);
+  padding: 0 8px;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.workflowActions button {
+  background: #fff;
+  color: var(--teal-dark);
+  cursor: pointer;
+}
+
+.workflowActions button:not(:disabled):hover,
+.workflowActions button:not(:disabled):focus-visible {
+  background: #edf8f4;
+}
+
+.workflowActions button:disabled {
+  color: #91a09c;
+  cursor: default;
+  opacity: 0.72;
+}
+
+.workflowActions > div {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 100%;
   flex-wrap: wrap;
   gap: 6px;
 }
 
 .workflowActions span {
-  border: 1px solid rgb(15 118 110 / 16%);
   background: #ecfdf3;
-  padding: 6px 8px;
   color: var(--teal-dark);
-  font-size: 0.68rem;
-  font-weight: 900;
-  text-transform: uppercase;
 }
 
 .mediaStrip {
