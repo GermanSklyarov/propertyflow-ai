@@ -4,11 +4,24 @@ import { CheckCircle2, Clipboard, Eye, Hash, Link2, Megaphone, MessageCircle, Pe
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
-import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostWorkflowStage } from "@propertyflow/contracts";
+import type { PropertySocialPostDraft, PropertySocialPostPublication } from "@propertyflow/contracts";
 import { recordPropertySocialPostPublication } from "@shared/api/agency-client";
+import {
+  capitalizeWorkflowState,
+  formatPublicationStatus,
+  formatShortDate,
+  formatWorkflowAction,
+  formatWorkflowStage,
+  getCurrentWorkflowLabel,
+  getInitialPublicationStatus,
+  getInitialWorkflowStage,
+  getWorkflowNote,
+  getWorkflowStages,
+  type SocialPostPublicationStatus,
+  type SocialPostWorkflowStageKey,
+  shortenIdentifier
+} from "../model/social-post-draft-card";
 import styles from "./listing-social-posts-panel.module.css";
-
-type WorkflowStageKey = PropertySocialPostDraft["approvalWorkflow"]["currentStage"];
 
 export function SocialPostDraftCard({
   draft,
@@ -20,15 +33,15 @@ export function SocialPostDraftCard({
   publication?: PropertySocialPostPublication;
 }) {
   const router = useRouter();
-  const initialPublicationStatus = publication ? "published" : "idle";
+  const initialPublicationStatus = getInitialPublicationStatus(publication);
   const [body, setBody] = useState(draft.body);
   const [cta, setCta] = useState(draft.cta);
   const [hashtags, setHashtags] = useState(draft.hashtags.join(" "));
   const [hook, setHook] = useState(draft.hook);
   const [copied, setCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const [publicationStatus, setPublicationStatus] = useState<"idle" | "saving" | "published" | "error">(initialPublicationStatus);
-  const [workflowStage, setWorkflowStage] = useState<WorkflowStageKey>(draft.approvalWorkflow.currentStage);
+  const [publicationStatus, setPublicationStatus] = useState<SocialPostPublicationStatus>(initialPublicationStatus);
+  const [workflowStage, setWorkflowStage] = useState<SocialPostWorkflowStageKey>(getInitialWorkflowStage(draft, publication));
   const initialHashtags = draft.hashtags.join(" ");
   const tagItems = useMemo(() => hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean), [hashtags]);
   const workflowStages = useMemo(
@@ -54,7 +67,7 @@ export function SocialPostDraftCard({
     setCopied(false);
     setDetailsOpen(false);
     setPublicationStatus(initialPublicationStatus);
-    setWorkflowStage(publication ? "published" : draft.approvalWorkflow.currentStage);
+    setWorkflowStage(getInitialWorkflowStage(draft, publication));
   }, [draft.approvalWorkflow.currentStage, draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags, initialPublicationStatus, publication]);
 
   async function copyDraft() {
@@ -276,99 +289,4 @@ export function SocialPostDraftCard({
       ) : null}
     </article>
   );
-}
-
-function getWorkflowStages(stages: PropertySocialPostWorkflowStage[], currentStage: WorkflowStageKey) {
-  const order: WorkflowStageKey[] = ["draft", "review", "approved", "published"];
-  const currentIndex = order.indexOf(currentStage);
-
-  return stages.map((stage) => {
-    const stageIndex = order.indexOf(stage.key);
-
-    if (stageIndex < currentIndex) {
-      return { ...stage, state: "complete" as const };
-    }
-
-    if (stageIndex === currentIndex) {
-      return { ...stage, state: "current" as const };
-    }
-
-    return { ...stage, state: "pending" as const };
-  });
-}
-
-function capitalizeWorkflowState(value: PropertySocialPostDraft["approvalWorkflow"]["stages"][number]["state"]) {
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
-}
-
-function formatWorkflowAction(action: PropertySocialPostDraft["approvalWorkflow"]["allowedActions"][number]) {
-  return action
-    .split("-")
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(" ");
-}
-
-function formatWorkflowStage(label: string) {
-  return label === "Approved" ? "Approve" : label === "Published" ? "Publish" : label;
-}
-
-function getCurrentWorkflowLabel(stages: PropertySocialPostWorkflowStage[]) {
-  return stages.find((stage) => stage.state === "current")?.label ?? "Draft";
-}
-
-function shortenIdentifier(value: string) {
-  return value.length > 38 ? `${value.slice(0, 18)}...${value.slice(-14)}` : value;
-}
-
-function formatPublicationStatus(status: "idle" | "saving" | "published" | "error") {
-  if (status === "saving") {
-    return "Saving";
-  }
-
-  if (status === "published") {
-    return "Published";
-  }
-
-  if (status === "error") {
-    return "Retry publish";
-  }
-
-  return "Mark published";
-}
-
-function formatShortDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
-
-function getWorkflowNote(
-  stage: WorkflowStageKey,
-  publicationStatus: "idle" | "saving" | "published" | "error",
-  fallback: string
-) {
-  if (publicationStatus === "published") {
-    return "Published and tracked for lead attribution.";
-  }
-
-  if (publicationStatus === "saving") {
-    return "Saving publication marker...";
-  }
-
-  if (publicationStatus === "error") {
-    return "Publication marker failed. Check the API and retry.";
-  }
-
-  if (stage === "approved") {
-    return "Approved for publishing. Mark it as published after the agent posts it.";
-  }
-
-  if (stage === "review") {
-    return "Queued for manager review before this post goes live.";
-  }
-
-  return fallback;
 }
