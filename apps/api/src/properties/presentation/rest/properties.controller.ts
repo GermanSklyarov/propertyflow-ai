@@ -1214,7 +1214,7 @@ export class PropertiesController {
     @Param("propertyId") propertyId: string,
     @Body() payload: RecordPropertySocialPostPublicationDto
   ): Promise<RecordPropertySocialPostPublicationResponse> {
-    const result = await this.socialPosts.recordPublication(tenantId, propertyId, payload);
+    const result = await this.socialPosts.recordPublication(tenantId, propertyId, payload, user);
 
     await this.audit.record({
       tenantId,

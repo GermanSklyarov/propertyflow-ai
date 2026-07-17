@@ -349,6 +349,27 @@ create index if not exists idx_price_recommendation_feedback_property on propert
 create index if not exists idx_price_recommendation_feedback_decision on property_price_recommendation_feedback (tenant_id, decision, created_at desc);
 create index if not exists idx_price_recommendation_feedback_model on property_price_recommendation_feedback (tenant_id, engine, model_version);
 
+create table if not exists property_social_post_publications (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid not null references properties(id) on delete cascade,
+  channel text not null,
+  locale text not null,
+  tracking_slug text not null,
+  published_url text,
+  utm jsonb not null,
+  created_by_user_id text,
+  created_by_user_role text,
+  published_at timestamptz not null
+);
+
+create index if not exists idx_social_post_publications_property
+  on property_social_post_publications (tenant_id, property_id, published_at desc);
+create index if not exists idx_social_post_publications_channel
+  on property_social_post_publications (tenant_id, channel, published_at desc);
+create index if not exists idx_social_post_publications_tracking
+  on property_social_post_publications (tenant_id, tracking_slug);
+
 create table if not exists property_generated_descriptions (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,

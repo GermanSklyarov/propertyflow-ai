@@ -3,7 +3,6 @@ import type {
   GeneratePropertySocialPostsRequest,
   GeneratePropertySocialPostsResponse,
   PropertyImageSnapshot,
-  PropertySocialPostPublication,
   PropertySocialPostApprovalWorkflow,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
@@ -12,11 +11,16 @@ import type {
   PropertySocialPostReadinessCheck,
   PropertySocialPostLocale,
   RecordPropertySocialPostPublicationRequest,
-  RecordPropertySocialPostPublicationResponse
+  RecordPropertySocialPostPublicationResponse,
+  RequestUser
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot } from "@propertyflow/domain";
 import { PROPERTY_IMAGES_REPOSITORY, type PropertyImagesRepository } from "../../domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
+import {
+  PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY,
+  type PropertySocialPostPublicationsRepository
+} from "../../domain/property-social-post-publications.repository.js";
 
 const allChannels: PropertySocialPostChannel[] = ["line-voom", "facebook", "instagram"];
 const copyByLocale = {
@@ -97,7 +101,9 @@ const copyByLocale = {
 export class PropertySocialPostsService {
   constructor(
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
-    @Inject(PROPERTY_IMAGES_REPOSITORY) private readonly images: PropertyImagesRepository
+    @Inject(PROPERTY_IMAGES_REPOSITORY) private readonly images: PropertyImagesRepository,
+    @Inject(PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY)
+    private readonly publications: PropertySocialPostPublicationsRepository
   ) {}
 
   async generateDrafts(
@@ -126,7 +132,8 @@ export class PropertySocialPostsService {
   async recordPublication(
     tenantId: string,
     propertyId: string,
-    request: RecordPropertySocialPostPublicationRequest
+    request: RecordPropertySocialPostPublicationRequest,
+    user: RequestUser
   ): Promise<RecordPropertySocialPostPublicationResponse> {
     const property = await this.properties.findById(tenantId, propertyId);
 
@@ -134,18 +141,9 @@ export class PropertySocialPostsService {
       throw new NotFoundException("Property not found");
     }
 
-    const publication: PropertySocialPostPublication = {
-      channel: request.channel,
-      locale: request.locale,
-      propertyId,
-      publishedAt: new Date().toISOString(),
-      publishedUrl: request.publishedUrl,
-      status: "published",
-      trackingSlug: request.trackingSlug,
-      utm: request.utm
+    return {
+      publication: await this.publications.record(tenantId, propertyId, request, user)
     };
-
-    return { publication };
   }
 }
 

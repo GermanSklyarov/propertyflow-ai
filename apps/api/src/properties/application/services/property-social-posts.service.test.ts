@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import type { PropertyImagesRepository } from "../../domain/property-images.repository.js";
 import type { PropertyRepository } from "../../domain/property.repository.js";
+import type { PropertySocialPostPublicationsRepository } from "../../domain/property-social-post-publications.repository.js";
 import { PropertySocialPostsService } from "./property-social-posts.service.js";
 
 const listing = {
@@ -69,6 +70,12 @@ const gallery = [
   }
 ];
 
+const user = {
+  id: "manager-demo-1",
+  role: "manager",
+  tenantId: "demo-agency"
+} as const;
+
 function createService(property: PropertySnapshot | null = listing, images = gallery) {
   const repository = {
     findById: vi.fn().mockResolvedValue(property)
@@ -76,17 +83,37 @@ function createService(property: PropertySnapshot | null = listing, images = gal
   const imageRepository = {
     listByPropertyId: vi.fn().mockResolvedValue(images)
   } as unknown as PropertyImagesRepository;
+  const publicationRepository = {
+    record: vi.fn().mockResolvedValue({
+      channel: "line-voom",
+      createdByUserId: user.id,
+      createdByUserRole: user.role,
+      id: "publication-1",
+      locale: "en",
+      propertyId: "property-1",
+      publishedAt: "2026-07-17T01:00:00.000Z",
+      publishedUrl: "https://linevoom.line.me/post/example",
+      status: "published",
+      tenantId: "demo-agency",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+      utm: {
+        campaign: "pattaya-sale-or-rent-property-1",
+        content: "line-voom-en",
+        medium: "social",
+        source: "line-voom"
+      }
+    })
+  } as unknown as PropertySocialPostPublicationsRepository;
 
   return {
     imageRepository,
+    publicationRepository,
     repository,
-    service: new PropertySocialPostsService(repository, imageRepository)
+    service: new PropertySocialPostsService(repository, imageRepository, publicationRepository)
   };
 }
 
 describe("PropertySocialPostsService", () => {
-  const publishedAt = "2026-07-17T01:00:00.000Z";
-
   it("generates channel-specific social post drafts from a tenant listing", async () => {
     const { imageRepository, repository, service } = createService();
 
@@ -174,11 +201,8 @@ describe("PropertySocialPostsService", () => {
   });
 
   it("records a social post publication for lead attribution", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date(publishedAt));
-    const { repository, service } = createService();
-
-    const response = await service.recordPublication("demo-agency", "property-1", {
+    const { publicationRepository, repository, service } = createService();
+    const request = {
       channel: "line-voom",
       locale: "en",
       publishedUrl: "https://linevoom.line.me/post/example",
@@ -189,15 +213,21 @@ describe("PropertySocialPostsService", () => {
         medium: "social",
         source: "line-voom"
       }
-    });
+    } as const;
+
+    const response = await service.recordPublication("demo-agency", "property-1", request, user);
 
     expect(response.publication).toEqual({
       channel: "line-voom",
+      createdByUserId: "manager-demo-1",
+      createdByUserRole: "manager",
+      id: "publication-1",
       locale: "en",
       propertyId: "property-1",
-      publishedAt,
+      publishedAt: "2026-07-17T01:00:00.000Z",
       publishedUrl: "https://linevoom.line.me/post/example",
       status: "published",
+      tenantId: "demo-agency",
       trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
       utm: {
         campaign: "pattaya-sale-or-rent-property-1",
@@ -207,7 +237,7 @@ describe("PropertySocialPostsService", () => {
       }
     });
     expect(repository.findById).toHaveBeenCalledWith("demo-agency", "property-1");
-    vi.useRealTimers();
+    expect(publicationRepository.record).toHaveBeenCalledWith("demo-agency", "property-1", request, user);
   });
 
   it("does not record social publication for a hidden listing", async () => {
@@ -224,7 +254,7 @@ describe("PropertySocialPostsService", () => {
           medium: "social",
           source: "facebook"
         }
-      })
+      }, user)
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

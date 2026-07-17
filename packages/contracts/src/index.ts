@@ -1228,11 +1228,15 @@ export interface RecordPropertySocialPostPublicationRequest {
 
 export interface PropertySocialPostPublication {
   channel: PropertySocialPostChannel;
+  createdByUserId?: string;
+  createdByUserRole?: UserRole;
+  id: string;
   locale: PropertySocialPostLocale;
   propertyId: string;
   publishedAt: string;
   publishedUrl?: string;
   status: "published";
+  tenantId: string;
   trackingSlug: string;
   utm: PropertySocialPostUtm;
 }

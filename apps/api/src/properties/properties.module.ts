@@ -36,6 +36,7 @@ import { PRICE_RECOMMENDATION_FEEDBACK_REPOSITORY } from "./domain/price-recomme
 import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
 import { PROPERTY_IMAGES_REPOSITORY } from "./domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
+import { PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY } from "./domain/property-social-post-publications.repository.js";
 import { PROPERTY_STATUS_HISTORY_REPOSITORY } from "./domain/property-status-history.repository.js";
 import { SAVED_SEARCH_ALERT_RUN_REPOSITORY } from "./domain/saved-search-alert-run.repository.js";
 import { SAVED_PROPERTY_SEARCH_REPOSITORY } from "./domain/saved-property-search.repository.js";
@@ -43,6 +44,7 @@ import { createPropertySearchClient, PROPERTY_SEARCH_CLIENT } from "./infrastruc
 import { PgPropertyAiAssetsRepository } from "./infrastructure/postgres/pg-property-ai-assets.repository.js";
 import { PgPropertyImagesRepository } from "./infrastructure/postgres/pg-property-images.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
+import { PgPropertySocialPostPublicationsRepository } from "./infrastructure/postgres/pg-property-social-post-publications.repository.js";
 import { PgPropertyStatusHistoryRepository } from "./infrastructure/postgres/pg-property-status-history.repository.js";
 import { PgPriceRecommendationFeedbackRepository } from "./infrastructure/postgres/pg-price-recommendation-feedback.repository.js";
 import { PgSavedSearchAlertRunRepository } from "./infrastructure/postgres/pg-saved-search-alert-run.repository.js";
@@ -104,6 +106,10 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     {
       provide: PROPERTY_STATUS_HISTORY_REPOSITORY,
       useClass: PgPropertyStatusHistoryRepository
+    },
+    {
+      provide: PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY,
+      useClass: PgPropertySocialPostPublicationsRepository
     },
     {
       provide: PROPERTY_SEARCH_CLIENT,
