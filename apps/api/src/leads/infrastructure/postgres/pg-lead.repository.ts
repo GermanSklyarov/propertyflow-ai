@@ -46,6 +46,9 @@ interface LeadRow {
   attribution_search_event_id: string | null;
   attribution_search_query: string | null;
   attribution_search_source: LeadSnapshot["attributionSearchSource"] | null;
+  attribution_social_post_campaign: string | null;
+  attribution_social_post_channel: LeadSnapshot["attributionSocialPostChannel"] | null;
+  attribution_social_post_tracking_slug: string | null;
   priority: LeadPriority;
   next_follow_up_at: Date | null;
   created_at: Date;
@@ -220,6 +223,9 @@ export class PgLeadRepository implements LeadRepository {
           attribution_search_event_id,
           attribution_search_query,
           attribution_search_source,
+          attribution_social_post_tracking_slug,
+          attribution_social_post_channel,
+          attribution_social_post_campaign,
           priority,
           next_follow_up_at,
           created_at,
@@ -239,10 +245,13 @@ export class PgLeadRepository implements LeadRepository {
           $11,
           $12,
           $13,
+          $14,
+          $15,
+          $16,
           'medium',
           null,
-          $14,
-          $15
+          $17,
+          $18
         )
         returning *
       `,
@@ -260,6 +269,9 @@ export class PgLeadRepository implements LeadRepository {
         input.attributionSearchEventId ?? null,
         input.attributionSearchQuery ?? null,
         input.attributionSearchSource ?? null,
+        input.attributionSocialPostTrackingSlug ?? null,
+        input.attributionSocialPostChannel ?? null,
+        input.attributionSocialPostCampaign ?? null,
         now,
         now
       ]
@@ -1386,6 +1398,9 @@ export class PgLeadRepository implements LeadRepository {
       attributionSearchEventId: row.attribution_search_event_id ?? undefined,
       attributionSearchQuery: row.attribution_search_query ?? undefined,
       attributionSearchSource: row.attribution_search_source ?? undefined,
+      attributionSocialPostCampaign: row.attribution_social_post_campaign ?? undefined,
+      attributionSocialPostChannel: row.attribution_social_post_channel ?? undefined,
+      attributionSocialPostTrackingSlug: row.attribution_social_post_tracking_slug ?? undefined,
       priority: row.priority,
       nextFollowUpAt: row.next_follow_up_at?.toISOString(),
       createdAt: row.created_at.toISOString(),

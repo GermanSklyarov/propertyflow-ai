@@ -73,7 +73,9 @@ export class LeadService {
       metadata: {
         propertyId: lead.propertyId,
         source: lead.source,
-        assignedAgentId: lead.assignedAgentId
+        assignedAgentId: lead.assignedAgentId,
+        attributionSocialPostChannel: lead.attributionSocialPostChannel,
+        attributionSocialPostTrackingSlug: lead.attributionSocialPostTrackingSlug
       }
     });
 
@@ -81,7 +83,9 @@ export class LeadService {
       leadId: lead.id,
       propertyId: lead.propertyId,
       source: lead.source,
-      assignedAgentId: lead.assignedAgentId
+      assignedAgentId: lead.assignedAgentId,
+      attributionSocialPostChannel: lead.attributionSocialPostChannel,
+      attributionSocialPostTrackingSlug: lead.attributionSocialPostTrackingSlug
     });
 
     await this.leads.recordStatusEvent({

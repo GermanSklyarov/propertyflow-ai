@@ -45,6 +45,9 @@ export function LeadOverviewPanel({ lead }: { lead: LeadSnapshot }) {
             <Field label="Property ID" value={lead.propertyId ?? "not linked"} />
             <Field label="Search source" value={lead.attributionSearchSource ?? "not attributed"} />
             <Field label="Search query" value={lead.attributionSearchQuery ?? "not captured"} wide />
+            <Field label="Social channel" value={lead.attributionSocialPostChannel ? formatBucket(lead.attributionSocialPostChannel) : "not attributed"} />
+            <Field label="Social campaign" value={lead.attributionSocialPostCampaign ?? "not captured"} />
+            <Field label="Tracking slug" value={lead.attributionSocialPostTrackingSlug ?? "not captured"} wide />
           </div>
         </section>
       </section>

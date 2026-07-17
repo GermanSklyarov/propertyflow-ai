@@ -1502,7 +1502,7 @@ export interface RentalYieldSummary {
 
 export type LeadStatus = "new" | "contacted" | "qualified" | "lost" | "won";
 
-export type LeadSource = "website" | "public-api" | "agent" | "ai-chat" | "ai-concierge" | "saved-search";
+export type LeadSource = "website" | "public-api" | "agent" | "ai-chat" | "ai-concierge" | "saved-search" | "social-post";
 
 export type LeadPriority = "low" | "medium" | "high";
 
@@ -1518,6 +1518,9 @@ export interface CreateLeadRequest {
   attributionSearchEventId?: string;
   attributionSearchQuery?: string;
   attributionSearchSource?: SearchEventSource;
+  attributionSocialPostCampaign?: string;
+  attributionSocialPostChannel?: PropertySocialPostChannel;
+  attributionSocialPostTrackingSlug?: string;
 }
 
 export interface LeadSnapshot {
@@ -1535,6 +1538,9 @@ export interface LeadSnapshot {
   attributionSearchEventId?: string;
   attributionSearchQuery?: string;
   attributionSearchSource?: SearchEventSource;
+  attributionSocialPostCampaign?: string;
+  attributionSocialPostChannel?: PropertySocialPostChannel;
+  attributionSocialPostTrackingSlug?: string;
   priority?: LeadPriority;
   nextFollowUpAt?: string;
   createdAt: string;

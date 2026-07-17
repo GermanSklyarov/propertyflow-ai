@@ -1,8 +1,9 @@
 import { IsEmail, IsIn, IsOptional, IsString, MinLength } from "class-validator";
-import type { CreateLeadRequest, LeadSource, SearchEventSource } from "@propertyflow/contracts";
+import type { CreateLeadRequest, LeadSource, PropertySocialPostChannel, SearchEventSource } from "@propertyflow/contracts";
 
-const leadSources: LeadSource[] = ["website", "public-api", "agent", "ai-chat", "ai-concierge", "saved-search"];
+const leadSources: LeadSource[] = ["website", "public-api", "agent", "ai-chat", "ai-concierge", "saved-search", "social-post"];
 const searchEventSources: SearchEventSource[] = ["structured", "indexed", "ai"];
+const socialPostChannels: PropertySocialPostChannel[] = ["line-voom", "facebook", "instagram"];
 const locales: NonNullable<CreateLeadRequest["preferredLocale"]>[] = ["en", "ru", "th", "zh"];
 
 export class CreateLeadDto implements CreateLeadRequest {
@@ -48,4 +49,16 @@ export class CreateLeadDto implements CreateLeadRequest {
   @IsOptional()
   @IsIn(searchEventSources)
   attributionSearchSource?: SearchEventSource;
+
+  @IsOptional()
+  @IsString()
+  attributionSocialPostCampaign?: string;
+
+  @IsOptional()
+  @IsIn(socialPostChannels)
+  attributionSocialPostChannel?: PropertySocialPostChannel;
+
+  @IsOptional()
+  @IsString()
+  attributionSocialPostTrackingSlug?: string;
 }

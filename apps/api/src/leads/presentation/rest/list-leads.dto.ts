@@ -10,7 +10,8 @@ const leadSources = [
   "agent",
   "ai-chat",
   "ai-concierge",
-  "saved-search"
+  "saved-search",
+  "social-post"
 ] as const satisfies readonly LeadSource[];
 const leadPriorities = ["low", "medium", "high"] as const satisfies readonly LeadPriority[];
 
