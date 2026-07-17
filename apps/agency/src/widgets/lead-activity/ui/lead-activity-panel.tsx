@@ -1,12 +1,15 @@
 import { CalendarClock, MessageSquareText } from "lucide-react";
+import { AddLeadNoteForm } from "@features/lead-note-create/ui/add-lead-note-form";
 import type { LeadNotesResponse, LeadTimelineResponse } from "@propertyflow/contracts";
 import { formatBucket, formatDateTime } from "@shared/lib/formatters";
 import styles from "./lead-activity-panel.module.css";
 
 export function LeadActivityPanel({
+  leadId,
   notes,
   timeline
 }: {
+  leadId: string;
   notes: LeadNotesResponse;
   timeline: LeadTimelineResponse;
 }) {
@@ -39,6 +42,7 @@ export function LeadActivityPanel({
           </div>
           <MessageSquareText size={20} />
         </div>
+        <AddLeadNoteForm leadId={leadId} />
         <div className={styles.noteList}>
           {notes.items.length ? (
             notes.items.map((note) => (

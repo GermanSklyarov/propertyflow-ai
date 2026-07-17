@@ -1,0 +1,127 @@
+.disclosure {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbf8;
+}
+
+.disclosure summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  padding: 12px;
+  color: var(--teal-dark);
+  cursor: pointer;
+  list-style: none;
+}
+
+.disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.disclosure summary:hover {
+  background: #e3f5ef;
+}
+
+.disclosure[open] summary {
+  border-bottom: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+}
+
+.summaryIcon {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+}
+
+.disclosure summary strong {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.disclosure summary small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.chevron {
+  transition: transform 160ms ease;
+}
+
+.disclosure[open] .chevron {
+  transform: rotate(180deg);
+}
+
+.form {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 8px;
+}
+
+.form label span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.form textarea {
+  min-height: 120px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 12px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.form textarea:focus {
+  outline: 2px solid rgb(15 118 110 / 20%);
+  outline-offset: 2px;
+}
+
+.form button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--teal);
+  background: var(--teal);
+  padding: 11px 14px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.form button:hover {
+  background: var(--teal-dark);
+}
+
+@media (max-width: 560px) {
+  .form button {
+    width: 100%;
+    justify-content: center;
+  }
+}

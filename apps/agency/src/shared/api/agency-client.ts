@@ -16,6 +16,7 @@ import type {
   AmenitySuggestionRequest,
   AmenitySuggestionResponse,
   CreateKnowledgeDocumentRequest,
+  CreateLeadNoteRequest,
   CreatePropertyImportUploadRequest,
   CreatePropertyImportUploadResponse,
   CreatePropertyProjectRequest,
@@ -26,6 +27,7 @@ import type {
   KnowledgeDocumentListResponse,
   KnowledgeDocumentSnapshot,
   LeadListResponse,
+  LeadNoteSnapshot,
   LeadNotesResponse,
   LeadQueueSummaryResponse,
   LeadSnapshot,
@@ -350,6 +352,23 @@ export async function getLeadNotes(leadId: string): Promise<LeadNotesResponse> {
   } catch {
     return demoLeadNotesResponse(leadId);
   }
+}
+
+export async function addLeadNote(leadId: string, payload: CreateLeadNoteRequest): Promise<LeadNoteSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/notes`, {
+    method: "POST",
+    headers: {
+      ...demoHeaders,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to add lead note: ${response.status}`);
+  }
+
+  return (await response.json()) as LeadNoteSnapshot;
 }
 
 export async function listProperties(

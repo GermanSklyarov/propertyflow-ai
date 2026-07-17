@@ -33,7 +33,7 @@ export function LeadDetailPage({
 
         <LeadOverviewPanel lead={lead} />
 
-        <LeadActivityPanel notes={notes} timeline={timeline} />
+        <LeadActivityPanel leadId={lead.id} notes={notes} timeline={timeline} />
       </div>
     </main>
   );
