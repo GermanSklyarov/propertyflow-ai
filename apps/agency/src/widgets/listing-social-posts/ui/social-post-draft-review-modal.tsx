@@ -3,6 +3,7 @@ import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySo
 import {
   capitalizeWorkflowState,
   formatShortDate,
+  formatPublicationStatus,
   formatWorkflowAction,
   formatWorkflowStage,
   getWorkflowNote,
@@ -15,6 +16,7 @@ import styles from "./listing-social-posts-panel.module.css";
 export function SocialPostDraftReviewModal({
   body,
   canApprove,
+  canPublish,
   canRequestReview,
   cta,
   draft,
@@ -22,21 +24,25 @@ export function SocialPostDraftReviewModal({
   hook,
   publication,
   publicationStatus,
+  publishedUrl,
   reviewActionStatus,
   saveDraftStatus,
   setBody,
   setCta,
   setHashtags,
   setHook,
+  setPublishedUrl,
   workflowStage,
   workflowStages,
   onApprove,
   onClose,
+  onMarkPublished,
   onRequestReview,
   onSaveDraft
 }: {
   body: string;
   canApprove: boolean;
+  canPublish: boolean;
   canRequestReview: boolean;
   cta: string;
   draft: PropertySocialPostDraft;
@@ -44,16 +50,19 @@ export function SocialPostDraftReviewModal({
   hook: string;
   publication?: PropertySocialPostPublication;
   publicationStatus: SocialPostPublicationStatus;
+  publishedUrl: string;
   reviewActionStatus: "idle" | "saving" | "error";
   saveDraftStatus: "idle" | "saving" | "saved" | "error";
   setBody: (value: string) => void;
   setCta: (value: string) => void;
   setHashtags: (value: string) => void;
   setHook: (value: string) => void;
+  setPublishedUrl: (value: string) => void;
   workflowStage: SocialPostWorkflowStageKey;
   workflowStages: PropertySocialPostWorkflowStage[];
   onApprove: () => void;
   onClose: () => void;
+  onMarkPublished: () => void;
   onRequestReview: () => void;
   onSaveDraft: () => void;
 }) {
@@ -178,6 +187,31 @@ export function SocialPostDraftReviewModal({
                   <dd>{draft.publicationPlan.utm.content}</dd>
                 </div>
               </dl>
+              <div className={styles.publishForm}>
+                <label>
+                  <span>Published post URL</span>
+                  <input
+                    disabled={publicationStatus === "published"}
+                    placeholder="https://linevoom.line.me/post/..."
+                    type="url"
+                    value={publishedUrl}
+                    onChange={(event) => setPublishedUrl(event.currentTarget.value)}
+                  />
+                </label>
+                <button
+                  disabled={!canPublish || publicationStatus === "saving" || publicationStatus === "published"}
+                  type="button"
+                  onClick={onMarkPublished}
+                >
+                  {publicationStatus === "published" ? <CheckCircle2 size={14} /> : <Send size={14} />}
+                  <span>{formatPublicationStatus(publicationStatus)}</span>
+                </button>
+                {publicationStatus === "published" && publication?.publishedUrl ? (
+                  <a href={publication.publishedUrl} rel="noreferrer" target="_blank">
+                    Open published post
+                  </a>
+                ) : null}
+              </div>
             </div>
             <div className={styles.mediaPlan}>
               <div className={styles.planHeader}>

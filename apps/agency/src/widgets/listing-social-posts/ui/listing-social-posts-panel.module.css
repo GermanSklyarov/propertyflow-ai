@@ -486,6 +486,77 @@
   overflow-wrap: anywhere;
 }
 
+.publishForm {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  padding: 0 10px;
+}
+
+.publishForm label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.publishForm label span {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.publishForm input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 9px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.publishForm button,
+.publishForm a {
+  display: inline-flex;
+  min-height: 36px;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  padding: 0 10px;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.publishForm button {
+  background: var(--teal);
+  color: #fff;
+  cursor: pointer;
+}
+
+.publishForm button:not(:disabled):hover,
+.publishForm button:not(:disabled):focus-visible {
+  background: var(--teal-dark);
+}
+
+.publishForm button:disabled {
+  cursor: default;
+  opacity: 0.64;
+}
+
+.publishForm a {
+  background: #ecfdf3;
+  color: var(--teal-dark);
+}
+
 .workflowPlan {
   display: grid;
   min-width: 0;

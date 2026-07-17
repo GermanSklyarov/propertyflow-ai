@@ -37,6 +37,7 @@ export function SocialPostDraftCard({
   const [cta, setCta] = useState(draft.cta);
   const [hashtags, setHashtags] = useState(draft.hashtags.join(" "));
   const [hook, setHook] = useState(draft.hook);
+  const [publishedUrl, setPublishedUrl] = useState(publication?.publishedUrl ?? "");
   const [copied, setCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [publicationStatus, setPublicationStatus] = useState<SocialPostPublicationStatus>(initialPublicationStatus);
@@ -65,6 +66,7 @@ export function SocialPostDraftCard({
     setCta(draft.cta);
     setHashtags(initialHashtags);
     setHook(draft.hook);
+    setPublishedUrl(publication?.publishedUrl ?? "");
     setCopied(false);
     setDetailsOpen(false);
     setPublicationStatus(initialPublicationStatus);
@@ -79,7 +81,7 @@ export function SocialPostDraftCard({
     window.setTimeout(() => setCopied(false), 1600);
   }
 
-  async function markPublished() {
+  async function markPublished(nextPublishedUrl: string) {
     if (!canPublish) {
       return;
     }
@@ -90,6 +92,7 @@ export function SocialPostDraftCard({
       await recordPropertySocialPostPublication(propertyId, {
         channel: draft.channel,
         locale: draft.locale,
+        publishedUrl: nextPublishedUrl.trim() || undefined,
         trackingSlug: draft.publicationPlan.trackingSlug,
         utm: draft.publicationPlan.utm
       });
@@ -192,7 +195,7 @@ export function SocialPostDraftCard({
           className={`${styles.actionButton} ${styles.secondaryAction}`}
           disabled={!canPublish || publicationStatus === "saving" || isPublished}
           type="button"
-          onClick={markPublished}
+          onClick={() => setDetailsOpen(true)}
         >
           {publicationStatus === "published" ? <CheckCircle2 size={14} /> : <Send size={14} />}
           <span>{formatPublicationStatus(publicationStatus)}</span>
@@ -202,6 +205,7 @@ export function SocialPostDraftCard({
         <SocialPostDraftReviewModal
           body={body}
           canApprove={canApprove}
+          canPublish={canPublish}
           canRequestReview={canRequestReview}
           cta={cta}
           draft={draft}
@@ -209,16 +213,19 @@ export function SocialPostDraftCard({
           hook={hook}
           publication={publication}
           publicationStatus={publicationStatus}
+          publishedUrl={publishedUrl}
           reviewActionStatus={reviewActionStatus}
           saveDraftStatus={saveDraftStatus}
           setBody={setBody}
           setCta={setCta}
           setHashtags={setHashtags}
           setHook={setHook}
+          setPublishedUrl={setPublishedUrl}
           workflowStage={workflowStage}
           workflowStages={workflowStages}
           onApprove={() => recordReviewStatus("approved")}
           onClose={() => setDetailsOpen(false)}
+          onMarkPublished={() => markPublished(publishedUrl)}
           onRequestReview={() => recordReviewStatus("review")}
           onSaveDraft={saveDraftOverride}
         />
