@@ -142,6 +142,7 @@
   background: #fff;
   padding: 14px;
   color: inherit;
+  text-decoration: none;
 }
 
 .leadRow:hover {
@@ -205,13 +206,25 @@
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.45;
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
 }
 
-.contactRow,
-.leadSignals {
+.contactRow {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.leadSignals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 8px;
+  align-content: start;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .contactRow span,
@@ -234,6 +247,7 @@
 }
 
 .contactRow span {
+  flex: 0 1 320px;
   white-space: normal;
 }
 
@@ -241,6 +255,10 @@
 .priorityPill,
 .followUpPill {
   white-space: nowrap;
+}
+
+.followUpPill {
+  white-space: normal;
 }
 
 .priorityPill {
@@ -293,8 +311,8 @@
   display: grid;
   align-content: start;
   gap: 6px;
-  border-left: 3px solid rgb(15 118 110 / 18%);
-  padding-left: 12px;
+  border-top: 1px solid rgb(15 118 110 / 14%);
+  padding-top: 12px;
 }
 
 .ownerCell strong {
@@ -307,14 +325,31 @@
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
+  .ownerCell {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    column-gap: 14px;
+  }
+}
+
+@media (min-width: 1180px) {
   .board {
     grid-template-columns: 280px minmax(0, 1fr);
   }
 }
 
-@media (min-width: 1180px) {
+@media (min-width: 1500px) {
   .leadRow {
-    grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.65fr) minmax(120px, 0.35fr);
+    grid-template-columns: minmax(420px, 1.25fr) minmax(290px, 0.65fr) minmax(170px, 0.35fr);
     align-items: center;
+  }
+
+  .ownerCell {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+    border-top: 0;
+    border-left: 3px solid rgb(15 118 110 / 18%);
+    padding-top: 0;
+    padding-left: 12px;
   }
 }
