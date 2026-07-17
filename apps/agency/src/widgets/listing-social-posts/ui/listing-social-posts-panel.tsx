@@ -1,4 +1,9 @@
-import type { PropertySocialPostChannel, PropertySocialPostDraft, PropertySocialPostLocale } from "@propertyflow/contracts";
+import type {
+  PropertySocialPostChannel,
+  PropertySocialPostDraft,
+  PropertySocialPostLocale,
+  PropertySocialPostPublicationListResponse
+} from "@propertyflow/contracts";
 import { SocialPostDraftCard } from "./social-post-draft-card";
 import styles from "./listing-social-posts-panel.module.css";
 
@@ -18,11 +23,13 @@ const localeOptions = [
 export function ListingSocialPostsPanel({
   drafts,
   propertyId,
+  publications,
   selectedChannels,
   selectedLocale
 }: {
   drafts: PropertySocialPostDraft[];
   propertyId: string;
+  publications: PropertySocialPostPublicationListResponse;
   selectedChannels: PropertySocialPostChannel[];
   selectedLocale: PropertySocialPostLocale;
 }) {
@@ -65,6 +72,25 @@ export function ListingSocialPostsPanel({
           Generate variants
         </button>
       </form>
+      <div className={styles.publicationHistory}>
+        <div>
+          <strong>{publications.total} published posts</strong>
+          <span>Tracked for lead attribution</span>
+        </div>
+        {publications.items.length ? (
+          <ul>
+            {publications.items.slice(0, 4).map((item) => (
+              <li key={item.id}>
+                <span>{formatChannel(item.channel)}</span>
+                <strong title={item.trackingSlug}>{shortenTrackingSlug(item.trackingSlug)}</strong>
+                <time dateTime={item.publishedAt}>{formatDate(item.publishedAt)}</time>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No social posts have been marked as published yet.</p>
+        )}
+      </div>
       <div className={styles.grid}>
         {drafts.map((draft) => (
           <SocialPostDraftCard draft={draft} key={`${draft.channel}-${draft.locale}`} propertyId={propertyId} />
@@ -72,4 +98,21 @@ export function ListingSocialPostsPanel({
       </div>
     </section>
   );
+}
+
+function formatChannel(channel: PropertySocialPostChannel) {
+  return channel === "line-voom" ? "LINE VOOM" : channel === "facebook" ? "Facebook" : "Instagram";
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date(value));
+}
+
+function shortenTrackingSlug(value: string) {
+  return value.length > 34 ? `${value.slice(0, 15)}...${value.slice(-12)}` : value;
 }

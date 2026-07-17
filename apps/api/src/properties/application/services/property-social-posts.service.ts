@@ -10,6 +10,7 @@ import type {
   PropertySocialPostPublicationPlan,
   PropertySocialPostReadinessCheck,
   PropertySocialPostLocale,
+  PropertySocialPostPublicationListResponse,
   RecordPropertySocialPostPublicationRequest,
   RecordPropertySocialPostPublicationResponse,
   RequestUser
@@ -143,6 +144,22 @@ export class PropertySocialPostsService {
 
     return {
       publication: await this.publications.record(tenantId, propertyId, request, user)
+    };
+  }
+
+  async listPublications(tenantId: string, propertyId: string): Promise<PropertySocialPostPublicationListResponse> {
+    const property = await this.properties.findById(tenantId, propertyId);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    const items = await this.publications.listByPropertyId(tenantId, propertyId);
+
+    return {
+      items,
+      propertyId,
+      total: items.length
     };
   }
 }

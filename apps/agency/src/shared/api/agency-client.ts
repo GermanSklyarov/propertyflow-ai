@@ -42,6 +42,7 @@ import type {
   PropertyProjectSearchResponse,
   PropertySearchRequest,
   PropertySearchResponse,
+  PropertySocialPostPublicationListResponse,
   ReviewAiAssetRequest,
   RunListingAssistantRequest,
   RunListingAssistantResponse,
@@ -571,6 +572,25 @@ export async function recordPropertySocialPostPublication(
   }
 
   return (await response.json()) as RecordPropertySocialPostPublicationResponse;
+}
+
+export async function listPropertySocialPostPublications(
+  propertyId: string
+): Promise<PropertySocialPostPublicationListResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/publications`, {
+      headers: demoHeaders,
+      next: { revalidate: 10 }
+    });
+
+    if (!response.ok) {
+      return { items: [], propertyId, total: 0 };
+    }
+
+    return (await response.json()) as PropertySocialPostPublicationListResponse;
+  } catch {
+    return { items: [], propertyId, total: 0 };
+  }
 }
 
 export async function reviewPropertyImageAnalysisAsset(

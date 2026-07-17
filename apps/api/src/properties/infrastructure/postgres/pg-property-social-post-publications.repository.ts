@@ -30,6 +30,21 @@ interface PropertySocialPostPublicationRow {
 export class PgPropertySocialPostPublicationsRepository implements PropertySocialPostPublicationsRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  async listByPropertyId(tenantId: string, propertyId: string): Promise<PropertySocialPostPublication[]> {
+    const result = await this.pool.query<PropertySocialPostPublicationRow>(
+      `
+        select *
+        from property_social_post_publications
+        where tenant_id = $1
+          and property_id = $2
+        order by published_at desc
+      `,
+      [tenantId, propertyId]
+    );
+
+    return result.rows.map((row) => this.toSnapshot(row));
+  }
+
   async record(
     tenantId: string,
     propertyId: string,

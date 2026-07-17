@@ -14,6 +14,7 @@ import type {
   LeadSnapshot,
   PricingModelRegistryResponse,
   PricingTrainingDatasetResponse,
+  PropertySocialPostPublicationListResponse,
   RecordPropertySocialPostPublicationResponse,
   PropertyAiAssets,
   PropertyComparisonResponse,
@@ -1198,6 +1199,31 @@ export class PropertiesController {
         channels: result.drafts.map((draft) => draft.channel),
         locale: result.locale,
         readyDrafts: result.drafts.filter((draft) => draft.status === "ready").length
+      }
+    });
+
+    return result;
+  }
+
+  @Get(":propertyId/social-posts/publications")
+  @ApiOperation({ summary: "List published social posts for a property" })
+  @ApiOkResponse({ description: "Published social post tracking history" })
+  @Roles("agent", "broker", "manager", "admin")
+  async listSocialPostPublications(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string
+  ): Promise<PropertySocialPostPublicationListResponse> {
+    const result = await this.socialPosts.listPublications(tenantId, propertyId);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.social_post_publications_viewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        total: result.total
       }
     });
 

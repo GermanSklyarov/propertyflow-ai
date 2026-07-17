@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Clipboard, Hash, Link2, Megaphone, MessageCircle, Pencil, Send, Sparkles, Workflow } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft } from "@propertyflow/contracts";
@@ -8,6 +9,7 @@ import { recordPropertySocialPostPublication } from "@shared/api/agency-client";
 import styles from "./listing-social-posts-panel.module.css";
 
 export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySocialPostDraft; propertyId: string }) {
+  const router = useRouter();
   const [body, setBody] = useState(draft.body);
   const [cta, setCta] = useState(draft.cta);
   const [hashtags, setHashtags] = useState(draft.hashtags.join(" "));
@@ -49,6 +51,7 @@ export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySoci
         utm: draft.publicationPlan.utm
       });
       setPublicationStatus("published");
+      router.refresh();
     } catch {
       setPublicationStatus("error");
     }

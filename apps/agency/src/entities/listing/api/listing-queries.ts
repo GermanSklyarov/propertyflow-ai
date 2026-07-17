@@ -2,6 +2,7 @@ import type { GeneratePropertySocialPostsRequest, PropertySearchRequest } from "
 import { queryOptions } from "@tanstack/react-query";
 import {
   generatePropertySocialPostDrafts,
+  listPropertySocialPostPublications,
   getProperty,
   getPropertyAiAssets,
   getPropertyImages,
@@ -43,5 +44,12 @@ export function listingSocialPostsQueryOptions(propertyId: string, request: Gene
   return queryOptions({
     queryKey: queryKeys.listings.socialPosts(propertyId, request),
     queryFn: () => generatePropertySocialPostDrafts(propertyId, request)
+  });
+}
+
+export function listingSocialPostPublicationsQueryOptions(propertyId: string) {
+  return queryOptions({
+    queryKey: [...queryKeys.listings.socialPosts(propertyId, {}), "publications"],
+    queryFn: () => listPropertySocialPostPublications(propertyId)
   });
 }

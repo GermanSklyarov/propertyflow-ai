@@ -7,6 +7,7 @@ import type {
 export const PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY = Symbol("PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY");
 
 export interface PropertySocialPostPublicationsRepository {
+  listByPropertyId(tenantId: string, propertyId: string): Promise<PropertySocialPostPublication[]>;
   record(
     tenantId: string,
     propertyId: string,

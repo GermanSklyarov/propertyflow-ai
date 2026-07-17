@@ -84,6 +84,26 @@ function createService(property: PropertySnapshot | null = listing, images = gal
     listByPropertyId: vi.fn().mockResolvedValue(images)
   } as unknown as PropertyImagesRepository;
   const publicationRepository = {
+    listByPropertyId: vi.fn().mockResolvedValue([
+      {
+        channel: "line-voom",
+        createdByUserId: user.id,
+        createdByUserRole: user.role,
+        id: "publication-1",
+        locale: "en",
+        propertyId: "property-1",
+        publishedAt: "2026-07-17T01:00:00.000Z",
+        status: "published",
+        tenantId: "demo-agency",
+        trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+        utm: {
+          campaign: "pattaya-sale-or-rent-property-1",
+          content: "line-voom-en",
+          medium: "social",
+          source: "line-voom"
+        }
+      }
+    ]),
     record: vi.fn().mockResolvedValue({
       channel: "line-voom",
       createdByUserId: user.id,
@@ -256,5 +276,43 @@ describe("PropertySocialPostsService", () => {
         }
       }, user)
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("lists social post publications for a visible listing", async () => {
+    const { publicationRepository, service } = createService();
+
+    const response = await service.listPublications("demo-agency", "property-1");
+
+    expect(response).toEqual({
+      items: [
+        {
+          channel: "line-voom",
+          createdByUserId: "manager-demo-1",
+          createdByUserRole: "manager",
+          id: "publication-1",
+          locale: "en",
+          propertyId: "property-1",
+          publishedAt: "2026-07-17T01:00:00.000Z",
+          status: "published",
+          tenantId: "demo-agency",
+          trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+          utm: {
+            campaign: "pattaya-sale-or-rent-property-1",
+            content: "line-voom-en",
+            medium: "social",
+            source: "line-voom"
+          }
+        }
+      ],
+      propertyId: "property-1",
+      total: 1
+    });
+    expect(publicationRepository.listByPropertyId).toHaveBeenCalledWith("demo-agency", "property-1");
+  });
+
+  it("does not list social publications for a hidden listing", async () => {
+    const { service } = createService(null);
+
+    await expect(service.listPublications("demo-agency", "missing")).rejects.toBeInstanceOf(NotFoundException);
   });
 });

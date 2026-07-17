@@ -15,6 +15,7 @@ import type {
   PropertyImageGalleryResponse,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
+  PropertySocialPostPublicationListResponse,
   PropertySocialPostLocale
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -37,6 +38,7 @@ export function ListingDetailPage({
   selectedSocialChannels,
   selectedSocialLocale,
   socialPostDrafts,
+  socialPostPublications,
   queuedImageAnalysis = false
 }: {
   appliedDescriptionAssetId?: string;
@@ -48,6 +50,7 @@ export function ListingDetailPage({
   selectedSocialChannels: PropertySocialPostChannel[];
   selectedSocialLocale: PropertySocialPostLocale;
   socialPostDrafts: PropertySocialPostDraft[];
+  socialPostPublications: PropertySocialPostPublicationListResponse;
   queuedImageAnalysis?: boolean;
 }) {
   const media = buildListingMediaSummary(gallery);
@@ -96,6 +99,7 @@ export function ListingDetailPage({
 
         <ListingSocialPostsPanel
           drafts={socialPostDrafts}
+          publications={socialPostPublications}
           propertyId={listing.id}
           selectedChannels={selectedSocialChannels}
           selectedLocale={selectedSocialLocale}

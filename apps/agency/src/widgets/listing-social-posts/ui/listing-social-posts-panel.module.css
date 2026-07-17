@@ -109,6 +109,74 @@
   background: var(--teal-dark);
 }
 
+.publicationHistory {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 12px;
+}
+
+.publicationHistory > div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.publicationHistory strong {
+  color: var(--teal-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.publicationHistory span,
+.publicationHistory p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.publicationHistory ul {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.publicationHistory li {
+  display: grid;
+  min-width: 180px;
+  max-width: 100%;
+  gap: 3px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f6fbf9;
+  padding: 8px;
+}
+
+.publicationHistory li span,
+.publicationHistory time {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.publicationHistory li strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .grid {
   display: grid;
   align-items: stretch;
