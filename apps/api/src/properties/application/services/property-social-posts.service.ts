@@ -3,6 +3,7 @@ import type {
   GeneratePropertySocialPostsRequest,
   GeneratePropertySocialPostsResponse,
   PropertyImageSnapshot,
+  PropertySocialPostApprovalWorkflow,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostMediaPlan,
@@ -138,9 +139,11 @@ function buildDraft(
   const mediaPlan = buildMediaPlan(channel, gallery, publicPhotoCount);
   const publicationPlan = buildPublicationPlan(listing, channel, locale);
   const readiness = buildReadiness(listing, hashtags, mediaPlan);
+  const approvalWorkflow = buildApprovalWorkflow(readiness);
 
   if (channel === "line-voom") {
     return {
+      approvalWorkflow,
       body: `${projectLine}. ${priceLine}. ${amenityLine} ${description}`,
       channel,
       cta: copy.lineVoomCta,
@@ -157,6 +160,7 @@ function buildDraft(
 
   if (channel === "facebook") {
     return {
+      approvalWorkflow,
       body: copy.facebookBody(listing.title, formatListingType(listing.listingType, locale), market, description, amenityLine),
       channel,
       cta: copy.facebookCta,
@@ -172,6 +176,7 @@ function buildDraft(
   }
 
   return {
+    approvalWorkflow,
     body: copy.instagramBody(market, priceLine, amenityLine),
     channel,
     cta: copy.instagramCta,
@@ -183,6 +188,36 @@ function buildDraft(
     publicationPlan,
     readiness,
     status
+  };
+}
+
+function buildApprovalWorkflow(readiness: PropertySocialPostReadinessCheck[]): PropertySocialPostApprovalWorkflow {
+  const blockers = readiness.filter((check) => !check.ready);
+
+  if (blockers.length) {
+    return {
+      allowedActions: [],
+      currentStage: "review",
+      reviewNote: `Resolve ${blockers.map((check) => check.key).join(", ")} before approval.`,
+      stages: [
+        { key: "draft", label: "Draft", state: "complete" },
+        { key: "review", label: "Review", state: "current" },
+        { key: "approved", label: "Approved", state: "blocked" },
+        { key: "published", label: "Published", state: "blocked" }
+      ]
+    };
+  }
+
+  return {
+    allowedActions: ["request-review", "approve"],
+    currentStage: "draft",
+    reviewNote: "Ready for agent review and manager approval.",
+    stages: [
+      { key: "draft", label: "Draft", state: "current" },
+      { key: "review", label: "Review", state: "pending" },
+      { key: "approved", label: "Approved", state: "pending" },
+      { key: "published", label: "Published", state: "pending" }
+    ]
   };
 }
 

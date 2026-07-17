@@ -306,6 +306,92 @@
   overflow-wrap: anywhere;
 }
 
+.workflowPlan {
+  display: grid;
+  min-width: 0;
+  gap: 9px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 10px;
+}
+
+.workflowHeader {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--teal-dark);
+}
+
+.workflowHeader strong {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.workflowPlan ol {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflowPlan li {
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 12%);
+  padding: 7px 6px;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.workflowCurrent {
+  background: var(--teal);
+  color: #fff;
+}
+
+.workflowComplete {
+  background: #ecfdf3;
+  color: #14785d;
+}
+
+.workflowPending {
+  background: #f6fbf9;
+  color: var(--muted);
+}
+
+.workflowBlocked {
+  background: #fff1ed;
+  color: #a33b32;
+}
+
+.workflowPlan p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.workflowActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.workflowActions span {
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #ecfdf3;
+  padding: 6px 8px;
+  color: var(--teal-dark);
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .mediaPlan {
   display: grid;
   min-width: 0;
@@ -487,5 +573,9 @@
 @media (max-width: 520px) {
   .publicationPlan dl {
     grid-template-columns: 1fr;
+  }
+
+  .workflowPlan ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

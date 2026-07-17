@@ -114,6 +114,17 @@ describe("PropertySocialPostsService", () => {
         source: "line-voom"
       }
     });
+    expect(response.drafts[0].approvalWorkflow).toEqual({
+      allowedActions: ["request-review", "approve"],
+      currentStage: "draft",
+      reviewNote: "Ready for agent review and manager approval.",
+      stages: [
+        { key: "draft", label: "Draft", state: "current" },
+        { key: "review", label: "Review", state: "pending" },
+        { key: "approved", label: "Approved", state: "pending" },
+        { key: "published", label: "Published", state: "pending" }
+      ]
+    });
     expect(response.drafts[0].readiness).toEqual([
       { key: "copy", label: "Listing copy available", ready: true },
       { key: "media", label: "3 photos selected", ready: true },
@@ -133,6 +144,9 @@ describe("PropertySocialPostsService", () => {
     expect(response.drafts[0].mediaPlan.warnings).toContain("Add public gallery photos before publishing this post.");
     expect(response.drafts[0].readiness).toContainEqual({ key: "copy", label: "Description missing", ready: false });
     expect(response.drafts[0].readiness).toContainEqual({ key: "media", label: "Gallery photos missing", ready: false });
+    expect(response.drafts[0].approvalWorkflow.allowedActions).toEqual([]);
+    expect(response.drafts[0].approvalWorkflow.currentStage).toBe("review");
+    expect(response.drafts[0].approvalWorkflow.reviewNote).toBe("Resolve copy, media before approval.");
   });
 
   it("uses locale-specific copy when a locale is requested", async () => {

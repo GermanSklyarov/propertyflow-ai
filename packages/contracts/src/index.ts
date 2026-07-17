@@ -1202,7 +1202,23 @@ export interface PropertySocialPostPublicationPlan {
   utm: PropertySocialPostUtm;
 }
 
+export type PropertySocialPostWorkflowStageKey = "draft" | "review" | "approved" | "published";
+
+export interface PropertySocialPostWorkflowStage {
+  key: PropertySocialPostWorkflowStageKey;
+  label: string;
+  state: "complete" | "current" | "pending" | "blocked";
+}
+
+export interface PropertySocialPostApprovalWorkflow {
+  allowedActions: Array<"request-review" | "approve" | "publish">;
+  currentStage: PropertySocialPostWorkflowStageKey;
+  reviewNote: string;
+  stages: PropertySocialPostWorkflowStage[];
+}
+
 export interface PropertySocialPostDraft {
+  approvalWorkflow: PropertySocialPostApprovalWorkflow;
   body: string;
   channel: PropertySocialPostChannel;
   cta: string;

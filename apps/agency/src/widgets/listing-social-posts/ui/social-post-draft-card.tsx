@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Clipboard, Hash, Link2, Megaphone, MessageCircle, Pencil, Sparkles } from "lucide-react";
+import { CheckCircle2, Clipboard, Hash, Link2, Megaphone, MessageCircle, Pencil, Sparkles, Workflow } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft } from "@propertyflow/contracts";
@@ -84,6 +84,27 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
           </div>
         </dl>
       </div>
+      <div className={styles.workflowPlan}>
+        <div className={styles.workflowHeader}>
+          <Workflow size={15} />
+          <strong>Approval flow</strong>
+        </div>
+        <ol>
+          {draft.approvalWorkflow.stages.map((stage) => (
+            <li className={styles[`workflow${capitalizeWorkflowState(stage.state)}`]} key={stage.key}>
+              {stage.label}
+            </li>
+          ))}
+        </ol>
+        <p>{draft.approvalWorkflow.reviewNote}</p>
+        {draft.approvalWorkflow.allowedActions.length ? (
+          <div className={styles.workflowActions}>
+            {draft.approvalWorkflow.allowedActions.map((action) => (
+              <span key={action}>{formatWorkflowAction(action)}</span>
+            ))}
+          </div>
+        ) : null}
+      </div>
       <div className={styles.mediaPlan}>
         <strong>{draft.mediaPlan.summary}</strong>
         {draft.mediaPlan.items.length ? (
@@ -136,4 +157,15 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
       </div>
     </article>
   );
+}
+
+function capitalizeWorkflowState(value: PropertySocialPostDraft["approvalWorkflow"]["stages"][number]["state"]) {
+  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
+}
+
+function formatWorkflowAction(action: PropertySocialPostDraft["approvalWorkflow"]["allowedActions"][number]) {
+  return action
+    .split("-")
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
 }
