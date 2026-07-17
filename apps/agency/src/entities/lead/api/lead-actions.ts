@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { LeadPriority, LeadStatus } from "@propertyflow/contracts";
-import { addLeadNote, updateLeadFollowUp, updateLeadStatus } from "@shared/api/agency-client";
+import { addLeadNote, assignLead, updateLeadFollowUp, updateLeadStatus } from "@shared/api/agency-client";
 
 export async function addLeadNoteAction(leadId: string, formData: FormData) {
   const note = String(formData.get("note") ?? "").trim();
@@ -46,6 +46,19 @@ export async function updateLeadFollowUpAction(leadId: string, formData: FormDat
     priority: priority || undefined,
     nextFollowUpAt: nextFollowUpAt ? new Date(nextFollowUpAt).toISOString() : undefined
   });
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+}
+
+export async function assignLeadAction(leadId: string, formData: FormData) {
+  const assignedAgentId = String(formData.get("assignedAgentId") ?? "").trim();
+
+  if (!assignedAgentId) {
+    throw new Error("Choose an agent.");
+  }
+
+  await assignLead(leadId, { assignedAgentId });
 
   revalidatePath("/leads");
   revalidatePath(`/leads/${leadId}`);

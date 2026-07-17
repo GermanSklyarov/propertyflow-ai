@@ -1,14 +1,15 @@
 import { CalendarClock, GitBranch, Save } from "lucide-react";
-import { updateLeadFollowUpAction, updateLeadStatusAction } from "@entities/lead/api/lead-actions";
+import { assignLeadAction, updateLeadFollowUpAction, updateLeadStatusAction } from "@entities/lead/api/lead-actions";
 import {
   formatLeadFollowUpDateTimeLocalValue,
   leadWorkflowPriorityOptions,
   leadWorkflowStatusOptions
 } from "@features/lead-workflow-update/model/lead-workflow";
-import type { LeadSnapshot } from "@propertyflow/contracts";
+import type { LeadSnapshot, TenantUserSnapshot } from "@propertyflow/contracts";
 import styles from "./lead-workflow-panel.module.css";
 
-export function LeadWorkflowPanel({ lead }: { lead: LeadSnapshot }) {
+export function LeadWorkflowPanel({ agents, lead }: { agents: TenantUserSnapshot[]; lead: LeadSnapshot }) {
+  const assignAction = assignLeadAction.bind(null, lead.id);
   const statusAction = updateLeadStatusAction.bind(null, lead.id);
   const followUpAction = updateLeadFollowUpAction.bind(null, lead.id);
 
@@ -69,6 +70,30 @@ export function LeadWorkflowPanel({ lead }: { lead: LeadSnapshot }) {
           <button type="submit">
             <Save size={16} />
             Save follow-up
+          </button>
+        </form>
+
+        <form action={assignAction} className={styles.actionCard}>
+          <div className={styles.actionTitle}>
+            <GitBranch size={17} />
+            <span>Owner assignment</span>
+          </div>
+          <label>
+            <span>Agent</span>
+            <select defaultValue={lead.assignedAgentId ?? ""} name="assignedAgentId">
+              <option value="" disabled>
+                Choose agent
+              </option>
+              {agents.map((agent) => (
+                <option key={agent.id} value={agent.id}>
+                  {agent.name} · {agent.role}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit">
+            <Save size={16} />
+            Assign lead
           </button>
         </form>
       </div>

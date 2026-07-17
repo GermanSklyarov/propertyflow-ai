@@ -5,6 +5,7 @@ export const queryKeys = {
   },
   leads: {
     all: ["leads"] as const,
+    agents: () => [...queryKeys.leads.all, "agents"] as const,
     detail: (leadId: string) => [...queryKeys.leads.all, "detail", leadId] as const,
     list: (filters: object) => [...queryKeys.leads.all, "list", filters] as const,
     notes: (leadId: string) => [...queryKeys.leads.all, "notes", leadId] as const,

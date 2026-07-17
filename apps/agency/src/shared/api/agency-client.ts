@@ -3,6 +3,7 @@ import type {
   BackgroundJobMonitorItem,
   BackgroundJobSnapshot,
   BackgroundJobState,
+  AssignLeadRequest,
   GeneratePropertySocialPostsRequest,
   GeneratePropertySocialPostsResponse,
   RecordPropertySocialPostPublicationRequest,
@@ -58,6 +59,7 @@ import type {
   SavedSearchOpportunitiesResponse,
   TenantDashboardMetrics,
   TenantSnapshot,
+  TenantUserSnapshot,
   TenantUsageResponse,
   UpdateLeadFollowUpRequest,
   UpdateLeadStatusRequest,
@@ -356,6 +358,23 @@ export async function getLeadNotes(leadId: string): Promise<LeadNotesResponse> {
   }
 }
 
+export async function listLeadAgents(): Promise<TenantUserSnapshot[]> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/leads/agents`, {
+      headers: demoHeaders,
+      next: { revalidate: 60 }
+    });
+
+    if (!response.ok) {
+      return demoLeadAgents();
+    }
+
+    return (await response.json()) as TenantUserSnapshot[];
+  } catch {
+    return demoLeadAgents();
+  }
+}
+
 export async function addLeadNote(leadId: string, payload: CreateLeadNoteRequest): Promise<LeadNoteSnapshot> {
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/notes`, {
     method: "POST",
@@ -402,6 +421,23 @@ export async function updateLeadFollowUp(leadId: string, payload: UpdateLeadFoll
 
   if (!response.ok) {
     throw new Error(`Failed to update lead follow-up: ${response.status}`);
+  }
+
+  return (await response.json()) as LeadSnapshot;
+}
+
+export async function assignLead(leadId: string, payload: AssignLeadRequest): Promise<LeadSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/assign`, {
+    method: "PATCH",
+    headers: {
+      ...demoHeaders,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to assign lead: ${response.status}`);
   }
 
   return (await response.json()) as LeadSnapshot;
@@ -1419,6 +1455,38 @@ function demoLeadQueueSummaryResponse(filters: ListLeadsRequest): LeadQueueSumma
 
 function demoLeadById(leadId: string) {
   return demoLeadListResponse().items.find((lead) => lead.id === leadId) ?? null;
+}
+
+function demoLeadAgents(): TenantUserSnapshot[] {
+  return [
+    {
+      id: "agent-demo-1",
+      tenantId: demoHeaders["x-tenant-id"],
+      name: "Agent 1",
+      email: "agent1@propertyflow.test",
+      role: "agent",
+      status: "active",
+      createdAt: "2026-01-01T00:00:00.000Z"
+    },
+    {
+      id: "agent-demo-2",
+      tenantId: demoHeaders["x-tenant-id"],
+      name: "Agent 2",
+      email: "agent2@propertyflow.test",
+      role: "agent",
+      status: "active",
+      createdAt: "2026-01-01T00:00:00.000Z"
+    },
+    {
+      id: "manager-demo-1",
+      tenantId: demoHeaders["x-tenant-id"],
+      name: "Manager",
+      email: "manager@propertyflow.test",
+      role: "manager",
+      status: "active",
+      createdAt: "2026-01-01T00:00:00.000Z"
+    }
+  ];
 }
 
 function demoLeadTimelineResponse(leadId: string): LeadTimelineResponse {

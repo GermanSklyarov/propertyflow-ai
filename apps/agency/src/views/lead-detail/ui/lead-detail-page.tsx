@@ -1,17 +1,19 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { LeadWorkflowPanel } from "@features/lead-workflow-update/ui/lead-workflow-panel";
-import type { LeadNotesResponse, LeadSnapshot, LeadTimelineResponse } from "@propertyflow/contracts";
+import type { LeadNotesResponse, LeadSnapshot, LeadTimelineResponse, TenantUserSnapshot } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import { LeadActivityPanel } from "@widgets/lead-activity/ui/lead-activity-panel";
 import { LeadOverviewPanel } from "@widgets/lead-overview/ui/lead-overview-panel";
 import styles from "./lead-detail-page.module.css";
 
 export function LeadDetailPage({
+  agents,
   lead,
   notes,
   timeline
 }: {
+  agents: TenantUserSnapshot[];
   lead: LeadSnapshot;
   notes: LeadNotesResponse;
   timeline: LeadTimelineResponse;
@@ -34,7 +36,7 @@ export function LeadDetailPage({
 
         <LeadOverviewPanel lead={lead} />
 
-        <LeadWorkflowPanel lead={lead} />
+        <LeadWorkflowPanel agents={agents} lead={lead} />
 
         <LeadActivityPanel leadId={lead.id} notes={notes} timeline={timeline} />
       </div>
