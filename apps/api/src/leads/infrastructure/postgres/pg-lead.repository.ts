@@ -493,8 +493,10 @@ export class PgLeadRepository implements LeadRepository {
           and ($5::boolean = false or assigned_agent_id is null)
           and ($6::text is null or priority = $6)
           and ($7::timestamptz is null or next_follow_up_at <= $7)
+          and ($8::text is null or property_id = $8)
+          and ($9::text is null or attribution_social_post_tracking_slug = $9)
         order by next_follow_up_at asc nulls last, updated_at desc, created_at desc
-        limit $8
+        limit $10
       `,
       [
         tenantId,
@@ -504,6 +506,8 @@ export class PgLeadRepository implements LeadRepository {
         request.unassigned ?? false,
         request.priority ?? null,
         request.followUpDueBefore ?? null,
+        request.propertyId ?? null,
+        request.attributionSocialPostTrackingSlug ?? null,
         request.limit ?? 50
       ]
     );

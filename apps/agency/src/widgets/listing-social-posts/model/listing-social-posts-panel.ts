@@ -1,4 +1,5 @@
 import type {
+  LeadSnapshot,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostPublication,
@@ -38,4 +39,8 @@ export function formatSocialPostPublishedAt(value: string) {
 
 export function shortenSocialPostTrackingSlug(value: string) {
   return value.length > 34 ? `${value.slice(0, 15)}...${value.slice(-12)}` : value;
+}
+
+export function countSocialPostLeads(trackingSlug: string, leads: LeadSnapshot[]) {
+  return leads.filter((lead) => lead.attributionSocialPostTrackingSlug === trackingSlug).length;
 }

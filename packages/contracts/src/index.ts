@@ -1680,10 +1680,12 @@ export interface LeadStatusHistoryResponse {
 export interface ListLeadsRequest {
   status?: LeadStatus;
   source?: LeadSource;
+  propertyId?: string;
   assignedAgentId?: string;
   unassigned?: boolean;
   priority?: LeadPriority;
   followUpDueBefore?: string;
+  attributionSocialPostTrackingSlug?: string;
   limit?: number;
 }
 

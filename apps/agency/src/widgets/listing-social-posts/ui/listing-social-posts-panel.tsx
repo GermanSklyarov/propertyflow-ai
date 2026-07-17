@@ -1,4 +1,5 @@
 import type {
+  LeadListResponse,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostLocale,
@@ -10,6 +11,7 @@ import {
   findDraftReview,
   formatSocialPostChannel,
   formatSocialPostPublishedAt,
+  countSocialPostLeads,
   shortenSocialPostTrackingSlug
 } from "../model/listing-social-posts-panel";
 import { SocialPostDraftCard } from "./social-post-draft-card";
@@ -33,6 +35,7 @@ export function ListingSocialPostsPanel({
   propertyId,
   publications,
   reviews,
+  socialPostLeads,
   selectedChannels,
   selectedLocale
 }: {
@@ -40,6 +43,7 @@ export function ListingSocialPostsPanel({
   propertyId: string;
   publications: PropertySocialPostPublicationListResponse;
   reviews: PropertySocialPostReviewListResponse;
+  socialPostLeads: LeadListResponse;
   selectedChannels: PropertySocialPostChannel[];
   selectedLocale: PropertySocialPostLocale;
 }) {
@@ -85,7 +89,7 @@ export function ListingSocialPostsPanel({
       <div className={styles.publicationHistory}>
         <div>
           <strong>{publications.total} published posts</strong>
-          <span>Tracked for lead attribution</span>
+          <span>{socialPostLeads.total} attributed leads</span>
         </div>
         {publications.items.length ? (
           <ul>
@@ -99,6 +103,7 @@ export function ListingSocialPostsPanel({
                 ) : (
                   <em>No URL saved</em>
                 )}
+                <b>{countSocialPostLeads(item.trackingSlug, socialPostLeads.items)} leads</b>
                 <strong title={item.trackingSlug}>{shortenSocialPostTrackingSlug(item.trackingSlug)}</strong>
                 <time dateTime={item.publishedAt}>{formatSocialPostPublishedAt(item.publishedAt)}</time>
               </li>

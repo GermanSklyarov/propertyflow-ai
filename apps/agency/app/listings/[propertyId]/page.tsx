@@ -8,6 +8,7 @@ import {
   listingSocialPostReviewsQueryOptions,
   listingSocialPostsQueryOptions
 } from "@entities/listing/api/listing-queries";
+import { listLeads } from "@shared/api/agency-client";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { ListingDetailPage } from "@views/listing-detail/ui/listing-detail-page";
@@ -53,6 +54,11 @@ export default async function AgencyListingDetailPage({
     queryClient.ensureQueryData(listingSocialPostPublicationsQueryOptions(propertyId)),
     queryClient.ensureQueryData(listingSocialPostReviewsQueryOptions(propertyId))
   ]);
+  const socialPostLeads = await listLeads({
+    limit: 100,
+    propertyId,
+    source: "social-post"
+  });
 
   return (
     <ListingDetailPage
@@ -63,6 +69,7 @@ export default async function AgencyListingDetailPage({
       selectedSocialChannels={socialChannels}
       selectedSocialLocale={socialLocale}
       socialPostDrafts={socialPosts.drafts}
+      socialPostLeads={socialPostLeads}
       socialPostPublications={socialPublications}
       socialPostReviews={socialReviews}
       appliedImageAnalysisAssetId={query.applied === "image-features" ? query.asset : undefined}

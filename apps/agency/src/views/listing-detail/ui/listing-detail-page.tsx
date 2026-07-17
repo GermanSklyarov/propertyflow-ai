@@ -13,6 +13,7 @@ import { ListingProjectUpdatePanel } from "@features/listing-project-update/ui/l
 import type {
   PropertyAiAssets,
   PropertyImageGalleryResponse,
+  LeadListResponse,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostPublicationListResponse,
@@ -40,6 +41,7 @@ export function ListingDetailPage({
   selectedSocialLocale,
   socialPostDrafts,
   socialPostPublications,
+  socialPostLeads,
   socialPostReviews,
   queuedImageAnalysis = false
 }: {
@@ -53,6 +55,7 @@ export function ListingDetailPage({
   selectedSocialLocale: PropertySocialPostLocale;
   socialPostDrafts: PropertySocialPostDraft[];
   socialPostPublications: PropertySocialPostPublicationListResponse;
+  socialPostLeads: LeadListResponse;
   socialPostReviews: PropertySocialPostReviewListResponse;
   queuedImageAnalysis?: boolean;
 }) {
@@ -105,6 +108,7 @@ export function ListingDetailPage({
           publications={socialPostPublications}
           propertyId={listing.id}
           reviews={socialPostReviews}
+          socialPostLeads={socialPostLeads}
           selectedChannels={selectedSocialChannels}
           selectedLocale={selectedSocialLocale}
         />

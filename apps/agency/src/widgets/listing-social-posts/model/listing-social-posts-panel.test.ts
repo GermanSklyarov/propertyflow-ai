@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  LeadSnapshot,
   PropertySocialPostDraft,
   PropertySocialPostPublication,
   PropertySocialPostReview
@@ -8,6 +9,7 @@ import {
   findDraftPublication,
   findDraftReview,
   formatSocialPostChannel,
+  countSocialPostLeads,
   shortenSocialPostTrackingSlug
 } from "./listing-social-posts-panel";
 
@@ -41,5 +43,21 @@ describe("listing social posts panel model", () => {
     expect(formatSocialPostChannel("facebook")).toBe("Facebook");
     expect(shortenSocialPostTrackingSlug("short-slug")).toBe("short-slug");
     expect(shortenSocialPostTrackingSlug("pattaya-sale-or-rent-property-1-line-voom-en")).toBe("pattaya-sale-or...line-voom-en");
+  });
+
+  it("counts attributed leads by social post tracking slug", () => {
+    const leads = [
+      {
+        attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en"
+      },
+      {
+        attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-facebook-en"
+      },
+      {
+        attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en"
+      }
+    ] as LeadSnapshot[];
+
+    expect(countSocialPostLeads("pattaya-sale-or-rent-property-1-line-voom-en", leads)).toBe(2);
   });
 });

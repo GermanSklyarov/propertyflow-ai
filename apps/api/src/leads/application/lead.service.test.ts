@@ -16,6 +16,7 @@ const user = {
 function createService(lead: LeadSnapshot) {
   const leads = {
     create: vi.fn().mockResolvedValue(lead),
+    list: vi.fn().mockResolvedValue([lead]),
     recordStatusEvent: vi.fn().mockResolvedValue({
       id: "status-event-1",
       leadId: lead.id,
@@ -106,6 +107,43 @@ describe("LeadService", () => {
       status: "new",
       tenantId: "demo-agency",
       user
+    });
+  });
+
+  it("lists social-post leads by property and tracking slug", async () => {
+    const lead = {
+      attributionSocialPostChannel: "facebook",
+      attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-facebook-en",
+      contactEmail: "client@example.com",
+      contactName: "Facebook Client",
+      createdAt: "2026-07-17T08:10:00.000Z",
+      id: "lead-2",
+      priority: "medium",
+      propertyId: "property-1",
+      source: "social-post",
+      status: "new",
+      tenantId: "demo-agency",
+      updatedAt: "2026-07-17T08:10:00.000Z"
+    } satisfies LeadSnapshot;
+    const { leads, service } = createService(lead);
+
+    const response = await service.list(
+      "demo-agency",
+      {
+        attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-facebook-en",
+        limit: 100,
+        propertyId: "property-1",
+        source: "social-post"
+      },
+      user
+    );
+
+    expect(response).toEqual({ items: [lead], total: 1 });
+    expect(leads.list).toHaveBeenCalledWith("demo-agency", {
+      attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-facebook-en",
+      limit: 100,
+      propertyId: "property-1",
+      source: "social-post"
     });
   });
 });

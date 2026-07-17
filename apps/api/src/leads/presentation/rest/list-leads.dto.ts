@@ -29,6 +29,11 @@ export class ListLeadsDto implements ListLeadsRequest {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  propertyId?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   assignedAgentId?: string;
 
   @ApiProperty({ required: false })
@@ -52,6 +57,11 @@ export class ListLeadsDto implements ListLeadsRequest {
   @IsOptional()
   @IsISO8601()
   followUpDueBefore?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  attributionSocialPostTrackingSlug?: string;
 
   @ApiProperty({ required: false, minimum: 1, maximum: 100 })
   @IsOptional()

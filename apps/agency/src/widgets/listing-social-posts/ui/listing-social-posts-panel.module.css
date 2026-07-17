@@ -177,6 +177,22 @@
   white-space: nowrap;
 }
 
+.publicationHistory li b {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 26px;
+  align-items: center;
+  border: 1px solid rgb(20 120 93 / 18%);
+  background: #ecfdf3;
+  padding: 0 7px;
+  color: #14785d;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
 .publicationHistory li a,
 .publicationHistory li em {
   display: inline-flex;
