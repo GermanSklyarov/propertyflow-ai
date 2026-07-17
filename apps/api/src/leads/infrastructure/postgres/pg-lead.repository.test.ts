@@ -64,4 +64,48 @@ describe("PgLeadRepository", () => {
       ]
     );
   });
+
+  it("applies social post lead filters to queue summary", async () => {
+    const pool = {
+      query: vi.fn().mockResolvedValue({
+        rows: [
+          {
+            assigned: "1",
+            by_priority: [],
+            by_source: [{ bucket: "social-post", count: 2 }],
+            by_status: [{ bucket: "new", count: 2 }],
+            due_soon_follow_ups: "0",
+            high_priority: "0",
+            open: "2",
+            overdue_follow_ups: "0",
+            total: "2",
+            unassigned: "1"
+          }
+        ]
+      })
+    } as unknown as Pool;
+    const repository = new PgLeadRepository(pool);
+
+    const summary = await repository.getQueueSummary("demo-agency", {
+      attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-facebook-en",
+      propertyId: "10000000-0000-4000-8000-000000000001",
+      source: "social-post"
+    });
+
+    expect(summary.total).toBe(2);
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("property_id::text = $8"),
+      [
+        "demo-agency",
+        null,
+        "social-post",
+        null,
+        false,
+        null,
+        null,
+        "10000000-0000-4000-8000-000000000001",
+        "pattaya-sale-or-rent-property-1-facebook-en"
+      ]
+    );
+  });
 });

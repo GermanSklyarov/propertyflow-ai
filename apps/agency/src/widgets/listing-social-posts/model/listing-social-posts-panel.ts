@@ -44,3 +44,13 @@ export function shortenSocialPostTrackingSlug(value: string) {
 export function countSocialPostLeads(trackingSlug: string, leads: LeadSnapshot[]) {
   return leads.filter((lead) => lead.attributionSocialPostTrackingSlug === trackingSlug).length;
 }
+
+export function buildSocialPostLeadQueueHref(propertyId: string, trackingSlug: string) {
+  const params = new URLSearchParams({
+    attributionSocialPostTrackingSlug: trackingSlug,
+    propertyId,
+    source: "social-post"
+  });
+
+  return `/leads?${params.toString()}`;
+}

@@ -177,7 +177,8 @@
   white-space: nowrap;
 }
 
-.publicationHistory li b {
+.publicationHistory li b,
+.publicationHistory li a[href^="/leads"] {
   display: inline-flex;
   width: max-content;
   max-width: 100%;
@@ -191,6 +192,12 @@
   font-weight: 900;
   line-height: 1;
   text-transform: uppercase;
+}
+
+.publicationHistory li a[href^="/leads"]:hover,
+.publicationHistory li a[href^="/leads"]:focus-visible {
+  background: var(--teal);
+  color: #fff;
 }
 
 .publicationHistory li a,

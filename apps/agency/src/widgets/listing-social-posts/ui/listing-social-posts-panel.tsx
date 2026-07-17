@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type {
   LeadListResponse,
   PropertySocialPostChannel,
@@ -11,6 +12,7 @@ import {
   findDraftReview,
   formatSocialPostChannel,
   formatSocialPostPublishedAt,
+  buildSocialPostLeadQueueHref,
   countSocialPostLeads,
   shortenSocialPostTrackingSlug
 } from "../model/listing-social-posts-panel";
@@ -103,7 +105,9 @@ export function ListingSocialPostsPanel({
                 ) : (
                   <em>No URL saved</em>
                 )}
-                <b>{countSocialPostLeads(item.trackingSlug, socialPostLeads.items)} leads</b>
+                <Link href={buildSocialPostLeadQueueHref(propertyId, item.trackingSlug)}>
+                  {countSocialPostLeads(item.trackingSlug, socialPostLeads.items)} leads
+                </Link>
                 <strong title={item.trackingSlug}>{shortenSocialPostTrackingSlug(item.trackingSlug)}</strong>
                 <time dateTime={item.publishedAt}>{formatSocialPostPublishedAt(item.publishedAt)}</time>
               </li>

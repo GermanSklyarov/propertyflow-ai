@@ -4,10 +4,12 @@ import { LeadsQueuePanel } from "@widgets/leads-queue/ui/leads-queue-panel";
 import styles from "./leads-page.module.css";
 
 export function LeadsPage({
+  activeFilterLabel,
   leads,
   queueSummary,
   total
 }: {
+  activeFilterLabel?: string;
   leads: LeadSnapshot[];
   queueSummary: LeadQueueSummaryResponse;
   total: number;
@@ -25,6 +27,13 @@ export function LeadsPage({
           </div>
           <span className={styles.updated}>Updated {formatDateTime(queueSummary.generatedAt)}</span>
         </header>
+        {activeFilterLabel ? (
+          <div className={styles.activeFilter}>
+            <span>Filtered queue</span>
+            <strong>{activeFilterLabel}</strong>
+            <a href="/leads">Clear filter</a>
+          </div>
+        ) : null}
 
         <LeadsQueuePanel leads={leads} queueSummary={queueSummary} total={total} />
       </div>

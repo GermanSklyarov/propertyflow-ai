@@ -9,6 +9,7 @@ import {
   findDraftPublication,
   findDraftReview,
   formatSocialPostChannel,
+  buildSocialPostLeadQueueHref,
   countSocialPostLeads,
   shortenSocialPostTrackingSlug
 } from "./listing-social-posts-panel";
@@ -59,5 +60,11 @@ describe("listing social posts panel model", () => {
     ] as LeadSnapshot[];
 
     expect(countSocialPostLeads("pattaya-sale-or-rent-property-1-line-voom-en", leads)).toBe(2);
+  });
+
+  it("builds a lead queue URL for a social post tracking slug", () => {
+    expect(buildSocialPostLeadQueueHref("property-1", "pattaya-sale-or-rent-property-1-line-voom-en")).toBe(
+      "/leads?attributionSocialPostTrackingSlug=pattaya-sale-or-rent-property-1-line-voom-en&propertyId=property-1&source=social-post"
+    );
   });
 });

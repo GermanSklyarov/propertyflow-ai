@@ -531,6 +531,8 @@ export class PgLeadRepository implements LeadRepository {
             and ($5::boolean = false or assigned_agent_id is null)
             and ($6::text is null or priority = $6)
             and ($7::timestamptz is null or next_follow_up_at <= $7)
+            and ($8::text is null or property_id::text = $8)
+            and ($9::text is null or attribution_social_post_tracking_slug = $9)
         )
         select
           count(*) as total,
@@ -577,7 +579,9 @@ export class PgLeadRepository implements LeadRepository {
         request.assignedAgentId ?? null,
         request.unassigned ?? false,
         request.priority ?? null,
-        request.followUpDueBefore ?? null
+        request.followUpDueBefore ?? null,
+        request.propertyId ?? null,
+        request.attributionSocialPostTrackingSlug ?? null
       ]
     );
     const row = result.rows[0];
