@@ -18,6 +18,7 @@ import type {
   PropertySocialPostReviewListResponse,
   RecordPropertySocialPostPublicationResponse,
   RecordPropertySocialPostReviewResponse,
+  SavePropertySocialPostDraftResponse,
   PropertyAiAssets,
   PropertyComparisonResponse,
   PropertyImageDeletePreviewResponse,
@@ -103,6 +104,7 @@ import { ListSavedSearchOpportunitiesDto } from "./list-saved-search-opportuniti
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RecordPropertySocialPostPublicationDto } from "./record-property-social-post-publication.dto.js";
 import { RecordPropertySocialPostReviewDto } from "./record-property-social-post-review.dto.js";
+import { SavePropertySocialPostDraftDto } from "./save-property-social-post-draft.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
@@ -1202,6 +1204,35 @@ export class PropertiesController {
         channels: result.drafts.map((draft) => draft.channel),
         locale: result.locale,
         readyDrafts: result.drafts.filter((draft) => draft.status === "ready").length
+      }
+    });
+
+    return result;
+  }
+
+  @Post(":propertyId/social-posts/draft-overrides")
+  @ApiOperation({ summary: "Save an edited social post draft for a property" })
+  @ApiOkResponse({ description: "Saved social post draft override for future generation" })
+  @Roles("agent", "broker", "manager", "admin")
+  async saveSocialPostDraft(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: SavePropertySocialPostDraftDto
+  ): Promise<SavePropertySocialPostDraftResponse> {
+    const result = await this.socialPosts.saveDraft(tenantId, propertyId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.social_post_draft_saved",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        channel: result.draft.channel,
+        hashtagCount: result.draft.hashtags.length,
+        locale: result.draft.locale,
+        trackingSlug: result.draft.trackingSlug
       }
     });
 

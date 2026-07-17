@@ -1,8 +1,10 @@
 import { NotFoundException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
+import type { SavePropertySocialPostDraftRequest } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import type { PropertyImagesRepository } from "../../domain/property-images.repository.js";
 import type { PropertyRepository } from "../../domain/property.repository.js";
+import type { PropertySocialPostDraftOverridesRepository } from "../../domain/property-social-post-draft-overrides.repository.js";
 import type { PropertySocialPostPublicationsRepository } from "../../domain/property-social-post-publications.repository.js";
 import type { PropertySocialPostReviewsRepository } from "../../domain/property-social-post-reviews.repository.js";
 import { PropertySocialPostsService } from "./property-social-posts.service.js";
@@ -125,6 +127,27 @@ function createService(property: PropertySnapshot | null = listing, images = gal
       }
     })
   } as unknown as PropertySocialPostPublicationsRepository;
+  const draftOverrideRepository = {
+    listByPropertyId: vi.fn().mockResolvedValue([]),
+    save: vi.fn().mockResolvedValue({
+      body: "Agent-edited body with a softer relocation angle.",
+      channel: "line-voom",
+      createdAt: "2026-07-17T00:10:00.000Z",
+      createdByUserId: user.id,
+      createdByUserRole: user.role,
+      cta: "Ask for the newest viewing window.",
+      hashtags: ["#PattayaProperty", "#Edited"],
+      hook: "Agent-edited LINE VOOM hook",
+      id: "draft-override-1",
+      locale: "en",
+      propertyId: "property-1",
+      tenantId: "demo-agency",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+      updatedAt: "2026-07-17T00:15:00.000Z",
+      updatedByUserId: user.id,
+      updatedByUserRole: user.role
+    })
+  } as unknown as PropertySocialPostDraftOverridesRepository;
   const reviewRepository = {
     listByPropertyId: vi.fn().mockResolvedValue([
       {
@@ -163,10 +186,11 @@ function createService(property: PropertySnapshot | null = listing, images = gal
 
   return {
     imageRepository,
+    draftOverrideRepository,
     publicationRepository,
     repository,
     reviewRepository,
-    service: new PropertySocialPostsService(repository, imageRepository, publicationRepository, reviewRepository)
+    service: new PropertySocialPostsService(repository, imageRepository, draftOverrideRepository, publicationRepository, reviewRepository)
   };
 }
 
@@ -218,6 +242,43 @@ describe("PropertySocialPostsService", () => {
     ]);
     expect(repository.findById).toHaveBeenCalledWith("demo-agency", "property-1");
     expect(imageRepository.listByPropertyId).toHaveBeenCalledWith("demo-agency", "property-1");
+  });
+
+  it("applies saved social post draft overrides during generation", async () => {
+    const { draftOverrideRepository, service } = createService();
+    vi.mocked(draftOverrideRepository.listByPropertyId).mockResolvedValueOnce([
+      {
+        body: "Edited body saved by the agent.",
+        channel: "line-voom",
+        createdAt: "2026-07-17T00:10:00.000Z",
+        createdByUserId: user.id,
+        createdByUserRole: user.role,
+        cta: "Edited CTA.",
+        hashtags: ["#Edited", "#PattayaProperty"],
+        hook: "Edited hook",
+        id: "draft-override-1",
+        locale: "en",
+        propertyId: "property-1",
+        tenantId: "demo-agency",
+        trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+        updatedAt: "2026-07-17T00:15:00.000Z",
+        updatedByUserId: user.id,
+        updatedByUserRole: user.role
+      }
+    ]);
+
+    const response = await service.generateDrafts("demo-agency", "property-1", {
+      channels: ["line-voom", "instagram"]
+    });
+
+    expect(response.drafts[0]).toMatchObject({
+      body: "Edited body saved by the agent.",
+      cta: "Edited CTA.",
+      hashtags: ["#Edited", "#PattayaProperty"],
+      hook: "Edited hook"
+    });
+    expect(response.drafts[1].hook).not.toBe("Edited hook");
+    expect(draftOverrideRepository.listByPropertyId).toHaveBeenCalledWith("demo-agency", "property-1");
   });
 
   it("marks drafts for review when publication facts are missing", async () => {
@@ -295,6 +356,56 @@ describe("PropertySocialPostsService", () => {
     });
     expect(repository.findById).toHaveBeenCalledWith("demo-agency", "property-1");
     expect(publicationRepository.record).toHaveBeenCalledWith("demo-agency", "property-1", request, user);
+  });
+
+  it("saves an edited social post draft for a visible listing", async () => {
+    const { draftOverrideRepository, repository, service } = createService();
+    const request: SavePropertySocialPostDraftRequest = {
+      body: " Agent-edited body with a softer relocation angle. ",
+      channel: "line-voom",
+      cta: " Ask for the newest viewing window. ",
+      hashtags: ["PattayaProperty", "#Edited", "Edited", ""],
+      hook: " Agent-edited LINE VOOM hook ",
+      locale: "en",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en"
+    };
+
+    const response = await service.saveDraft("demo-agency", "property-1", request, user);
+
+    expect(response.draft).toMatchObject({
+      body: "Agent-edited body with a softer relocation angle.",
+      hook: "Agent-edited LINE VOOM hook",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en"
+    });
+    expect(repository.findById).toHaveBeenCalledWith("demo-agency", "property-1");
+    expect(draftOverrideRepository.save).toHaveBeenCalledWith(
+      "demo-agency",
+      "property-1",
+      {
+        ...request,
+        body: "Agent-edited body with a softer relocation angle.",
+        cta: "Ask for the newest viewing window.",
+        hashtags: ["#PattayaProperty", "#Edited"],
+        hook: "Agent-edited LINE VOOM hook"
+      },
+      user
+    );
+  });
+
+  it("does not save social post draft overrides for a hidden listing", async () => {
+    const { service } = createService(null);
+
+    await expect(
+      service.saveDraft("demo-agency", "missing", {
+        body: "Edited body",
+        channel: "facebook",
+        cta: "Edited CTA",
+        hashtags: ["#Edited"],
+        hook: "Edited hook",
+        locale: "en",
+        trackingSlug: "missing-facebook-en"
+      }, user)
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("does not record social publication for a hidden listing", async () => {

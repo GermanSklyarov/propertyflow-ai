@@ -9,6 +9,8 @@ import type {
   RecordPropertySocialPostPublicationResponse,
   RecordPropertySocialPostReviewRequest,
   RecordPropertySocialPostReviewResponse,
+  SavePropertySocialPostDraftRequest,
+  SavePropertySocialPostDraftResponse,
   AiChatRequest,
   AiChatResponse,
   AmenitySuggestionRequest,
@@ -575,6 +577,26 @@ export async function recordPropertySocialPostPublication(
   }
 
   return (await response.json()) as RecordPropertySocialPostPublicationResponse;
+}
+
+export async function savePropertySocialPostDraft(
+  propertyId: string,
+  request: SavePropertySocialPostDraftRequest
+): Promise<SavePropertySocialPostDraftResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/draft-overrides`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to save property social post draft: ${response.status}`);
+  }
+
+  return (await response.json()) as SavePropertySocialPostDraftResponse;
 }
 
 export async function listPropertySocialPostPublications(

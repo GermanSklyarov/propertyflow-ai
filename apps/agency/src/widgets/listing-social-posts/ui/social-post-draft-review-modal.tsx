@@ -1,4 +1,4 @@
-import { CheckCircle2, Hash, Link2, Pencil, Send, Sparkles, Workflow, X } from "lucide-react";
+import { CheckCircle2, Hash, Link2, Pencil, Save, Send, Sparkles, Workflow, X } from "lucide-react";
 import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostWorkflowStage } from "@propertyflow/contracts";
 import {
   capitalizeWorkflowState,
@@ -23,6 +23,7 @@ export function SocialPostDraftReviewModal({
   publication,
   publicationStatus,
   reviewActionStatus,
+  saveDraftStatus,
   setBody,
   setCta,
   setHashtags,
@@ -31,7 +32,8 @@ export function SocialPostDraftReviewModal({
   workflowStages,
   onApprove,
   onClose,
-  onRequestReview
+  onRequestReview,
+  onSaveDraft
 }: {
   body: string;
   canApprove: boolean;
@@ -43,6 +45,7 @@ export function SocialPostDraftReviewModal({
   publication?: PropertySocialPostPublication;
   publicationStatus: SocialPostPublicationStatus;
   reviewActionStatus: "idle" | "saving" | "error";
+  saveDraftStatus: "idle" | "saving" | "saved" | "error";
   setBody: (value: string) => void;
   setCta: (value: string) => void;
   setHashtags: (value: string) => void;
@@ -52,6 +55,7 @@ export function SocialPostDraftReviewModal({
   onApprove: () => void;
   onClose: () => void;
   onRequestReview: () => void;
+  onSaveDraft: () => void;
 }) {
   const tagItems = hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean);
 
@@ -108,6 +112,13 @@ export function SocialPostDraftReviewModal({
                 <span>Hashtags</span>
                 <input value={hashtags} onChange={(event) => setHashtags(event.target.value)} />
               </label>
+              <div className={styles.editActions}>
+                <button disabled={saveDraftStatus === "saving"} type="button" onClick={onSaveDraft}>
+                  {saveDraftStatus === "saved" ? <CheckCircle2 size={14} /> : <Save size={14} />}
+                  <span>{getSaveDraftLabel(saveDraftStatus)}</span>
+                </button>
+                {saveDraftStatus === "error" ? <small>Draft save failed. Check the API and retry.</small> : null}
+              </div>
             </div>
           </div>
           <div className={styles.modalColumn}>
@@ -196,4 +207,20 @@ export function SocialPostDraftReviewModal({
       </section>
     </div>
   );
+}
+
+function getSaveDraftLabel(status: "idle" | "saving" | "saved" | "error") {
+  if (status === "saving") {
+    return "Saving draft";
+  }
+
+  if (status === "saved") {
+    return "Draft saved";
+  }
+
+  if (status === "error") {
+    return "Retry save";
+  }
+
+  return "Save draft";
 }

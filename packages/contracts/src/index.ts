@@ -114,6 +114,7 @@ export type AuditAction =
   | "property.project_updated"
   | "property.social_post_published"
   | "property.social_post_publications_viewed"
+  | "property.social_post_draft_saved"
   | "property.social_post_reviews_viewed"
   | "property.social_post_reviewed"
   | "property.social_posts_generated"
@@ -1271,6 +1272,35 @@ export interface PropertySocialPostReview {
   updatedByUserRole?: UserRole;
 }
 
+export interface SavePropertySocialPostDraftRequest {
+  body: string;
+  channel: PropertySocialPostChannel;
+  cta: string;
+  hashtags: string[];
+  hook: string;
+  locale: PropertySocialPostLocale;
+  trackingSlug: string;
+}
+
+export interface PropertySocialPostDraftOverride {
+  body: string;
+  channel: PropertySocialPostChannel;
+  createdAt: string;
+  createdByUserId?: string;
+  createdByUserRole?: UserRole;
+  cta: string;
+  hashtags: string[];
+  hook: string;
+  id: string;
+  locale: PropertySocialPostLocale;
+  propertyId: string;
+  tenantId: string;
+  trackingSlug: string;
+  updatedAt: string;
+  updatedByUserId?: string;
+  updatedByUserRole?: UserRole;
+}
+
 export interface PropertySocialPostDraft {
   approvalWorkflow: PropertySocialPostApprovalWorkflow;
   body: string;
@@ -1304,6 +1334,10 @@ export interface PropertySocialPostPublicationListResponse {
 
 export interface RecordPropertySocialPostReviewResponse {
   review: PropertySocialPostReview;
+}
+
+export interface SavePropertySocialPostDraftResponse {
+  draft: PropertySocialPostDraftOverride;
 }
 
 export interface PropertySocialPostReviewListResponse {

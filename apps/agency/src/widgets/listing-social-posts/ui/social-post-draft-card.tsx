@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostReview } from "@propertyflow/contracts";
-import { recordPropertySocialPostPublication, recordPropertySocialPostReview } from "@shared/api/agency-client";
+import { recordPropertySocialPostPublication, recordPropertySocialPostReview, savePropertySocialPostDraft } from "@shared/api/agency-client";
 import {
   formatPublicationStatus,
   formatShortDate,
@@ -41,6 +41,7 @@ export function SocialPostDraftCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [publicationStatus, setPublicationStatus] = useState<SocialPostPublicationStatus>(initialPublicationStatus);
   const [reviewActionStatus, setReviewActionStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [saveDraftStatus, setSaveDraftStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [workflowStage, setWorkflowStage] = useState<SocialPostWorkflowStageKey>(getInitialWorkflowStage(draft, publication, review));
   const initialHashtags = draft.hashtags.join(" ");
   const tagItems = useMemo(() => hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean), [hashtags]);
@@ -68,6 +69,7 @@ export function SocialPostDraftCard({
     setDetailsOpen(false);
     setPublicationStatus(initialPublicationStatus);
     setReviewActionStatus("idle");
+    setSaveDraftStatus("idle");
     setWorkflowStage(getInitialWorkflowStage(draft, publication, review));
   }, [draft.approvalWorkflow.currentStage, draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags, initialPublicationStatus, publication, review]);
 
@@ -117,6 +119,27 @@ export function SocialPostDraftCard({
       router.refresh();
     } catch {
       setReviewActionStatus("error");
+    }
+  }
+
+  async function saveDraftOverride() {
+    setSaveDraftStatus("saving");
+
+    try {
+      await savePropertySocialPostDraft(propertyId, {
+        body,
+        channel: draft.channel,
+        cta,
+        hashtags: tagItems,
+        hook,
+        locale: draft.locale,
+        trackingSlug: draft.publicationPlan.trackingSlug
+      });
+      setSaveDraftStatus("saved");
+      router.refresh();
+      window.setTimeout(() => setSaveDraftStatus("idle"), 1600);
+    } catch {
+      setSaveDraftStatus("error");
     }
   }
 
@@ -187,6 +210,7 @@ export function SocialPostDraftCard({
           publication={publication}
           publicationStatus={publicationStatus}
           reviewActionStatus={reviewActionStatus}
+          saveDraftStatus={saveDraftStatus}
           setBody={setBody}
           setCta={setCta}
           setHashtags={setHashtags}
@@ -196,6 +220,7 @@ export function SocialPostDraftCard({
           onApprove={() => recordReviewStatus("approved")}
           onClose={() => setDetailsOpen(false)}
           onRequestReview={() => recordReviewStatus("review")}
+          onSaveDraft={saveDraftOverride}
         />
       ) : null}
     </article>

@@ -36,6 +36,7 @@ import { PRICE_RECOMMENDATION_FEEDBACK_REPOSITORY } from "./domain/price-recomme
 import { PROPERTY_AI_ASSETS_REPOSITORY } from "./domain/property-ai-assets.repository.js";
 import { PROPERTY_IMAGES_REPOSITORY } from "./domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY } from "./domain/property.repository.js";
+import { PROPERTY_SOCIAL_POST_DRAFT_OVERRIDES_REPOSITORY } from "./domain/property-social-post-draft-overrides.repository.js";
 import { PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY } from "./domain/property-social-post-publications.repository.js";
 import { PROPERTY_SOCIAL_POST_REVIEWS_REPOSITORY } from "./domain/property-social-post-reviews.repository.js";
 import { PROPERTY_STATUS_HISTORY_REPOSITORY } from "./domain/property-status-history.repository.js";
@@ -45,6 +46,7 @@ import { createPropertySearchClient, PROPERTY_SEARCH_CLIENT } from "./infrastruc
 import { PgPropertyAiAssetsRepository } from "./infrastructure/postgres/pg-property-ai-assets.repository.js";
 import { PgPropertyImagesRepository } from "./infrastructure/postgres/pg-property-images.repository.js";
 import { PgPropertyRepository } from "./infrastructure/postgres/pg-property.repository.js";
+import { PgPropertySocialPostDraftOverridesRepository } from "./infrastructure/postgres/pg-property-social-post-draft-overrides.repository.js";
 import { PgPropertySocialPostPublicationsRepository } from "./infrastructure/postgres/pg-property-social-post-publications.repository.js";
 import { PgPropertySocialPostReviewsRepository } from "./infrastructure/postgres/pg-property-social-post-reviews.repository.js";
 import { PgPropertyStatusHistoryRepository } from "./infrastructure/postgres/pg-property-status-history.repository.js";
@@ -108,6 +110,10 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     {
       provide: PROPERTY_STATUS_HISTORY_REPOSITORY,
       useClass: PgPropertyStatusHistoryRepository
+    },
+    {
+      provide: PROPERTY_SOCIAL_POST_DRAFT_OVERRIDES_REPOSITORY,
+      useClass: PgPropertySocialPostDraftOverridesRepository
     },
     {
       provide: PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY,

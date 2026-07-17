@@ -16,11 +16,17 @@ import type {
   RecordPropertySocialPostPublicationResponse,
   RecordPropertySocialPostReviewRequest,
   RecordPropertySocialPostReviewResponse,
-  RequestUser
+  RequestUser,
+  SavePropertySocialPostDraftRequest,
+  SavePropertySocialPostDraftResponse
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot } from "@propertyflow/domain";
 import { PROPERTY_IMAGES_REPOSITORY, type PropertyImagesRepository } from "../../domain/property-images.repository.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
+import {
+  PROPERTY_SOCIAL_POST_DRAFT_OVERRIDES_REPOSITORY,
+  type PropertySocialPostDraftOverridesRepository
+} from "../../domain/property-social-post-draft-overrides.repository.js";
 import {
   PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY,
   type PropertySocialPostPublicationsRepository
@@ -110,6 +116,8 @@ export class PropertySocialPostsService {
   constructor(
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(PROPERTY_IMAGES_REPOSITORY) private readonly images: PropertyImagesRepository,
+    @Inject(PROPERTY_SOCIAL_POST_DRAFT_OVERRIDES_REPOSITORY)
+    private readonly draftOverrides: PropertySocialPostDraftOverridesRepository,
     @Inject(PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY)
     private readonly publications: PropertySocialPostPublicationsRepository,
     @Inject(PROPERTY_SOCIAL_POST_REVIEWS_REPOSITORY)
@@ -131,11 +139,47 @@ export class PropertySocialPostsService {
     const channels = request.channels?.length ? request.channels : allChannels;
     const gallery = await this.images.listByPropertyId(tenantId, propertyId);
     const publicPhotoCount = request.publicPhotoCount ?? gallery.length;
+    const overrides = await this.draftOverrides.listByPropertyId(tenantId, propertyId);
 
     return {
       propertyId,
       locale,
-      drafts: channels.map((channel) => buildDraft(property, gallery, channel, locale, publicPhotoCount))
+      drafts: channels.map((channel) => {
+        const draft = buildDraft(property, gallery, channel, locale, publicPhotoCount);
+        const override = overrides.find(
+          (item) =>
+            item.channel === draft.channel &&
+            item.locale === draft.locale &&
+            item.trackingSlug === draft.publicationPlan.trackingSlug
+        );
+
+        return override
+          ? {
+              ...draft,
+              body: override.body,
+              cta: override.cta,
+              hashtags: override.hashtags,
+              hook: override.hook
+            }
+          : draft;
+      })
+    };
+  }
+
+  async saveDraft(
+    tenantId: string,
+    propertyId: string,
+    request: SavePropertySocialPostDraftRequest,
+    user: RequestUser
+  ): Promise<SavePropertySocialPostDraftResponse> {
+    const property = await this.properties.findById(tenantId, propertyId);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    return {
+      draft: await this.draftOverrides.save(tenantId, propertyId, normalizeDraftOverride(request), user)
     };
   }
 
@@ -390,6 +434,26 @@ function buildMediaPlan(
       ? `${selected.length} recommended photo${selected.length === 1 ? "" : "s"} from the public gallery`
       : "No public gallery photos selected",
     warnings
+  };
+}
+
+function normalizeDraftOverride(request: SavePropertySocialPostDraftRequest): SavePropertySocialPostDraftRequest {
+  const hashtags = new Set<string>();
+
+  for (const hashtag of request.hashtags) {
+    const normalized = hashtag.trim().replace(/^#+/, "");
+
+    if (normalized) {
+      hashtags.add(`#${normalized}`);
+    }
+  }
+
+  return {
+    ...request,
+    body: request.body.trim(),
+    cta: request.cta.trim(),
+    hashtags: [...hashtags],
+    hook: request.hook.trim()
   };
 }
 

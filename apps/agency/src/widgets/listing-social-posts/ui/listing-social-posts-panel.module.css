@@ -780,6 +780,47 @@
   resize: vertical;
 }
 
+.editActions {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.editActions button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: var(--teal);
+  padding: 0 12px;
+  color: #fff;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.editActions button:not(:disabled):hover,
+.editActions button:not(:disabled):focus-visible {
+  background: var(--teal-dark);
+}
+
+.editActions button:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.editActions small {
+  color: #a33b32;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
 .modalBackdrop {
   position: fixed;
   z-index: 80;

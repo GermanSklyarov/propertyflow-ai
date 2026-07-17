@@ -394,6 +394,30 @@ create index if not exists idx_social_post_reviews_property
 create index if not exists idx_social_post_reviews_status
   on property_social_post_reviews (tenant_id, status, updated_at desc);
 
+create table if not exists property_social_post_draft_overrides (
+  id uuid primary key,
+  tenant_id text not null references tenants(id) on delete cascade,
+  property_id uuid not null references properties(id) on delete cascade,
+  channel text not null,
+  locale text not null,
+  tracking_slug text not null,
+  hook text not null,
+  body text not null,
+  cta text not null,
+  hashtags text[] not null default '{}',
+  created_by_user_id text,
+  created_by_user_role text,
+  updated_by_user_id text,
+  updated_by_user_role text,
+  created_at timestamptz not null,
+  updated_at timestamptz not null
+);
+
+create unique index if not exists idx_social_post_draft_overrides_unique_draft
+  on property_social_post_draft_overrides (tenant_id, property_id, channel, locale, tracking_slug);
+create index if not exists idx_social_post_draft_overrides_property
+  on property_social_post_draft_overrides (tenant_id, property_id, updated_at desc);
+
 create table if not exists property_generated_descriptions (
   id uuid primary key,
   tenant_id text not null references tenants(id) on delete cascade,
