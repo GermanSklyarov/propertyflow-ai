@@ -1,4 +1,9 @@
-import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostWorkflowStage } from "@propertyflow/contracts";
+import type {
+  PropertySocialPostDraft,
+  PropertySocialPostPublication,
+  PropertySocialPostReview,
+  PropertySocialPostWorkflowStage
+} from "@propertyflow/contracts";
 
 export type SocialPostPublicationStatus = "idle" | "saving" | "published" | "error";
 export type SocialPostWorkflowStageKey = PropertySocialPostDraft["approvalWorkflow"]["currentStage"];
@@ -9,9 +14,22 @@ export function getInitialPublicationStatus(publication?: PropertySocialPostPubl
 
 export function getInitialWorkflowStage(
   draft: PropertySocialPostDraft,
-  publication?: PropertySocialPostPublication
+  publication?: PropertySocialPostPublication,
+  review?: PropertySocialPostReview
 ): SocialPostWorkflowStageKey {
-  return publication ? "published" : draft.approvalWorkflow.currentStage;
+  if (publication) {
+    return "published";
+  }
+
+  if (review?.status === "approved") {
+    return "approved";
+  }
+
+  if (review?.status === "review_requested") {
+    return "review";
+  }
+
+  return draft.approvalWorkflow.currentStage;
 }
 
 export function getWorkflowStages(

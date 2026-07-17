@@ -3,7 +3,9 @@ import type {
   PropertySocialPostDraft,
   PropertySocialPostLocale,
   PropertySocialPostPublication,
-  PropertySocialPostPublicationListResponse
+  PropertySocialPostPublicationListResponse,
+  PropertySocialPostReview,
+  PropertySocialPostReviewListResponse
 } from "@propertyflow/contracts";
 import { SocialPostDraftCard } from "./social-post-draft-card";
 import styles from "./listing-social-posts-panel.module.css";
@@ -25,12 +27,14 @@ export function ListingSocialPostsPanel({
   drafts,
   propertyId,
   publications,
+  reviews,
   selectedChannels,
   selectedLocale
 }: {
   drafts: PropertySocialPostDraft[];
   propertyId: string;
   publications: PropertySocialPostPublicationListResponse;
+  reviews: PropertySocialPostReviewListResponse;
   selectedChannels: PropertySocialPostChannel[];
   selectedLocale: PropertySocialPostLocale;
 }) {
@@ -99,6 +103,7 @@ export function ListingSocialPostsPanel({
             key={`${draft.channel}-${draft.locale}`}
             propertyId={propertyId}
             publication={findDraftPublication(draft, publications.items)}
+            review={findDraftReview(draft, reviews.items)}
           />
         ))}
       </div>
@@ -112,6 +117,15 @@ function findDraftPublication(draft: PropertySocialPostDraft, publications: Prop
       publication.channel === draft.channel &&
       publication.locale === draft.locale &&
       publication.trackingSlug === draft.publicationPlan.trackingSlug
+  );
+}
+
+function findDraftReview(draft: PropertySocialPostDraft, reviews: PropertySocialPostReview[]) {
+  return reviews.find(
+    (review) =>
+      review.channel === draft.channel &&
+      review.locale === draft.locale &&
+      review.trackingSlug === draft.publicationPlan.trackingSlug
   );
 }
 

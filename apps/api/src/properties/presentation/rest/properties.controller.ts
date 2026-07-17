@@ -15,7 +15,9 @@ import type {
   PricingModelRegistryResponse,
   PricingTrainingDatasetResponse,
   PropertySocialPostPublicationListResponse,
+  PropertySocialPostReviewListResponse,
   RecordPropertySocialPostPublicationResponse,
+  RecordPropertySocialPostReviewResponse,
   PropertyAiAssets,
   PropertyComparisonResponse,
   PropertyImageDeletePreviewResponse,
@@ -100,6 +102,7 @@ import { ListSavedSearchLeadCoverageDto } from "./list-saved-search-lead-coverag
 import { ListSavedSearchOpportunitiesDto } from "./list-saved-search-opportunities.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RecordPropertySocialPostPublicationDto } from "./record-property-social-post-publication.dto.js";
+import { RecordPropertySocialPostReviewDto } from "./record-property-social-post-review.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
@@ -1266,6 +1269,60 @@ export class PropertiesController {
       trackingSlug: result.publication.trackingSlug,
       userId: user.id,
       userRole: user.role
+    });
+
+    return result;
+  }
+
+  @Get(":propertyId/social-posts/reviews")
+  @ApiOperation({ summary: "List social post review statuses for a property" })
+  @ApiOkResponse({ description: "Social post review and approval history" })
+  @Roles("agent", "broker", "manager", "admin")
+  async listSocialPostReviews(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string
+  ): Promise<PropertySocialPostReviewListResponse> {
+    const result = await this.socialPosts.listReviews(tenantId, propertyId);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.social_post_reviews_viewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        total: result.total
+      }
+    });
+
+    return result;
+  }
+
+  @Post(":propertyId/social-posts/reviews")
+  @ApiOperation({ summary: "Record a social post review or approval status" })
+  @ApiOkResponse({ description: "Recorded social post review workflow status" })
+  @Roles("agent", "broker", "manager", "admin")
+  async recordSocialPostReview(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: RecordPropertySocialPostReviewDto
+  ): Promise<RecordPropertySocialPostReviewResponse> {
+    const result = await this.socialPosts.recordReview(tenantId, propertyId, payload, user);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.social_post_reviewed",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        channel: result.review.channel,
+        locale: result.review.locale,
+        status: result.review.status,
+        trackingSlug: result.review.trackingSlug
+      }
     });
 
     return result;

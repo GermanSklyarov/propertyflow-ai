@@ -22,14 +22,16 @@ export function SocialPostDraftReviewModal({
   hook,
   publication,
   publicationStatus,
+  reviewActionStatus,
   setBody,
   setCta,
   setHashtags,
   setHook,
-  setWorkflowStage,
   workflowStage,
   workflowStages,
-  onClose
+  onApprove,
+  onClose,
+  onRequestReview
 }: {
   body: string;
   canApprove: boolean;
@@ -40,14 +42,16 @@ export function SocialPostDraftReviewModal({
   hook: string;
   publication?: PropertySocialPostPublication;
   publicationStatus: SocialPostPublicationStatus;
+  reviewActionStatus: "idle" | "saving" | "error";
   setBody: (value: string) => void;
   setCta: (value: string) => void;
   setHashtags: (value: string) => void;
   setHook: (value: string) => void;
-  setWorkflowStage: (stage: SocialPostWorkflowStageKey) => void;
   workflowStage: SocialPostWorkflowStageKey;
   workflowStages: PropertySocialPostWorkflowStage[];
+  onApprove: () => void;
   onClose: () => void;
+  onRequestReview: () => void;
 }) {
   const tagItems = hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean);
 
@@ -119,13 +123,19 @@ export function SocialPostDraftReviewModal({
                   </li>
                 ))}
               </ol>
-              <p>{getWorkflowNote(workflowStage, publicationStatus, draft.approvalWorkflow.reviewNote)}</p>
+              <p>
+                {reviewActionStatus === "saving"
+                  ? "Saving review workflow status..."
+                  : reviewActionStatus === "error"
+                    ? "Review workflow update failed. Check the API and retry."
+                    : getWorkflowNote(workflowStage, publicationStatus, draft.approvalWorkflow.reviewNote)}
+              </p>
               <div className={styles.workflowActions}>
-                <button disabled={!canRequestReview} type="button" onClick={() => setWorkflowStage("review")}>
+                <button disabled={!canRequestReview || reviewActionStatus === "saving"} type="button" onClick={onRequestReview}>
                   <Send size={13} />
                   <span>Request review</span>
                 </button>
-                <button disabled={!canApprove} type="button" onClick={() => setWorkflowStage("approved")}>
+                <button disabled={!canApprove || reviewActionStatus === "saving"} type="button" onClick={onApprove}>
                   <CheckCircle2 size={13} />
                   <span>Approve</span>
                 </button>

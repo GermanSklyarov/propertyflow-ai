@@ -42,6 +42,11 @@ describe("social post draft card model", () => {
     expect(getInitialWorkflowStage(draft, { id: "publication-id" } as never)).toBe("published");
   });
 
+  it("starts from a saved review workflow state", () => {
+    expect(getInitialWorkflowStage(draft, undefined, { status: "review_requested" } as never)).toBe("review");
+    expect(getInitialWorkflowStage(draft, undefined, { status: "approved" } as never)).toBe("approved");
+  });
+
   it("formats workflow actions and publication status for compact UI labels", () => {
     expect(formatWorkflowAction("request-review")).toBe("Request Review");
     expect(formatPublicationStatus("error")).toBe("Retry publish");

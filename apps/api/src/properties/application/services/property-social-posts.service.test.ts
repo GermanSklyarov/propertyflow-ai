@@ -4,6 +4,7 @@ import type { PropertySnapshot } from "@propertyflow/domain";
 import type { PropertyImagesRepository } from "../../domain/property-images.repository.js";
 import type { PropertyRepository } from "../../domain/property.repository.js";
 import type { PropertySocialPostPublicationsRepository } from "../../domain/property-social-post-publications.repository.js";
+import type { PropertySocialPostReviewsRepository } from "../../domain/property-social-post-reviews.repository.js";
 import { PropertySocialPostsService } from "./property-social-posts.service.js";
 
 const listing = {
@@ -124,12 +125,48 @@ function createService(property: PropertySnapshot | null = listing, images = gal
       }
     })
   } as unknown as PropertySocialPostPublicationsRepository;
+  const reviewRepository = {
+    listByPropertyId: vi.fn().mockResolvedValue([
+      {
+        channel: "line-voom",
+        createdAt: "2026-07-17T00:30:00.000Z",
+        createdByUserId: user.id,
+        createdByUserRole: user.role,
+        id: "review-1",
+        locale: "en",
+        propertyId: "property-1",
+        status: "approved",
+        tenantId: "demo-agency",
+        trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+        updatedAt: "2026-07-17T00:45:00.000Z",
+        updatedByUserId: user.id,
+        updatedByUserRole: user.role
+      }
+    ]),
+    record: vi.fn().mockResolvedValue({
+      channel: "line-voom",
+      createdAt: "2026-07-17T00:30:00.000Z",
+      createdByUserId: user.id,
+      createdByUserRole: user.role,
+      id: "review-1",
+      locale: "en",
+      note: "Approved for LINE VOOM.",
+      propertyId: "property-1",
+      status: "approved",
+      tenantId: "demo-agency",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+      updatedAt: "2026-07-17T00:45:00.000Z",
+      updatedByUserId: user.id,
+      updatedByUserRole: user.role
+    })
+  } as unknown as PropertySocialPostReviewsRepository;
 
   return {
     imageRepository,
     publicationRepository,
     repository,
-    service: new PropertySocialPostsService(repository, imageRepository, publicationRepository)
+    reviewRepository,
+    service: new PropertySocialPostsService(repository, imageRepository, publicationRepository, reviewRepository)
   };
 }
 
@@ -314,5 +351,64 @@ describe("PropertySocialPostsService", () => {
     const { service } = createService(null);
 
     await expect(service.listPublications("demo-agency", "missing")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("records a social post review status for a visible listing", async () => {
+    const { repository, reviewRepository, service } = createService();
+    const request = {
+      channel: "line-voom",
+      locale: "en",
+      note: "Approved for LINE VOOM.",
+      status: "approved",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en"
+    } as const;
+
+    const response = await service.recordReview("demo-agency", "property-1", request, user);
+
+    expect(response.review).toEqual({
+      channel: "line-voom",
+      createdAt: "2026-07-17T00:30:00.000Z",
+      createdByUserId: "manager-demo-1",
+      createdByUserRole: "manager",
+      id: "review-1",
+      locale: "en",
+      note: "Approved for LINE VOOM.",
+      propertyId: "property-1",
+      status: "approved",
+      tenantId: "demo-agency",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+      updatedAt: "2026-07-17T00:45:00.000Z",
+      updatedByUserId: "manager-demo-1",
+      updatedByUserRole: "manager"
+    });
+    expect(repository.findById).toHaveBeenCalledWith("demo-agency", "property-1");
+    expect(reviewRepository.record).toHaveBeenCalledWith("demo-agency", "property-1", request, user);
+  });
+
+  it("lists social post review statuses for a visible listing", async () => {
+    const { reviewRepository, service } = createService();
+
+    const response = await service.listReviews("demo-agency", "property-1");
+
+    expect(response.total).toBe(1);
+    expect(response.items[0]).toMatchObject({
+      channel: "line-voom",
+      status: "approved",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en"
+    });
+    expect(reviewRepository.listByPropertyId).toHaveBeenCalledWith("demo-agency", "property-1");
+  });
+
+  it("does not record social post reviews for a hidden listing", async () => {
+    const { service } = createService(null);
+
+    await expect(
+      service.recordReview("demo-agency", "missing", {
+        channel: "facebook",
+        locale: "en",
+        status: "review_requested",
+        trackingSlug: "missing-facebook-en"
+      }, user)
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

@@ -4,8 +4,8 @@ import { CheckCircle2, Clipboard, Eye, Hash, Megaphone, MessageCircle, Send, Spa
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
-import type { PropertySocialPostDraft, PropertySocialPostPublication } from "@propertyflow/contracts";
-import { recordPropertySocialPostPublication } from "@shared/api/agency-client";
+import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostReview } from "@propertyflow/contracts";
+import { recordPropertySocialPostPublication, recordPropertySocialPostReview } from "@shared/api/agency-client";
 import {
   formatPublicationStatus,
   formatShortDate,
@@ -23,11 +23,13 @@ import { SocialPostDraftReviewModal } from "./social-post-draft-review-modal";
 export function SocialPostDraftCard({
   draft,
   propertyId,
-  publication
+  publication,
+  review
 }: {
   draft: PropertySocialPostDraft;
   propertyId: string;
   publication?: PropertySocialPostPublication;
+  review?: PropertySocialPostReview;
 }) {
   const router = useRouter();
   const initialPublicationStatus = getInitialPublicationStatus(publication);
@@ -38,7 +40,8 @@ export function SocialPostDraftCard({
   const [copied, setCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [publicationStatus, setPublicationStatus] = useState<SocialPostPublicationStatus>(initialPublicationStatus);
-  const [workflowStage, setWorkflowStage] = useState<SocialPostWorkflowStageKey>(getInitialWorkflowStage(draft, publication));
+  const [reviewActionStatus, setReviewActionStatus] = useState<"idle" | "saving" | "error">("idle");
+  const [workflowStage, setWorkflowStage] = useState<SocialPostWorkflowStageKey>(getInitialWorkflowStage(draft, publication, review));
   const initialHashtags = draft.hashtags.join(" ");
   const tagItems = useMemo(() => hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean), [hashtags]);
   const workflowStages = useMemo(
@@ -64,8 +67,9 @@ export function SocialPostDraftCard({
     setCopied(false);
     setDetailsOpen(false);
     setPublicationStatus(initialPublicationStatus);
-    setWorkflowStage(getInitialWorkflowStage(draft, publication));
-  }, [draft.approvalWorkflow.currentStage, draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags, initialPublicationStatus, publication]);
+    setReviewActionStatus("idle");
+    setWorkflowStage(getInitialWorkflowStage(draft, publication, review));
+  }, [draft.approvalWorkflow.currentStage, draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags, initialPublicationStatus, publication, review]);
 
   async function copyDraft() {
     await navigator.clipboard.writeText(copyText);
@@ -91,6 +95,28 @@ export function SocialPostDraftCard({
       router.refresh();
     } catch {
       setPublicationStatus("error");
+    }
+  }
+
+  async function recordReviewStatus(nextStage: Extract<SocialPostWorkflowStageKey, "review" | "approved">) {
+    if (isPublished) {
+      return;
+    }
+
+    setReviewActionStatus("saving");
+
+    try {
+      await recordPropertySocialPostReview(propertyId, {
+        channel: draft.channel,
+        locale: draft.locale,
+        status: nextStage === "approved" ? "approved" : "review_requested",
+        trackingSlug: draft.publicationPlan.trackingSlug
+      });
+      setWorkflowStage(nextStage);
+      setReviewActionStatus("idle");
+      router.refresh();
+    } catch {
+      setReviewActionStatus("error");
     }
   }
 
@@ -160,14 +186,16 @@ export function SocialPostDraftCard({
           hook={hook}
           publication={publication}
           publicationStatus={publicationStatus}
+          reviewActionStatus={reviewActionStatus}
           setBody={setBody}
           setCta={setCta}
           setHashtags={setHashtags}
           setHook={setHook}
-          setWorkflowStage={setWorkflowStage}
           workflowStage={workflowStage}
           workflowStages={workflowStages}
+          onApprove={() => recordReviewStatus("approved")}
           onClose={() => setDetailsOpen(false)}
+          onRequestReview={() => recordReviewStatus("review")}
         />
       ) : null}
     </article>

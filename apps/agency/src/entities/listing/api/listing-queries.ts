@@ -3,6 +3,7 @@ import { queryOptions } from "@tanstack/react-query";
 import {
   generatePropertySocialPostDrafts,
   listPropertySocialPostPublications,
+  listPropertySocialPostReviews,
   getProperty,
   getPropertyAiAssets,
   getPropertyImages,
@@ -51,5 +52,12 @@ export function listingSocialPostPublicationsQueryOptions(propertyId: string) {
   return queryOptions({
     queryKey: [...queryKeys.listings.socialPosts(propertyId, {}), "publications"],
     queryFn: () => listPropertySocialPostPublications(propertyId)
+  });
+}
+
+export function listingSocialPostReviewsQueryOptions(propertyId: string) {
+  return queryOptions({
+    queryKey: [...queryKeys.listings.socialPosts(propertyId, {}), "reviews"],
+    queryFn: () => listPropertySocialPostReviews(propertyId)
   });
 }

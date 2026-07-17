@@ -5,6 +5,7 @@ import {
   listingDetailQueryOptions,
   listingImagesQueryOptions,
   listingSocialPostPublicationsQueryOptions,
+  listingSocialPostReviewsQueryOptions,
   listingSocialPostsQueryOptions
 } from "@entities/listing/api/listing-queries";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
@@ -41,7 +42,7 @@ export default async function AgencyListingDetailPage({
   const media = buildListingMediaSummary(gallery);
   const socialLocale = parseSocialLocale(query.socialLocale);
   const socialChannels = parseSocialChannels(query.socialChannel);
-  const [socialPosts, socialPublications] = await Promise.all([
+  const [socialPosts, socialPublications, socialReviews] = await Promise.all([
     queryClient.ensureQueryData(
       listingSocialPostsQueryOptions(propertyId, {
         channels: socialChannels,
@@ -49,7 +50,8 @@ export default async function AgencyListingDetailPage({
         publicPhotoCount: media.activeCount
       })
     ),
-    queryClient.ensureQueryData(listingSocialPostPublicationsQueryOptions(propertyId))
+    queryClient.ensureQueryData(listingSocialPostPublicationsQueryOptions(propertyId)),
+    queryClient.ensureQueryData(listingSocialPostReviewsQueryOptions(propertyId))
   ]);
 
   return (
@@ -62,6 +64,7 @@ export default async function AgencyListingDetailPage({
       selectedSocialLocale={socialLocale}
       socialPostDrafts={socialPosts.drafts}
       socialPostPublications={socialPublications}
+      socialPostReviews={socialReviews}
       appliedImageAnalysisAssetId={query.applied === "image-features" ? query.asset : undefined}
       amenitiesUpdated={query.amenities === "updated"}
       queuedImageAnalysis={query.queued === "image-analysis"}

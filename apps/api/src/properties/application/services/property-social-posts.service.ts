@@ -11,8 +11,11 @@ import type {
   PropertySocialPostReadinessCheck,
   PropertySocialPostLocale,
   PropertySocialPostPublicationListResponse,
+  PropertySocialPostReviewListResponse,
   RecordPropertySocialPostPublicationRequest,
   RecordPropertySocialPostPublicationResponse,
+  RecordPropertySocialPostReviewRequest,
+  RecordPropertySocialPostReviewResponse,
   RequestUser
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot } from "@propertyflow/domain";
@@ -22,6 +25,10 @@ import {
   PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY,
   type PropertySocialPostPublicationsRepository
 } from "../../domain/property-social-post-publications.repository.js";
+import {
+  PROPERTY_SOCIAL_POST_REVIEWS_REPOSITORY,
+  type PropertySocialPostReviewsRepository
+} from "../../domain/property-social-post-reviews.repository.js";
 
 const allChannels: PropertySocialPostChannel[] = ["line-voom", "facebook", "instagram"];
 const copyByLocale = {
@@ -104,7 +111,9 @@ export class PropertySocialPostsService {
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(PROPERTY_IMAGES_REPOSITORY) private readonly images: PropertyImagesRepository,
     @Inject(PROPERTY_SOCIAL_POST_PUBLICATIONS_REPOSITORY)
-    private readonly publications: PropertySocialPostPublicationsRepository
+    private readonly publications: PropertySocialPostPublicationsRepository,
+    @Inject(PROPERTY_SOCIAL_POST_REVIEWS_REPOSITORY)
+    private readonly reviews: PropertySocialPostReviewsRepository
   ) {}
 
   async generateDrafts(
@@ -155,6 +164,39 @@ export class PropertySocialPostsService {
     }
 
     const items = await this.publications.listByPropertyId(tenantId, propertyId);
+
+    return {
+      items,
+      propertyId,
+      total: items.length
+    };
+  }
+
+  async recordReview(
+    tenantId: string,
+    propertyId: string,
+    request: RecordPropertySocialPostReviewRequest,
+    user: RequestUser
+  ): Promise<RecordPropertySocialPostReviewResponse> {
+    const property = await this.properties.findById(tenantId, propertyId);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    return {
+      review: await this.reviews.record(tenantId, propertyId, request, user)
+    };
+  }
+
+  async listReviews(tenantId: string, propertyId: string): Promise<PropertySocialPostReviewListResponse> {
+    const property = await this.properties.findById(tenantId, propertyId);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    const items = await this.reviews.listByPropertyId(tenantId, propertyId);
 
     return {
       items,

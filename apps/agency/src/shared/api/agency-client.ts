@@ -7,6 +7,8 @@ import type {
   GeneratePropertySocialPostsResponse,
   RecordPropertySocialPostPublicationRequest,
   RecordPropertySocialPostPublicationResponse,
+  RecordPropertySocialPostReviewRequest,
+  RecordPropertySocialPostReviewResponse,
   AiChatRequest,
   AiChatResponse,
   AmenitySuggestionRequest,
@@ -43,6 +45,7 @@ import type {
   PropertySearchRequest,
   PropertySearchResponse,
   PropertySocialPostPublicationListResponse,
+  PropertySocialPostReviewListResponse,
   ReviewAiAssetRequest,
   RunListingAssistantRequest,
   RunListingAssistantResponse,
@@ -588,6 +591,45 @@ export async function listPropertySocialPostPublications(
     }
 
     return (await response.json()) as PropertySocialPostPublicationListResponse;
+  } catch {
+    return { items: [], propertyId, total: 0 };
+  }
+}
+
+export async function recordPropertySocialPostReview(
+  propertyId: string,
+  request: RecordPropertySocialPostReviewRequest
+): Promise<RecordPropertySocialPostReviewResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/reviews`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to record property social post review: ${response.status}`);
+  }
+
+  return (await response.json()) as RecordPropertySocialPostReviewResponse;
+}
+
+export async function listPropertySocialPostReviews(
+  propertyId: string
+): Promise<PropertySocialPostReviewListResponse> {
+  try {
+    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/reviews`, {
+      headers: demoHeaders,
+      next: { revalidate: 10 }
+    });
+
+    if (!response.ok) {
+      return { items: [], propertyId, total: 0 };
+    }
+
+    return (await response.json()) as PropertySocialPostReviewListResponse;
   } catch {
     return { items: [], propertyId, total: 0 };
   }

@@ -114,6 +114,8 @@ export type AuditAction =
   | "property.project_updated"
   | "property.social_post_published"
   | "property.social_post_publications_viewed"
+  | "property.social_post_reviews_viewed"
+  | "property.social_post_reviewed"
   | "property.social_posts_generated"
   | "property.status_changed"
   | "saved_search.created"
@@ -1242,6 +1244,33 @@ export interface PropertySocialPostPublication {
   utm: PropertySocialPostUtm;
 }
 
+export type PropertySocialPostReviewStatus = "review_requested" | "approved";
+
+export interface RecordPropertySocialPostReviewRequest {
+  channel: PropertySocialPostChannel;
+  locale: PropertySocialPostLocale;
+  note?: string;
+  status: PropertySocialPostReviewStatus;
+  trackingSlug: string;
+}
+
+export interface PropertySocialPostReview {
+  channel: PropertySocialPostChannel;
+  createdAt: string;
+  createdByUserId?: string;
+  createdByUserRole?: UserRole;
+  id: string;
+  locale: PropertySocialPostLocale;
+  note?: string;
+  propertyId: string;
+  status: PropertySocialPostReviewStatus;
+  tenantId: string;
+  trackingSlug: string;
+  updatedAt: string;
+  updatedByUserId?: string;
+  updatedByUserRole?: UserRole;
+}
+
 export interface PropertySocialPostDraft {
   approvalWorkflow: PropertySocialPostApprovalWorkflow;
   body: string;
@@ -1269,6 +1298,16 @@ export interface RecordPropertySocialPostPublicationResponse {
 
 export interface PropertySocialPostPublicationListResponse {
   items: PropertySocialPostPublication[];
+  propertyId: string;
+  total: number;
+}
+
+export interface RecordPropertySocialPostReviewResponse {
+  review: PropertySocialPostReview;
+}
+
+export interface PropertySocialPostReviewListResponse {
+  items: PropertySocialPostReview[];
   propertyId: string;
   total: number;
 }
