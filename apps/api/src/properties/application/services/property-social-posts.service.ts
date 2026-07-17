@@ -3,13 +3,16 @@ import type {
   GeneratePropertySocialPostsRequest,
   GeneratePropertySocialPostsResponse,
   PropertyImageSnapshot,
+  PropertySocialPostPublication,
   PropertySocialPostApprovalWorkflow,
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostMediaPlan,
   PropertySocialPostPublicationPlan,
   PropertySocialPostReadinessCheck,
-  PropertySocialPostLocale
+  PropertySocialPostLocale,
+  RecordPropertySocialPostPublicationRequest,
+  RecordPropertySocialPostPublicationResponse
 } from "@propertyflow/contracts";
 import type { Money, PropertySnapshot } from "@propertyflow/domain";
 import { PROPERTY_IMAGES_REPOSITORY, type PropertyImagesRepository } from "../../domain/property-images.repository.js";
@@ -118,6 +121,31 @@ export class PropertySocialPostsService {
       locale,
       drafts: channels.map((channel) => buildDraft(property, gallery, channel, locale, publicPhotoCount))
     };
+  }
+
+  async recordPublication(
+    tenantId: string,
+    propertyId: string,
+    request: RecordPropertySocialPostPublicationRequest
+  ): Promise<RecordPropertySocialPostPublicationResponse> {
+    const property = await this.properties.findById(tenantId, propertyId);
+
+    if (!property) {
+      throw new NotFoundException("Property not found");
+    }
+
+    const publication: PropertySocialPostPublication = {
+      channel: request.channel,
+      locale: request.locale,
+      propertyId,
+      publishedAt: new Date().toISOString(),
+      publishedUrl: request.publishedUrl,
+      status: "published",
+      trackingSlug: request.trackingSlug,
+      utm: request.utm
+    };
+
+    return { publication };
   }
 }
 

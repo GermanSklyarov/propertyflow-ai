@@ -1,17 +1,19 @@
 "use client";
 
-import { CheckCircle2, Clipboard, Hash, Link2, Megaphone, MessageCircle, Pencil, Sparkles, Workflow } from "lucide-react";
+import { CheckCircle2, Clipboard, Hash, Link2, Megaphone, MessageCircle, Pencil, Send, Sparkles, Workflow } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft } from "@propertyflow/contracts";
+import { recordPropertySocialPostPublication } from "@shared/api/agency-client";
 import styles from "./listing-social-posts-panel.module.css";
 
-export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft }) {
+export function SocialPostDraftCard({ draft, propertyId }: { draft: PropertySocialPostDraft; propertyId: string }) {
   const [body, setBody] = useState(draft.body);
   const [cta, setCta] = useState(draft.cta);
   const [hashtags, setHashtags] = useState(draft.hashtags.join(" "));
   const [hook, setHook] = useState(draft.hook);
   const [copied, setCopied] = useState(false);
+  const [publicationStatus, setPublicationStatus] = useState<"idle" | "saving" | "published" | "error">("idle");
   const initialHashtags = draft.hashtags.join(" ");
   const tagItems = useMemo(() => hashtags.split(/\s+/).map((tag) => tag.trim()).filter(Boolean), [hashtags]);
   const copyText = composeSocialPostText({
@@ -27,12 +29,29 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
     setHashtags(initialHashtags);
     setHook(draft.hook);
     setCopied(false);
-  }, [draft.body, draft.cta, draft.hook, initialHashtags]);
+    setPublicationStatus("idle");
+  }, [draft.body, draft.channel, draft.cta, draft.hook, draft.locale, initialHashtags]);
 
   async function copyDraft() {
     await navigator.clipboard.writeText(copyText);
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
+  }
+
+  async function markPublished() {
+    setPublicationStatus("saving");
+
+    try {
+      await recordPropertySocialPostPublication(propertyId, {
+        channel: draft.channel,
+        locale: draft.locale,
+        trackingSlug: draft.publicationPlan.trackingSlug,
+        utm: draft.publicationPlan.utm
+      });
+      setPublicationStatus("published");
+    } catch {
+      setPublicationStatus("error");
+    }
   }
 
   return (
@@ -155,6 +174,15 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
           {copied ? <CheckCircle2 size={14} /> : <Clipboard size={14} />}
           <span>{copied ? "Copied" : "Copy post"}</span>
         </button>
+        <button
+          className={`${styles.actionButton} ${styles.secondaryAction}`}
+          disabled={publicationStatus === "saving" || publicationStatus === "published"}
+          type="button"
+          onClick={markPublished}
+        >
+          {publicationStatus === "published" ? <CheckCircle2 size={14} /> : <Send size={14} />}
+          <span>{formatPublicationStatus(publicationStatus)}</span>
+        </button>
       </div>
     </article>
   );
@@ -177,4 +205,20 @@ function formatWorkflowStage(label: string) {
 
 function shortenIdentifier(value: string) {
   return value.length > 38 ? `${value.slice(0, 18)}...${value.slice(-14)}` : value;
+}
+
+function formatPublicationStatus(status: "idle" | "saving" | "published" | "error") {
+  if (status === "saving") {
+    return "Saving";
+  }
+
+  if (status === "published") {
+    return "Published";
+  }
+
+  if (status === "error") {
+    return "Retry publish";
+  }
+
+  return "Mark published";
 }

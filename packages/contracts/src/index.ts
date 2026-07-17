@@ -112,6 +112,7 @@ export type AuditAction =
   | "property.price_updated"
   | "property.project_created"
   | "property.project_updated"
+  | "property.social_post_published"
   | "property.social_posts_generated"
   | "property.status_changed"
   | "saved_search.created"
@@ -1217,6 +1218,25 @@ export interface PropertySocialPostApprovalWorkflow {
   stages: PropertySocialPostWorkflowStage[];
 }
 
+export interface RecordPropertySocialPostPublicationRequest {
+  channel: PropertySocialPostChannel;
+  locale: PropertySocialPostLocale;
+  publishedUrl?: string;
+  trackingSlug: string;
+  utm: PropertySocialPostUtm;
+}
+
+export interface PropertySocialPostPublication {
+  channel: PropertySocialPostChannel;
+  locale: PropertySocialPostLocale;
+  propertyId: string;
+  publishedAt: string;
+  publishedUrl?: string;
+  status: "published";
+  trackingSlug: string;
+  utm: PropertySocialPostUtm;
+}
+
 export interface PropertySocialPostDraft {
   approvalWorkflow: PropertySocialPostApprovalWorkflow;
   body: string;
@@ -1236,6 +1256,10 @@ export interface GeneratePropertySocialPostsResponse {
   propertyId: string;
   locale: PropertySocialPostLocale;
   drafts: PropertySocialPostDraft[];
+}
+
+export interface RecordPropertySocialPostPublicationResponse {
+  publication: PropertySocialPostPublication;
 }
 
 export interface PropertyPriceHistoryPoint {
@@ -1970,6 +1994,7 @@ export type RealtimeEventType =
   | "property.published"
   | "property.price_updated"
   | "property.project_updated"
+  | "property.social_post_published"
   | "property.status_changed"
   | "lead.created"
   | "lead.assigned"

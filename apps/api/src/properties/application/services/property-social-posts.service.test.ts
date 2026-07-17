@@ -85,6 +85,8 @@ function createService(property: PropertySnapshot | null = listing, images = gal
 }
 
 describe("PropertySocialPostsService", () => {
+  const publishedAt = "2026-07-17T01:00:00.000Z";
+
   it("generates channel-specific social post drafts from a tenant listing", async () => {
     const { imageRepository, repository, service } = createService();
 
@@ -169,5 +171,60 @@ describe("PropertySocialPostsService", () => {
     const { service } = createService(null);
 
     await expect(service.generateDrafts("demo-agency", "missing")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("records a social post publication for lead attribution", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(publishedAt));
+    const { repository, service } = createService();
+
+    const response = await service.recordPublication("demo-agency", "property-1", {
+      channel: "line-voom",
+      locale: "en",
+      publishedUrl: "https://linevoom.line.me/post/example",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+      utm: {
+        campaign: "pattaya-sale-or-rent-property-1",
+        content: "line-voom-en",
+        medium: "social",
+        source: "line-voom"
+      }
+    });
+
+    expect(response.publication).toEqual({
+      channel: "line-voom",
+      locale: "en",
+      propertyId: "property-1",
+      publishedAt,
+      publishedUrl: "https://linevoom.line.me/post/example",
+      status: "published",
+      trackingSlug: "pattaya-sale-or-rent-property-1-line-voom-en",
+      utm: {
+        campaign: "pattaya-sale-or-rent-property-1",
+        content: "line-voom-en",
+        medium: "social",
+        source: "line-voom"
+      }
+    });
+    expect(repository.findById).toHaveBeenCalledWith("demo-agency", "property-1");
+    vi.useRealTimers();
+  });
+
+  it("does not record social publication for a hidden listing", async () => {
+    const { service } = createService(null);
+
+    await expect(
+      service.recordPublication("demo-agency", "missing", {
+        channel: "facebook",
+        locale: "en",
+        trackingSlug: "missing-facebook-en",
+        utm: {
+          campaign: "missing",
+          content: "facebook-en",
+          medium: "social",
+          source: "facebook"
+        }
+      })
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

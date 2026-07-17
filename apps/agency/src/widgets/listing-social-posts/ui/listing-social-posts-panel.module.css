@@ -540,13 +540,18 @@
   flex: 0 0 auto;
 }
 
+.actionButton:disabled {
+  cursor: default;
+  opacity: 0.62;
+}
+
 .primaryAction {
   background: var(--teal);
   color: #fff;
 }
 
-.primaryAction:hover,
-.primaryAction:focus-visible {
+.primaryAction:not(:disabled):hover,
+.primaryAction:not(:disabled):focus-visible {
   background: var(--teal-dark);
 }
 
@@ -560,8 +565,8 @@
   display: none;
 }
 
-.secondaryAction:hover,
-.secondaryAction:focus-visible {
+.secondaryAction:not(:disabled):hover,
+.secondaryAction:not(:disabled):focus-visible {
   background: #edf8f4;
 }
 

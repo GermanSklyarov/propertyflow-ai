@@ -14,6 +14,7 @@ import type {
   LeadSnapshot,
   PricingModelRegistryResponse,
   PricingTrainingDatasetResponse,
+  RecordPropertySocialPostPublicationResponse,
   PropertyAiAssets,
   PropertyComparisonResponse,
   PropertyImageDeletePreviewResponse,
@@ -97,6 +98,7 @@ import { ListSavedSearchAlertRunsDto } from "./list-saved-search-alert-runs.dto.
 import { ListSavedSearchLeadCoverageDto } from "./list-saved-search-lead-coverage.dto.js";
 import { ListSavedSearchOpportunitiesDto } from "./list-saved-search-opportunities.dto.js";
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
+import { RecordPropertySocialPostPublicationDto } from "./record-property-social-post-publication.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
 import { SearchPropertiesDto, toPropertySearchRequest } from "./search-properties.dto.js";
@@ -1197,6 +1199,47 @@ export class PropertiesController {
         locale: result.locale,
         readyDrafts: result.drafts.filter((draft) => draft.status === "ready").length
       }
+    });
+
+    return result;
+  }
+
+  @Post(":propertyId/social-posts/publications")
+  @ApiOperation({ summary: "Record a published social post for lead attribution" })
+  @ApiOkResponse({ description: "Recorded social post publication tracking metadata" })
+  @Roles("agent", "broker", "manager", "admin")
+  async recordSocialPostPublication(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: RecordPropertySocialPostPublicationDto
+  ): Promise<RecordPropertySocialPostPublicationResponse> {
+    const result = await this.socialPosts.recordPublication(tenantId, propertyId, payload);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.social_post_published",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        channel: result.publication.channel,
+        locale: result.publication.locale,
+        publishedAt: result.publication.publishedAt,
+        publishedUrl: result.publication.publishedUrl,
+        trackingSlug: result.publication.trackingSlug,
+        utm: result.publication.utm
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.social_post_published", {
+      propertyId,
+      channel: result.publication.channel,
+      locale: result.publication.locale,
+      publishedAt: result.publication.publishedAt,
+      trackingSlug: result.publication.trackingSlug,
+      userId: user.id,
+      userRole: user.role
     });
 
     return result;

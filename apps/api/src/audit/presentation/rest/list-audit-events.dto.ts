@@ -34,6 +34,7 @@ const auditActions = [
   "property.price_updated",
   "property.project_created",
   "property.project_updated",
+  "property.social_post_published",
   "property.social_posts_generated",
   "property.status_changed",
   "saved_search.created",

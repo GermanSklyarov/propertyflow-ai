@@ -5,6 +5,8 @@ import type {
   BackgroundJobState,
   GeneratePropertySocialPostsRequest,
   GeneratePropertySocialPostsResponse,
+  RecordPropertySocialPostPublicationRequest,
+  RecordPropertySocialPostPublicationResponse,
   AiChatRequest,
   AiChatResponse,
   AmenitySuggestionRequest,
@@ -549,6 +551,26 @@ export async function generatePropertySocialPostDrafts(
   }
 
   return (await response.json()) as GeneratePropertySocialPostsResponse;
+}
+
+export async function recordPropertySocialPostPublication(
+  propertyId: string,
+  request: RecordPropertySocialPostPublicationRequest
+): Promise<RecordPropertySocialPostPublicationResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/publications`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to record property social post publication: ${response.status}`);
+  }
+
+  return (await response.json()) as RecordPropertySocialPostPublicationResponse;
 }
 
 export async function reviewPropertyImageAnalysisAsset(

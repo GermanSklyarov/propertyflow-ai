@@ -96,6 +96,7 @@ export function ListingDetailPage({
 
         <ListingSocialPostsPanel
           drafts={socialPostDrafts}
+          propertyId={listing.id}
           selectedChannels={selectedSocialChannels}
           selectedLocale={selectedSocialLocale}
         />

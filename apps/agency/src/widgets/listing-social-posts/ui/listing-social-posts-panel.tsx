@@ -17,10 +17,12 @@ const localeOptions = [
 
 export function ListingSocialPostsPanel({
   drafts,
+  propertyId,
   selectedChannels,
   selectedLocale
 }: {
   drafts: PropertySocialPostDraft[];
+  propertyId: string;
   selectedChannels: PropertySocialPostChannel[];
   selectedLocale: PropertySocialPostLocale;
 }) {
@@ -65,7 +67,7 @@ export function ListingSocialPostsPanel({
       </form>
       <div className={styles.grid}>
         {drafts.map((draft) => (
-          <SocialPostDraftCard draft={draft} key={`${draft.channel}-${draft.locale}`} />
+          <SocialPostDraftCard draft={draft} key={`${draft.channel}-${draft.locale}`} propertyId={propertyId} />
         ))}
       </div>
     </section>
