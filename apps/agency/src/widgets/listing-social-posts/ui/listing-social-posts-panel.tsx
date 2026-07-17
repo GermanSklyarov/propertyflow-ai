@@ -2,11 +2,16 @@ import type {
   PropertySocialPostChannel,
   PropertySocialPostDraft,
   PropertySocialPostLocale,
-  PropertySocialPostPublication,
   PropertySocialPostPublicationListResponse,
-  PropertySocialPostReview,
   PropertySocialPostReviewListResponse
 } from "@propertyflow/contracts";
+import {
+  findDraftPublication,
+  findDraftReview,
+  formatSocialPostChannel,
+  formatSocialPostPublishedAt,
+  shortenSocialPostTrackingSlug
+} from "../model/listing-social-posts-panel";
 import { SocialPostDraftCard } from "./social-post-draft-card";
 import styles from "./listing-social-posts-panel.module.css";
 
@@ -86,9 +91,16 @@ export function ListingSocialPostsPanel({
           <ul>
             {publications.items.slice(0, 4).map((item) => (
               <li key={item.id}>
-                <span>{formatChannel(item.channel)}</span>
-                <strong title={item.trackingSlug}>{shortenTrackingSlug(item.trackingSlug)}</strong>
-                <time dateTime={item.publishedAt}>{formatDate(item.publishedAt)}</time>
+                <span>{formatSocialPostChannel(item.channel)}</span>
+                {item.publishedUrl ? (
+                  <a href={item.publishedUrl} rel="noreferrer" target="_blank" title={item.publishedUrl}>
+                    Open post
+                  </a>
+                ) : (
+                  <em>No URL saved</em>
+                )}
+                <strong title={item.trackingSlug}>{shortenSocialPostTrackingSlug(item.trackingSlug)}</strong>
+                <time dateTime={item.publishedAt}>{formatSocialPostPublishedAt(item.publishedAt)}</time>
               </li>
             ))}
           </ul>
@@ -109,39 +121,4 @@ export function ListingSocialPostsPanel({
       </div>
     </section>
   );
-}
-
-function findDraftPublication(draft: PropertySocialPostDraft, publications: PropertySocialPostPublication[]) {
-  return publications.find(
-    (publication) =>
-      publication.channel === draft.channel &&
-      publication.locale === draft.locale &&
-      publication.trackingSlug === draft.publicationPlan.trackingSlug
-  );
-}
-
-function findDraftReview(draft: PropertySocialPostDraft, reviews: PropertySocialPostReview[]) {
-  return reviews.find(
-    (review) =>
-      review.channel === draft.channel &&
-      review.locale === draft.locale &&
-      review.trackingSlug === draft.publicationPlan.trackingSlug
-  );
-}
-
-function formatChannel(channel: PropertySocialPostChannel) {
-  return channel === "line-voom" ? "LINE VOOM" : channel === "facebook" ? "Facebook" : "Instagram";
-}
-
-function formatDate(value: string) {
-  return new Intl.DateTimeFormat("en", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date(value));
-}
-
-function shortenTrackingSlug(value: string) {
-  return value.length > 34 ? `${value.slice(0, 15)}...${value.slice(-12)}` : value;
 }

@@ -177,6 +177,36 @@
   white-space: nowrap;
 }
 
+.publicationHistory li a,
+.publicationHistory li em {
+  display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  min-height: 26px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #ecfdf3;
+  padding: 0 7px;
+  color: var(--teal-dark);
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.publicationHistory li a:hover,
+.publicationHistory li a:focus-visible {
+  background: var(--teal);
+  color: #fff;
+}
+
+.publicationHistory li em {
+  background: #fff8e8;
+  color: #8a5b10;
+}
+
 .grid {
   display: grid;
   align-items: stretch;
