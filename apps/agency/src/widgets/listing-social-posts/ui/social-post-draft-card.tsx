@@ -63,11 +63,12 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
           </span>
         ))}
       </div>
-      <div className={styles.publicationPlan}>
-        <div>
+      <details className={styles.publicationPlan}>
+        <summary>
           <Link2 size={15} />
-          <strong>{draft.publicationPlan.trackingSlug}</strong>
-        </div>
+          <strong>Tracking kit</strong>
+          <span title={draft.publicationPlan.trackingSlug}>{shortenIdentifier(draft.publicationPlan.trackingSlug)}</span>
+        </summary>
         <p>{draft.publicationPlan.nextAction}</p>
         <dl>
           <div>
@@ -83,7 +84,7 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
             <dd>{draft.publicationPlan.utm.content}</dd>
           </div>
         </dl>
-      </div>
+      </details>
       <div className={styles.workflowPlan}>
         <div className={styles.workflowHeader}>
           <Workflow size={15} />
@@ -92,7 +93,7 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
         <ol>
           {draft.approvalWorkflow.stages.map((stage) => (
             <li className={styles[`workflow${capitalizeWorkflowState(stage.state)}`]} key={stage.key}>
-              {stage.label}
+              {formatWorkflowStage(stage.label)}
             </li>
           ))}
         </ol>
@@ -105,8 +106,8 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
           </div>
         ) : null}
       </div>
-      <div className={styles.mediaPlan}>
-        <strong>{draft.mediaPlan.summary}</strong>
+      <details className={styles.mediaPlan}>
+        <summary>{draft.mediaPlan.summary}</summary>
         {draft.mediaPlan.items.length ? (
           <div className={styles.mediaStrip} aria-label={`${draft.label} recommended photos`}>
             {draft.mediaPlan.items.slice(0, 5).map((item) => (
@@ -124,7 +125,7 @@ export function SocialPostDraftCard({ draft }: { draft: PropertySocialPostDraft 
             ))}
           </ul>
         ) : null}
-      </div>
+      </details>
       <div className={styles.cardActions}>
         <details className={styles.editDetails}>
           <summary className={`${styles.actionButton} ${styles.secondaryAction}`}>
@@ -168,4 +169,12 @@ function formatWorkflowAction(action: PropertySocialPostDraft["approvalWorkflow"
     .split("-")
     .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
     .join(" ");
+}
+
+function formatWorkflowStage(label: string) {
+  return label === "Approved" ? "Approve" : label === "Published" ? "Publish" : label;
+}
+
+function shortenIdentifier(value: string) {
+  return value.length > 38 ? `${value.slice(0, 18)}...${value.slice(-14)}` : value;
 }

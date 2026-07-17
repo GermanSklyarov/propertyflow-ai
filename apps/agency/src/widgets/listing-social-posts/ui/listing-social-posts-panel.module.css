@@ -111,12 +111,14 @@
 
 .grid {
   display: grid;
+  align-items: stretch;
   gap: 12px;
 }
 
 .card {
   display: grid;
   min-width: 0;
+  height: 100%;
   gap: 12px;
   border: 1px solid rgb(15 118 110 / 12%);
   background: #fff;
@@ -176,12 +178,18 @@
   color: var(--teal-dark);
   font-size: 1rem;
   font-weight: 900;
+  min-height: 4.35em;
 }
 
 .body {
+  display: -webkit-box;
+  min-height: 8.15em;
+  overflow: hidden;
   color: #475955;
   font-size: 0.94rem;
   font-weight: 700;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 6;
 }
 
 .cta {
@@ -241,13 +249,65 @@
   color: #8a5b10;
 }
 
-.publicationPlan {
+.publicationPlan,
+.mediaPlan {
   display: grid;
   min-width: 0;
-  gap: 8px;
   border: 1px solid rgb(15 118 110 / 12%);
   background: #f6fbf9;
-  padding: 10px;
+}
+
+.publicationPlan summary,
+.mediaPlan summary {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: var(--teal-dark);
+  cursor: pointer;
+  list-style: none;
+}
+
+.publicationPlan summary::-webkit-details-marker,
+.mediaPlan summary::-webkit-details-marker {
+  display: none;
+}
+
+.publicationPlan summary:hover,
+.publicationPlan summary:focus-visible,
+.mediaPlan summary:hover,
+.mediaPlan summary:focus-visible {
+  background: #edf8f4;
+}
+
+.publicationPlan summary span {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.publicationPlan[open],
+.mediaPlan[open] {
+  gap: 8px;
+  padding-bottom: 10px;
+}
+
+.publicationPlan[open] summary,
+.mediaPlan[open] summary {
+  border-bottom: 1px solid rgb(15 118 110 / 10%);
+}
+
+.publicationPlan summary strong,
+.mediaPlan summary {
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .publicationPlan > div:first-child {
@@ -266,6 +326,7 @@
 
 .publicationPlan p {
   margin: 0;
+  padding: 0 10px;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
@@ -274,13 +335,18 @@
 
 .publicationPlan dl {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 6px;
   margin: 0;
+  padding: 0 10px;
 }
 
 .publicationPlan dl div {
+  display: flex;
   min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   border: 1px solid rgb(15 118 110 / 12%);
   background: #fff;
   padding: 7px;
@@ -299,20 +365,21 @@
 }
 
 .publicationPlan dd {
-  margin-top: 3px;
+  min-width: 0;
   color: var(--teal-dark);
   font-size: 0.72rem;
   font-weight: 900;
+  text-align: right;
   overflow-wrap: anywhere;
 }
 
 .workflowPlan {
   display: grid;
   min-width: 0;
-  gap: 9px;
+  gap: 8px;
   border: 1px solid rgb(15 118 110 / 12%);
   background: #fff;
-  padding: 10px;
+  padding: 9px;
 }
 
 .workflowHeader {
@@ -330,7 +397,7 @@
 .workflowPlan ol {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -339,8 +406,8 @@
 .workflowPlan li {
   min-width: 0;
   border: 1px solid rgb(15 118 110 / 12%);
-  padding: 7px 6px;
-  font-size: 0.66rem;
+  padding: 7px 4px;
+  font-size: 0.58rem;
   font-weight: 900;
   line-height: 1;
   text-align: center;
@@ -392,25 +459,11 @@
   text-transform: uppercase;
 }
 
-.mediaPlan {
-  display: grid;
-  min-width: 0;
-  gap: 8px;
-  border: 1px solid rgb(15 118 110 / 12%);
-  background: #f8fbf8;
-  padding: 10px;
-}
-
-.mediaPlan strong {
-  color: var(--teal-dark);
-  font-size: 0.82rem;
-  line-height: 1.35;
-}
-
 .mediaStrip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
+  padding: 0 10px;
 }
 
 .mediaStrip figure {
@@ -449,6 +502,7 @@
   gap: 4px;
   margin: 0;
   padding-left: 18px;
+  padding-right: 10px;
   color: #8a5b10;
   font-size: 0.76rem;
   font-weight: 850;
@@ -461,6 +515,7 @@
   flex-wrap: wrap;
   gap: 8px;
   align-items: flex-start;
+  margin-top: auto;
 }
 
 .actionButton {
