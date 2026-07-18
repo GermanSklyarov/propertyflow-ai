@@ -72,9 +72,11 @@ Create `.env` from `.env.example`, then start the local infrastructure and apply
 npm install
 npm run infra:up
 npm run migrate
-npm run seed:demo --workspace @propertyflow/api
+npm run seed:demo
 npm run dev --workspace @propertyflow/api
 ```
+
+`npm run seed:demo` seeds projects, listings, price history, and CRM leads for the local `demo-agency` tenant. Use `npm run seed:demo-properties` or `npm run seed:demo-leads` when you only need to refresh one side of the demo dataset.
 
 The API starts with a tenant-aware property inventory slice:
 
