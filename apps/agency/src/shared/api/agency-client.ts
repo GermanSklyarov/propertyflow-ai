@@ -302,73 +302,57 @@ export async function getLeadQueueSummary(
 }
 
 export async function getLead(leadId: string): Promise<LeadSnapshot | null> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/leads?limit=100`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/leads?limit=100`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoLeadById(leadId);
-    }
-
-    const body = (await response.json()) as LeadListResponse;
-
-    return body.items.find((lead) => lead.id === leadId) ?? null;
-  } catch {
-    return demoLeadById(leadId);
+  if (!response.ok) {
+    throw new Error(`Failed to load lead: ${response.status}`);
   }
+
+  const body = (await response.json()) as LeadListResponse;
+
+  return body.items.find((lead) => lead.id === leadId) ?? null;
 }
 
 export async function getLeadTimeline(leadId: string): Promise<LeadTimelineResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/leads/${leadId}/timeline`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/timeline`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoLeadTimelineResponse(leadId);
-    }
-
-    return (await response.json()) as LeadTimelineResponse;
-  } catch {
-    return demoLeadTimelineResponse(leadId);
+  if (!response.ok) {
+    throw new Error(`Failed to load lead timeline: ${response.status}`);
   }
+
+  return (await response.json()) as LeadTimelineResponse;
 }
 
 export async function getLeadNotes(leadId: string): Promise<LeadNotesResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/leads/${leadId}/notes`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/notes`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoLeadNotesResponse(leadId);
-    }
-
-    return (await response.json()) as LeadNotesResponse;
-  } catch {
-    return demoLeadNotesResponse(leadId);
+  if (!response.ok) {
+    throw new Error(`Failed to load lead notes: ${response.status}`);
   }
+
+  return (await response.json()) as LeadNotesResponse;
 }
 
 export async function listLeadAgents(): Promise<TenantUserSnapshot[]> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/leads/agents`, {
-      headers: demoHeaders,
-      next: { revalidate: 60 }
-    });
+  const response = await fetch(`${apiBaseUrl}/leads/agents`, {
+    headers: demoHeaders,
+    next: { revalidate: 60 }
+  });
 
-    if (!response.ok) {
-      return demoLeadAgents();
-    }
-
-    return (await response.json()) as TenantUserSnapshot[];
-  } catch {
-    return demoLeadAgents();
+  if (!response.ok) {
+    throw new Error(`Failed to load lead agents: ${response.status}`);
   }
+
+  return (await response.json()) as TenantUserSnapshot[];
 }
 
 export async function addLeadNote(leadId: string, payload: CreateLeadNoteRequest): Promise<LeadNoteSnapshot> {
