@@ -1,15 +1,23 @@
 import Link from "next/link";
-import { Bot, CircleDot, Clock3, Mail, Phone, Sparkles, UserRound, Users } from "lucide-react";
+import { Bot, CircleDot, Clock3, Mail, Phone, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
 import { buildLeadFollowUpState, formatLeadOwner } from "@entities/lead/lib/lead-queue";
-import type { CountByBucket, LeadQueueSummaryResponse, LeadSnapshot } from "@propertyflow/contracts";
+import {
+  buildLeadQueueHref,
+  leadPriorityFilterOptions,
+  leadSourceFilterOptions,
+  leadStatusFilterOptions
+} from "@entities/lead/model/lead-filters";
+import type { CountByBucket, LeadQueueSummaryResponse, LeadSnapshot, ListLeadsRequest } from "@propertyflow/contracts";
 import { formatBucket, formatDateTime } from "@shared/lib/formatters";
 import styles from "./leads-queue-panel.module.css";
 
 export function LeadsQueuePanel({
+  filters,
   leads,
   queueSummary,
   total
 }: {
+  filters: ListLeadsRequest;
   leads: LeadSnapshot[];
   queueSummary: LeadQueueSummaryResponse;
   total: number;
@@ -51,15 +59,89 @@ export function LeadsQueuePanel({
             <span className={styles.queueCount}>{leads.length} visible</span>
           </div>
 
+          <div className={styles.quickFilters} aria-label="Quick lead filters">
+            <Link className={isEmptyLeadFilter(filters) ? styles.quickFilterActive : ""} href="/leads">
+              All
+            </Link>
+            <Link
+              className={filters.unassigned ? styles.quickFilterActive : ""}
+              href={buildLeadQueueHref(filters, { priority: undefined, status: undefined, unassigned: true })}
+            >
+              Unassigned
+            </Link>
+            <Link
+              className={filters.priority === "high" ? styles.quickFilterActive : ""}
+              href={buildLeadQueueHref(filters, { priority: "high", status: undefined, unassigned: undefined })}
+            >
+              High priority
+            </Link>
+            <Link
+              className={filters.status === "new" ? styles.quickFilterActive : ""}
+              href={buildLeadQueueHref(filters, { priority: undefined, status: "new", unassigned: undefined })}
+            >
+              New leads
+            </Link>
+          </div>
+
+          <form action="/leads" className={styles.toolbar} method="get">
+            <label>
+              <SlidersHorizontal size={16} />
+              <select defaultValue={filters.status ?? ""} name="status">
+                <option value="">Any status</option>
+                {leadStatusFilterOptions.map((status) => (
+                  <option key={status} value={status}>
+                    {formatBucket(status)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <select defaultValue={filters.source ?? ""} name="source">
+                <option value="">Any source</option>
+                {leadSourceFilterOptions.map((source) => (
+                  <option key={source} value={source}>
+                    {formatBucket(source)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <select defaultValue={filters.priority ?? ""} name="priority">
+                <option value="">Any priority</option>
+                {leadPriorityFilterOptions.map((priority) => (
+                  <option key={priority} value={priority}>
+                    {formatBucket(priority)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <select defaultValue={filters.unassigned ? "true" : ""} name="unassigned">
+                <option value="">Any owner</option>
+                <option value="true">Unassigned only</option>
+              </select>
+            </label>
+            {filters.propertyId ? <input name="propertyId" type="hidden" value={filters.propertyId} /> : null}
+            {filters.attributionSocialPostTrackingSlug ? (
+              <input name="attributionSocialPostTrackingSlug" type="hidden" value={filters.attributionSocialPostTrackingSlug} />
+            ) : null}
+            <button type="submit">Apply filters</button>
+          </form>
+
           <div className={styles.leadList}>
             {leads.map((lead) => (
               <LeadRow key={lead.id} lead={lead} />
             ))}
+            {leads.length === 0 ? <div className={styles.emptyState}>No leads match this queue filter.</div> : null}
           </div>
         </section>
       </section>
     </>
   );
+}
+
+function isEmptyLeadFilter(filters: ListLeadsRequest) {
+  return !filters.status && !filters.source && !filters.priority && !filters.unassigned && !filters.propertyId && !filters.attributionSocialPostTrackingSlug;
 }
 
 function LeadRow({ lead }: { lead: LeadSnapshot }) {

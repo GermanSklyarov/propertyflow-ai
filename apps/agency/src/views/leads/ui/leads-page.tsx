@@ -1,15 +1,17 @@
-import type { LeadQueueSummaryResponse, LeadSnapshot } from "@propertyflow/contracts";
+import type { LeadQueueSummaryResponse, LeadSnapshot, ListLeadsRequest } from "@propertyflow/contracts";
 import { formatDateTime } from "@shared/lib/formatters";
 import { LeadsQueuePanel } from "@widgets/leads-queue/ui/leads-queue-panel";
 import styles from "./leads-page.module.css";
 
 export function LeadsPage({
   activeFilterLabel,
+  filters,
   leads,
   queueSummary,
   total
 }: {
   activeFilterLabel?: string;
+  filters: ListLeadsRequest;
   leads: LeadSnapshot[];
   queueSummary: LeadQueueSummaryResponse;
   total: number;
@@ -35,7 +37,7 @@ export function LeadsPage({
           </div>
         ) : null}
 
-        <LeadsQueuePanel leads={leads} queueSummary={queueSummary} total={total} />
+        <LeadsQueuePanel filters={filters} leads={leads} queueSummary={queueSummary} total={total} />
       </div>
     </main>
   );
