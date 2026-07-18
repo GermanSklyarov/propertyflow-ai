@@ -1,22 +1,35 @@
-import { Home, Link2, MapPin, Save, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Home, Link2, MapPin, Save, Search, SlidersHorizontal } from "lucide-react";
 import { linkLeadPropertyAction } from "@entities/lead/api/lead-actions";
+import {
+  buildLeadPropertyCandidateHref,
+  formatLeadPropertyCandidateSort,
+  getLeadPropertyCandidatePage,
+  leadPropertyCandidatePageSize,
+  leadPropertyCandidateSortOptions
+} from "@features/lead-property-link/model/lead-property-link";
+import type { PropertySearchResponse } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import styles from "./lead-property-link-panel.module.css";
 
 export function LeadPropertyLinkPanel({
   leadId,
-  listings,
-  searchQuery
+  response
 }: {
   leadId: string;
-  listings: PropertySnapshot[];
-  searchQuery: string;
+  response: PropertySearchResponse;
 }) {
   const action = linkLeadPropertyAction.bind(null, leadId);
+  const listings = response.items;
+  const filters = response.filters;
+  const currentPage = getLeadPropertyCandidatePage(filters);
+  const pageSize = filters.limit ?? leadPropertyCandidatePageSize;
+  const pageCount = Math.max(1, Math.ceil(response.total / pageSize));
+  const firstVisible = response.total === 0 ? 0 : (filters.offset ?? 0) + 1;
+  const lastVisible = Math.min(response.total, (filters.offset ?? 0) + listings.length);
 
   return (
-    <section className={styles.panel} aria-label="Link lead to listing">
+    <section className={styles.panel} id="link-listing" aria-label="Link lead to listing">
       <div className={styles.header}>
         <div>
           <p className="section-kicker">Missing context</p>
@@ -25,16 +38,29 @@ export function LeadPropertyLinkPanel({
         <Link2 size={20} />
       </div>
 
-      <form className={styles.searchForm} method="get">
+      <form action={`/leads/${leadId}#link-listing`} className={styles.searchForm} method="get">
         <label className={styles.searchField}>
           <Search size={17} />
           <input
-            defaultValue={searchQuery}
+            defaultValue={filters.query ?? ""}
             name="listingSearch"
             placeholder="condo jomtien 1 bedroom under 20k/month"
             type="search"
           />
         </label>
+        <label className={styles.sortField}>
+          <SlidersHorizontal size={16} />
+          <select defaultValue={filters.sort ?? "created-desc"} name="listingSort">
+            {leadPropertyCandidateSortOptions.map((sort) => (
+              <option key={sort} value={sort}>
+                {formatLeadPropertyCandidateSort(sort)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <span className={styles.resultMeta}>
+          {firstVisible}-{lastVisible} of {response.total}
+        </span>
         <button className={styles.searchButton} type="submit">
           Search listings
         </button>
@@ -42,7 +68,7 @@ export function LeadPropertyLinkPanel({
 
       <form action={action} className={styles.form}>
         <div className={styles.candidateGroup}>
-          <span className={styles.fieldLabel}>{searchQuery ? "Matching listings" : "Recent listings"}</span>
+          <span className={styles.fieldLabel}>{filters.query ? "Matching listings" : "Recent listings"}</span>
           <div className={styles.candidateList}>
             {listings.map((listing) => (
               <label className={styles.candidateCard} key={listing.id}>
@@ -74,6 +100,30 @@ export function LeadPropertyLinkPanel({
             ) : null}
           </div>
         </div>
+
+        {pageCount > 1 ? (
+          <div className={styles.pagination} aria-label="Candidate listing pagination">
+            <a
+              aria-disabled={currentPage === 1}
+              className={currentPage === 1 ? styles.paginationDisabled : ""}
+              href={buildLeadPropertyCandidateHref(leadId, filters, { page: Math.max(1, currentPage - 1) })}
+            >
+              <ChevronLeft size={16} />
+              Prev
+            </a>
+            <span>
+              Page {currentPage} of {pageCount} · {formatLeadPropertyCandidateSort(filters.sort ?? "created-desc")}
+            </span>
+            <a
+              aria-disabled={currentPage === pageCount}
+              className={currentPage === pageCount ? styles.paginationDisabled : ""}
+              href={buildLeadPropertyCandidateHref(leadId, filters, { page: Math.min(pageCount, currentPage + 1) })}
+            >
+              Next
+              <ChevronRight size={16} />
+            </a>
+          </div>
+        ) : null}
 
         <label>
           <span>Agent note</span>
