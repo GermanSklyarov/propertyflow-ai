@@ -542,54 +542,42 @@ export async function updatePropertyAmenities(
 }
 
 export async function getProperty(propertyId: string): Promise<PropertySnapshot | null> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoPropertyById(propertyId);
-    }
-
-    return (await response.json()) as PropertySnapshot;
-  } catch {
-    return demoPropertyById(propertyId);
+  if (!response.ok) {
+    throw new Error(`Failed to load property: ${response.status}`);
   }
+
+  return (await response.json()) as PropertySnapshot;
 }
 
 export async function getPropertyImages(propertyId: string): Promise<PropertyImageGalleryResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoPropertyImageGallery(propertyId);
-    }
-
-    return (await response.json()) as PropertyImageGalleryResponse;
-  } catch {
-    return demoPropertyImageGallery(propertyId);
+  if (!response.ok) {
+    throw new Error(`Failed to load property images: ${response.status}`);
   }
+
+  return (await response.json()) as PropertyImageGalleryResponse;
 }
 
 export async function getPropertyAiAssets(propertyId: string): Promise<PropertyAiAssets> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoPropertyAiAssets(propertyId);
-    }
-
-    return (await response.json()) as PropertyAiAssets;
-  } catch {
-    return demoPropertyAiAssets(propertyId);
+  if (!response.ok) {
+    throw new Error(`Failed to load property AI assets: ${response.status}`);
   }
+
+  return (await response.json()) as PropertyAiAssets;
 }
 
 export async function addPropertyImage(
@@ -752,20 +740,16 @@ export async function savePropertySocialPostDraft(
 export async function listPropertySocialPostPublications(
   propertyId: string
 ): Promise<PropertySocialPostPublicationListResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/publications`, {
-      headers: demoHeaders,
-      next: { revalidate: 10 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/publications`, {
+    headers: demoHeaders,
+    next: { revalidate: 10 }
+  });
 
-    if (!response.ok) {
-      return { items: [], propertyId, total: 0 };
-    }
-
-    return (await response.json()) as PropertySocialPostPublicationListResponse;
-  } catch {
-    return { items: [], propertyId, total: 0 };
+  if (!response.ok) {
+    throw new Error(`Failed to list property social post publications: ${response.status}`);
   }
+
+  return (await response.json()) as PropertySocialPostPublicationListResponse;
 }
 
 export async function recordPropertySocialPostReview(
@@ -791,20 +775,16 @@ export async function recordPropertySocialPostReview(
 export async function listPropertySocialPostReviews(
   propertyId: string
 ): Promise<PropertySocialPostReviewListResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/reviews`, {
-      headers: demoHeaders,
-      next: { revalidate: 10 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/reviews`, {
+    headers: demoHeaders,
+    next: { revalidate: 10 }
+  });
 
-    if (!response.ok) {
-      return { items: [], propertyId, total: 0 };
-    }
-
-    return (await response.json()) as PropertySocialPostReviewListResponse;
-  } catch {
-    return { items: [], propertyId, total: 0 };
+  if (!response.ok) {
+    throw new Error(`Failed to list property social post reviews: ${response.status}`);
   }
+
+  return (await response.json()) as PropertySocialPostReviewListResponse;
 }
 
 export async function reviewPropertyImageAnalysisAsset(

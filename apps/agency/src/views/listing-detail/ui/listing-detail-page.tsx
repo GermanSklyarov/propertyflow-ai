@@ -22,6 +22,7 @@ import type {
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
+import { LoadState } from "@shared/ui/load-state";
 import { ListingAgentGuidancePanel } from "@widgets/listing-agent-guidance/ui/listing-agent-guidance-panel";
 import { ListingAmenitiesPanel } from "@widgets/listing-amenities/ui/listing-amenities-panel";
 import { ListingMediaPanel } from "@widgets/listing-media/ui/listing-media-panel";
@@ -35,11 +36,14 @@ export function ListingDetailPage({
   appliedImageAnalysisAssetId,
   amenitiesUpdated,
   aiAssets,
+  aiAssetsError,
   gallery,
+  galleryError,
   listing,
   selectedSocialChannels,
   selectedSocialLocale,
   socialPostDrafts,
+  socialPostError,
   socialPostPublications,
   socialPostLeads,
   socialPostReviews,
@@ -48,19 +52,23 @@ export function ListingDetailPage({
   appliedDescriptionAssetId?: string;
   appliedImageAnalysisAssetId?: string;
   amenitiesUpdated?: boolean;
-  aiAssets: PropertyAiAssets;
-  gallery: PropertyImageGalleryResponse;
+  aiAssets?: PropertyAiAssets;
+  aiAssetsError?: string;
+  gallery?: PropertyImageGalleryResponse;
+  galleryError?: string;
   listing: PropertySnapshot;
   selectedSocialChannels: PropertySocialPostChannel[];
   selectedSocialLocale: PropertySocialPostLocale;
-  socialPostDrafts: PropertySocialPostDraft[];
-  socialPostPublications: PropertySocialPostPublicationListResponse;
-  socialPostLeads: LeadListResponse;
-  socialPostReviews: PropertySocialPostReviewListResponse;
+  socialPostDrafts?: PropertySocialPostDraft[];
+  socialPostError?: string;
+  socialPostPublications?: PropertySocialPostPublicationListResponse;
+  socialPostLeads?: LeadListResponse;
+  socialPostReviews?: PropertySocialPostReviewListResponse;
   queuedImageAnalysis?: boolean;
 }) {
-  const media = buildListingMediaSummary(gallery);
-  const publication = buildListingPublicationSummary(listing, media.activeCount);
+  const media = gallery ? buildListingMediaSummary(gallery) : null;
+  const activeImageCount = media?.activeCount ?? 0;
+  const publication = buildListingPublicationSummary(listing, activeImageCount);
   const readiness = buildListingReadiness(listing);
   const nextActions = buildListingNextActions(listing, readiness.score);
 
@@ -95,7 +103,15 @@ export function ListingDetailPage({
           </div>
         ) : null}
 
-        <ListingMediaPanel gallery={gallery} listingId={listing.id} listingTitle={listing.title} />
+        {gallery ? (
+          <ListingMediaPanel gallery={gallery} listingId={listing.id} listingTitle={listing.title} />
+        ) : (
+          <LoadState
+            kicker="Media unavailable"
+            message={galleryError ?? "Listing gallery did not load."}
+            title="Could not load listing photos"
+          />
+        )}
 
         <ListingOverviewPanel listing={listing} readiness={readiness} />
 
@@ -103,32 +119,56 @@ export function ListingDetailPage({
 
         <ListingPublicationPanel publication={publication} />
 
-        <ListingSocialPostsPanel
-          drafts={socialPostDrafts}
-          publications={socialPostPublications}
-          propertyId={listing.id}
-          reviews={socialPostReviews}
-          socialPostLeads={socialPostLeads}
-          selectedChannels={selectedSocialChannels}
-          selectedLocale={selectedSocialLocale}
-        />
+        {socialPostError || !socialPostDrafts || !socialPostPublications || !socialPostReviews || !socialPostLeads ? (
+          <LoadState
+            kicker="Growth automation unavailable"
+            message={socialPostError ?? "Social post drafts, reviews, publications, or leads did not load."}
+            title="Could not load social post workspace"
+          />
+        ) : (
+          <ListingSocialPostsPanel
+            drafts={socialPostDrafts}
+            publications={socialPostPublications}
+            propertyId={listing.id}
+            reviews={socialPostReviews}
+            socialPostLeads={socialPostLeads}
+            selectedChannels={selectedSocialChannels}
+            selectedLocale={selectedSocialLocale}
+          />
+        )}
 
         <ListingAgentGuidancePanel nextActions={nextActions} readiness={readiness} />
 
-        <ListingAiDescriptionReviewPanel
-          appliedDescriptionAssetId={appliedDescriptionAssetId}
-          descriptions={aiAssets.descriptions}
-          propertyId={listing.id}
-        />
+        {aiAssets ? (
+          <ListingAiDescriptionReviewPanel
+            appliedDescriptionAssetId={appliedDescriptionAssetId}
+            descriptions={aiAssets.descriptions}
+            propertyId={listing.id}
+          />
+        ) : (
+          <LoadState
+            kicker="AI copy unavailable"
+            message={aiAssetsError ?? "Generated descriptions did not load."}
+            title="Could not load AI description drafts"
+          />
+        )}
 
-        <ListingImageAnalysisReviewPanel
-          activeImageCount={media.activeCount}
-          appliedImageAnalysisAssetId={appliedImageAnalysisAssetId}
-          gallery={gallery}
-          imageAnalysis={aiAssets.imageAnalysis}
-          propertyId={listing.id}
-          queuedImageAnalysis={queuedImageAnalysis}
-        />
+        {aiAssets && gallery ? (
+          <ListingImageAnalysisReviewPanel
+            activeImageCount={activeImageCount}
+            appliedImageAnalysisAssetId={appliedImageAnalysisAssetId}
+            gallery={gallery}
+            imageAnalysis={aiAssets.imageAnalysis}
+            propertyId={listing.id}
+            queuedImageAnalysis={queuedImageAnalysis}
+          />
+        ) : (
+          <LoadState
+            kicker="AI image analysis unavailable"
+            message={aiAssetsError ?? galleryError ?? "Image analysis needs both AI assets and gallery data."}
+            title="Could not load image analysis"
+          />
+        )}
 
         <ListingAmenitiesPanel
           amenities={listing.amenities}
