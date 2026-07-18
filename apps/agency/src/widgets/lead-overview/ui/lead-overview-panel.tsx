@@ -1,10 +1,18 @@
-import { Clock3, Mail, MapPin, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import Link from "next/link";
+import { ArrowUpRight, Clock3, Home, Mail, MapPin, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { buildLeadFollowUpSummary, formatLeadOwner } from "@entities/lead/lib/lead-queue";
 import type { LeadSnapshot } from "@propertyflow/contracts";
+import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatDateTime } from "@shared/lib/formatters";
 import styles from "./lead-overview-panel.module.css";
 
-export function LeadOverviewPanel({ lead }: { lead: LeadSnapshot }) {
+export function LeadOverviewPanel({
+  lead,
+  linkedListing
+}: {
+  lead: LeadSnapshot;
+  linkedListing?: PropertySnapshot | null;
+}) {
   const followUpState = buildLeadFollowUpSummary(lead);
 
   return (
@@ -42,7 +50,7 @@ export function LeadOverviewPanel({ lead }: { lead: LeadSnapshot }) {
             <MapPin size={20} />
           </div>
           <div className={styles.fieldGrid}>
-            <Field label="Property ID" value={lead.propertyId ?? "not linked"} />
+            <LinkedListingField lead={lead} listing={linkedListing} />
             <Field label="Search source" value={lead.attributionSearchSource ?? "not attributed"} />
             <Field label="Search query" value={lead.attributionSearchQuery ?? "not captured"} wide />
             <Field label="Social channel" value={lead.attributionSocialPostChannel ? formatBucket(lead.attributionSocialPostChannel) : "not attributed"} />
@@ -52,6 +60,32 @@ export function LeadOverviewPanel({ lead }: { lead: LeadSnapshot }) {
         </section>
       </section>
     </>
+  );
+}
+
+function LinkedListingField({ lead, listing }: { lead: LeadSnapshot; listing?: PropertySnapshot | null }) {
+  if (!lead.propertyId) {
+    return <Field label="Linked listing" value="not linked" />;
+  }
+
+  if (!listing) {
+    return <Field label="Linked listing" value={lead.propertyId} />;
+  }
+
+  return (
+    <div className={`${styles.field} ${styles.fieldWide}`}>
+      <span>
+        <Home size={15} />
+        Linked listing
+      </span>
+      <Link className={styles.listingLink} href={`/listings/${listing.id}`}>
+        <strong>{listing.title}</strong>
+        <small>
+          {listing.market} · {listing.address}
+        </small>
+        <ArrowUpRight size={16} />
+      </Link>
+    </div>
   );
 }
 

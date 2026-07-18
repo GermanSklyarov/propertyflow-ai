@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { LeadWorkflowPanel } from "@features/lead-workflow-update/ui/lead-workflow-panel";
 import type { LeadNotesResponse, LeadSnapshot, LeadTimelineResponse, TenantUserSnapshot } from "@propertyflow/contracts";
+import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket } from "@shared/lib/formatters";
 import { LeadActivityPanel } from "@widgets/lead-activity/ui/lead-activity-panel";
 import { LeadOverviewPanel } from "@widgets/lead-overview/ui/lead-overview-panel";
@@ -10,11 +11,13 @@ import styles from "./lead-detail-page.module.css";
 export function LeadDetailPage({
   agents,
   lead,
+  linkedListing,
   notes,
   timeline
 }: {
   agents: TenantUserSnapshot[];
   lead: LeadSnapshot;
+  linkedListing?: PropertySnapshot | null;
   notes: LeadNotesResponse;
   timeline: LeadTimelineResponse;
 }) {
@@ -34,7 +37,7 @@ export function LeadDetailPage({
           <span className={styles.statusBadge}>{formatBucket(lead.status)}</span>
         </header>
 
-        <LeadOverviewPanel lead={lead} />
+        <LeadOverviewPanel lead={lead} linkedListing={linkedListing} />
 
         <LeadWorkflowPanel agents={agents} lead={lead} />
 

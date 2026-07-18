@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { leadAgentsQueryOptions, leadDetailQueryOptions, leadNotesQueryOptions, leadTimelineQueryOptions } from "@entities/lead/api/lead-queries";
+import { listingDetailQueryOptions } from "@entities/listing/api/listing-queries";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { LeadDetailPage } from "@views/lead-detail/ui/lead-detail-page";
 
@@ -17,5 +18,7 @@ export default async function AgencyLeadDetailRoute({ params }: { params: Promis
     notFound();
   }
 
-  return <LeadDetailPage agents={agents} lead={lead} notes={notes} timeline={timeline} />;
+  const linkedListing = lead.propertyId ? await queryClient.ensureQueryData(listingDetailQueryOptions(lead.propertyId)) : null;
+
+  return <LeadDetailPage agents={agents} lead={lead} linkedListing={linkedListing} notes={notes} timeline={timeline} />;
 }

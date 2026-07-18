@@ -95,6 +95,42 @@
   overflow-wrap: anywhere;
 }
 
+.listingLink {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 10px;
+  color: var(--teal-dark);
+}
+
+.listingLink:hover {
+  border-color: rgb(15 118 110 / 28%);
+  background: #e3f5ef;
+}
+
+.listingLink strong,
+.listingLink small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.listingLink small {
+  grid-column: 1 / 2;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.listingLink svg {
+  grid-column: 2 / 3;
+  grid-row: 1 / 3;
+}
+
 @media (min-width: 860px) {
   .kpiGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
