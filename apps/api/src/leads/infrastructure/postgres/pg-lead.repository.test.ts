@@ -60,9 +60,30 @@ describe("PgLeadRepository", () => {
         null,
         "10000000-0000-4000-8000-000000000001",
         "pattaya-sale-or-rent-property-1-facebook-en",
+        null,
+        null,
         100,
         0
       ]
+    );
+  });
+
+  it("searches leads by normalized phone and text context", async () => {
+    const pool = {
+      query: vi.fn().mockResolvedValue({
+        rows: []
+      })
+    } as unknown as Pool;
+    const repository = new PgLeadRepository(pool);
+
+    await repository.list("demo-agency", {
+      limit: 12,
+      query: "+66 81"
+    });
+
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $11"),
+      ["demo-agency", null, null, null, false, null, null, null, null, "%+66 81%", "%6681%", 12, 0]
     );
   });
 
@@ -83,7 +104,7 @@ describe("PgLeadRepository", () => {
     expect(total).toBe(37);
     expect(pool.query).toHaveBeenCalledWith(
       expect.stringContaining("count(*)::text as total"),
-      ["demo-agency", "new", "ai-concierge", null, false, "high", null, null, null]
+      ["demo-agency", "new", "ai-concierge", null, false, "high", null, null, null, null, null]
     );
   });
 
@@ -126,7 +147,9 @@ describe("PgLeadRepository", () => {
         null,
         null,
         "10000000-0000-4000-8000-000000000001",
-        "pattaya-sale-or-rent-property-1-facebook-en"
+        "pattaya-sale-or-rent-property-1-facebook-en",
+        null,
+        null
       ]
     );
   });

@@ -170,6 +170,7 @@
   padding: 0 10px;
 }
 
+.toolbar input,
 .toolbar select {
   min-width: 0;
   width: 100%;
@@ -182,6 +183,7 @@
   font-weight: 900;
 }
 
+.toolbar input:focus,
 .toolbar select:focus {
   outline: none;
 }
@@ -473,6 +475,10 @@
     align-items: stretch;
   }
 
+  .searchField {
+    grid-column: 1 / -1;
+  }
+
   .toolbar button {
     grid-column: span 2;
   }
@@ -480,9 +486,10 @@
 
 @media (min-width: 1240px) {
   .toolbar {
-    grid-template-columns: repeat(5, minmax(0, 1fr)) auto auto;
+    grid-template-columns: minmax(260px, 1.6fr) repeat(5, minmax(0, 1fr)) auto auto;
   }
 
+  .searchField,
   .toolbar button {
     grid-column: auto;
   }

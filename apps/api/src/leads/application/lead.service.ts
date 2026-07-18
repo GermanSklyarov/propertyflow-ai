@@ -739,11 +739,13 @@ export class LeadService {
     const rawLimit = request.limit as number | string | undefined;
     const rawOffset = request.offset as number | string | undefined;
     const rawUnassigned = request.unassigned as boolean | string | undefined;
+    const query = request.query?.trim();
 
     return {
       ...request,
       limit: rawLimit === undefined ? undefined : Number(rawLimit),
       offset: rawOffset === undefined ? undefined : Number(rawOffset),
+      query: query && query.length > 0 ? query : undefined,
       unassigned:
         rawUnassigned === undefined || rawUnassigned === ""
           ? undefined

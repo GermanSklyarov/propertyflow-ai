@@ -7,6 +7,7 @@ describe("lead filters model", () => {
       parseLeadQueueRequest({
         page: "3",
         priority: "high",
+        query: "+66 81",
         source: "ai-concierge",
         sort: "priority-desc",
         status: "new",
@@ -16,6 +17,7 @@ describe("lead filters model", () => {
       limit: 12,
       offset: 24,
       priority: "high",
+      query: "+66 81",
       source: "ai-concierge",
       sort: "priority-desc",
       status: "new",
@@ -28,6 +30,7 @@ describe("lead filters model", () => {
       limit: 12,
       offset: 0,
       priority: undefined,
+      query: undefined,
       source: undefined,
       sort: "follow-up-asc",
       status: undefined,
@@ -36,8 +39,8 @@ describe("lead filters model", () => {
   });
 
   it("builds stable lead queue hrefs without leaking the API limit", () => {
-    expect(buildLeadQueueHref({ limit: 12, offset: 12, source: "social-post" }, { priority: "high" })).toBe(
-      "/leads?source=social-post&priority=high"
+    expect(buildLeadQueueHref({ limit: 12, offset: 12, query: "maya", source: "social-post" }, { priority: "high" })).toBe(
+      "/leads?query=maya&source=social-post&priority=high"
     );
   });
 

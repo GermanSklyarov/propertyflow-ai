@@ -12,6 +12,7 @@ export interface LeadQueueSearchParams {
   priority?: string;
   propertyId?: string;
   page?: string;
+  query?: string;
   source?: string;
   sort?: string;
   status?: string;
@@ -26,6 +27,7 @@ export function parseLeadQueueRequest(query: LeadQueueSearchParams): ListLeadsRe
     offset: (parseLeadQueuePage(query.page) - 1) * leadQueuePageSize,
     priority: parseLeadPriority(query.priority),
     propertyId: query.propertyId || undefined,
+    query: query.query?.trim() || undefined,
     source: parseLeadSource(query.source),
     sort: parseLeadSort(query.sort) ?? "follow-up-asc",
     status: parseLeadStatus(query.status),
@@ -40,6 +42,10 @@ export function buildActiveLeadFilterLabel(request: ListLeadsRequest) {
 
   if (request.propertyId) {
     return `Property: ${request.propertyId}`;
+  }
+
+  if (request.query) {
+    return `Search: ${request.query}`;
   }
 
   if (request.unassigned) {

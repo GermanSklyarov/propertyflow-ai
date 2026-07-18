@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bot, ChevronLeft, ChevronRight, CircleDot, Clock3, Mail, Phone, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
+import { Bot, ChevronLeft, ChevronRight, CircleDot, Clock3, Mail, Phone, Search, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
 import { buildLeadFollowUpState, formatLeadOwner } from "@entities/lead/lib/lead-queue";
 import {
   buildLeadQueueHref,
@@ -93,6 +93,15 @@ export function LeadsQueuePanel({
           </div>
 
           <form action="/leads" className={styles.toolbar} method="get">
+            <label className={styles.searchField}>
+              <Search size={16} />
+              <input
+                defaultValue={filters.query ?? ""}
+                name="query"
+                placeholder="Name, phone, email, message"
+                type="search"
+              />
+            </label>
             <label>
               <SlidersHorizontal size={16} />
               <select defaultValue={filters.status ?? ""} name="status">
@@ -186,7 +195,15 @@ export function LeadsQueuePanel({
 }
 
 function isEmptyLeadFilter(filters: ListLeadsRequest) {
-  return !filters.status && !filters.source && !filters.priority && !filters.unassigned && !filters.propertyId && !filters.attributionSocialPostTrackingSlug;
+  return (
+    !filters.status &&
+    !filters.source &&
+    !filters.priority &&
+    !filters.unassigned &&
+    !filters.propertyId &&
+    !filters.query &&
+    !filters.attributionSocialPostTrackingSlug
+  );
 }
 
 function LeadRow({ lead }: { lead: LeadSnapshot }) {

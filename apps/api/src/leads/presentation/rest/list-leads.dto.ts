@@ -64,6 +64,14 @@ export class ListLeadsDto implements ListLeadsRequest {
   @IsString()
   attributionSocialPostTrackingSlug?: string;
 
+  @ApiProperty({
+    description: "Smart CRM search across contact name, email, phone, message, property id, and attribution context.",
+    required: false
+  })
+  @IsOptional()
+  @IsString()
+  query?: string;
+
   @ApiProperty({ required: false, minimum: 1, maximum: 100 })
   @IsOptional()
   @Transform(({ value }: { value: string | number | undefined }) => {

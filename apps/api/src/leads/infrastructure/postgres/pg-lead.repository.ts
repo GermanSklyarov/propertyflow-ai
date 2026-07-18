@@ -483,6 +483,7 @@ export class PgLeadRepository implements LeadRepository {
 
   async list(tenantId: string, request: ListLeadsRequest = {}): Promise<LeadSnapshot[]> {
     const orderBy = this.buildLeadListOrderBy(request.sort);
+    const search = this.buildLeadSearchParams(request.query);
     const result = await this.pool.query<LeadRow>(
       `
         select *
@@ -496,9 +497,22 @@ export class PgLeadRepository implements LeadRepository {
           and ($7::timestamptz is null or next_follow_up_at <= $7)
           and ($8::text is null or property_id::text = $8)
           and ($9::text is null or attribution_social_post_tracking_slug = $9)
+          and (
+            $10::text is null
+            or contact_name ilike $10
+            or contact_email ilike $10
+            or contact_phone ilike $10
+            or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $11
+            or message ilike $10
+            or property_id::text ilike $10
+            or attribution_search_query ilike $10
+            or attribution_search_source ilike $10
+            or attribution_social_post_campaign ilike $10
+            or attribution_social_post_tracking_slug ilike $10
+          )
         ${orderBy}
-        limit $10
-        offset $11
+        limit $12
+        offset $13
       `,
       [
         tenantId,
@@ -510,6 +524,8 @@ export class PgLeadRepository implements LeadRepository {
         request.followUpDueBefore ?? null,
         request.propertyId ?? null,
         request.attributionSocialPostTrackingSlug ?? null,
+        search.textPattern,
+        search.digitPattern,
         request.limit ?? 50,
         request.offset ?? 0
       ]
@@ -519,6 +535,7 @@ export class PgLeadRepository implements LeadRepository {
   }
 
   async count(tenantId: string, request: ListLeadsRequest = {}): Promise<number> {
+    const search = this.buildLeadSearchParams(request.query);
     const result = await this.pool.query<{ total: string }>(
       `
         select count(*)::text as total
@@ -532,6 +549,19 @@ export class PgLeadRepository implements LeadRepository {
           and ($7::timestamptz is null or next_follow_up_at <= $7)
           and ($8::text is null or property_id::text = $8)
           and ($9::text is null or attribution_social_post_tracking_slug = $9)
+          and (
+            $10::text is null
+            or contact_name ilike $10
+            or contact_email ilike $10
+            or contact_phone ilike $10
+            or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $11
+            or message ilike $10
+            or property_id::text ilike $10
+            or attribution_search_query ilike $10
+            or attribution_search_source ilike $10
+            or attribution_social_post_campaign ilike $10
+            or attribution_social_post_tracking_slug ilike $10
+          )
       `,
       [
         tenantId,
@@ -542,7 +572,9 @@ export class PgLeadRepository implements LeadRepository {
         request.priority ?? null,
         request.followUpDueBefore ?? null,
         request.propertyId ?? null,
-        request.attributionSocialPostTrackingSlug ?? null
+        request.attributionSocialPostTrackingSlug ?? null,
+        search.textPattern,
+        search.digitPattern
       ]
     );
 
@@ -553,6 +585,7 @@ export class PgLeadRepository implements LeadRepository {
     tenantId: string,
     request: ListLeadsRequest = {}
   ): Promise<Omit<LeadQueueSummaryResponse, "filters" | "generatedAt">> {
+    const search = this.buildLeadSearchParams(request.query);
     const result = await this.pool.query<LeadQueueSummaryRow>(
       `
         with filtered as (
@@ -567,6 +600,19 @@ export class PgLeadRepository implements LeadRepository {
             and ($7::timestamptz is null or next_follow_up_at <= $7)
             and ($8::text is null or property_id::text = $8)
             and ($9::text is null or attribution_social_post_tracking_slug = $9)
+            and (
+              $10::text is null
+              or contact_name ilike $10
+              or contact_email ilike $10
+              or contact_phone ilike $10
+              or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $11
+              or message ilike $10
+              or property_id::text ilike $10
+              or attribution_search_query ilike $10
+              or attribution_search_source ilike $10
+              or attribution_social_post_campaign ilike $10
+              or attribution_social_post_tracking_slug ilike $10
+            )
         )
         select
           count(*) as total,
@@ -615,7 +661,9 @@ export class PgLeadRepository implements LeadRepository {
         request.priority ?? null,
         request.followUpDueBefore ?? null,
         request.propertyId ?? null,
-        request.attributionSocialPostTrackingSlug ?? null
+        request.attributionSocialPostTrackingSlug ?? null,
+        search.textPattern,
+        search.digitPattern
       ]
     );
     const row = result.rows[0];
@@ -1742,6 +1790,24 @@ export class PgLeadRepository implements LeadRepository {
       default:
         return "order by next_follow_up_at asc nulls last, updated_at desc, created_at desc";
     }
+  }
+
+  private buildLeadSearchParams(query?: string): { digitPattern: string | null; textPattern: string | null } {
+    const normalizedQuery = query?.trim();
+
+    if (!normalizedQuery) {
+      return {
+        digitPattern: null,
+        textPattern: null
+      };
+    }
+
+    const digits = normalizedQuery.replace(/\D/g, "");
+
+    return {
+      digitPattern: digits.length > 0 ? `%${digits}%` : null,
+      textPattern: `%${normalizedQuery}%`
+    };
   }
 
   private toStatusEventSnapshot(row: LeadStatusEventRow): LeadStatusEventSnapshot {

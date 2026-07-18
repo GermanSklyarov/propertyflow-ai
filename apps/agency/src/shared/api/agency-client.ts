@@ -1517,12 +1517,40 @@ function filterDemoLeads(leads: LeadSnapshot[], request: ListLeadsRequest) {
     .filter((lead) => !request.propertyId || lead.propertyId === request.propertyId)
     .filter((lead) => !request.assignedAgentId || lead.assignedAgentId === request.assignedAgentId)
     .filter((lead) => !request.unassigned || !lead.assignedAgentId)
+    .filter((lead) => matchesDemoLeadQuery(lead, request.query))
     .filter(
       (lead) =>
         !request.attributionSocialPostTrackingSlug ||
         lead.attributionSocialPostTrackingSlug === request.attributionSocialPostTrackingSlug
     )
     .sort((left, right) => sortDemoLeads(left, right, request.sort ?? "follow-up-asc"));
+}
+
+function matchesDemoLeadQuery(lead: LeadSnapshot, query?: string) {
+  const normalizedQuery = query?.trim().toLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  const digits = normalizedQuery.replace(/\D/g, "");
+  const haystack = [
+    lead.contactName,
+    lead.contactEmail,
+    lead.contactPhone,
+    lead.message,
+    lead.propertyId,
+    lead.attributionSearchQuery,
+    lead.attributionSearchSource,
+    lead.attributionSocialPostCampaign,
+    lead.attributionSocialPostTrackingSlug
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  const phoneDigits = (lead.contactPhone ?? "").replace(/\D/g, "");
+
+  return haystack.includes(normalizedQuery) || (digits.length > 0 && phoneDigits.includes(digits));
 }
 
 function sortDemoLeads(left: LeadSnapshot, right: LeadSnapshot, sort: NonNullable<ListLeadsRequest["sort"]>) {

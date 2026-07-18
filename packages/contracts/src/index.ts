@@ -1687,6 +1687,7 @@ export interface ListLeadsRequest {
   priority?: LeadPriority;
   followUpDueBefore?: string;
   attributionSocialPostTrackingSlug?: string;
+  query?: string;
   limit?: number;
   offset?: number;
   sort?: LeadListSort;
