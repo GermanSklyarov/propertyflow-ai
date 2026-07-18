@@ -123,14 +123,19 @@
 }
 
 .topbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   border-bottom: 1px solid var(--line);
-  background: rgb(255 255 255 / 76%);
+  background: rgb(255 255 255 / 92%);
+  backdrop-filter: blur(14px);
   padding: 12px clamp(18px, 4vw, 34px);
+  box-shadow: 0 10px 26px rgb(37 50 46 / 8%);
 }
 
 .quickNav {
