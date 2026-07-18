@@ -155,19 +155,27 @@
 }
 
 .toolbar {
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
   gap: 8px;
   margin-bottom: 14px;
 }
 
 .toolbar label {
   display: flex;
+  flex: 1 1 190px;
   min-width: 0;
+  min-height: 44px;
   align-items: center;
   gap: 8px;
   border: 1px solid var(--line);
   background: #fff;
   padding: 0 10px;
+}
+
+.searchField {
+  flex: 2 1 320px;
 }
 
 .toolbar input,
@@ -194,6 +202,8 @@
 }
 
 .toolbar button {
+  flex: 1 1 180px;
+  min-height: 44px;
   border: 1px solid var(--teal);
   background: var(--teal);
   padding: 11px 14px;
@@ -211,6 +221,8 @@
 
 .resultMeta {
   display: inline-flex;
+  flex: 1 1 140px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   border: 1px solid rgb(15 118 110 / 18%);
@@ -468,30 +480,6 @@
     grid-template-columns: auto minmax(0, 1fr);
     align-items: center;
     column-gap: 14px;
-  }
-
-  .toolbar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    align-items: stretch;
-  }
-
-  .searchField {
-    grid-column: 1 / -1;
-  }
-
-  .toolbar button {
-    grid-column: span 2;
-  }
-}
-
-@media (min-width: 1240px) {
-  .toolbar {
-    grid-template-columns: minmax(260px, 1.6fr) repeat(5, minmax(0, 1fr)) auto auto;
-  }
-
-  .searchField,
-  .toolbar button {
-    grid-column: auto;
   }
 }
 
