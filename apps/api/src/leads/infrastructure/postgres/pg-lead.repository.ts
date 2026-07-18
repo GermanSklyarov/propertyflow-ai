@@ -497,22 +497,23 @@ export class PgLeadRepository implements LeadRepository {
           and ($7::timestamptz is null or next_follow_up_at <= $7)
           and ($8::text is null or property_id::text = $8)
           and ($9::text is null or attribution_social_post_tracking_slug = $9)
+          and ($10::boolean = false or property_id is null)
           and (
-            $10::text is null
-            or contact_name ilike $10
-            or contact_email ilike $10
-            or contact_phone ilike $10
-            or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $11
-            or message ilike $10
-            or property_id::text ilike $10
-            or attribution_search_query ilike $10
-            or attribution_search_source ilike $10
-            or attribution_social_post_campaign ilike $10
-            or attribution_social_post_tracking_slug ilike $10
+            $11::text is null
+            or contact_name ilike $11
+            or contact_email ilike $11
+            or contact_phone ilike $11
+            or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $12
+            or message ilike $11
+            or property_id::text ilike $11
+            or attribution_search_query ilike $11
+            or attribution_search_source ilike $11
+            or attribution_social_post_campaign ilike $11
+            or attribution_social_post_tracking_slug ilike $11
           )
         ${orderBy}
-        limit $12
-        offset $13
+        limit $13
+        offset $14
       `,
       [
         tenantId,
@@ -524,6 +525,7 @@ export class PgLeadRepository implements LeadRepository {
         request.followUpDueBefore ?? null,
         request.propertyId ?? null,
         request.attributionSocialPostTrackingSlug ?? null,
+        request.missingProperty ?? false,
         search.textPattern,
         search.digitPattern,
         request.limit ?? 50,
@@ -549,18 +551,19 @@ export class PgLeadRepository implements LeadRepository {
           and ($7::timestamptz is null or next_follow_up_at <= $7)
           and ($8::text is null or property_id::text = $8)
           and ($9::text is null or attribution_social_post_tracking_slug = $9)
+          and ($10::boolean = false or property_id is null)
           and (
-            $10::text is null
-            or contact_name ilike $10
-            or contact_email ilike $10
-            or contact_phone ilike $10
-            or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $11
-            or message ilike $10
-            or property_id::text ilike $10
-            or attribution_search_query ilike $10
-            or attribution_search_source ilike $10
-            or attribution_social_post_campaign ilike $10
-            or attribution_social_post_tracking_slug ilike $10
+            $11::text is null
+            or contact_name ilike $11
+            or contact_email ilike $11
+            or contact_phone ilike $11
+            or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $12
+            or message ilike $11
+            or property_id::text ilike $11
+            or attribution_search_query ilike $11
+            or attribution_search_source ilike $11
+            or attribution_social_post_campaign ilike $11
+            or attribution_social_post_tracking_slug ilike $11
           )
       `,
       [
@@ -573,6 +576,7 @@ export class PgLeadRepository implements LeadRepository {
         request.followUpDueBefore ?? null,
         request.propertyId ?? null,
         request.attributionSocialPostTrackingSlug ?? null,
+        request.missingProperty ?? false,
         search.textPattern,
         search.digitPattern
       ]
@@ -600,18 +604,19 @@ export class PgLeadRepository implements LeadRepository {
             and ($7::timestamptz is null or next_follow_up_at <= $7)
             and ($8::text is null or property_id::text = $8)
             and ($9::text is null or attribution_social_post_tracking_slug = $9)
+            and ($10::boolean = false or property_id is null)
             and (
-              $10::text is null
-              or contact_name ilike $10
-              or contact_email ilike $10
-              or contact_phone ilike $10
-              or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $11
-              or message ilike $10
-              or property_id::text ilike $10
-              or attribution_search_query ilike $10
-              or attribution_search_source ilike $10
-              or attribution_social_post_campaign ilike $10
-              or attribution_social_post_tracking_slug ilike $10
+              $11::text is null
+              or contact_name ilike $11
+              or contact_email ilike $11
+              or contact_phone ilike $11
+              or regexp_replace(coalesce(contact_phone, ''), '[^0-9]', '', 'g') like $12
+              or message ilike $11
+              or property_id::text ilike $11
+              or attribution_search_query ilike $11
+              or attribution_search_source ilike $11
+              or attribution_social_post_campaign ilike $11
+              or attribution_social_post_tracking_slug ilike $11
             )
         )
         select
@@ -662,6 +667,7 @@ export class PgLeadRepository implements LeadRepository {
         request.followUpDueBefore ?? null,
         request.propertyId ?? null,
         request.attributionSocialPostTrackingSlug ?? null,
+        request.missingProperty ?? false,
         search.textPattern,
         search.digitPattern
       ]

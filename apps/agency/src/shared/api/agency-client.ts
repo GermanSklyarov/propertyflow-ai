@@ -1515,6 +1515,7 @@ function filterDemoLeads(leads: LeadSnapshot[], request: ListLeadsRequest) {
     .filter((lead) => !request.source || lead.source === request.source)
     .filter((lead) => !request.priority || lead.priority === request.priority)
     .filter((lead) => !request.propertyId || lead.propertyId === request.propertyId)
+    .filter((lead) => !request.missingProperty || !lead.propertyId)
     .filter((lead) => !request.assignedAgentId || lead.assignedAgentId === request.assignedAgentId)
     .filter((lead) => !request.unassigned || !lead.assignedAgentId)
     .filter((lead) => matchesDemoLeadQuery(lead, request.query))

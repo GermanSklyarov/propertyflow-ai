@@ -49,6 +49,21 @@ export class ListLeadsDto implements ListLeadsRequest {
   @IsBoolean()
   unassigned?: boolean;
 
+  @ApiProperty({
+    description: "Return only leads that are not linked to a property yet.",
+    required: false
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: string | boolean | undefined }) => {
+    if (value === undefined || value === "") {
+      return undefined;
+    }
+
+    return value === true || value === "true";
+  })
+  @IsBoolean()
+  missingProperty?: boolean;
+
   @ApiProperty({ required: false, enum: leadPriorities })
   @IsOptional()
   @IsEnum(leadPriorities)

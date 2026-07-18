@@ -74,19 +74,25 @@ export function LeadsQueuePanel({
             </Link>
             <Link
               className={filters.unassigned ? styles.quickFilterActive : ""}
-              href={buildLeadQueueHref(filters, { priority: undefined, status: undefined, unassigned: true })}
+              href={buildLeadQueueHref(filters, { missingProperty: undefined, priority: undefined, status: undefined, unassigned: true })}
             >
               Unassigned
             </Link>
             <Link
+              className={filters.missingProperty ? styles.quickFilterActive : ""}
+              href={buildLeadQueueHref(filters, { missingProperty: true, priority: undefined, propertyId: undefined, status: undefined, unassigned: undefined })}
+            >
+              Missing property
+            </Link>
+            <Link
               className={filters.priority === "high" ? styles.quickFilterActive : ""}
-              href={buildLeadQueueHref(filters, { priority: "high", status: undefined, unassigned: undefined })}
+              href={buildLeadQueueHref(filters, { missingProperty: undefined, priority: "high", status: undefined, unassigned: undefined })}
             >
               High priority
             </Link>
             <Link
               className={filters.status === "new" ? styles.quickFilterActive : ""}
-              href={buildLeadQueueHref(filters, { priority: undefined, status: "new", unassigned: undefined })}
+              href={buildLeadQueueHref(filters, { missingProperty: undefined, priority: undefined, status: "new", unassigned: undefined })}
             >
               New leads
             </Link>
@@ -149,6 +155,7 @@ export function LeadsQueuePanel({
               </select>
             </label>
             {filters.propertyId ? <input name="propertyId" type="hidden" value={filters.propertyId} /> : null}
+            {filters.missingProperty ? <input name="missingProperty" type="hidden" value="true" /> : null}
             {filters.attributionSocialPostTrackingSlug ? (
               <input name="attributionSocialPostTrackingSlug" type="hidden" value={filters.attributionSocialPostTrackingSlug} />
             ) : null}
@@ -199,6 +206,7 @@ function isEmptyLeadFilter(filters: ListLeadsRequest) {
     !filters.status &&
     !filters.source &&
     !filters.priority &&
+    !filters.missingProperty &&
     !filters.unassigned &&
     !filters.propertyId &&
     !filters.query &&

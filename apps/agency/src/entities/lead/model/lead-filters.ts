@@ -11,6 +11,7 @@ export interface LeadQueueSearchParams {
   attributionSocialPostTrackingSlug?: string;
   priority?: string;
   propertyId?: string;
+  missingProperty?: string;
   page?: string;
   query?: string;
   source?: string;
@@ -24,6 +25,7 @@ export function parseLeadQueueRequest(query: LeadQueueSearchParams): ListLeadsRe
     assignedAgentId: query.assignedAgentId || undefined,
     attributionSocialPostTrackingSlug: query.attributionSocialPostTrackingSlug || undefined,
     limit: leadQueuePageSize,
+    missingProperty: query.missingProperty === "true" ? true : undefined,
     offset: (parseLeadQueuePage(query.page) - 1) * leadQueuePageSize,
     priority: parseLeadPriority(query.priority),
     propertyId: query.propertyId || undefined,
@@ -50,6 +52,10 @@ export function buildActiveLeadFilterLabel(request: ListLeadsRequest) {
 
   if (request.unassigned) {
     return "Unassigned leads";
+  }
+
+  if (request.missingProperty) {
+    return "Missing property";
   }
 
   if (request.assignedAgentId) {

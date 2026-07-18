@@ -1684,6 +1684,7 @@ export interface ListLeadsRequest {
   propertyId?: string;
   assignedAgentId?: string;
   unassigned?: boolean;
+  missingProperty?: boolean;
   priority?: LeadPriority;
   followUpDueBefore?: string;
   attributionSocialPostTrackingSlug?: string;

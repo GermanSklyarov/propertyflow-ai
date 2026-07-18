@@ -738,6 +738,7 @@ export class LeadService {
   private normalizeLeadQueueRequest(request: ListLeadsRequest): ListLeadsRequest {
     const rawLimit = request.limit as number | string | undefined;
     const rawOffset = request.offset as number | string | undefined;
+    const rawMissingProperty = request.missingProperty as boolean | string | undefined;
     const rawUnassigned = request.unassigned as boolean | string | undefined;
     const query = request.query?.trim();
 
@@ -746,6 +747,10 @@ export class LeadService {
       limit: rawLimit === undefined ? undefined : Number(rawLimit),
       offset: rawOffset === undefined ? undefined : Number(rawOffset),
       query: query && query.length > 0 ? query : undefined,
+      missingProperty:
+        rawMissingProperty === undefined || rawMissingProperty === ""
+          ? undefined
+          : rawMissingProperty === true || rawMissingProperty === "true",
       unassigned:
         rawUnassigned === undefined || rawUnassigned === ""
           ? undefined
