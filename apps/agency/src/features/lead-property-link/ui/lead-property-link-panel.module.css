@@ -1,0 +1,227 @@
+.panel {
+  border: 1px solid rgb(224 90 64 / 24%);
+  background: #fff9f7;
+  padding: 16px;
+  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.header h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.35rem, 2vw, 2.1rem);
+}
+
+.searchForm,
+.form {
+  display: grid;
+  gap: 10px;
+}
+
+.searchForm {
+  margin-bottom: 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 7px;
+}
+
+.form > label > span,
+.fieldLabel {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.searchField {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 11px;
+}
+
+.searchField input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 11px 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
+.searchField input:focus {
+  outline: none;
+}
+
+.form > label input {
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 11px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 850;
+}
+
+.searchField:focus-within,
+.form > label input:focus {
+  outline: 2px solid rgb(15 118 110 / 20%);
+  outline-offset: 2px;
+}
+
+.searchButton,
+.form button {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--teal);
+  background: var(--teal);
+  padding: 11px 14px;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.searchButton:hover,
+.form button:hover:not(:disabled) {
+  background: var(--teal-dark);
+}
+
+.form button:disabled {
+  border-color: var(--line);
+  background: #f3f5f1;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.candidateGroup {
+  display: grid;
+  gap: 8px;
+}
+
+.candidateList {
+  display: grid;
+  max-height: 320px;
+  gap: 8px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.candidateCard {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 11px;
+  cursor: pointer;
+}
+
+.candidateCard:has(input:checked) {
+  border-color: var(--teal);
+  background: #ecf8f5;
+}
+
+.candidateCard input {
+  width: 17px;
+  height: 17px;
+  margin: 3px 0 0;
+  accent-color: var(--teal);
+}
+
+.candidateBody {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.candidateBody strong,
+.candidateBody small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.candidateBody strong {
+  color: var(--ink);
+  font-size: 0.98rem;
+}
+
+.candidateBody small,
+.candidateMeta span {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+}
+
+.candidateMeta {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.candidateMeta span {
+  border: 1px solid var(--line);
+  background: #f7faf7;
+  padding: 5px 7px;
+}
+
+.emptyState {
+  border: 1px dashed var(--line);
+  background: #fff;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+@media (min-width: 860px) {
+  .searchForm {
+    grid-template-columns: minmax(260px, 1fr) auto;
+    align-items: stretch;
+  }
+
+  .form {
+    grid-template-columns: minmax(260px, 1.2fr) auto;
+    align-items: end;
+  }
+
+  .candidateGroup {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 560px) {
+  .searchButton,
+  .form button {
+    width: 100%;
+  }
+}

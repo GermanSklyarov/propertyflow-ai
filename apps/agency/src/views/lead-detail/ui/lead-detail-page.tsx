@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { LeadPropertyLinkPanel } from "@features/lead-property-link/ui/lead-property-link-panel";
 import { LeadWorkflowPanel } from "@features/lead-workflow-update/ui/lead-workflow-panel";
 import type { LeadNotesResponse, LeadSnapshot, LeadTimelineResponse, TenantUserSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -11,12 +12,16 @@ import styles from "./lead-detail-page.module.css";
 export function LeadDetailPage({
   agents,
   lead,
+  listingSearch,
+  linkableListings,
   linkedListing,
   notes,
   timeline
 }: {
   agents: TenantUserSnapshot[];
   lead: LeadSnapshot;
+  listingSearch: string;
+  linkableListings: PropertySnapshot[];
   linkedListing?: PropertySnapshot | null;
   notes: LeadNotesResponse;
   timeline: LeadTimelineResponse;
@@ -38,6 +43,8 @@ export function LeadDetailPage({
         </header>
 
         <LeadOverviewPanel lead={lead} linkedListing={linkedListing} />
+
+        {lead.propertyId ? null : <LeadPropertyLinkPanel leadId={lead.id} listings={linkableListings} searchQuery={listingSearch} />}
 
         <LeadWorkflowPanel agents={agents} lead={lead} />
 

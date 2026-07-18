@@ -4,6 +4,8 @@ import type {
   BackgroundJobSnapshot,
   BackgroundJobState,
   AssignLeadRequest,
+  ApplyLeadQualityLinkPropertyRequest,
+  ApplyLeadQualityLinkPropertyResponse,
   GeneratePropertySocialPostsRequest,
   GeneratePropertySocialPostsResponse,
   RecordPropertySocialPostPublicationRequest,
@@ -441,6 +443,26 @@ export async function assignLead(leadId: string, payload: AssignLeadRequest): Pr
   }
 
   return (await response.json()) as LeadSnapshot;
+}
+
+export async function linkLeadProperty(
+  leadId: string,
+  payload: ApplyLeadQualityLinkPropertyRequest
+): Promise<ApplyLeadQualityLinkPropertyResponse> {
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/quality-actions/link-property`, {
+    method: "POST",
+    headers: {
+      ...demoHeaders,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to link lead property: ${response.status}`);
+  }
+
+  return (await response.json()) as ApplyLeadQualityLinkPropertyResponse;
 }
 
 export async function listProperties(
