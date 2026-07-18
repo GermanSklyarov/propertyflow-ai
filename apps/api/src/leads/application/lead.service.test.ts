@@ -15,6 +15,7 @@ const user = {
 
 function createService(lead: LeadSnapshot) {
   const leads = {
+    count: vi.fn().mockResolvedValue(1),
     create: vi.fn().mockResolvedValue(lead),
     list: vi.fn().mockResolvedValue([lead]),
     recordStatusEvent: vi.fn().mockResolvedValue({
@@ -139,6 +140,12 @@ describe("LeadService", () => {
     );
 
     expect(response).toEqual({ items: [lead], total: 1 });
+    expect(leads.count).toHaveBeenCalledWith("demo-agency", {
+      attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-facebook-en",
+      limit: 100,
+      propertyId: "property-1",
+      source: "social-post"
+    });
     expect(leads.list).toHaveBeenCalledWith("demo-agency", {
       attributionSocialPostTrackingSlug: "pattaya-sale-or-rent-property-1-facebook-en",
       limit: 100,

@@ -109,11 +109,14 @@ export class LeadService {
 
   async list(tenantId: string, request: ListLeadsRequest, user: RequestUser): Promise<LeadListResponse> {
     const scopedRequest = this.scopeLeadQueueRequest(request, user);
-    const items = await this.leads.list(tenantId, scopedRequest);
+    const [items, total] = await Promise.all([
+      this.leads.list(tenantId, scopedRequest),
+      this.leads.count(tenantId, scopedRequest)
+    ]);
 
     return {
       items,
-      total: items.length
+      total
     };
   }
 
@@ -734,11 +737,13 @@ export class LeadService {
 
   private normalizeLeadQueueRequest(request: ListLeadsRequest): ListLeadsRequest {
     const rawLimit = request.limit as number | string | undefined;
+    const rawOffset = request.offset as number | string | undefined;
     const rawUnassigned = request.unassigned as boolean | string | undefined;
 
     return {
       ...request,
       limit: rawLimit === undefined ? undefined : Number(rawLimit),
+      offset: rawOffset === undefined ? undefined : Number(rawOffset),
       unassigned:
         rawUnassigned === undefined || rawUnassigned === ""
           ? undefined

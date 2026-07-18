@@ -1506,6 +1506,7 @@ export type LeadStatus = "new" | "contacted" | "qualified" | "lost" | "won";
 export type LeadSource = "website" | "public-api" | "agent" | "ai-chat" | "ai-concierge" | "saved-search" | "social-post";
 
 export type LeadPriority = "low" | "medium" | "high";
+export type LeadListSort = "created-desc" | "created-asc" | "follow-up-asc" | "priority-desc";
 
 export interface CreateLeadRequest {
   propertyId?: string;
@@ -1687,6 +1688,8 @@ export interface ListLeadsRequest {
   followUpDueBefore?: string;
   attributionSocialPostTrackingSlug?: string;
   limit?: number;
+  offset?: number;
+  sort?: LeadListSort;
 }
 
 export interface LeadListResponse {

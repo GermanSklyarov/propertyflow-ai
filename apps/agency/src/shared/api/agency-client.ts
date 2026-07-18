@@ -281,12 +281,12 @@ export async function listLeads(request: ListLeadsRequest = { limit: 24 }): Prom
     });
 
     if (!response.ok) {
-      return demoLeadListResponse();
+      return demoLeadListResponse(request);
     }
 
     return (await response.json()) as LeadListResponse;
   } catch {
-    return demoLeadListResponse();
+    return demoLeadListResponse(request);
   }
 }
 
@@ -1354,7 +1354,18 @@ function demoTenantUsageResponse(): TenantUsageResponse {
   };
 }
 
-function demoLeadListResponse(): LeadListResponse {
+function demoLeadListResponse(request: ListLeadsRequest = {}): LeadListResponse {
+  const leads = filterDemoLeads(demoLeadSnapshots(), request);
+  const offset = request.offset ?? 0;
+  const limit = request.limit ?? leads.length;
+
+  return {
+    items: leads.slice(offset, offset + limit),
+    total: leads.length
+  };
+}
+
+function demoLeadSnapshots(): LeadSnapshot[] {
   const now = new Date();
   const leads: LeadSnapshot[] = [
     {
@@ -1461,14 +1472,11 @@ function demoLeadListResponse(): LeadListResponse {
     }
   ];
 
-  return {
-    items: leads,
-    total: leads.length
-  };
+  return leads.sort((left, right) => sortDemoLeads(left, right, "follow-up-asc"));
 }
 
 function demoLeadQueueSummaryResponse(filters: ListLeadsRequest): LeadQueueSummaryResponse {
-  const leads = demoLeadListResponse().items;
+  const leads = filterDemoLeads(demoLeadSnapshots(), { ...filters, limit: undefined, offset: undefined });
   const openStatuses = new Set(["new", "contacted", "qualified"]);
   const now = new Date();
   const soon = new Date(now.getTime() + 1000 * 60 * 60 * 24);
@@ -1499,6 +1507,45 @@ function demoLeadQueueSummaryResponse(filters: ListLeadsRequest): LeadQueueSumma
 
 function demoLeadById(leadId: string) {
   return demoLeadListResponse().items.find((lead) => lead.id === leadId) ?? null;
+}
+
+function filterDemoLeads(leads: LeadSnapshot[], request: ListLeadsRequest) {
+  return leads
+    .filter((lead) => !request.status || lead.status === request.status)
+    .filter((lead) => !request.source || lead.source === request.source)
+    .filter((lead) => !request.priority || lead.priority === request.priority)
+    .filter((lead) => !request.propertyId || lead.propertyId === request.propertyId)
+    .filter((lead) => !request.assignedAgentId || lead.assignedAgentId === request.assignedAgentId)
+    .filter((lead) => !request.unassigned || !lead.assignedAgentId)
+    .filter(
+      (lead) =>
+        !request.attributionSocialPostTrackingSlug ||
+        lead.attributionSocialPostTrackingSlug === request.attributionSocialPostTrackingSlug
+    )
+    .sort((left, right) => sortDemoLeads(left, right, request.sort ?? "follow-up-asc"));
+}
+
+function sortDemoLeads(left: LeadSnapshot, right: LeadSnapshot, sort: NonNullable<ListLeadsRequest["sort"]>) {
+  if (sort === "created-asc") {
+    return new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime();
+  }
+
+  if (sort === "created-desc") {
+    return new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime();
+  }
+
+  if (sort === "priority-desc") {
+    const priorityRank = { high: 1, medium: 2, low: 3 };
+    const leftRank = left.priority ? priorityRank[left.priority] : 4;
+    const rightRank = right.priority ? priorityRank[right.priority] : 4;
+
+    return leftRank - rightRank || new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+  }
+
+  const leftFollowUp = left.nextFollowUpAt ? new Date(left.nextFollowUpAt).getTime() : Number.MAX_SAFE_INTEGER;
+  const rightFollowUp = right.nextFollowUpAt ? new Date(right.nextFollowUpAt).getTime() : Number.MAX_SAFE_INTEGER;
+
+  return leftFollowUp - rightFollowUp || new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
 }
 
 function demoLeadAgents(): TenantUserSnapshot[] {

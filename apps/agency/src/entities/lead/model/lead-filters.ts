@@ -1,15 +1,19 @@
-import type { LeadPriority, LeadSource, LeadStatus, ListLeadsRequest } from "@propertyflow/contracts";
+import type { LeadListSort, LeadPriority, LeadSource, LeadStatus, ListLeadsRequest } from "@propertyflow/contracts";
 
 export const leadStatusFilterOptions: LeadStatus[] = ["new", "contacted", "qualified", "won", "lost"];
 export const leadPriorityFilterOptions: LeadPriority[] = ["low", "medium", "high"];
 export const leadSourceFilterOptions: LeadSource[] = ["website", "public-api", "agent", "ai-chat", "ai-concierge", "saved-search", "social-post"];
+export const leadSortFilterOptions: LeadListSort[] = ["follow-up-asc", "created-desc", "created-asc", "priority-desc"];
+export const leadQueuePageSize = 12;
 
 export interface LeadQueueSearchParams {
   assignedAgentId?: string;
   attributionSocialPostTrackingSlug?: string;
   priority?: string;
   propertyId?: string;
+  page?: string;
   source?: string;
+  sort?: string;
   status?: string;
   unassigned?: string;
 }
@@ -18,10 +22,12 @@ export function parseLeadQueueRequest(query: LeadQueueSearchParams): ListLeadsRe
   return {
     assignedAgentId: query.assignedAgentId || undefined,
     attributionSocialPostTrackingSlug: query.attributionSocialPostTrackingSlug || undefined,
-    limit: 24,
+    limit: leadQueuePageSize,
+    offset: (parseLeadQueuePage(query.page) - 1) * leadQueuePageSize,
     priority: parseLeadPriority(query.priority),
     propertyId: query.propertyId || undefined,
     source: parseLeadSource(query.source),
+    sort: parseLeadSort(query.sort) ?? "follow-up-asc",
     status: parseLeadStatus(query.status),
     unassigned: query.unassigned === "true" ? true : undefined
   };
@@ -59,11 +65,15 @@ export function buildActiveLeadFilterLabel(request: ListLeadsRequest) {
   return undefined;
 }
 
-export function buildLeadQueueHref(current: ListLeadsRequest, patch: Partial<ListLeadsRequest>) {
+type LeadQueueHrefPatch = Partial<ListLeadsRequest> & { page?: number };
+
+export function buildLeadQueueHref(current: ListLeadsRequest, patch: LeadQueueHrefPatch) {
+  const { page, ...requestPatch } = patch;
   const next: ListLeadsRequest = {
     ...current,
-    ...patch,
-    limit: undefined
+    ...requestPatch,
+    limit: undefined,
+    offset: undefined
   };
   const params = new URLSearchParams();
 
@@ -73,9 +83,28 @@ export function buildLeadQueueHref(current: ListLeadsRequest, patch: Partial<Lis
     }
   });
 
+  if (page && page > 1) {
+    params.set("page", String(page));
+  }
+
   const query = params.toString();
 
   return query ? `/leads?${query}` : "/leads";
+}
+
+export function getLeadQueuePage(request: ListLeadsRequest) {
+  return Math.floor((request.offset ?? 0) / (request.limit ?? leadQueuePageSize)) + 1;
+}
+
+export function formatLeadSort(sort: NonNullable<ListLeadsRequest["sort"]>) {
+  const labels = {
+    "created-asc": "Oldest first",
+    "created-desc": "Newest first",
+    "follow-up-asc": "Follow-up due first",
+    "priority-desc": "Priority first"
+  } satisfies Record<NonNullable<ListLeadsRequest["sort"]>, string>;
+
+  return labels[sort];
 }
 
 function parseLeadStatus(value?: string): LeadStatus | undefined {
@@ -88,4 +117,14 @@ function parseLeadPriority(value?: string): LeadPriority | undefined {
 
 function parseLeadSource(value?: string): LeadSource | undefined {
   return leadSourceFilterOptions.includes(value as LeadSource) ? (value as LeadSource) : undefined;
+}
+
+function parseLeadSort(value?: string): LeadListSort | undefined {
+  return leadSortFilterOptions.includes(value as LeadListSort) ? (value as LeadListSort) : undefined;
+}
+
+function parseLeadQueuePage(value?: string) {
+  const page = Number(value);
+
+  return Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
 }

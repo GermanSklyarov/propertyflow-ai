@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { Bot, CircleDot, Clock3, Mail, Phone, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
+import { Bot, ChevronLeft, ChevronRight, CircleDot, Clock3, Mail, Phone, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
 import { buildLeadFollowUpState, formatLeadOwner } from "@entities/lead/lib/lead-queue";
 import {
   buildLeadQueueHref,
+  formatLeadSort,
+  getLeadQueuePage,
   leadPriorityFilterOptions,
+  leadQueuePageSize,
+  leadSortFilterOptions,
   leadSourceFilterOptions,
   leadStatusFilterOptions
 } from "@entities/lead/model/lead-filters";
@@ -22,6 +26,11 @@ export function LeadsQueuePanel({
   queueSummary: LeadQueueSummaryResponse;
   total: number;
 }) {
+  const currentPage = getLeadQueuePage(filters);
+  const pageCount = Math.max(1, Math.ceil(total / (filters.limit ?? leadQueuePageSize)));
+  const firstVisible = total === 0 ? 0 : (filters.offset ?? 0) + 1;
+  const lastVisible = Math.min(total, (filters.offset ?? 0) + leads.length);
+
   return (
     <>
       <section className={styles.kpiGrid} aria-label="Lead queue overview">
@@ -121,10 +130,22 @@ export function LeadsQueuePanel({
                 <option value="true">Unassigned only</option>
               </select>
             </label>
+            <label>
+              <select defaultValue={filters.sort ?? "follow-up-asc"} name="sort">
+                {leadSortFilterOptions.map((sort) => (
+                  <option key={sort} value={sort}>
+                    {formatLeadSort(sort)}
+                  </option>
+                ))}
+              </select>
+            </label>
             {filters.propertyId ? <input name="propertyId" type="hidden" value={filters.propertyId} /> : null}
             {filters.attributionSocialPostTrackingSlug ? (
               <input name="attributionSocialPostTrackingSlug" type="hidden" value={filters.attributionSocialPostTrackingSlug} />
             ) : null}
+            <span className={styles.resultMeta}>
+              {firstVisible}-{lastVisible} of {total}
+            </span>
             <button type="submit">Apply filters</button>
           </form>
 
@@ -134,6 +155,30 @@ export function LeadsQueuePanel({
             ))}
             {leads.length === 0 ? <div className={styles.emptyState}>No leads match this queue filter.</div> : null}
           </div>
+
+          {pageCount > 1 ? (
+            <div className={styles.pagination} aria-label="Lead queue pagination">
+              <Link
+                aria-disabled={currentPage === 1}
+                className={currentPage === 1 ? styles.paginationDisabled : ""}
+                href={buildLeadQueueHref(filters, { page: Math.max(1, currentPage - 1) })}
+              >
+                <ChevronLeft size={16} />
+                Prev
+              </Link>
+              <span>
+                Page {currentPage} of {pageCount} · {formatLeadSort(filters.sort ?? "follow-up-asc")}
+              </span>
+              <Link
+                aria-disabled={currentPage === pageCount}
+                className={currentPage === pageCount ? styles.paginationDisabled : ""}
+                href={buildLeadQueueHref(filters, { page: Math.min(pageCount, currentPage + 1) })}
+              >
+                Next
+                <ChevronRight size={16} />
+              </Link>
+            </div>
+          ) : null}
         </section>
       </section>
     </>

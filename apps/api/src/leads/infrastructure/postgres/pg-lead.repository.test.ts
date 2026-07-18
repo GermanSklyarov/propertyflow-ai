@@ -60,8 +60,30 @@ describe("PgLeadRepository", () => {
         null,
         "10000000-0000-4000-8000-000000000001",
         "pattaya-sale-or-rent-property-1-facebook-en",
-        100
+        100,
+        0
       ]
+    );
+  });
+
+  it("counts leads with the same filters used by paginated lists", async () => {
+    const pool = {
+      query: vi.fn().mockResolvedValue({
+        rows: [{ total: "37" }]
+      })
+    } as unknown as Pool;
+    const repository = new PgLeadRepository(pool);
+
+    const total = await repository.count("demo-agency", {
+      priority: "high",
+      source: "ai-concierge",
+      status: "new"
+    });
+
+    expect(total).toBe(37);
+    expect(pool.query).toHaveBeenCalledWith(
+      expect.stringContaining("count(*)::text as total"),
+      ["demo-agency", "new", "ai-concierge", null, false, "high", null, null, null]
     );
   });
 

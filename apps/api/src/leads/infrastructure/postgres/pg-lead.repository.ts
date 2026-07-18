@@ -482,6 +482,7 @@ export class PgLeadRepository implements LeadRepository {
   }
 
   async list(tenantId: string, request: ListLeadsRequest = {}): Promise<LeadSnapshot[]> {
+    const orderBy = this.buildLeadListOrderBy(request.sort);
     const result = await this.pool.query<LeadRow>(
       `
         select *
@@ -495,8 +496,9 @@ export class PgLeadRepository implements LeadRepository {
           and ($7::timestamptz is null or next_follow_up_at <= $7)
           and ($8::text is null or property_id::text = $8)
           and ($9::text is null or attribution_social_post_tracking_slug = $9)
-        order by next_follow_up_at asc nulls last, updated_at desc, created_at desc
+        ${orderBy}
         limit $10
+        offset $11
       `,
       [
         tenantId,
@@ -508,11 +510,43 @@ export class PgLeadRepository implements LeadRepository {
         request.followUpDueBefore ?? null,
         request.propertyId ?? null,
         request.attributionSocialPostTrackingSlug ?? null,
-        request.limit ?? 50
+        request.limit ?? 50,
+        request.offset ?? 0
       ]
     );
 
     return result.rows.map((row) => this.toSnapshot(row));
+  }
+
+  async count(tenantId: string, request: ListLeadsRequest = {}): Promise<number> {
+    const result = await this.pool.query<{ total: string }>(
+      `
+        select count(*)::text as total
+        from leads
+        where tenant_id = $1
+          and ($2::text is null or status = $2)
+          and ($3::text is null or source = $3)
+          and ($4::text is null or assigned_agent_id = $4)
+          and ($5::boolean = false or assigned_agent_id is null)
+          and ($6::text is null or priority = $6)
+          and ($7::timestamptz is null or next_follow_up_at <= $7)
+          and ($8::text is null or property_id::text = $8)
+          and ($9::text is null or attribution_social_post_tracking_slug = $9)
+      `,
+      [
+        tenantId,
+        request.status ?? null,
+        request.source ?? null,
+        request.assignedAgentId ?? null,
+        request.unassigned ?? false,
+        request.priority ?? null,
+        request.followUpDueBefore ?? null,
+        request.propertyId ?? null,
+        request.attributionSocialPostTrackingSlug ?? null
+      ]
+    );
+
+    return Number(result.rows[0]?.total ?? 0);
   }
 
   async getQueueSummary(
@@ -1683,6 +1717,31 @@ export class PgLeadRepository implements LeadRepository {
     }
 
     return "link-property";
+  }
+
+  private buildLeadListOrderBy(sort: ListLeadsRequest["sort"]): string {
+    switch (sort) {
+      case "created-asc":
+        return "order by created_at asc, id asc";
+      case "priority-desc":
+        return `
+          order by
+            case priority
+              when 'high' then 1
+              when 'medium' then 2
+              when 'low' then 3
+              else 4
+            end asc,
+            next_follow_up_at asc nulls last,
+            updated_at desc,
+            created_at desc
+        `;
+      case "created-desc":
+        return "order by created_at desc, id desc";
+      case "follow-up-asc":
+      default:
+        return "order by next_follow_up_at asc nulls last, updated_at desc, created_at desc";
+    }
   }
 
   private toStatusEventSnapshot(row: LeadStatusEventRow): LeadStatusEventSnapshot {

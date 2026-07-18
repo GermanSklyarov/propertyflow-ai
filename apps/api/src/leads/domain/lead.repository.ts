@@ -61,6 +61,7 @@ export interface LeadRepository {
   recordStatusEvent(input: RecordLeadStatusEventInput): Promise<LeadStatusEventSnapshot>;
   listStatusEvents(tenantId: string, leadId: string): Promise<LeadStatusEventSnapshot[]>;
   list(tenantId: string, request?: ListLeadsRequest): Promise<LeadSnapshot[]>;
+  count(tenantId: string, request?: ListLeadsRequest): Promise<number>;
   getQueueSummary(tenantId: string, request?: ListLeadsRequest): Promise<Omit<LeadQueueSummaryResponse, "filters" | "generatedAt">>;
   getSlaSummary(tenantId: string, request?: ListLeadsRequest): Promise<Omit<LeadSlaResponse, "filters" | "generatedAt">>;
   listSlaBreaches(tenantId: string, request?: ListLeadsRequest): Promise<LeadSlaBreachesResponse["items"]>;
