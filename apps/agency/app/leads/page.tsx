@@ -11,18 +11,31 @@ export default async function AgencyLeadsPage({
   const query = await searchParams;
   const request = parseLeadQueueRequest(query);
   const queryClient = createPropertyFlowQueryClient();
-  const [leadList, queueSummary] = await Promise.all([
+  const [leadListResult, queueSummaryResult] = await Promise.allSettled([
     queryClient.ensureQueryData(leadsListQueryOptions(request)),
     queryClient.ensureQueryData(leadQueueSummaryQueryOptions(request))
   ]);
+  const leadList = leadListResult.status === "fulfilled" ? leadListResult.value : undefined;
+  const queueSummary = queueSummaryResult.status === "fulfilled" ? queueSummaryResult.value : undefined;
+  const loadError =
+    leadListResult.status === "rejected"
+      ? toErrorMessage(leadListResult.reason)
+      : queueSummaryResult.status === "rejected"
+        ? toErrorMessage(queueSummaryResult.reason)
+        : undefined;
 
   return (
     <LeadsPage
       activeFilterLabel={buildActiveLeadFilterLabel(request)}
+      error={loadError}
       filters={request}
-      leads={leadList.items}
+      leads={leadList?.items}
       queueSummary={queueSummary}
-      total={leadList.total}
+      total={leadList?.total}
     />
   );
+}
+
+function toErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Failed to load leads";
 }

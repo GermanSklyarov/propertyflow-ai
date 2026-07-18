@@ -1,0 +1,42 @@
+.state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 16px;
+  color: var(--ink);
+}
+
+.state svg {
+  flex: 0 0 auto;
+}
+
+.error {
+  border-color: rgb(224 90 64 / 28%);
+  background: #fff9f7;
+}
+
+.loading {
+  border-color: rgb(15 118 110 / 18%);
+  background: #edf8f4;
+}
+
+.body {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.body h2 {
+  margin: 0;
+  font-size: clamp(1.2rem, 2vw, 1.8rem);
+}
+
+.body span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.45;
+}

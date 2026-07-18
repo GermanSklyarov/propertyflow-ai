@@ -31,6 +31,7 @@ import {
 import type { PropertySearchRequest, PropertySearchResponse, PropertySearchSort } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatPercent } from "@shared/lib/formatters";
+import { LoadState } from "@shared/ui/load-state";
 import styles from "./listings-inventory-panel.module.css";
 
 const sortLabels: Record<PropertySearchSort, string> = {
@@ -45,7 +46,15 @@ const sortLabels: Record<PropertySearchSort, string> = {
 
 export function ListingsInventoryPanel({ error, response }: { error?: string; response?: PropertySearchResponse }) {
   if (!response) {
-    return <InventoryLoadError message={error ?? "Backend is unavailable. Start the API server and retry."} />;
+    return (
+      <section className={styles.tablePanel} id="inventory" aria-label="Listings loading error">
+        <LoadState
+          kicker="Inventory unavailable"
+          message={error ?? "Backend is unavailable. Start the API server and retry."}
+          title="Could not load listings"
+        />
+      </section>
+    );
   }
 
   const listings = response.items;
@@ -179,21 +188,6 @@ export function ListingsInventoryPanel({ error, response }: { error?: string; re
         </section>
       </section>
     </>
-  );
-}
-
-function InventoryLoadError({ message }: { message: string }) {
-  return (
-    <section className={styles.tablePanel} id="inventory" aria-label="Listings loading error">
-      <div className={styles.errorState}>
-        <AlertTriangle size={20} />
-        <div>
-          <p className="section-kicker">Inventory unavailable</p>
-          <h2>Could not load listings</h2>
-          <span>{message}</span>
-        </div>
-      </div>
-    </section>
   );
 }
 

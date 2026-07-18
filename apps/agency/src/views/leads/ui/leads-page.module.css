@@ -85,3 +85,10 @@
   background: var(--teal);
   color: #fff;
 }
+
+.loadPanel {
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  padding: 16px;
+  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
+}

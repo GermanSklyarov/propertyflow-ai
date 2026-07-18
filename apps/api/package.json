@@ -9,6 +9,7 @@
     "dev": "tsx watch src/main.ts",
     "migrate": "tsx src/database/migrate.ts",
     "seed:demo": "tsx src/database/seed-demo-properties.ts",
+    "seed:demo-leads": "tsx src/database/seed-demo-leads.ts",
     "smoke:indexing": "tsx src/smoke/indexing-flow.ts",
     "test": "vitest run"
   },

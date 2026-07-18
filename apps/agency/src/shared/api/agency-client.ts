@@ -274,39 +274,31 @@ function demoBackgroundJobs(request: { states?: BackgroundJobState[] } = {}): Ba
 }
 
 export async function listLeads(request: ListLeadsRequest = { limit: 24 }): Promise<LeadListResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/leads${toQueryString(request)}`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/leads${toQueryString(request)}`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoLeadListResponse(request);
-    }
-
-    return (await response.json()) as LeadListResponse;
-  } catch {
-    return demoLeadListResponse(request);
+  if (!response.ok) {
+    throw new Error(`Failed to load leads: ${response.status}`);
   }
+
+  return (await response.json()) as LeadListResponse;
 }
 
 export async function getLeadQueueSummary(
   request: ListLeadsRequest = { limit: 24 }
 ): Promise<LeadQueueSummaryResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/leads/queue-summary${toQueryString(request)}`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/leads/queue-summary${toQueryString(request)}`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoLeadQueueSummaryResponse(request);
-    }
-
-    return (await response.json()) as LeadQueueSummaryResponse;
-  } catch {
-    return demoLeadQueueSummaryResponse(request);
+  if (!response.ok) {
+    throw new Error(`Failed to load lead queue summary: ${response.status}`);
   }
+
+  return (await response.json()) as LeadQueueSummaryResponse;
 }
 
 export async function getLead(leadId: string): Promise<LeadSnapshot | null> {

@@ -22,6 +22,7 @@
     "infra:up": "docker compose up -d postgres redis opensearch minio",
     "infra:down": "docker compose down",
     "migrate": "npm run migrate --workspace @propertyflow/api",
+    "seed:demo-leads": "npm run seed:demo-leads --workspace @propertyflow/api",
     "format": "prettier --write .",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
