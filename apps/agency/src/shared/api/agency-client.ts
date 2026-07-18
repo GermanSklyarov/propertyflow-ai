@@ -39,11 +39,13 @@ import type {
   LeadTimelineResponse,
   ListLeadsRequest,
   AddPropertyImageRequest,
+  ConfirmPropertyImageDeleteRequest,
   ConfirmPropertyImageUploadRequest,
   CreatePropertyImageUploadRequest,
   CreatePropertyImageUploadResponse,
   GeneratedPropertyDescription,
   PropertyAiAssets,
+  PropertyImageDeletePreviewResponse,
   PropertyImageGalleryResponse,
   PropertyImageAnalysisResult,
   PropertyImageSnapshot,
@@ -645,6 +647,43 @@ export async function confirmPropertyImageUpload(
 
   if (!response.ok) {
     throw new Error(`Failed to confirm property image upload: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageSnapshot;
+}
+
+export async function previewPropertyImageDelete(
+  propertyId: string,
+  imageId: string
+): Promise<PropertyImageDeletePreviewResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/${imageId}/delete-preview`, {
+    method: "POST",
+    headers: demoHeaders
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to preview property image delete: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageDeletePreviewResponse;
+}
+
+export async function deletePropertyImage(
+  propertyId: string,
+  imageId: string,
+  request: ConfirmPropertyImageDeleteRequest
+): Promise<PropertyImageSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/${imageId}`, {
+    method: "DELETE",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete property image: ${response.status}`);
   }
 
   return (await response.json()) as PropertyImageSnapshot;

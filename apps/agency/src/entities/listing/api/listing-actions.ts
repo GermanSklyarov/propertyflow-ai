@@ -10,7 +10,9 @@ import {
   createProperty,
   createPropertyImportUploadUrl,
   createPropertyImageUploadUrl,
+  deletePropertyImage,
   enqueuePropertyImport,
+  previewPropertyImageDelete,
   reviewPropertyDescriptionAsset,
   reviewPropertyImageAnalysisAsset,
   updatePropertyDescriptionAsset,
@@ -109,6 +111,17 @@ export async function addPropertyImageAction(propertyId: string, formData: FormD
   if (analyzeImage) {
     redirect(`/listings/${propertyId}?queued=image-analysis#ai-image-analysis`);
   }
+}
+
+export async function deletePropertyImageAction(propertyId: string, imageId: string) {
+  const preview = await previewPropertyImageDelete(propertyId, imageId);
+
+  await deletePropertyImage(propertyId, imageId, {
+    confirmationToken: preview.confirmationToken
+  });
+
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
 }
 
 export async function updatePropertyProjectAction(propertyId: string, formData: FormData) {

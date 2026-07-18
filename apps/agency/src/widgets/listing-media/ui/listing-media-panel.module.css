@@ -122,6 +122,39 @@
   color: var(--teal-dark);
 }
 
+.deleteImageForm {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 10px;
+}
+
+.deleteImageForm button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(163 61 48 / 35%);
+  background: rgb(255 249 247 / 92%);
+  padding: 0 10px;
+  color: #9f3c32;
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgb(8 28 24 / 14%);
+}
+
+.deleteImageForm button:hover,
+.deleteImageForm button:focus-visible {
+  border-color: rgb(163 61 48 / 64%);
+  background: #fff1ed;
+  outline: 2px solid rgb(163 61 48 / 18%);
+  outline-offset: 2px;
+}
+
 .empty {
   display: grid;
   min-height: 260px;
