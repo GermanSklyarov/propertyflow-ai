@@ -31,12 +31,23 @@ export default async function AgencyProjectsPage({
     queryClient.ensureQueryData(projectsQueryOptions(projectRequest)),
     queryClient.ensureQueryData(listingsQueryOptions({ limit: 12, projectLink: "missing", sort: "created-desc" }))
   ]);
-  const projects =
-    projectsResult.status === "fulfilled" ? projectsResult.value : { filters: projectRequest, items: [], total: 0 };
-  const missingListings =
-    missingListingsResult.status === "fulfilled"
-      ? missingListingsResult.value
-      : { filters: { limit: 12, projectLink: "missing" as const, sort: "created-desc" as const }, items: [], total: 0 };
+  const projects = projectsResult.status === "fulfilled" ? projectsResult.value : undefined;
+  const missingListings = missingListingsResult.status === "fulfilled" ? missingListingsResult.value : undefined;
+  const projectsError = projectsResult.status === "rejected" ? toErrorMessage(projectsResult.reason) : undefined;
+  const missingListingsError =
+    missingListingsResult.status === "rejected" ? toErrorMessage(missingListingsResult.reason) : undefined;
 
-  return <ProjectsPage missingListings={missingListings} projects={projects} />;
+  return (
+    <ProjectsPage
+      missingListings={missingListings}
+      missingListingsError={missingListingsError}
+      projectFilters={projectRequest}
+      projects={projects}
+      projectsError={projectsError}
+    />
+  );
+}
+
+function toErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Failed to load projects";
 }

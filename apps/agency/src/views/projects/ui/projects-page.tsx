@@ -17,6 +17,7 @@ import { AmenitiesSuggestionField } from "@features/project-create/ui/amenities-
 import { ProjectNameDedupeField } from "@features/project-create/ui/project-name-dedupe-field";
 import type { PropertyProjectSearchResponse, PropertySearchResponse } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
+import { LoadState } from "@shared/ui/load-state";
 import styles from "./projects-page.module.css";
 
 const markets = [
@@ -29,22 +30,32 @@ const markets = [
 
 export function ProjectsPage({
   missingListings,
-  projects
+  missingListingsError,
+  projectFilters,
+  projects,
+  projectsError
 }: {
-  missingListings: PropertySearchResponse;
-  projects: PropertyProjectSearchResponse;
+  missingListings?: PropertySearchResponse;
+  missingListingsError?: string;
+  projectFilters: PropertyProjectSearchResponse["filters"];
+  projects?: PropertyProjectSearchResponse;
+  projectsError?: string;
 }) {
-  const projectLinkFacets = missingListings.facets?.projectLink;
+  const projectItems = projects?.items ?? [];
+  const projectTotal = projects?.total ?? 0;
+  const filters = projects?.filters ?? projectFilters;
+  const missingItems = missingListings?.items ?? [];
+  const projectLinkFacets = missingListings?.facets?.projectLink;
   const linkedListings = projectLinkFacets?.linked ?? 0;
-  const missingProjectListings = projectLinkFacets?.missing ?? missingListings.total;
+  const missingProjectListings = projectLinkFacets?.missing ?? missingListings?.total ?? 0;
   const totalListings = projectLinkFacets?.all ?? linkedListings + missingProjectListings;
   const linkedRate = totalListings > 0 ? Math.round((linkedListings / totalListings) * 100) : 0;
-  const statusCounts = projects.facets?.status ?? buildProjectStatusCounts(projects.items);
-  const pageSize = projects.filters.limit ?? (projects.items.length || 1);
-  const currentPage = Math.floor((projects.filters.offset ?? 0) / pageSize) + 1;
-  const pageCount = Math.max(1, Math.ceil(projects.total / pageSize));
-  const firstVisible = projects.items.length ? (currentPage - 1) * pageSize + 1 : 0;
-  const lastVisible = Math.min((currentPage - 1) * pageSize + projects.items.length, projects.total);
+  const statusCounts = projects?.facets?.status ?? buildProjectStatusCounts(projectItems);
+  const pageSize = filters.limit ?? (projectItems.length || 1);
+  const currentPage = Math.floor((filters.offset ?? 0) / pageSize) + 1;
+  const pageCount = Math.max(1, Math.ceil(projectTotal / pageSize));
+  const firstVisible = projectItems.length ? (currentPage - 1) * pageSize + 1 : 0;
+  const lastVisible = Math.min((currentPage - 1) * pageSize + projectItems.length, projectTotal);
 
   return (
     <main className={styles.page}>
@@ -57,11 +68,11 @@ export function ProjectsPage({
               Normalize project names, spot missing links, and keep imported listings attached to the same development record.
             </p>
           </div>
-          <span className={styles.totalBadge}>{projects.total} projects</span>
+          <span className={styles.totalBadge}>{projectsError ? "Unavailable" : `${projectTotal} projects`}</span>
         </header>
 
         <section className={styles.kpiGrid} aria-label="Project registry health">
-          <MetricCard icon={<Building2 size={18} />} label="Known projects" value={projects.total} />
+          <MetricCard icon={<Building2 size={18} />} label="Known projects" value={projectTotal} />
           <MetricCard icon={<Home size={18} />} label="Linked listings" value={linkedListings} />
           <MetricCard icon={<AlertTriangle size={18} />} label="Missing project" tone="warning" value={missingProjectListings} />
           <MetricCard icon={<CircleDot size={18} />} label="Portfolio linked" value={`${linkedRate}%`} />
@@ -112,11 +123,11 @@ export function ProjectsPage({
             <form action="/projects#project-directory" className={styles.directoryToolbar} method="get">
               <label className={styles.searchBox}>
                 <Search size={17} />
-                <input defaultValue={projects.filters.query ?? ""} name="query" placeholder="Search project or developer" type="search" />
+                <input defaultValue={filters.query ?? ""} name="query" placeholder="Search project or developer" type="search" />
               </label>
               <label className={styles.marketSelect}>
                 <Building2 size={16} />
-                <select defaultValue={projects.filters.market ?? "all"} name="market">
+                <select defaultValue={filters.market ?? "all"} name="market">
                   <option value="all">All markets</option>
                   {markets.map((market) => (
                     <option key={market.value} value={market.value}>
@@ -126,16 +137,19 @@ export function ProjectsPage({
                 </select>
               </label>
               <span className={styles.resultMeta}>
-                {firstVisible}-{lastVisible} of {projects.total}
+                {firstVisible}-{lastVisible} of {projectTotal}
               </span>
               <button className={styles.applyButton} type="submit">
                 Apply
               </button>
             </form>
 
-            <div className={styles.projectList}>
-              {projects.items.length ? (
-                projects.items.map((project) => (
+            {projectsError ? (
+              <LoadState kicker="Project directory unavailable" message={projectsError} title="Could not load projects" />
+            ) : (
+              <div className={styles.projectList}>
+                {projectItems.length ? (
+                  projectItems.map((project) => (
                   <article className={styles.projectCard} key={project.id}>
                     <div className={styles.projectTitle}>
                       <span className={styles.projectIcon}>
@@ -163,18 +177,19 @@ export function ProjectsPage({
                       </span>
                     </div>
                   </article>
-                ))
-              ) : (
-                <div className={styles.emptyState}>No projects yet. Create or import listings with project names to start the registry.</div>
-              )}
-            </div>
+                  ))
+                ) : (
+                  <div className={styles.emptyState}>No projects yet. Create or import listings with project names to start the registry.</div>
+                )}
+              </div>
+            )}
 
-            {pageCount > 1 ? (
+            {!projectsError && pageCount > 1 ? (
               <div className={styles.pagination} aria-label="Project directory pagination">
                 <Link
                   aria-disabled={currentPage === 1}
                   className={currentPage === 1 ? styles.paginationDisabled : ""}
-                  href={projectDirectoryHref(projects.filters, Math.max(1, currentPage - 1))}
+                  href={projectDirectoryHref(filters, Math.max(1, currentPage - 1))}
                 >
                   <ChevronLeft size={16} />
                   Prev
@@ -185,7 +200,7 @@ export function ProjectsPage({
                 <Link
                   aria-disabled={currentPage === pageCount}
                   className={currentPage === pageCount ? styles.paginationDisabled : ""}
-                  href={projectDirectoryHref(projects.filters, Math.min(pageCount, currentPage + 1))}
+                  href={projectDirectoryHref(filters, Math.min(pageCount, currentPage + 1))}
                 >
                   Next
                   <ChevronRight size={16} />
@@ -223,21 +238,29 @@ export function ProjectsPage({
                   <h2>Missing projects</h2>
                 </div>
               </div>
-              <div className={styles.gapList}>
-                {missingListings.items.slice(0, 6).map((listing) => (
-                  <Link className={styles.gapRow} href={`/listings/${listing.id}`} key={listing.id}>
-                    <AlertTriangle size={15} />
-                    <span>
-                      <strong>{listing.title}</strong>
-                      <small>
-                        {formatBucket(listing.market)} · {formatListingType(listing.listingType)}
-                        {listing.address ? ` · ${listing.address}` : ""}
-                      </small>
-                    </span>
-                  </Link>
-                ))}
-                {missingListings.items.length === 0 ? <p>No missing project links.</p> : null}
-              </div>
+              {missingListingsError ? (
+                <LoadState
+                  kicker="Cleanup queue unavailable"
+                  message={missingListingsError}
+                  title="Could not load missing projects"
+                />
+              ) : (
+                <div className={styles.gapList}>
+                  {missingItems.slice(0, 6).map((listing) => (
+                    <Link className={styles.gapRow} href={`/listings/${listing.id}`} key={listing.id}>
+                      <AlertTriangle size={15} />
+                      <span>
+                        <strong>{listing.title}</strong>
+                        <small>
+                          {formatBucket(listing.market)} · {formatListingType(listing.listingType)}
+                          {listing.address ? ` · ${listing.address}` : ""}
+                        </small>
+                      </span>
+                    </Link>
+                  ))}
+                  {missingItems.length === 0 ? <p>No missing project links.</p> : null}
+                </div>
+              )}
             </section>
           </aside>
         </section>
