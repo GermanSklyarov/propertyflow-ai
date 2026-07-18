@@ -4,6 +4,8 @@ import type {
   BackgroundJobSnapshot,
   BackgroundJobState,
   AssignLeadRequest,
+  ApplyLeadQualityContactRequest,
+  ApplyLeadQualityContactResponse,
   ApplyLeadQualityLinkPropertyRequest,
   ApplyLeadQualityLinkPropertyResponse,
   GeneratePropertySocialPostsRequest,
@@ -443,6 +445,26 @@ export async function assignLead(leadId: string, payload: AssignLeadRequest): Pr
   }
 
   return (await response.json()) as LeadSnapshot;
+}
+
+export async function updateLeadContact(
+  leadId: string,
+  payload: ApplyLeadQualityContactRequest
+): Promise<ApplyLeadQualityContactResponse> {
+  const response = await fetch(`${apiBaseUrl}/leads/${leadId}/quality-actions/contact`, {
+    method: "POST",
+    headers: {
+      ...demoHeaders,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update lead contact: ${response.status}`);
+  }
+
+  return (await response.json()) as ApplyLeadQualityContactResponse;
 }
 
 export async function linkLeadProperty(

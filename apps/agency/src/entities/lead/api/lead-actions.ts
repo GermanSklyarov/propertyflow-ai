@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { LeadPriority, LeadStatus } from "@propertyflow/contracts";
-import { addLeadNote, assignLead, linkLeadProperty, updateLeadFollowUp, updateLeadStatus } from "@shared/api/agency-client";
+import { addLeadNote, assignLead, linkLeadProperty, updateLeadContact, updateLeadFollowUp, updateLeadStatus } from "@shared/api/agency-client";
 
 export async function addLeadNoteAction(leadId: string, formData: FormData) {
   const note = String(formData.get("note") ?? "").trim();
@@ -74,6 +74,25 @@ export async function linkLeadPropertyAction(leadId: string, formData: FormData)
 
   await linkLeadProperty(leadId, {
     propertyId,
+    note: note || undefined
+  });
+
+  revalidatePath("/leads");
+  revalidatePath(`/leads/${leadId}`);
+}
+
+export async function updateLeadContactAction(leadId: string, formData: FormData) {
+  const contactEmail = String(formData.get("contactEmail") ?? "").trim();
+  const contactPhone = String(formData.get("contactPhone") ?? "").trim();
+  const note = String(formData.get("note") ?? "").trim();
+
+  if (!contactEmail && !contactPhone) {
+    throw new Error("Add an email or phone number.");
+  }
+
+  await updateLeadContact(leadId, {
+    contactEmail: contactEmail || undefined,
+    contactPhone: contactPhone || undefined,
     note: note || undefined
   });
 

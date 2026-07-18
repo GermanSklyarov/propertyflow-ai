@@ -71,6 +71,10 @@
   gap: 10px;
 }
 
+.inlineAction {
+  margin-top: 12px;
+}
+
 .field {
   display: grid;
   gap: 7px;

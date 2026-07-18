@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowUpRight, Clock3, Home, Mail, MapPin, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { buildLeadFollowUpSummary, formatLeadOwner } from "@entities/lead/lib/lead-queue";
+import { UpdateLeadContactForm } from "@features/lead-contact-update/ui/update-lead-contact-form";
 import type { LeadSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { formatBucket, formatDateTime } from "@shared/lib/formatters";
@@ -38,6 +39,9 @@ export function LeadOverviewPanel({
             <Field icon={<Phone size={15} />} label="Phone" value={lead.contactPhone ?? "not provided"} />
             <Field label="Locale" value={lead.preferredLocale ?? "not set"} />
             <Field label="Created" value={formatDateTime(lead.createdAt)} />
+          </div>
+          <div className={styles.inlineAction}>
+            <UpdateLeadContactForm lead={lead} />
           </div>
         </section>
 
