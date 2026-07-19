@@ -104,6 +104,7 @@ import { ListSavedSearchOpportunitiesDto } from "./list-saved-search-opportuniti
 import { NaturalLanguageSearchDto } from "./natural-language-search.dto.js";
 import { RecordPropertySocialPostPublicationDto } from "./record-property-social-post-publication.dto.js";
 import { RecordPropertySocialPostReviewDto } from "./record-property-social-post-review.dto.js";
+import { ReorderPropertyImagesDto } from "./reorder-property-images.dto.js";
 import { SavePropertySocialPostDraftDto } from "./save-property-social-post-draft.dto.js";
 import { RunListingAssistantDto } from "./run-listing-assistant.dto.js";
 import { ReviewAiAssetDto } from "./review-ai-asset.dto.js";
@@ -1760,6 +1761,47 @@ export class PropertiesController {
     });
 
     return preview;
+  }
+
+  @Patch(":propertyId/images/reorder")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Persist drag-and-drop listing image order" })
+  @ApiOkResponse({ description: "Updated listing image gallery order" })
+  async reorderImages(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Body() payload: ReorderPropertyImagesDto
+  ): Promise<PropertyImageGalleryResponse> {
+    const gallery = await this.propertyImages.reorderImages(tenantId, propertyId, payload);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.image_reordered",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        coverImageId: gallery.images[0]?.id,
+        imageIds: gallery.images.map((image) => image.id),
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.images_updated", {
+      propertyId,
+      action: "reordered",
+      imageIds: gallery.images.map((image) => image.id)
+    });
+
+    return gallery;
   }
 
   @Patch(":propertyId/images/:imageId/cover")

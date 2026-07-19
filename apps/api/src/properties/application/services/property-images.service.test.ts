@@ -46,6 +46,10 @@ function createService(repositoryOverrides: Partial<PropertyImagesRepository> = 
     listByPropertyId: vi.fn().mockResolvedValue([activeImage]),
     listDeletedByPropertyId: vi.fn().mockResolvedValue([deletedImage]),
     makeCover: vi.fn().mockResolvedValue({ ...activeImage, id: "image-promoted", position: 0 }),
+    reorder: vi.fn().mockResolvedValue([
+      { ...activeImage, id: "image-2", position: 0 },
+      { ...activeImage, id: "image-1", position: 1 }
+    ]),
     restore: vi.fn().mockResolvedValue({ ...deletedImage, deletedAt: undefined }),
     ...repositoryOverrides
   } as unknown as PropertyImagesRepository;
@@ -117,6 +121,35 @@ describe("PropertyImagesService", () => {
     });
 
     await expect(service.makeCover("tenant-1", "property-1", "image-deleted")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("persists a unique active image order and returns the refreshed gallery", async () => {
+    const { images, service } = createService();
+
+    await expect(
+      service.reorderImages("tenant-1", "property-1", {
+        imageIds: ["image-2", "image-1"]
+      })
+    ).resolves.toEqual({
+      propertyId: "property-1",
+      images: [
+        { ...activeImage, id: "image-2", position: 0 },
+        { ...activeImage, id: "image-1", position: 1 }
+      ],
+      deletedImages: [deletedImage]
+    });
+
+    expect(images.reorder).toHaveBeenCalledWith("tenant-1", "property-1", ["image-2", "image-1"]);
+  });
+
+  it("rejects reorder payloads with duplicate image ids", async () => {
+    const { service } = createService();
+
+    await expect(
+      service.reorderImages("tenant-1", "property-1", {
+        imageIds: ["image-1", "image-1"]
+      })
+    ).rejects.toBeInstanceOf(Error);
   });
 
   it("rejects gallery access for unknown properties", async () => {

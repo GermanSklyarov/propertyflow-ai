@@ -105,6 +105,7 @@ export type AuditAction =
   | "property.image_cover_updated"
   | "property.image_delete_previewed"
   | "property.image_removed"
+  | "property.image_reordered"
   | "property.image_restored"
   | "property.published"
   | "property.price_recommendation_feedback"
@@ -298,6 +299,10 @@ export interface PropertyImageDeletePreviewResponse {
 
 export interface ConfirmPropertyImageDeleteRequest {
   confirmationToken: string;
+}
+
+export interface ReorderPropertyImagesRequest {
+  imageIds: string[];
 }
 
 export interface AddPropertyImageRequest {

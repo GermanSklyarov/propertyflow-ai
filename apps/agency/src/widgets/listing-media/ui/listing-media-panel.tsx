@@ -3,6 +3,7 @@ import {
   addPropertyImageAction,
   deletePropertyImageAction,
   makePropertyImageCoverAction,
+  reorderPropertyImagesAction,
   restorePropertyImageAction,
   uploadPropertyImageAction
 } from "@entities/listing/api/listing-actions";
@@ -10,6 +11,7 @@ import { buildGalleryImageSrc, buildListingMediaSummary } from "@entities/listin
 import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import { DeleteImageButton } from "./delete-image-button";
 import { MakeCoverButton } from "./make-cover-button";
+import { ReorderGallery } from "./reorder-gallery";
 import { RestoreImageButton } from "./restore-image-button";
 import styles from "./listing-media-panel.module.css";
 
@@ -26,6 +28,7 @@ export function ListingMediaPanel({
   const deletedImages = gallery.deletedImages ?? [];
   const addImage = addPropertyImageAction.bind(null, listingId);
   const uploadImage = uploadPropertyImageAction.bind(null, listingId);
+  const reorderImages = reorderPropertyImagesAction.bind(null, listingId);
 
   return (
     <section className={styles.panel} aria-label="Listing media gallery">
@@ -69,10 +72,19 @@ export function ListingMediaPanel({
 
       <div className={styles.actions}>
         <span>Cover can be changed from thumbnails</span>
-        <span>Reorder queue</span>
+        <span>Drag order can be saved</span>
         <span>AI quality review</span>
         <span>Public gallery sync</span>
       </div>
+
+      <ReorderGallery
+        action={reorderImages}
+        images={gallery.images.map((image, index) => ({
+          caption: image.caption ?? (index === 0 ? `${listingTitle} cover photo` : `${listingTitle} photo ${index + 1}`),
+          id: image.id,
+          src: buildGalleryImageSrc(image)
+        }))}
+      />
 
       {deletedImages.length ? (
         <div className={styles.deletedImages}>

@@ -297,6 +297,82 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
     }
   }
 
+  async reorder(tenantId: string, propertyId: string, imageIds: string[]): Promise<PropertyImageSnapshot[] | null> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+
+      const requested = await client.query<{ id: string }>(
+        `
+          select id
+          from property_images
+          where tenant_id = $1
+            and property_id = $2
+            and deleted_at is null
+            and id = any($3::uuid[])
+          for update
+        `,
+        [tenantId, propertyId, imageIds]
+      );
+
+      if (requested.rowCount !== imageIds.length) {
+        await client.query("rollback");
+        return null;
+      }
+
+      await client.query(
+        `
+          with requested_order as (
+            select image_id::uuid as id, ordinal_position - 1 as next_position
+            from unnest($3::uuid[]) with ordinality as ordered(image_id, ordinal_position)
+          ),
+          remaining_order as (
+            select
+              id,
+              cardinality($3::uuid[]) + row_number() over (order by position asc, created_at asc) - 1 as next_position
+            from property_images
+            where tenant_id = $1
+              and property_id = $2
+              and deleted_at is null
+              and not (id = any($3::uuid[]))
+          ),
+          next_order as (
+            select * from requested_order
+            union all
+            select * from remaining_order
+          )
+          update property_images
+          set position = next_order.next_position
+          from next_order
+          where property_images.tenant_id = $1
+            and property_images.property_id = $2
+            and property_images.id = next_order.id
+        `,
+        [tenantId, propertyId, imageIds]
+      );
+
+      const result = await client.query<PropertyImageRow>(
+        `
+          select id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
+          from property_images
+          where tenant_id = $1 and property_id = $2 and deleted_at is null
+          order by position asc, created_at asc
+        `,
+        [tenantId, propertyId]
+      );
+
+      await client.query("commit");
+
+      return result.rows.map((row) => this.toSnapshot(row));
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   private toSnapshot(row: PropertyImageRow): PropertyImageSnapshot {
     return {
       id: row.id,

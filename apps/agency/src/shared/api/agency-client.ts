@@ -14,6 +14,7 @@ import type {
   RecordPropertySocialPostPublicationResponse,
   RecordPropertySocialPostReviewRequest,
   RecordPropertySocialPostReviewResponse,
+  ReorderPropertyImagesRequest,
   SavePropertySocialPostDraftRequest,
   SavePropertySocialPostDraftResponse,
   AiChatRequest,
@@ -656,6 +657,26 @@ export async function makePropertyImageCover(propertyId: string, imageId: string
   }
 
   return (await response.json()) as PropertyImageSnapshot;
+}
+
+export async function reorderPropertyImages(
+  propertyId: string,
+  request: ReorderPropertyImagesRequest
+): Promise<PropertyImageGalleryResponse> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/reorder`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to reorder property images: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageGalleryResponse;
 }
 
 export async function generatePropertySocialPostDrafts(

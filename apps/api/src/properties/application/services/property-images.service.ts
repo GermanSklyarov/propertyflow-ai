@@ -8,7 +8,8 @@ import type {
   CreatePropertyImageUploadResponse,
   PropertyImageDeletePreviewResponse,
   PropertyImageGalleryResponse,
-  PropertyImageSnapshot
+  PropertyImageSnapshot,
+  ReorderPropertyImagesRequest
 } from "@propertyflow/contracts";
 import { ObjectStorageService } from "../../../storage/object-storage.service.js";
 import { PROPERTY_IMAGES_REPOSITORY, type PropertyImagesRepository } from "../../domain/property-images.repository.js";
@@ -189,6 +190,27 @@ export class PropertyImagesService {
     return image;
   }
 
+  async reorderImages(
+    tenantId: string,
+    propertyId: string,
+    request: ReorderPropertyImagesRequest
+  ): Promise<PropertyImageGalleryResponse> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const imageIds = this.uniqueImageIds(request.imageIds);
+    const images = await this.images.reorder(tenantId, propertyId, imageIds);
+
+    if (!images) {
+      throw new BadRequestException("Image order contains unknown or inactive property images");
+    }
+
+    return {
+      propertyId,
+      images,
+      deletedImages: await this.images.listDeletedByPropertyId(tenantId, propertyId)
+    };
+  }
+
   async createImageReadUrl(
     tenantId: string,
     propertyId: string,
@@ -238,5 +260,16 @@ export class PropertyImagesService {
 
   private hashToken(token: string): string {
     return createHash("sha256").update(token).digest("hex");
+  }
+
+  private uniqueImageIds(imageIds: string[]): string[] {
+    const normalized = imageIds.map((imageId) => imageId.trim()).filter(Boolean);
+    const unique = new Set(normalized);
+
+    if (!normalized.length || unique.size !== normalized.length) {
+      throw new BadRequestException("Image order must include unique image ids");
+    }
+
+    return normalized;
   }
 }

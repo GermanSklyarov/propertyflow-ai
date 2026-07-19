@@ -14,6 +14,7 @@ import {
   enqueuePropertyImport,
   makePropertyImageCover,
   previewPropertyImageDelete,
+  reorderPropertyImages,
   restorePropertyImage,
   reviewPropertyDescriptionAsset,
   reviewPropertyImageAnalysisAsset,
@@ -141,6 +142,14 @@ export async function restorePropertyImageAction(propertyId: string, imageId: st
 
 export async function makePropertyImageCoverAction(propertyId: string, imageId: string) {
   await makePropertyImageCover(propertyId, imageId);
+
+  revalidatePath("/listings");
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function reorderPropertyImagesAction(propertyId: string, imageIds: string[]) {
+  await reorderPropertyImages(propertyId, { imageIds });
 
   revalidatePath("/listings");
   revalidatePath(`/listings/${propertyId}`);

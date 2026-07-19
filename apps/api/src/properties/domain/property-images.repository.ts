@@ -15,6 +15,7 @@ export interface PropertyImagesRepository {
   listByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]>;
   listDeletedByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]>;
   makeCover(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null>;
+  reorder(tenantId: string, propertyId: string, imageIds: string[]): Promise<PropertyImageSnapshot[] | null>;
   consumeDeleteConfirmation(input: ConsumePropertyImageDeleteConfirmationInput): Promise<boolean>;
   remove(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null>;
   restore(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null>;
