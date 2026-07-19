@@ -4,13 +4,14 @@ import { DatabaseModule } from "../database/database.module.js";
 import { JobsModule } from "../jobs/jobs.module.js";
 import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
+import { StorageModule } from "../storage/storage.module.js";
 import { KnowledgeDocumentService } from "./application/knowledge-document.service.js";
 import { KNOWLEDGE_DOCUMENT_REPOSITORY } from "./domain/knowledge-document.repository.js";
 import { PgKnowledgeDocumentRepository } from "./infrastructure/postgres/pg-knowledge-document.repository.js";
 import { KnowledgeDocumentsController } from "./presentation/rest/knowledge-documents.controller.js";
 
 @Module({
-  imports: [AuditModule, AuthModule, DatabaseModule, JobsModule, TenantsModule],
+  imports: [AuditModule, AuthModule, DatabaseModule, JobsModule, StorageModule, TenantsModule],
   controllers: [KnowledgeDocumentsController],
   providers: [
     KnowledgeDocumentService,

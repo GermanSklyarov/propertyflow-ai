@@ -2,6 +2,7 @@ import { Body, Controller, Get, Inject, Param, Post, Query, UseGuards } from "@n
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   BackgroundJobSnapshot,
+  CreateKnowledgeDocumentUploadResponse,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
   KnowledgeDocumentSnapshot,
@@ -17,6 +18,7 @@ import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { KnowledgeDocumentService } from "../../application/knowledge-document.service.js";
 import { CreateKnowledgeDocumentDto } from "./create-knowledge-document.dto.js";
+import { CreateKnowledgeDocumentUploadDto } from "./create-knowledge-document-upload.dto.js";
 import { EmbedKnowledgeChunksDto } from "./embed-knowledge-chunks.dto.js";
 import { ListKnowledgeDocumentsDto } from "./list-knowledge-documents.dto.js";
 import { SearchKnowledgeChunksDto } from "./search-knowledge-chunks.dto.js";
@@ -78,6 +80,15 @@ export class KnowledgeDocumentsController {
     });
 
     return document;
+  }
+
+  @Post("upload-url")
+  @Roles("manager", "admin")
+  createUploadUrl(
+    @TenantId() tenantId: string,
+    @Body() payload: CreateKnowledgeDocumentUploadDto
+  ): Promise<CreateKnowledgeDocumentUploadResponse> {
+    return this.knowledge.createUploadUrl(tenantId, payload);
   }
 
   @Post(":documentId/ingest")

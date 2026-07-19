@@ -1,5 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  CreateKnowledgeDocumentUploadRequest,
+  CreateKnowledgeDocumentUploadResponse,
   CreateKnowledgeDocumentRequest,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
@@ -7,6 +9,7 @@ import type {
   KnowledgeDocumentSearchRequest,
   KnowledgeDocumentSnapshot
 } from "@propertyflow/contracts";
+import { ObjectStorageService } from "../../storage/object-storage.service.js";
 import {
   KNOWLEDGE_DOCUMENT_REPOSITORY,
   type KnowledgeDocumentRepository
@@ -15,7 +18,8 @@ import {
 @Injectable()
 export class KnowledgeDocumentService {
   constructor(
-    @Inject(KNOWLEDGE_DOCUMENT_REPOSITORY) private readonly documents: KnowledgeDocumentRepository
+    @Inject(KNOWLEDGE_DOCUMENT_REPOSITORY) private readonly documents: KnowledgeDocumentRepository,
+    @Inject(ObjectStorageService) private readonly storage: ObjectStorageService
   ) {}
 
   create(tenantId: string, request: CreateKnowledgeDocumentRequest): Promise<KnowledgeDocumentSnapshot> {
@@ -45,7 +49,43 @@ export class KnowledgeDocumentService {
     };
   }
 
+  async createUploadUrl(
+    tenantId: string,
+    request: CreateKnowledgeDocumentUploadRequest
+  ): Promise<CreateKnowledgeDocumentUploadResponse> {
+    const objectKey = [
+      "tenants",
+      this.safePathSegment(tenantId),
+      "knowledge",
+      `${crypto.randomUUID()}-${this.safeFilename(request.filename)}`
+    ].join("/");
+    const upload = await this.storage.createPresignedPutUrl({
+      objectKey,
+      contentType: request.mimeType,
+      expiresInSeconds: 900
+    });
+    const read = await this.storage.createPresignedGetUrl({
+      objectKey,
+      expiresInSeconds: 3600
+    });
+
+    return {
+      ...upload,
+      objectUrl: read.objectUrl
+    };
+  }
+
   private normalizeTags(tags: string[]): string[] {
     return [...new Set(tags.map((tag) => tag.trim().toLowerCase()).filter(Boolean))];
+  }
+
+  private safePathSegment(value: string): string {
+    return value.replace(/[^a-zA-Z0-9._-]/g, "-");
+  }
+
+  private safeFilename(filename: string): string {
+    const normalized = filename.trim().replace(/[^a-zA-Z0-9._-]/g, "-");
+
+    return normalized || "knowledge-source";
   }
 }

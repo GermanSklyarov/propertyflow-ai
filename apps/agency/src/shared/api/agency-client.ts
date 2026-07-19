@@ -21,6 +21,8 @@ import type {
   AiChatResponse,
   AmenitySuggestionRequest,
   AmenitySuggestionResponse,
+  CreateKnowledgeDocumentUploadRequest,
+  CreateKnowledgeDocumentUploadResponse,
   CreateKnowledgeDocumentRequest,
   CreateLeadNoteRequest,
   CreatePropertyImportUploadRequest,
@@ -1037,6 +1039,25 @@ export async function createKnowledgeDocument(request: CreateKnowledgeDocumentRe
   }
 
   return (await response.json()) as KnowledgeDocumentSnapshot;
+}
+
+export async function createKnowledgeDocumentUploadUrl(
+  request: CreateKnowledgeDocumentUploadRequest
+): Promise<CreateKnowledgeDocumentUploadResponse> {
+  const response = await fetch(`${apiBaseUrl}/knowledge-documents/upload-url`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create knowledge document upload URL: ${response.status}`);
+  }
+
+  return (await response.json()) as CreateKnowledgeDocumentUploadResponse;
 }
 
 export async function ingestKnowledgeDocument(documentId: string): Promise<BackgroundJobSnapshot> {
