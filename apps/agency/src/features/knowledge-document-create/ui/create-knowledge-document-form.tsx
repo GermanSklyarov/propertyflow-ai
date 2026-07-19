@@ -9,7 +9,7 @@ export function CreateKnowledgeDocumentForm() {
     <form action={createKnowledgeDocumentAction} className={styles.form}>
       <label className={styles.wide}>
         Title
-        <input name="title" placeholder="Wongamat family relocation guide" required />
+        <input name="title" placeholder="Buying guide, visa FAQ, company information, condo brochure..." required />
       </label>
       <label>
         Locale
@@ -23,7 +23,7 @@ export function CreateKnowledgeDocumentForm() {
       </label>
       <label>
         Kind
-        <select defaultValue="relocation" name="kind">
+        <select defaultValue="faq" name="kind">
           {knowledgeKindOptions.map((kind) => (
             <option key={kind} value={kind}>
               {formatBucket(kind)}
@@ -33,11 +33,16 @@ export function CreateKnowledgeDocumentForm() {
       </label>
       <label className={styles.wide}>
         Tags
-        <input name="tags" placeholder="pattaya, wongamat, family" />
+        <input name="tags" placeholder="faq, buying, visa, tax, pattaya, developer" />
       </label>
       <label className={styles.wide}>
         Body
-        <textarea name="body" placeholder="Add the source material agents would normally explain by hand..." required rows={8} />
+        <textarea
+          name="body"
+          placeholder="Paste source material or a cleaned transcript. File upload will come next; for now this text is queued for ingestion immediately."
+          required
+          rows={8}
+        />
       </label>
       <button type="submit">
         <DatabaseZap size={16} />

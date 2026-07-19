@@ -1,5 +1,19 @@
 import type { ReactNode } from "react";
-import { Bot, BookOpenText, DatabaseZap, FileText, Languages, Plus, SearchCheck, Tags } from "lucide-react";
+import {
+  ArrowRight,
+  Bot,
+  BookOpenText,
+  CheckCircle2,
+  CircleDashed,
+  DatabaseZap,
+  FileText,
+  Languages,
+  Plus,
+  SearchCheck,
+  Tags,
+  UploadCloud
+} from "lucide-react";
+import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import { KnowledgeDocumentCard } from "@entities/knowledge/ui/knowledge-document-card";
 import { CreateKnowledgeDocumentForm } from "@features/knowledge-document-create/ui/create-knowledge-document-form";
 import { KnowledgeAiAnswerPanel } from "@features/knowledge-ai-answer/ui/knowledge-ai-answer-panel";
@@ -38,6 +52,8 @@ export function KnowledgeBasePage({
   const kindCount = new Set(documents.map((document) => document.kind)).size;
   const localeCount = new Set(documents.map((document) => document.locale)).size;
   const taggedCount = documents.filter((document) => document.tags.length > 0).length;
+  const starterReadiness = buildKnowledgeStarterReadiness(documents);
+  const activeKnowledgeJobs = jobs.filter((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed").length;
 
   return (
     <main className={styles.page}>
@@ -47,10 +63,11 @@ export function KnowledgeBasePage({
             <p className="section-kicker">RAG operations</p>
             <h1 className={styles.title}>Knowledge base</h1>
             <p className={styles.subtitle}>
-              Maintain the agency content that AI Concierge, listing chat, relocation advice, and investment answers can retrieve.
+              Start with agency documents. PropertyFlowAI indexes the knowledge first, then AI Concierge can answer from it before
+              CRM is even enabled.
             </p>
           </div>
-          <span className={styles.statusBadge}>Tenant-scoped</span>
+          <span className={styles.statusBadge}>AI-first setup</span>
         </header>
 
         {notice ? (
@@ -59,6 +76,46 @@ export function KnowledgeBasePage({
             <strong>{notice.message}</strong>
           </section>
         ) : null}
+
+        <section className={styles.onboardingPanel} id="starter-knowledge">
+          <div className={styles.onboardingIntro}>
+            <UploadCloud size={24} />
+            <div>
+              <p className="section-kicker">Starter onboarding</p>
+              <h2>Upload documents. AI starts useful.</h2>
+              <p>
+                Cover the documents a client would normally ask an agent about: buying, selling, visas, taxes, company answers,
+                project brochures, and internal handoff instructions.
+              </p>
+            </div>
+          </div>
+
+          <div className={styles.onboardingStats}>
+            <strong>
+              {starterReadiness.completed}/{starterReadiness.total}
+            </strong>
+            <span>knowledge types covered</span>
+            <small>{activeKnowledgeJobs ? "AI is indexing your knowledge..." : "Ready for the next source"}</small>
+          </div>
+
+          <div className={styles.requirementGrid} aria-label="Starter knowledge checklist">
+            {starterReadiness.items.map((item) => {
+              const Icon = item.done ? CheckCircle2 : CircleDashed;
+
+              return (
+                <span className={item.done ? styles.requirementDone : styles.requirementMissing} key={item.id}>
+                  <Icon size={15} />
+                  {item.title}
+                </span>
+              );
+            })}
+          </div>
+
+          <a className={styles.primaryLink} href="#create-knowledge-document">
+            Add knowledge source
+            <ArrowRight size={16} />
+          </a>
+        </section>
 
         <section className={styles.kpiGrid} aria-label="Knowledge base overview">
           <KpiCard icon={<BookOpenText size={18} />} label="Documents" note="Tenant knowledge" value={total} />
@@ -104,7 +161,7 @@ export function KnowledgeBasePage({
         </section>
 
         <section className={styles.layout}>
-          <section className={styles.panel}>
+          <section className={styles.panel} id="create-knowledge-document">
             <div className={styles.panelHeader}>
               <div>
                 <p className="section-kicker">Add source</p>

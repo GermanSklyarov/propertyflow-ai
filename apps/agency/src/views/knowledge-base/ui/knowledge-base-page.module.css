@@ -56,6 +56,132 @@
   padding: 14px 16px;
 }
 
+.onboardingPanel {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  border: 1px solid var(--line);
+  background: var(--panel-strong);
+  padding: 16px;
+  box-shadow: 0 16px 42px rgb(37 50 46 / 7%);
+}
+
+.onboardingIntro {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.onboardingIntro > svg {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  padding: 9px;
+}
+
+.onboardingIntro h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.45rem, 2.4vw, 2.7rem);
+  line-height: 1.02;
+}
+
+.onboardingIntro p:last-child {
+  max-width: 840px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.onboardingStats {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 5px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 14px;
+}
+
+.onboardingStats strong {
+  color: var(--teal-dark);
+  font-size: clamp(1.7rem, 2.8vw, 3rem);
+  line-height: 0.95;
+}
+
+.onboardingStats span,
+.onboardingStats small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.35;
+  text-transform: uppercase;
+}
+
+.onboardingStats small {
+  color: var(--teal-dark);
+}
+
+.requirementGrid {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.requirementDone,
+.requirementMissing {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 10px 11px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.requirementDone svg,
+.requirementMissing svg {
+  flex: 0 0 auto;
+}
+
+.requirementMissing {
+  border-color: rgb(180 83 9 / 20%);
+  background: #fff7ed;
+  color: #7c4a05;
+}
+
+.primaryLink {
+  display: inline-flex;
+  min-height: 44px;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 24%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 950;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.primaryLink:hover,
+.primaryLink:focus-visible {
+  background: var(--teal-dark);
+}
+
 .kpiGrid {
   display: grid;
   gap: 12px;
@@ -193,7 +319,26 @@
 }
 
 @media (min-width: 1080px) {
+  .onboardingPanel {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.22fr);
+  }
+
+  .requirementGrid,
+  .primaryLink {
+    grid-column: 1 / -1;
+  }
+
   .layout {
     grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .onboardingIntro {
+    grid-template-columns: 1fr;
+  }
+
+  .primaryLink {
+    width: 100%;
   }
 }
