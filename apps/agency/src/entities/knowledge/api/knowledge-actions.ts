@@ -3,14 +3,20 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { CreateKnowledgeDocumentRequest, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
-import { createKnowledgeDocument, embedKnowledgeChunks, ingestKnowledgeDocument } from "@shared/api/agency-client";
+import {
+  createKnowledgeDocument,
+  createKnowledgeDocumentUploadUrl,
+  embedKnowledgeChunks,
+  ingestKnowledgeDocument
+} from "@shared/api/agency-client";
 import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
 
 export async function createKnowledgeDocumentAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const typedBody = String(formData.get("body") ?? "").trim();
   const sourceFile = getSourceFile(formData.get("sourceFile"));
-  const body = await resolveKnowledgeDocumentBody(typedBody, sourceFile);
+  const sourceUpload = sourceFile ? await uploadKnowledgeSourceFile(sourceFile) : undefined;
+  const body = await resolveKnowledgeDocumentBody(typedBody, sourceFile, sourceUpload);
   const locale = String(formData.get("locale") ?? "en") as CreateKnowledgeDocumentRequest["locale"];
   const kind = String(formData.get("kind") ?? "article") as CreateKnowledgeDocumentRequest["kind"];
   const tags = [
@@ -18,7 +24,8 @@ export async function createKnowledgeDocumentAction(formData: FormData) {
       .split(",")
       .map((tag) => tag.trim())
       .filter(Boolean),
-    ...(sourceFile ? ["source-file", sourceFile.name] : [])
+    ...(sourceFile ? ["source-file", sourceFile.name] : []),
+    ...(sourceUpload ? ["storage-backed"] : [])
   ];
 
   if (!title || !body) {
@@ -40,6 +47,29 @@ export async function createKnowledgeDocumentAction(formData: FormData) {
 
 function getSourceFile(value: FormDataEntryValue | null): File | null {
   return typeof File !== "undefined" && value instanceof File && value.size > 0 ? value : null;
+}
+
+async function uploadKnowledgeSourceFile(file: File) {
+  const upload = await createKnowledgeDocumentUploadUrl({
+    filename: file.name,
+    mimeType: file.type || "application/octet-stream",
+    sizeBytes: file.size
+  });
+
+  const uploadResponse = await fetch(upload.uploadUrl, {
+    method: upload.method,
+    headers: upload.headers,
+    body: file
+  });
+
+  if (!uploadResponse.ok) {
+    throw new Error(`Failed to upload knowledge source file: ${uploadResponse.status}`);
+  }
+
+  return {
+    objectKey: upload.objectKey,
+    objectUrl: upload.objectUrl
+  };
 }
 
 export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumentSnapshot["id"], title: string) {

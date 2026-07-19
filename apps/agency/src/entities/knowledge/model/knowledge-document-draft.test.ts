@@ -8,6 +8,18 @@ describe("knowledge document draft", () => {
     expect(body).toBe("Agent pasted FAQ");
   });
 
+  it("appends storage source references when a file upload exists", async () => {
+    const body = await resolveKnowledgeDocumentBody("Agent pasted FAQ", fileFactory("guide.md", "File body"), {
+      objectKey: "tenants/demo-agency/knowledge/source.md",
+      objectUrl: "https://storage.example.com/source.md"
+    });
+
+    expect(body).toContain("Agent pasted FAQ");
+    expect(body).toContain("Source upload:");
+    expect(body).toContain("tenants/demo-agency/knowledge/source.md");
+    expect(body).toContain("https://storage.example.com/source.md");
+  });
+
   it("reads supported text files when body is empty", async () => {
     const body = await resolveKnowledgeDocumentBody("", fileFactory("buying-guide.md", "Buying guide content"));
 

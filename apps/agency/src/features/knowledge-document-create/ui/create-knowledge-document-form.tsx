@@ -46,8 +46,8 @@ export function CreateKnowledgeDocumentForm() {
       </label>
       <div className={styles.wide}>
         <FileDropField
-          accept=".txt,.md,.csv,.json,.html,.xml,text/*,application/json,application/xml"
-          description="Text-like files are read immediately and queued for knowledge ingestion. PDF/OCR ingestion is the next backend worker step."
+          accept=".txt,.md,.csv,.json,.html,.xml,.pdf,.png,.jpg,.jpeg,text/*,application/json,application/xml,application/pdf,image/*"
+          description="Text-like files are read immediately. PDFs and images are stored as source files for the upcoming OCR/PDF worker."
           icon={<FileText size={24} />}
           name="sourceFile"
           title="Drop knowledge file"
