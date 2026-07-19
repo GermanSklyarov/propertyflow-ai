@@ -4,16 +4,22 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { CreateKnowledgeDocumentRequest, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
 import { createKnowledgeDocument, embedKnowledgeChunks, ingestKnowledgeDocument } from "@shared/api/agency-client";
+import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
 
 export async function createKnowledgeDocumentAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
-  const body = String(formData.get("body") ?? "").trim();
+  const typedBody = String(formData.get("body") ?? "").trim();
+  const sourceFile = getSourceFile(formData.get("sourceFile"));
+  const body = await resolveKnowledgeDocumentBody(typedBody, sourceFile);
   const locale = String(formData.get("locale") ?? "en") as CreateKnowledgeDocumentRequest["locale"];
   const kind = String(formData.get("kind") ?? "article") as CreateKnowledgeDocumentRequest["kind"];
-  const tags = String(formData.get("tags") ?? "")
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean);
+  const tags = [
+    ...String(formData.get("tags") ?? "")
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean),
+    ...(sourceFile ? ["source-file", sourceFile.name] : [])
+  ];
 
   if (!title || !body) {
     return;
@@ -30,6 +36,10 @@ export async function createKnowledgeDocumentAction(formData: FormData) {
   revalidatePath("/knowledge");
 
   redirect(`/knowledge?created=${encodeURIComponent(document.title)}#knowledge-list`);
+}
+
+function getSourceFile(value: FormDataEntryValue | null): File | null {
+  return typeof File !== "undefined" && value instanceof File && value.size > 0 ? value : null;
 }
 
 export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumentSnapshot["id"], title: string) {
