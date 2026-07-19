@@ -461,8 +461,30 @@
   color: var(--teal-dark);
 }
 
+.photoSourceGrid {
+  display: grid;
+  gap: 10px;
+}
+
 .photoDrop {
   min-height: 188px;
+}
+
+.urlDrop {
+  min-height: 188px;
+  border-style: dashed;
+  background: #f5faf7;
+  padding: 24px;
+}
+
+.urlDrop > svg {
+  color: var(--teal-dark);
+}
+
+.urlDrop textarea {
+  min-height: 84px;
+  margin-top: auto;
+  background: #fff;
 }
 
 .checkbox {
@@ -618,7 +640,8 @@
   .fieldGrid,
   .commercialGrid,
   .chanoteGrid,
-  .manualFallbackGrid {
+  .manualFallbackGrid,
+  .photoSourceGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
@@ -629,10 +652,25 @@
   .manualFallbackGrid .wideField {
     grid-column: span 2;
   }
+
+  .photoSourceGrid > * {
+    grid-column: span 3;
+  }
+}
+
+@media (min-width: 1080px) {
+  .photoSourceGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .photoSourceGrid > * {
+    grid-column: auto;
+  }
 }
 
 @media (max-width: 779px) {
-  .fileDrop {
+  .fileDrop,
+  .urlDrop {
     min-height: 160px;
   }
 }

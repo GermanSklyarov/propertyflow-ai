@@ -43,6 +43,7 @@ export async function createPropertyAction(formData: FormData) {
   const projectName = getOptionalString(formData, "projectName");
   const projectStatus = getOptionalString(formData, "projectStatus") as PropertyProjectStatus | undefined;
   const images = getImageFiles(formData);
+  const imageUrls = getImageUrls(formData);
   const analyzeImages = formData.get("analyzeImages") === "on";
   const chanoteExtraction = await extractChanoteData(formData);
   const description = buildDescriptionWithChanote(getOptionalString(formData, "description"), chanoteExtraction);
@@ -76,7 +77,10 @@ export async function createPropertyAction(formData: FormData) {
       : {})
   });
 
-  await Promise.all(images.map((file) => uploadCreatedPropertyImage(property.id, file, analyzeImages)));
+  await Promise.all([
+    ...images.map((file) => uploadCreatedPropertyImage(property.id, file, analyzeImages)),
+    ...imageUrls.map((imageUrl, index) => addCreatedPropertyImageUrl(property.id, imageUrl, index, analyzeImages))
+  ]);
 
   revalidatePath("/listings");
   revalidatePath(`/listings/${property.id}`);
@@ -84,11 +88,13 @@ export async function createPropertyAction(formData: FormData) {
 
   const params = new URLSearchParams({ created: "1" });
 
-  if (images.length && analyzeImages) {
+  const attachedImageCount = images.length + imageUrls.length;
+
+  if (attachedImageCount && analyzeImages) {
     params.set("queued", "image-analysis");
   }
 
-  redirect(`/listings/${property.id}?${params.toString()}${images.length && analyzeImages ? "#ai-image-analysis" : ""}`);
+  redirect(`/listings/${property.id}?${params.toString()}${attachedImageCount && analyzeImages ? "#ai-image-analysis" : ""}`);
 }
 
 export async function addPropertyImageAction(propertyId: string, formData: FormData) {
@@ -299,6 +305,13 @@ function getImageFiles(formData: FormData) {
     .filter((file): file is File => file instanceof File && file.size > 0);
 }
 
+function getImageUrls(formData: FormData) {
+  return String(formData.get("imageUrls") ?? "")
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 interface ChanoteExtraction {
   address?: string;
   areaSqm?: number;
@@ -408,6 +421,14 @@ async function uploadCreatedPropertyImage(propertyId: string, file: File, analyz
     objectKey: upload.objectKey,
     originalFilename: file.name,
     sizeBytes: file.size
+  });
+}
+
+async function addCreatedPropertyImageUrl(propertyId: string, imageUrl: string, index: number, analyzeImage: boolean) {
+  await addPropertyImage(propertyId, {
+    analyzeImage,
+    caption: index === 0 ? "Linked photo" : `Linked photo ${index + 1}`,
+    imageUrl
   });
 }
 

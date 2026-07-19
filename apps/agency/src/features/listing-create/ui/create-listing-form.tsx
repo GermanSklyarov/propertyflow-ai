@@ -1,4 +1,4 @@
-import { Bot, Building2, Camera, ChevronDown, CircleDollarSign, FileScan, Plus } from "lucide-react";
+import { Bot, Building2, Camera, ChevronDown, CircleDollarSign, FileScan, Link2, Plus } from "lucide-react";
 import { createPropertyAction } from "@entities/listing/api/listing-actions";
 import { AmenitiesSuggestionField } from "@features/project-create/ui/amenities-suggestion-field";
 import { FileDropField } from "./file-drop-field";
@@ -165,15 +165,26 @@ export function CreateListingForm() {
                 </div>
               </div>
 
-              <FileDropField
-                accept="image/*"
-                description="Multiple images supported. They will be attached after the draft is created."
-                icon={<Camera size={19} />}
-                multiple
-                name="imageFiles"
-                title="Upload photos"
-                variant="photo"
-              />
+              <div className={styles.photoSourceGrid}>
+                <FileDropField
+                  accept="image/*"
+                  description="Multiple images supported. They will be attached after the draft is created."
+                  icon={<Camera size={19} />}
+                  multiple
+                  name="imageFiles"
+                  title="Upload photos"
+                  variant="photo"
+                />
+                <label className={`${styles.wideField} ${styles.urlDrop}`}>
+                  <Link2 size={19} />
+                  <span>Paste photo links</span>
+                  <small>Use this when photos are already hosted. Add one URL per line or separate links with commas.</small>
+                  <textarea
+                    name="imageUrls"
+                    placeholder="https://images.example.com/living-room.jpg&#10;https://images.example.com/pool-view.jpg"
+                  />
+                </label>
+              </div>
 
               <label className={styles.checkbox}>
                 <input defaultChecked name="analyzeImages" type="checkbox" />
