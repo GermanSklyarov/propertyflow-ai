@@ -88,90 +88,74 @@ const demoHeaders = {
 };
 
 export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetrics> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/analytics/dashboard`, {
-      headers: demoHeaders,
-      next: { revalidate: 30 }
-    });
+  const response = await fetch(`${apiBaseUrl}/analytics/dashboard`, {
+    headers: demoHeaders,
+    next: { revalidate: 30 }
+  });
 
-    if (!response.ok) {
-      return demoTenantDashboardMetrics();
-    }
-
-    return (await response.json()) as TenantDashboardMetrics;
-  } catch {
-    return demoTenantDashboardMetrics();
+  if (!response.ok) {
+    throw new Error(`Failed to load tenant dashboard metrics: ${response.status}`);
   }
+
+  return (await response.json()) as TenantDashboardMetrics;
 }
 
 export async function listBackgroundJobs(
   request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12 },
   options: { revalidateSeconds?: number | false } = {}
 ): Promise<BackgroundJobMonitorResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/jobs${toQueryString(request)}`, {
-      headers: demoHeaders,
-      ...(options.revalidateSeconds === false
-        ? { cache: "no-store" as const }
-        : { next: { revalidate: options.revalidateSeconds ?? 5 } })
-    });
+  const response = await fetch(`${apiBaseUrl}/jobs${toQueryString(request)}`, {
+    headers: demoHeaders,
+    ...(options.revalidateSeconds === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidateSeconds ?? 5 } })
+  });
 
-    if (!response.ok) {
-      return demoBackgroundJobs(request);
-    }
-
-    return (await response.json()) as BackgroundJobMonitorResponse;
-  } catch {
-    return demoBackgroundJobs(request);
+  if (!response.ok) {
+    throw new Error(`Failed to load background jobs: ${response.status}`);
   }
+
+  return (await response.json()) as BackgroundJobMonitorResponse;
 }
 
 export async function getBackgroundJob(
   jobId: string,
   options: { revalidateSeconds?: number | false } = {}
 ): Promise<BackgroundJobMonitorItem | null> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}`, {
-      headers: demoHeaders,
-      ...(options.revalidateSeconds === false
-        ? { cache: "no-store" as const }
-        : { next: { revalidate: options.revalidateSeconds ?? 5 } })
-    });
+  const response = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}`, {
+    headers: demoHeaders,
+    ...(options.revalidateSeconds === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidateSeconds ?? 5 } })
+  });
 
-    if (response.status === 404) {
-      return null;
-    }
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return (await response.json()) as BackgroundJobMonitorItem;
-  } catch {
+  if (response.status === 404) {
     return null;
   }
+
+  if (!response.ok) {
+    throw new Error(`Failed to load background job: ${response.status}`);
+  }
+
+  return (await response.json()) as BackgroundJobMonitorItem;
 }
 
 export async function searchPropertyProjects(
   request: PropertyProjectSearchRequest = { limit: 8 },
   options: { revalidateSeconds?: number | false } = {}
 ): Promise<PropertyProjectSearchResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/projects${toQueryString(request)}`, {
-      headers: demoHeaders,
-      ...(options.revalidateSeconds === false
-        ? { cache: "no-store" as const }
-        : { next: { revalidate: options.revalidateSeconds ?? 10 } })
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/projects${toQueryString(request)}`, {
+    headers: demoHeaders,
+    ...(options.revalidateSeconds === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidateSeconds ?? 10 } })
+  });
 
-    if (!response.ok) {
-      return demoPropertyProjectSearchResponse(request);
-    }
-
-    return (await response.json()) as PropertyProjectSearchResponse;
-  } catch {
-    return demoPropertyProjectSearchResponse(request);
+  if (!response.ok) {
+    throw new Error(`Failed to search property projects: ${response.status}`);
   }
+
+  return (await response.json()) as PropertyProjectSearchResponse;
 }
 
 export async function getPropertyProject(projectId: string): Promise<PropertyProjectSuggestion | null> {
@@ -232,47 +216,18 @@ export async function searchAmenities(
   request: AmenitySuggestionRequest = { limit: 12 },
   options: { revalidateSeconds?: number | false } = {}
 ): Promise<AmenitySuggestionResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/amenities${toQueryString(request)}`, {
-      headers: demoHeaders,
-      ...(options.revalidateSeconds === false
-        ? { cache: "no-store" as const }
-        : { next: { revalidate: options.revalidateSeconds ?? 10 } })
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/amenities${toQueryString(request)}`, {
+    headers: demoHeaders,
+    ...(options.revalidateSeconds === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidateSeconds ?? 10 } })
+  });
 
-    if (!response.ok) {
-      return demoAmenitySuggestions(request);
-    }
-
-    return (await response.json()) as AmenitySuggestionResponse;
-  } catch {
-    return demoAmenitySuggestions(request);
+  if (!response.ok) {
+    throw new Error(`Failed to search amenities: ${response.status}`);
   }
-}
 
-function demoAmenitySuggestions(request: AmenitySuggestionRequest): AmenitySuggestionResponse {
-  return {
-    filters: request,
-    items: [],
-    total: 0
-  };
-}
-
-function demoPropertyProjectSearchResponse(request: PropertyProjectSearchRequest): PropertyProjectSearchResponse {
-  return {
-    facets: { status: [] },
-    filters: request,
-    items: [],
-    total: 0
-  };
-}
-
-function demoBackgroundJobs(request: { states?: BackgroundJobState[] } = {}): BackgroundJobMonitorResponse {
-  return {
-    items: [],
-    states: request.states ?? ["active", "waiting", "completed", "failed"],
-    total: 0
-  };
+  return (await response.json()) as AmenitySuggestionResponse;
 }
 
 export async function listLeads(request: ListLeadsRequest = { limit: 24 }): Promise<LeadListResponse> {
@@ -918,111 +873,87 @@ export async function runListingAssistant(
 }
 
 export async function listSavedPropertySearches(): Promise<SavedPropertySearchListResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/saved-searches`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/saved-searches`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoSavedPropertySearchListResponse();
-    }
-
-    return (await response.json()) as SavedPropertySearchListResponse;
-  } catch {
-    return demoSavedPropertySearchListResponse();
+  if (!response.ok) {
+    throw new Error(`Failed to load saved property searches: ${response.status}`);
   }
+
+  return (await response.json()) as SavedPropertySearchListResponse;
 }
 
 export async function listSavedSearchOpportunities(): Promise<SavedSearchOpportunitiesResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/saved-searches/opportunities?limit=12&minScore=35`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/saved-searches/opportunities?limit=12&minScore=35`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoSavedSearchOpportunitiesResponse();
-    }
-
-    return (await response.json()) as SavedSearchOpportunitiesResponse;
-  } catch {
-    return demoSavedSearchOpportunitiesResponse();
+  if (!response.ok) {
+    throw new Error(`Failed to load saved search opportunities: ${response.status}`);
   }
+
+  return (await response.json()) as SavedSearchOpportunitiesResponse;
 }
 
 export async function getSavedSearchAlertAnalytics(): Promise<SavedSearchAlertAnalyticsResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/properties/saved-searches/alerts/analytics`, {
-      headers: demoHeaders,
-      next: { revalidate: 30 }
-    });
+  const response = await fetch(`${apiBaseUrl}/properties/saved-searches/alerts/analytics`, {
+    headers: demoHeaders,
+    next: { revalidate: 30 }
+  });
 
-    if (!response.ok) {
-      return demoSavedSearchAlertAnalyticsResponse();
-    }
-
-    return (await response.json()) as SavedSearchAlertAnalyticsResponse;
-  } catch {
-    return demoSavedSearchAlertAnalyticsResponse();
+  if (!response.ok) {
+    throw new Error(`Failed to load saved search alert analytics: ${response.status}`);
   }
+
+  return (await response.json()) as SavedSearchAlertAnalyticsResponse;
 }
 
 export async function listKnowledgeDocuments(request: { limit?: number } = { limit: 24 }): Promise<KnowledgeDocumentListResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/knowledge-documents${toQueryString(request)}`, {
-      headers: demoHeaders,
-      next: { revalidate: 20 }
-    });
+  const response = await fetch(`${apiBaseUrl}/knowledge-documents${toQueryString(request)}`, {
+    headers: demoHeaders,
+    next: { revalidate: 20 }
+  });
 
-    if (!response.ok) {
-      return demoKnowledgeDocumentListResponse();
-    }
-
-    return (await response.json()) as KnowledgeDocumentListResponse;
-  } catch {
-    return demoKnowledgeDocumentListResponse();
+  if (!response.ok) {
+    throw new Error(`Failed to load knowledge documents: ${response.status}`);
   }
+
+  return (await response.json()) as KnowledgeDocumentListResponse;
 }
 
 export async function searchKnowledgeChunks(
   request: KnowledgeChunkSearchRequest
 ): Promise<KnowledgeChunkSearchResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/search${toQueryString(request)}`, {
-      headers: demoHeaders,
-      next: { revalidate: 10 }
-    });
+  const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/search${toQueryString(request)}`, {
+    headers: demoHeaders,
+    next: { revalidate: 10 }
+  });
 
-    if (!response.ok) {
-      return demoKnowledgeChunkSearchResponse(request);
-    }
-
-    return (await response.json()) as KnowledgeChunkSearchResponse;
-  } catch {
-    return demoKnowledgeChunkSearchResponse(request);
+  if (!response.ok) {
+    throw new Error(`Failed to search knowledge chunks: ${response.status}`);
   }
+
+  return (await response.json()) as KnowledgeChunkSearchResponse;
 }
 
 export async function askAiChat(request: AiChatRequest): Promise<AiChatResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/chat`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...demoHeaders
-      },
-      body: JSON.stringify(request)
-    });
+  const response = await fetch(`${apiBaseUrl}/chat`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
 
-    if (!response.ok) {
-      return demoAiChatResponse(request);
-    }
-
-    return (await response.json()) as AiChatResponse;
-  } catch {
-    return demoAiChatResponse(request);
+  if (!response.ok) {
+    throw new Error(`Failed to ask AI chat: ${response.status}`);
   }
+
+  return (await response.json()) as AiChatResponse;
 }
 
 export async function embedKnowledgeChunks(
@@ -1116,37 +1047,29 @@ export async function createPropertyImportUploadUrl(
 }
 
 export async function getCurrentTenant(): Promise<TenantSnapshot> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/tenants/current`, {
-      headers: demoHeaders,
-      next: { revalidate: 30 }
-    });
+  const response = await fetch(`${apiBaseUrl}/tenants/current`, {
+    headers: demoHeaders,
+    next: { revalidate: 30 }
+  });
 
-    if (!response.ok) {
-      return demoTenantSnapshot();
-    }
-
-    return (await response.json()) as TenantSnapshot;
-  } catch {
-    return demoTenantSnapshot();
+  if (!response.ok) {
+    throw new Error(`Failed to load current tenant: ${response.status}`);
   }
+
+  return (await response.json()) as TenantSnapshot;
 }
 
 export async function getTenantUsage(): Promise<TenantUsageResponse> {
-  try {
-    const response = await fetch(`${apiBaseUrl}/tenants/current/usage`, {
-      headers: demoHeaders,
-      next: { revalidate: 30 }
-    });
+  const response = await fetch(`${apiBaseUrl}/tenants/current/usage`, {
+    headers: demoHeaders,
+    next: { revalidate: 30 }
+  });
 
-    if (!response.ok) {
-      return demoTenantUsageResponse();
-    }
-
-    return (await response.json()) as TenantUsageResponse;
-  } catch {
-    return demoTenantUsageResponse();
+  if (!response.ok) {
+    throw new Error(`Failed to load tenant usage: ${response.status}`);
   }
+
+  return (await response.json()) as TenantUsageResponse;
 }
 
 export async function updateTenantSettings(request: UpdateTenantSettingsRequest): Promise<TenantSnapshot> {
