@@ -302,10 +302,26 @@
   min-height: 260px;
   place-items: center;
   gap: 10px;
+  cursor: pointer;
   border: 1px dashed rgb(15 118 110 / 24%);
   background: #edf8f4;
   padding: 28px;
+  color: inherit;
   text-align: center;
+  text-decoration: none;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    transform 140ms ease;
+}
+
+.empty:hover,
+.empty:focus-visible {
+  border-color: rgb(15 118 110 / 46%);
+  background: #dff4ed;
+  outline: 2px solid rgb(15 118 110 / 16%);
+  outline-offset: 2px;
+  transform: translateY(-1px);
 }
 
 .empty svg,

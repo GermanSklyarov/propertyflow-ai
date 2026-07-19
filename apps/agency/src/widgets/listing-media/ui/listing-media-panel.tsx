@@ -63,11 +63,11 @@ export function ListingMediaPanel({
           </div>
         </div>
       ) : (
-        <div className={styles.empty}>
+        <a className={styles.empty} href="#add-photos">
           <ImagePlus size={28} />
           <strong>Upload photos before publishing</strong>
-          <p>Photos will power the public listing gallery, AI image analysis, amenity detection, and client-facing recommendations.</p>
-        </div>
+          <p>Click to add photos by URL or upload local files. Photos will power the public gallery, AI image analysis, and recommendations.</p>
+        </a>
       )}
 
       <div className={styles.actions}>
@@ -110,7 +110,7 @@ export function ListingMediaPanel({
         </div>
       ) : null}
 
-      <details className={styles.addPhotosPanel}>
+      <details className={styles.addPhotosPanel} id="add-photos" open={!media.activeCount}>
         <summary>
           <ImagePlus size={16} />
           <span>Add photos</span>
