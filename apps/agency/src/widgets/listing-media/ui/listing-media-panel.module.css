@@ -122,6 +122,39 @@
   color: var(--teal-dark);
 }
 
+.makeCoverForm {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  left: 10px;
+}
+
+.makeCoverForm button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 24%);
+  background: rgb(237 248 244 / 94%);
+  padding: 0 9px;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+  box-shadow: 0 10px 24px rgb(8 28 24 / 14%);
+}
+
+.makeCoverForm button:hover,
+.makeCoverForm button:focus-visible {
+  border-color: rgb(15 118 110 / 48%);
+  background: #dff4ed;
+  outline: 2px solid rgb(15 118 110 / 16%);
+  outline-offset: 2px;
+}
+
 .deleteImageForm {
   position: absolute;
   z-index: 2;
@@ -404,5 +437,16 @@
 
   .thumbnailFrame {
     aspect-ratio: 16 / 9;
+  }
+}
+
+@media (max-width: 779px) {
+  .makeCoverForm button span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
   }
 }

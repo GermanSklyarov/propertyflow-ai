@@ -2,12 +2,14 @@ import { ImagePlus } from "lucide-react";
 import {
   addPropertyImageAction,
   deletePropertyImageAction,
+  makePropertyImageCoverAction,
   restorePropertyImageAction,
   uploadPropertyImageAction
 } from "@entities/listing/api/listing-actions";
 import { buildGalleryImageSrc, buildListingMediaSummary } from "@entities/listing/lib/listing-media";
 import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import { DeleteImageButton } from "./delete-image-button";
+import { MakeCoverButton } from "./make-cover-button";
 import { RestoreImageButton } from "./restore-image-button";
 import styles from "./listing-media-panel.module.css";
 
@@ -50,6 +52,7 @@ export function ListingMediaPanel({
             {media.thumbnails.map((image, index) => (
               <figure className={styles.thumbnailFrame} key={image.id}>
                 <img src={buildGalleryImageSrc(image)} alt={image.caption ?? `${listingTitle} photo ${index + 2}`} />
+                <MakeCoverButton action={makePropertyImageCoverAction.bind(null, listingId, image.id)} />
                 <DeleteImageButton action={deletePropertyImageAction.bind(null, listingId, image.id)} />
                 <figcaption>{index === 0 ? "Next in gallery" : `Photo ${index + 2}`}</figcaption>
               </figure>
@@ -65,7 +68,7 @@ export function ListingMediaPanel({
       )}
 
       <div className={styles.actions}>
-        <span>Cover selection</span>
+        <span>Cover can be changed from thumbnails</span>
         <span>Reorder queue</span>
         <span>AI quality review</span>
         <span>Public gallery sync</span>

@@ -45,6 +45,7 @@ function createService(repositoryOverrides: Partial<PropertyImagesRepository> = 
     findByIdIncludingDeleted: vi.fn().mockResolvedValue(storedDeletedImage),
     listByPropertyId: vi.fn().mockResolvedValue([activeImage]),
     listDeletedByPropertyId: vi.fn().mockResolvedValue([deletedImage]),
+    makeCover: vi.fn().mockResolvedValue({ ...activeImage, id: "image-promoted", position: 0 }),
     restore: vi.fn().mockResolvedValue({ ...deletedImage, deletedAt: undefined }),
     ...repositoryOverrides
   } as unknown as PropertyImagesRepository;
@@ -97,6 +98,25 @@ describe("PropertyImagesService", () => {
     });
 
     expect(images.findByIdIncludingDeleted).toHaveBeenCalledWith("tenant-1", "property-1", "image-deleted");
+  });
+
+  it("promotes an active image to the cover position", async () => {
+    const { images, service } = createService();
+
+    await expect(service.makeCover("tenant-1", "property-1", "image-promoted")).resolves.toMatchObject({
+      id: "image-promoted",
+      position: 0
+    });
+
+    expect(images.makeCover).toHaveBeenCalledWith("tenant-1", "property-1", "image-promoted");
+  });
+
+  it("rejects cover changes for images outside the active gallery", async () => {
+    const { service } = createService({
+      makeCover: vi.fn().mockResolvedValue(null)
+    });
+
+    await expect(service.makeCover("tenant-1", "property-1", "image-deleted")).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it("rejects gallery access for unknown properties", async () => {

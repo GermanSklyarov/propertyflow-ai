@@ -123,6 +123,26 @@ export class InMemoryPropertyImagesRepository implements PropertyImagesRepositor
     return image;
   }
 
+  async makeCover(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
+    const existing = this.images.get(this.key(tenantId, propertyId)) ?? [];
+    const active = existing
+      .filter((image) => !image.deletedAt)
+      .sort((left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt));
+    const selected = active.find((image) => image.id === imageId);
+
+    if (!selected) {
+      return null;
+    }
+
+    const ordered = [selected, ...active.filter((image) => image.id !== imageId)];
+
+    ordered.forEach((image, position) => {
+      image.position = position;
+    });
+
+    return selected;
+  }
+
   private key(tenantId: string, propertyId: string): string {
     return `${tenantId}:${propertyId}`;
   }

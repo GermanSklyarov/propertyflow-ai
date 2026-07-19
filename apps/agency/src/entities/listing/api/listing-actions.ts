@@ -12,6 +12,7 @@ import {
   createPropertyImageUploadUrl,
   deletePropertyImage,
   enqueuePropertyImport,
+  makePropertyImageCover,
   previewPropertyImageDelete,
   restorePropertyImage,
   reviewPropertyDescriptionAsset,
@@ -134,6 +135,14 @@ export async function deletePropertyImageAction(propertyId: string, imageId: str
 export async function restorePropertyImageAction(propertyId: string, imageId: string) {
   await restorePropertyImage(propertyId, imageId);
 
+  revalidatePath(`/listings/${propertyId}`);
+  revalidatePath(`/properties/${propertyId}`);
+}
+
+export async function makePropertyImageCoverAction(propertyId: string, imageId: string) {
+  await makePropertyImageCover(propertyId, imageId);
+
+  revalidatePath("/listings");
   revalidatePath(`/listings/${propertyId}`);
   revalidatePath(`/properties/${propertyId}`);
 }

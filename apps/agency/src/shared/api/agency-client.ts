@@ -645,6 +645,19 @@ export async function restorePropertyImage(propertyId: string, imageId: string):
   return (await response.json()) as PropertyImageSnapshot;
 }
 
+export async function makePropertyImageCover(propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/${imageId}/cover`, {
+    method: "PATCH",
+    headers: demoHeaders
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to make property image cover: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageSnapshot;
+}
+
 export async function generatePropertySocialPostDrafts(
   propertyId: string,
   request: GeneratePropertySocialPostsRequest

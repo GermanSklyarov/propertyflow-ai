@@ -233,6 +233,70 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async makeCover(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null> {
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+
+      const selected = await client.query<{ position: number }>(
+        `
+          select position
+          from property_images
+          where tenant_id = $1
+            and property_id = $2
+            and id = $3
+            and deleted_at is null
+          for update
+        `,
+        [tenantId, propertyId, imageId]
+      );
+
+      if (!selected.rows[0]) {
+        await client.query("rollback");
+        return null;
+      }
+
+      const currentPosition = selected.rows[0].position;
+
+      await client.query(
+        `
+          update property_images
+          set position = position + 1
+          where tenant_id = $1
+            and property_id = $2
+            and id <> $3
+            and deleted_at is null
+            and position >= 0
+            and position < $4
+        `,
+        [tenantId, propertyId, imageId, currentPosition]
+      );
+
+      const result = await client.query<PropertyImageRow>(
+        `
+          update property_images
+          set position = 0
+          where tenant_id = $1
+            and property_id = $2
+            and id = $3
+            and deleted_at is null
+          returning id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
+        `,
+        [tenantId, propertyId, imageId]
+      );
+
+      await client.query("commit");
+
+      return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
   private toSnapshot(row: PropertyImageRow): PropertyImageSnapshot {
     return {
       id: row.id,

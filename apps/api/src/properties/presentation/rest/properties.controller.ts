@@ -1762,6 +1762,49 @@ export class PropertiesController {
     return preview;
   }
 
+  @Patch(":propertyId/images/:imageId/cover")
+  @Roles("agent", "broker", "manager", "admin")
+  @ApiOperation({ summary: "Promote an active listing image to the cover position" })
+  @ApiOkResponse({ description: "Image promoted to cover position" })
+  async makeImageCover(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("propertyId") propertyId: string,
+    @Param("imageId") imageId: string
+  ): Promise<PropertyImageSnapshot> {
+    const image = await this.propertyImages.makeCover(tenantId, propertyId, imageId);
+
+    const job = await this.jobs.enqueue("properties.search.index", {
+      tenantId,
+      requestedByUserId: user.id,
+      propertyId,
+      reason: "updated"
+    });
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "property.image_cover_updated",
+      resourceType: "property",
+      resourceId: propertyId,
+      metadata: {
+        imageId: image.id,
+        imageUrl: image.imageUrl,
+        position: image.position,
+        jobId: job.id
+      }
+    });
+
+    this.realtime.publish(tenantId, "property.images_updated", {
+      propertyId,
+      action: "cover-updated",
+      imageId: image.id,
+      imageUrl: image.imageUrl
+    });
+
+    return image;
+  }
+
   @Delete(":propertyId/images/:imageId")
   @Roles("agent", "broker", "manager", "admin")
   async removeImage(

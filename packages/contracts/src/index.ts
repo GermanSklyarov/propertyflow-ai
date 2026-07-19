@@ -102,6 +102,7 @@ export type AuditAction =
   | "property.amenities_updated"
   | "property.compared"
   | "property.image_added"
+  | "property.image_cover_updated"
   | "property.image_delete_previewed"
   | "property.image_removed"
   | "property.image_restored"

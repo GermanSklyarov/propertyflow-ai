@@ -177,6 +177,18 @@ export class PropertyImagesService {
     return image;
   }
 
+  async makeCover(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
+    await this.ensurePropertyExists(tenantId, propertyId);
+
+    const image = await this.images.makeCover(tenantId, propertyId, imageId);
+
+    if (!image) {
+      throw new NotFoundException("Active property image not found");
+    }
+
+    return image;
+  }
+
   async createImageReadUrl(
     tenantId: string,
     propertyId: string,
