@@ -409,7 +409,7 @@
 
 .reorderItem {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 8px;
   cursor: grab;
@@ -459,7 +459,44 @@
   white-space: nowrap;
 }
 
-.reorderItem svg {
+.reorderControls {
+  display: inline-flex;
+  grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.reorderControls button {
+  display: inline-flex;
+  width: 34px;
+  min-height: 30px;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  padding: 0;
+  color: var(--teal-dark);
+}
+
+.reorderControls button:disabled {
+  cursor: not-allowed;
+  border-color: rgb(15 118 110 / 8%);
+  background: #f5f7f5;
+  color: rgb(15 79 72 / 32%);
+}
+
+.reorderControls button:not(:disabled):hover,
+.reorderControls button:not(:disabled):focus-visible {
+  border-color: rgb(15 118 110 / 36%);
+  background: #dff4ed;
+  outline: 2px solid rgb(15 118 110 / 14%);
+  outline-offset: 2px;
+}
+
+.reorderControls > svg {
+  margin-left: auto;
   color: var(--muted);
 }
 

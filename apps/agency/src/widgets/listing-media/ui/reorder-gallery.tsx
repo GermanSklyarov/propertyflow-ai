@@ -1,7 +1,8 @@
 "use client";
 
-import { GripVertical, Save } from "lucide-react";
+import { ChevronLeft, ChevronRight, GripVertical, Save } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { moveGalleryItem, moveGalleryItemByStep } from "../model/reorder-gallery";
 import styles from "./listing-media-panel.module.css";
 
 interface ReorderGalleryItem {
@@ -35,23 +36,12 @@ export function ReorderGallery({
   }
 
   function moveItem(sourceId: string, targetId: string) {
-    if (sourceId === targetId) {
-      return;
-    }
+    setItems((current) => moveGalleryItem(current, sourceId, targetId));
+    setStatus("idle");
+  }
 
-    setItems((current) => {
-      const sourceIndex = current.findIndex((item) => item.id === sourceId);
-      const targetIndex = current.findIndex((item) => item.id === targetId);
-
-      if (sourceIndex < 0 || targetIndex < 0) {
-        return current;
-      }
-
-      const next = [...current];
-      const [source] = next.splice(sourceIndex, 1);
-      next.splice(targetIndex, 0, source);
-      return next;
-    });
+  function moveItemByStep(itemId: string, step: -1 | 1) {
+    setItems((current) => moveGalleryItemByStep(current, itemId, step));
     setStatus("idle");
   }
 
@@ -98,7 +88,27 @@ export function ReorderGallery({
             <span className={styles.reorderPosition}>{index === 0 ? "Cover" : index + 1}</span>
             <img src={image.src} alt={image.caption} />
             <strong>{image.caption}</strong>
-            <GripVertical size={18} />
+            <div className={styles.reorderControls}>
+              <button
+                aria-label={`Move ${image.caption} earlier`}
+                disabled={index === 0}
+                onClick={() => moveItemByStep(image.id, -1)}
+                title="Move earlier"
+                type="button"
+              >
+                <ChevronLeft size={15} />
+              </button>
+              <button
+                aria-label={`Move ${image.caption} later`}
+                disabled={index === items.length - 1}
+                onClick={() => moveItemByStep(image.id, 1)}
+                title="Move later"
+                type="button"
+              >
+                <ChevronRight size={15} />
+              </button>
+              <GripVertical size={18} aria-hidden="true" />
+            </div>
           </div>
         ))}
       </div>
