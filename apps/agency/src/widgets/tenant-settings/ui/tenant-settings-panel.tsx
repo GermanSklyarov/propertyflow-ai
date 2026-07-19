@@ -4,9 +4,13 @@ import {
   CheckCircle2,
   CircleDot,
   Code2,
+  FileText,
   Globe2,
   KeyRound,
+  Languages,
+  MessageCircle,
   Palette,
+  Rocket,
   ShieldAlert,
   ShieldCheck,
   SlidersHorizontal,
@@ -37,6 +41,83 @@ export function TenantSettingsPanel({
         <KpiCard icon={<Globe2 size={18} />} label="Domain" note={tenant.customDomain ?? "Not configured"} value={formatDomainStatus(tenant.domainStatus)} />
         <KpiCard icon={<Users size={18} />} label="Agents" note="Seats used" value={formatUsage(getUsage(usage.items, "agents"))} />
         <KpiCard icon={<Code2 size={18} />} label="Public API" note="Requests this month" value={formatUsage(getUsage(usage.items, "publicApiRequestsMonthly"))} />
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <div>
+            <p className="section-kicker">AI Concierge Starter</p>
+            <h2 className={styles.panelTitle}>Launch AI before CRM</h2>
+          </div>
+          <span className={styles.statusBadge}>Knowledge first</span>
+        </div>
+        <div className={styles.starterGrid}>
+          <article className={styles.starterHero}>
+            <Rocket size={22} />
+            <div>
+              <strong>Welcome to PropertyFlowAI</strong>
+              <p>
+                Connect documents, publish the website widget, and tune the assistant personality. CRM turns on later when a
+                conversation becomes a real lead.
+              </p>
+            </div>
+          </article>
+
+          <div className={styles.launchSteps}>
+            <LaunchStep
+              icon={<FileText size={17} />}
+              label="1"
+              title="Upload your documents"
+              value={`${starterDocumentTypes.length} knowledge types`}
+            />
+            <LaunchStep icon={<MessageCircle size={17} />} label="2" title="AI indexes knowledge" value="RAG ready" />
+            <LaunchStep icon={<Code2 size={17} />} label="3" title="Connect the website" value="Widget snippet" />
+            <LaunchStep icon={<Languages size={17} />} label="4" title="Set AI personality" value="EN, RU, TH, ZH" />
+          </div>
+        </div>
+
+        <div className={styles.starterDetailGrid}>
+          <section className={styles.starterCard}>
+            <p className="section-kicker">Documents</p>
+            <h3>Upload your knowledge base</h3>
+            <div className={styles.documentChecklist}>
+              {starterDocumentTypes.map((item) => (
+                <span key={item}>
+                  <CheckCircle2 size={15} />
+                  {item}
+                </span>
+              ))}
+            </div>
+            <div className={styles.indexingNotice}>
+              <CircleDot size={15} />
+              AI is indexing your knowledge from background jobs.
+            </div>
+          </section>
+
+          <section className={styles.starterCard}>
+            <p className="section-kicker">Widget</p>
+            <h3>Copy this code</h3>
+            <pre className={styles.widgetSnippet}>{buildWidgetSnippet(tenant)}</pre>
+            <small>Starter mode answers from documents and listings. Growth mode creates leads when visitors request help.</small>
+          </section>
+
+          <section className={styles.starterCard}>
+            <p className="section-kicker">Personality</p>
+            <h3>AI consultant profile</h3>
+            <div className={styles.personalityGrid}>
+              <Field label="AI name" value="Anna" />
+              <Field label="Tone" value="Friendly" />
+              <Field label="Welcome message" value="Hi! I'm Anna, your AI property consultant." />
+              <Field label="Languages" value="EN, RU, TH, ZH" />
+            </div>
+          </section>
+        </div>
+
+        <div className={styles.planModes}>
+          <PlanMode label="Starter" note="Documents, Knowledge Base, AI answers, and website widget." />
+          <PlanMode label="Growth" note="Conversations become leads when visitors ask for viewings, callbacks, or follow-up." />
+          <PlanMode label="Enterprise" note="CRM, analytics, automations, staff roles, SLA, pipeline, and integrations." />
+        </div>
       </section>
 
       <section className={styles.layout}>
@@ -171,6 +252,48 @@ interface ReadinessItem {
   note: string;
 }
 
+const starterDocumentTypes = [
+  "FAQ",
+  "Buying guide",
+  "Selling guide",
+  "Company information",
+  "Condo brochures",
+  "Developer PDFs",
+  "Tax information",
+  "Visa guide",
+  "Internal instructions"
+];
+
+function LaunchStep({
+  icon,
+  label,
+  title,
+  value
+}: {
+  icon: ReactNode;
+  label: string;
+  title: string;
+  value: string;
+}) {
+  return (
+    <article className={styles.launchStep}>
+      <span>{label}</span>
+      {icon}
+      <strong>{title}</strong>
+      <small>{value}</small>
+    </article>
+  );
+}
+
+function PlanMode({ label, note }: { label: string; note: string }) {
+  return (
+    <article className={styles.planMode}>
+      <strong>{label}</strong>
+      <span>{note}</span>
+    </article>
+  );
+}
+
 function ReadinessCard({ item }: { item: ReadinessItem }) {
   const Icon = item.done ? CheckCircle2 : ShieldAlert;
 
@@ -273,6 +396,15 @@ function formatUsageKey(value: TenantUsageMetric["key"]) {
 
 function formatDomainStatus(value: TenantSnapshot["domainStatus"]) {
   return value ? value.replaceAll("-", " ") : "not configured";
+}
+
+function buildWidgetSnippet(tenant: TenantSnapshot) {
+  return `<script
+  src="https://cdn.propertyflow.ai/widget.js"
+  data-tenant="${tenant.slug}"
+  data-ai-name="Anna"
+  data-languages="en,ru,th,zh"
+></script>`;
 }
 
 function buildReadinessItems(tenant: TenantSnapshot, usage: TenantUsageResponse): ReadinessItem[] {

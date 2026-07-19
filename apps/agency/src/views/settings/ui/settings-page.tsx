@@ -19,7 +19,7 @@ export function SettingsPage({
             <p className="section-kicker">Workspace settings</p>
             <h1 className={styles.title}>{tenant.branding.displayName}</h1>
             <p className={styles.subtitle}>
-              Configure tenant identity, domain readiness, subscription limits, public API posture, and agency operating roles.
+              Launch an AI property consultant first. Knowledge, widget, and assistant personality come before CRM complexity.
             </p>
           </div>
           <span className={styles.statusBadge}>{tenant.status}</span>

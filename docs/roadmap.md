@@ -62,6 +62,19 @@
 - Add property comparison.
 - Add saved searches and recommendation loops.
 
+## Phase 7.5: AI Concierge Starter Onboarding
+
+- Reframe the first tenant experience around Knowledge -> AI -> Widget, with CRM hidden until leads are actually created.
+- Add a setup wizard for new agencies: upload FAQ, buying/selling guides, company information, condo brochures, developer PDFs, tax information, visa guides, and internal instructions.
+- Show knowledge indexing progress immediately after upload, using background jobs as the source of truth.
+- Generate a copy-paste website widget snippet tied to the tenant workspace and public AI assistant.
+- Add AI personality settings: assistant name, welcome message, tone, and enabled languages.
+- Support three product modes:
+  - Starter: knowledge base, documents, AI answers, and website widget.
+  - Growth: conversations become leads when the visitor asks for a viewing, agent callback, WhatsApp follow-up, or saved search.
+  - Enterprise: CRM, analytics, automations, employees, roles, SLA, pipeline, reminders, and integrations.
+- Keep CRM as downstream infrastructure for conversations, not the primary onboarding surface.
+
 ## Phase 8: SaaS Operations
 
 - Add custom domains and tenant branding.

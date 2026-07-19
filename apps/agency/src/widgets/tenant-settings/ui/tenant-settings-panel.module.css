@@ -80,6 +80,185 @@
   text-transform: uppercase;
 }
 
+.starterGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.starterHero,
+.launchStep,
+.starterCard,
+.planMode {
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+}
+
+.starterHero {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 14px;
+  background: #edf8f4;
+}
+
+.starterHero svg {
+  color: var(--teal-dark);
+}
+
+.starterHero strong {
+  color: var(--teal-dark);
+  font-size: 1.05rem;
+}
+
+.starterHero p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.launchSteps {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+}
+
+.launchStep {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 12px;
+}
+
+.launchStep > span {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-weight: 900;
+}
+
+.launchStep svg {
+  color: var(--teal-dark);
+}
+
+.launchStep strong {
+  min-width: 0;
+  color: var(--ink);
+  font-size: 0.94rem;
+  overflow-wrap: anywhere;
+}
+
+.launchStep small {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.starterDetailGrid,
+.planModes {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.starterCard {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: 14px;
+}
+
+.starterCard h3 {
+  margin: 0;
+  color: var(--teal-dark);
+  font-size: 1rem;
+}
+
+.starterCard small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.documentChecklist {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.documentChecklist span,
+.indexingNotice {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 9px 10px;
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.documentChecklist svg,
+.indexingNotice svg {
+  flex: 0 0 auto;
+}
+
+.indexingNotice {
+  background: #fff7ed;
+  color: #7c4a05;
+}
+
+.widgetSnippet {
+  min-width: 0;
+  margin: 0;
+  overflow: auto;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #0b211d;
+  color: #ecfdf5;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  padding: 12px;
+  white-space: pre-wrap;
+}
+
+.personalityGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.planMode {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+}
+
+.planMode strong {
+  color: var(--teal-dark);
+  font-size: 0.95rem;
+}
+
+.planMode span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .fieldGrid,
 .readinessGrid,
 .usageGrid {
@@ -259,6 +438,15 @@
 @media (min-width: 860px) {
   .kpiGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .starterGrid {
+    grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  }
+
+  .starterDetailGrid,
+  .planModes {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .layout {
