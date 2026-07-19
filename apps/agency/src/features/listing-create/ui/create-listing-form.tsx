@@ -1,7 +1,7 @@
 import { Bot, Building2, Camera, ChevronDown, CircleDollarSign, FileScan, Link2, Plus } from "lucide-react";
 import { createPropertyAction } from "@entities/listing/api/listing-actions";
 import { AmenitiesSuggestionField } from "@features/project-create/ui/amenities-suggestion-field";
-import { FileDropField } from "./file-drop-field";
+import { FileDropField } from "@shared/ui/file-drop-field";
 import { ProjectAutocompleteField } from "./project-autocomplete-field";
 import { CreateListingWizard } from "./create-listing-wizard";
 import styles from "./create-listing-form.module.css";

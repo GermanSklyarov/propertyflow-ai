@@ -383,50 +383,12 @@
 .field input:focus,
 .field select:focus,
 .wideField input:focus,
-.wideField textarea:focus,
-.fileDrop:focus-within {
+.wideField textarea:focus {
   border-color: rgb(15 118 110 / 48%);
   outline: 2px solid rgb(15 118 110 / 12%);
   outline-offset: 0;
 }
 
-.fileDrop {
-  position: relative;
-  display: flex;
-  min-height: 188px;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  border: 1px dashed rgb(15 118 110 / 28%);
-  background: #f5faf7;
-  padding: 24px;
-  color: var(--teal-dark);
-}
-
-.fileDrop:hover,
-.fileDrop:focus-within,
-.fileDropActive {
-  border-color: rgb(15 118 110 / 48%);
-  background: #edf8f4;
-}
-
-.fileDrop span {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  font-size: 1rem;
-  font-weight: 950;
-  line-height: 1.15;
-  text-transform: uppercase;
-}
-
-.fileDrop svg {
-  flex: 0 0 auto;
-}
-
-.fileDrop small,
 .checkbox span,
 .aiNote span {
   color: var(--muted);
@@ -436,38 +398,9 @@
   overflow-wrap: anywhere;
 }
 
-.fileDrop input {
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-  opacity: 0;
-}
-
-.fileDropStatus {
-  display: inline-flex;
-  max-width: 100%;
-  border: 1px solid rgb(15 118 110 / 16%);
-  background: #fff;
-  padding: 8px 10px;
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 900;
-  line-height: 1.2;
-  overflow-wrap: anywhere;
-}
-
-.fileDropActive .fileDropStatus {
-  border-color: rgb(15 118 110 / 24%);
-  color: var(--teal-dark);
-}
-
 .photoSourceGrid {
   display: grid;
   gap: 10px;
-}
-
-.photoDrop {
-  min-height: 188px;
 }
 
 .urlDrop {
@@ -669,7 +602,6 @@
 }
 
 @media (max-width: 779px) {
-  .fileDrop,
   .urlDrop {
     min-height: 160px;
   }

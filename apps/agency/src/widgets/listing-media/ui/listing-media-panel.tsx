@@ -9,6 +9,7 @@ import {
 } from "@entities/listing/api/listing-actions";
 import { buildGalleryImageSrc, buildListingMediaSummary } from "@entities/listing/lib/listing-media";
 import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
+import { FileDropField } from "@shared/ui/file-drop-field";
 import { DeleteImageButton } from "./delete-image-button";
 import { MakeCoverButton } from "./make-cover-button";
 import { ReorderGallery } from "./reorder-gallery";
@@ -140,27 +141,35 @@ export function ListingMediaPanel({
             </button>
           </form>
 
-          <form action={uploadImage} className={styles.form}>
-            <div>
+          <form action={uploadImage} className={`${styles.form} ${styles.uploadForm}`}>
+            <div className={styles.uploadIntro}>
               <p className="section-kicker">Upload</p>
               <h3>Upload local file</h3>
             </div>
-            <label>
-              Image file
-              <input accept="image/*" name="imageFile" required type="file" />
-            </label>
-            <label>
-              Caption
-              <input name="caption" placeholder="Pool view, living room, bedroom..." />
-            </label>
-            <label className={styles.checkboxLabel}>
-              <input defaultChecked name="analyzeImage" type="checkbox" />
-              Queue AI image analysis
-            </label>
-            <button type="submit">
-              <ImagePlus size={16} />
-              Upload to gallery
-            </button>
+            <FileDropField
+              accept="image/*"
+              className={styles.uploadDrop}
+              description="Drop one listing photo here. It is added to the gallery and can be queued for AI image analysis."
+              icon={<ImagePlus size={18} />}
+              name="imageFile"
+              required
+              title="Drop image file"
+              variant="compact"
+            />
+            <div className={styles.uploadDetails}>
+              <label>
+                Caption
+                <input name="caption" placeholder="Pool view, living room, bedroom..." />
+              </label>
+              <label className={styles.checkboxLabel}>
+                <input defaultChecked name="analyzeImage" type="checkbox" />
+                Queue AI image analysis
+              </label>
+              <button type="submit">
+                <ImagePlus size={16} />
+                Upload to gallery
+              </button>
+            </div>
           </form>
         </div>
       </details>

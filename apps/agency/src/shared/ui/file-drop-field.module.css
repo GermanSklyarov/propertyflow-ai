@@ -1,0 +1,92 @@
+.fileDrop {
+  position: relative;
+  display: flex;
+  min-height: 188px;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  border: 1px dashed rgb(15 118 110 / 28%);
+  background: #f5faf7;
+  padding: 24px;
+  color: var(--teal-dark);
+}
+
+.fileDrop:hover,
+.fileDrop:focus-within,
+.fileDropActive {
+  border-color: rgb(15 118 110 / 48%);
+  background: #edf8f4;
+}
+
+.fileDrop:focus-within {
+  outline: 2px solid rgb(15 118 110 / 12%);
+  outline-offset: 0;
+}
+
+.fileDrop span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.fileDrop svg {
+  flex: 0 0 auto;
+}
+
+.fileDrop small {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+
+.fileDrop input {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.fileDropStatus {
+  display: inline-flex;
+  max-width: 100%;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #fff;
+  padding: 8px 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.fileDropActive .fileDropStatus {
+  border-color: rgb(15 118 110 / 24%);
+  color: var(--teal-dark);
+}
+
+.compact {
+  min-height: 132px;
+}
+
+.photo {
+  min-height: 188px;
+}
+
+@media (max-width: 779px) {
+  .fileDrop {
+    min-height: 160px;
+  }
+
+  .compact {
+    min-height: 124px;
+  }
+}
