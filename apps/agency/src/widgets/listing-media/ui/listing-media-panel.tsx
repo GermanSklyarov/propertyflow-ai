@@ -1,4 +1,4 @@
-import { ImagePlus } from "lucide-react";
+import { ChevronDown, ImagePlus } from "lucide-react";
 import {
   addPropertyImageAction,
   deletePropertyImageAction,
@@ -110,51 +110,60 @@ export function ListingMediaPanel({
         </div>
       ) : null}
 
-      <form action={addImage} className={styles.form}>
-        <div>
-          <p className="section-kicker">Add photo</p>
-          <h3>Add image by URL</h3>
-        </div>
-        <label>
-          Image URL
-          <input name="imageUrl" placeholder="https://images.unsplash.com/..." required type="url" />
-        </label>
-        <label>
-          Caption
-          <input name="caption" placeholder="Sea-view balcony, renovated kitchen..." />
-        </label>
-        <label className={styles.checkboxLabel}>
-          <input defaultChecked name="analyzeImage" type="checkbox" />
-          Queue AI image analysis
-        </label>
-        <button type="submit">
+      <details className={styles.addPhotosPanel}>
+        <summary>
           <ImagePlus size={16} />
-          Add to gallery
-        </button>
-      </form>
+          <span>Add photos</span>
+          <ChevronDown size={16} />
+        </summary>
+        <div className={styles.addPhotosBody}>
+          <form action={addImage} className={styles.form}>
+            <div>
+              <p className="section-kicker">Add photo</p>
+              <h3>Add image by URL</h3>
+            </div>
+            <label>
+              Image URL
+              <input name="imageUrl" placeholder="https://images.unsplash.com/..." required type="url" />
+            </label>
+            <label>
+              Caption
+              <input name="caption" placeholder="Sea-view balcony, renovated kitchen..." />
+            </label>
+            <label className={styles.checkboxLabel}>
+              <input defaultChecked name="analyzeImage" type="checkbox" />
+              Queue AI image analysis
+            </label>
+            <button type="submit">
+              <ImagePlus size={16} />
+              Add to gallery
+            </button>
+          </form>
 
-      <form action={uploadImage} className={styles.form}>
-        <div>
-          <p className="section-kicker">Upload</p>
-          <h3>Upload local file</h3>
+          <form action={uploadImage} className={styles.form}>
+            <div>
+              <p className="section-kicker">Upload</p>
+              <h3>Upload local file</h3>
+            </div>
+            <label>
+              Image file
+              <input accept="image/*" name="imageFile" required type="file" />
+            </label>
+            <label>
+              Caption
+              <input name="caption" placeholder="Pool view, living room, bedroom..." />
+            </label>
+            <label className={styles.checkboxLabel}>
+              <input defaultChecked name="analyzeImage" type="checkbox" />
+              Queue AI image analysis
+            </label>
+            <button type="submit">
+              <ImagePlus size={16} />
+              Upload to gallery
+            </button>
+          </form>
         </div>
-        <label>
-          Image file
-          <input accept="image/*" name="imageFile" required type="file" />
-        </label>
-        <label>
-          Caption
-          <input name="caption" placeholder="Pool view, living room, bedroom..." />
-        </label>
-        <label className={styles.checkboxLabel}>
-          <input defaultChecked name="analyzeImage" type="checkbox" />
-          Queue AI image analysis
-        </label>
-        <button type="submit">
-          <ImagePlus size={16} />
-          Upload to gallery
-        </button>
-      </form>
+      </details>
     </section>
   );
 }
