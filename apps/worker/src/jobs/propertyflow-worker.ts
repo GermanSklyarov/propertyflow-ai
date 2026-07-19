@@ -196,6 +196,9 @@ export class PropertyflowWorker {
 
     const now = new Date().toISOString();
     const chunks = this.chunkKnowledgeDocument(document.title, document.body);
+    const embeddingProvider = "local-hash";
+    const embeddingModel = "local-hash-16";
+    const embeddingDimensions = 16;
     const client = await this.pool.connect();
 
     try {
@@ -209,6 +212,8 @@ export class PropertyflowWorker {
       );
 
       for (const [index, chunk] of chunks.entries()) {
+        const searchText = this.buildKnowledgeSearchText(document.title, chunk, document.tags);
+
         await client.query(
           `
             insert into knowledge_document_chunks (
@@ -223,6 +228,7 @@ export class PropertyflowWorker {
               tags,
               token_estimate,
               search_text,
+              embedding,
               embedding_model,
               embedding_status,
               created_at,
@@ -242,7 +248,8 @@ export class PropertyflowWorker {
               $12,
               $13,
               $14,
-              $15
+              $15,
+              $16
             )
           `,
           [
@@ -256,9 +263,10 @@ export class PropertyflowWorker {
             document.kind,
             document.tags,
             this.estimateTokens(chunk),
-            this.buildKnowledgeSearchText(document.title, chunk, document.tags),
-            "pending-embedding-provider",
-            "pending",
+            searchText,
+            this.embedText(searchText, embeddingDimensions),
+            `${embeddingProvider}:${embeddingModel}`,
+            "embedded",
             now,
             now
           ]
@@ -279,7 +287,11 @@ export class PropertyflowWorker {
       reason: job.data.reason,
       ingested: true,
       chunks: chunks.length,
-      embeddingStatus: "pending"
+      embedded: chunks.length,
+      embeddingProvider,
+      embeddingModel,
+      embeddingDimensions,
+      embeddingStatus: "embedded"
     };
   }
 
