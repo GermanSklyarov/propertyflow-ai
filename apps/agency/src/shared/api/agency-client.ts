@@ -632,6 +632,19 @@ export async function deletePropertyImage(
   return (await response.json()) as PropertyImageSnapshot;
 }
 
+export async function restorePropertyImage(propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/${imageId}/restore`, {
+    method: "POST",
+    headers: demoHeaders
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to restore property image: ${response.status}`);
+  }
+
+  return (await response.json()) as PropertyImageSnapshot;
+}
+
 export async function generatePropertySocialPostDrafts(
   propertyId: string,
   request: GeneratePropertySocialPostsRequest

@@ -155,6 +155,115 @@
   outline-offset: 2px;
 }
 
+.deletedImages {
+  display: grid;
+  gap: 12px;
+  border: 1px solid rgb(163 61 48 / 18%);
+  background: #fff9f7;
+  padding: 12px;
+}
+
+.deletedHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.deletedHeader h3 {
+  margin: 4px 0 0;
+  color: var(--teal-dark);
+  font-size: 1rem;
+}
+
+.deletedHeader span {
+  border: 1px solid rgb(163 61 48 / 22%);
+  background: #fff;
+  padding: 8px 10px;
+  color: #9f3c32;
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.deletedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.deletedFrame {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 8px;
+}
+
+.deletedFrame img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  filter: saturate(0.75);
+}
+
+.deletedFrame figcaption {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.deletedFrame figcaption strong,
+.deletedFrame figcaption span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.deletedFrame figcaption strong {
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.deletedFrame figcaption span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.restoreImageForm button {
+  display: inline-flex;
+  min-height: 34px;
+  width: 100%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: #edf8f4;
+  padding: 0 10px;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.restoreImageForm button:hover,
+.restoreImageForm button:focus-visible {
+  border-color: rgb(15 118 110 / 42%);
+  background: #dff4ed;
+  outline: 2px solid rgb(15 118 110 / 16%);
+  outline-offset: 2px;
+}
+
 .empty {
   display: grid;
   min-height: 260px;

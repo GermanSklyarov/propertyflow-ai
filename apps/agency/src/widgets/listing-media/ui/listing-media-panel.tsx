@@ -1,8 +1,14 @@
 import { ImagePlus } from "lucide-react";
-import { addPropertyImageAction, deletePropertyImageAction, uploadPropertyImageAction } from "@entities/listing/api/listing-actions";
+import {
+  addPropertyImageAction,
+  deletePropertyImageAction,
+  restorePropertyImageAction,
+  uploadPropertyImageAction
+} from "@entities/listing/api/listing-actions";
 import { buildGalleryImageSrc, buildListingMediaSummary } from "@entities/listing/lib/listing-media";
 import type { PropertyImageGalleryResponse } from "@propertyflow/contracts";
 import { DeleteImageButton } from "./delete-image-button";
+import { RestoreImageButton } from "./restore-image-button";
 import styles from "./listing-media-panel.module.css";
 
 export function ListingMediaPanel({
@@ -15,6 +21,7 @@ export function ListingMediaPanel({
   listingTitle: string;
 }) {
   const media = buildListingMediaSummary(gallery);
+  const deletedImages = gallery.deletedImages ?? [];
   const addImage = addPropertyImageAction.bind(null, listingId);
   const uploadImage = uploadPropertyImageAction.bind(null, listingId);
 
@@ -64,6 +71,30 @@ export function ListingMediaPanel({
         <span>Public gallery sync</span>
       </div>
 
+      {deletedImages.length ? (
+        <div className={styles.deletedImages}>
+          <div className={styles.deletedHeader}>
+            <div>
+              <p className="section-kicker">Recently deleted</p>
+              <h3>Recover removed photos</h3>
+            </div>
+            <span>{deletedImages.length} deleted</span>
+          </div>
+          <div className={styles.deletedGrid}>
+            {deletedImages.map((image, index) => (
+              <figure className={styles.deletedFrame} key={image.id}>
+                <img src={buildGalleryImageSrc(image)} alt={image.caption ?? `${listingTitle} deleted photo ${index + 1}`} />
+                <figcaption>
+                  <strong>{image.caption ?? `Photo ${image.position + 1}`}</strong>
+                  <span>{image.deletedAt ? `Deleted ${formatDeletedDate(image.deletedAt)}` : "Deleted"}</span>
+                </figcaption>
+                <RestoreImageButton action={restorePropertyImageAction.bind(null, listingId, image.id)} />
+              </figure>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <form action={addImage} className={styles.form}>
         <div>
           <p className="section-kicker">Add photo</p>
@@ -111,4 +142,8 @@ export function ListingMediaPanel({
       </form>
     </section>
   );
+}
+
+function formatDeletedDate(value: string) {
+  return value.slice(0, 10);
 }

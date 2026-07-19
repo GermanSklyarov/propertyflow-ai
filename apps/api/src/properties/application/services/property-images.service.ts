@@ -24,10 +24,15 @@ export class PropertyImagesService {
 
   async getGallery(tenantId: string, propertyId: string): Promise<PropertyImageGalleryResponse> {
     await this.ensurePropertyExists(tenantId, propertyId);
+    const [images, deletedImages] = await Promise.all([
+      this.images.listByPropertyId(tenantId, propertyId),
+      this.images.listDeletedByPropertyId(tenantId, propertyId)
+    ]);
 
     return {
       propertyId,
-      images: await this.images.listByPropertyId(tenantId, propertyId)
+      images,
+      deletedImages
     };
   }
 
@@ -179,7 +184,7 @@ export class PropertyImagesService {
   ): Promise<{ image: PropertyImageSnapshot; objectUrl: string; expiresInSeconds: number }> {
     await this.ensurePropertyExists(tenantId, propertyId);
 
-    const image = await this.images.findById(tenantId, propertyId, imageId);
+    const image = await this.images.findByIdIncludingDeleted(tenantId, propertyId, imageId);
 
     if (!image) {
       throw new NotFoundException("Property image not found");

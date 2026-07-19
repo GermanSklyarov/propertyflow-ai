@@ -356,6 +356,7 @@ export interface ConfirmPropertyImageUploadRequest {
 export interface PropertyImageGalleryResponse {
   propertyId: string;
   images: PropertyImageSnapshot[];
+  deletedImages: PropertyImageSnapshot[];
 }
 
 export interface PropertyListResponse {

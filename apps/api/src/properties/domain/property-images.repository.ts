@@ -11,7 +11,9 @@ export interface PropertyImagesRepository {
   add(input: AddPropertyImageInput): Promise<PropertyImageSnapshot>;
   createDeleteConfirmation(input: PropertyImageDeleteConfirmationInput): Promise<void>;
   findById(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null>;
+  findByIdIncludingDeleted(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null>;
   listByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]>;
+  listDeletedByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]>;
   consumeDeleteConfirmation(input: ConsumePropertyImageDeleteConfirmationInput): Promise<boolean>;
   remove(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null>;
   restore(tenantId: string, propertyId: string, imageId: string): Promise<PropertyImageSnapshot | null>;

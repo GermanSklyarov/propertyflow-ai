@@ -52,10 +52,29 @@ export class InMemoryPropertyImagesRepository implements PropertyImagesRepositor
     );
   }
 
+  async findByIdIncludingDeleted(
+    tenantId: string,
+    propertyId: string,
+    imageId: string
+  ): Promise<PropertyImageSnapshot | null> {
+    return (this.images.get(this.key(tenantId, propertyId)) ?? []).find((item) => item.id === imageId) ?? null;
+  }
+
   async listByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]> {
     return [...(this.images.get(this.key(tenantId, propertyId)) ?? [])]
       .filter((image) => !image.deletedAt)
       .sort((left, right) => left.position - right.position || left.createdAt.localeCompare(right.createdAt));
+  }
+
+  async listDeletedByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]> {
+    return [...(this.images.get(this.key(tenantId, propertyId)) ?? [])]
+      .filter((image) => image.deletedAt)
+      .sort(
+        (left, right) =>
+          (right.deletedAt ?? "").localeCompare(left.deletedAt ?? "") ||
+          left.position - right.position ||
+          left.createdAt.localeCompare(right.createdAt)
+      );
   }
 
   async consumeDeleteConfirmation(input: ConsumePropertyImageDeleteConfirmationInput): Promise<boolean> {
@@ -82,7 +101,7 @@ export class InMemoryPropertyImagesRepository implements PropertyImagesRepositor
     const existing = this.images.get(key) ?? [];
     const image = existing.find((item) => item.id === imageId);
 
-    if (!image) {
+    if (!image || image.deletedAt) {
       return null;
     }
 

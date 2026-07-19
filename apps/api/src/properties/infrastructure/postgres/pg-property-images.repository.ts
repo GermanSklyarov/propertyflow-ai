@@ -138,6 +138,24 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async findByIdIncludingDeleted(
+    tenantId: string,
+    propertyId: string,
+    imageId: string
+  ): Promise<PropertyImageSnapshot | null> {
+    const result = await this.pool.query<PropertyImageRow>(
+      `
+        select id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
+        from property_images
+        where tenant_id = $1 and property_id = $2 and id = $3
+        limit 1
+      `,
+      [tenantId, propertyId, imageId]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async listByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]> {
     const result = await this.pool.query<PropertyImageRow>(
       `
@@ -145,6 +163,20 @@ export class PgPropertyImagesRepository implements PropertyImagesRepository {
         from property_images
         where tenant_id = $1 and property_id = $2 and deleted_at is null
         order by position asc, created_at asc
+      `,
+      [tenantId, propertyId]
+    );
+
+    return result.rows.map((row) => this.toSnapshot(row));
+  }
+
+  async listDeletedByPropertyId(tenantId: string, propertyId: string): Promise<PropertyImageSnapshot[]> {
+    const result = await this.pool.query<PropertyImageRow>(
+      `
+        select id, tenant_id, property_id, image_url, bucket, object_key, mime_type, size_bytes, original_filename, caption, position, created_at, deleted_at
+        from property_images
+        where tenant_id = $1 and property_id = $2 and deleted_at is not null
+        order by deleted_at desc, position asc, created_at asc
       `,
       [tenantId, propertyId]
     );
