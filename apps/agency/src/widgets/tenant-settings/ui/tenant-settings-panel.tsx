@@ -20,6 +20,8 @@ import type { ReactNode } from "react";
 import { UpdateTenantSettingsForm } from "@features/tenant-settings-update/ui/update-tenant-settings-form";
 import type { TenantSnapshot, TenantUsageMetric, TenantUsageResponse } from "@propertyflow/contracts";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
+import { buildWidgetInstallPackage } from "../model/widget-install";
+import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
 
 export function TenantSettingsPanel({
@@ -33,6 +35,7 @@ export function TenantSettingsPanel({
 }) {
   const readinessItems = buildReadinessItems(tenant, usage);
   const completedReadiness = readinessItems.filter((item) => item.done).length;
+  const widgetInstall = buildWidgetInstallPackage(tenant);
 
   return (
     <>
@@ -96,8 +99,16 @@ export function TenantSettingsPanel({
 
           <section className={styles.starterCard}>
             <p className="section-kicker">Widget</p>
-            <h3>Copy this code</h3>
-            <pre className={styles.widgetSnippet}>{buildWidgetSnippet(tenant)}</pre>
+            <div className={styles.widgetHeader}>
+              <h3>Copy this code</h3>
+              <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
+            </div>
+            <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
+            <div className={styles.widgetInstallSteps}>
+              {widgetInstall.steps.map((step) => (
+                <ReadinessCard item={step} key={step.label} />
+              ))}
+            </div>
             <small>Starter mode answers from documents and listings. Growth mode creates leads when visitors request help.</small>
           </section>
 
@@ -396,15 +407,6 @@ function formatUsageKey(value: TenantUsageMetric["key"]) {
 
 function formatDomainStatus(value: TenantSnapshot["domainStatus"]) {
   return value ? value.replaceAll("-", " ") : "not configured";
-}
-
-function buildWidgetSnippet(tenant: TenantSnapshot) {
-  return `<script
-  src="https://cdn.propertyflow.ai/widget.js"
-  data-tenant="${tenant.slug}"
-  data-ai-name="Anna"
-  data-languages="en,ru,th,zh"
-></script>`;
 }
 
 function buildReadinessItems(tenant: TenantSnapshot, usage: TenantUsageResponse): ReadinessItem[] {

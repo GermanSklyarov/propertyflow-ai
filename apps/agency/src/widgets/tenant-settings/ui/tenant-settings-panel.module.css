@@ -224,16 +224,74 @@
 .widgetSnippet {
   min-width: 0;
   margin: 0;
-  overflow: auto;
+  overflow-x: auto;
   border: 1px solid rgb(15 118 110 / 18%);
   background: #0b211d;
   color: #ecfdf5;
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.55;
-  overflow-wrap: anywhere;
+  max-height: 96px;
   padding: 12px;
-  white-space: pre-wrap;
+  white-space: pre;
+}
+
+.widgetHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.widgetHeader h3 {
+  min-width: 0;
+}
+
+.copySnippetButton {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 900;
+  padding: 8px 10px;
+  text-transform: uppercase;
+}
+
+.copySnippetButton:hover:not(:disabled) {
+  background: #dff4ec;
+  border-color: rgb(15 118 110 / 32%);
+}
+
+.copySnippetButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.widgetInstallSteps {
+  display: grid;
+  gap: 8px;
+}
+
+.widgetInstallSteps .readinessCard {
+  grid-template-columns: 18px minmax(0, 1fr);
+  background: #f7fbfa;
+  padding: 10px;
+}
+
+.widgetInstallSteps .readinessCard strong {
+  font-size: 0.86rem;
+}
+
+.widgetInstallSteps .readinessCard span {
+  font-size: 0.74rem;
 }
 
 .personalityGrid {
