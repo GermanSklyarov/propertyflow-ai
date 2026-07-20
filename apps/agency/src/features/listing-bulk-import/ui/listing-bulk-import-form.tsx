@@ -130,6 +130,25 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
 
       <input name="columnMapping" type="hidden" value={mappingJson} />
 
+      <fieldset className={styles.modePanel}>
+        <legend>Import mode</legend>
+        <label>
+          <input defaultChecked name="importMode" type="radio" value="hybrid" />
+          <span>CRM + AI index</span>
+          <small>Create listing drafts and make them searchable by Concierge.</small>
+        </label>
+        <label>
+          <input name="importMode" type="radio" value="concierge_index_only" />
+          <span>AI Concierge only</span>
+          <small>Use this inventory for website AI search without migrating to PropertyFlow CRM yet.</small>
+        </label>
+        <label>
+          <input name="importMode" type="radio" value="crm_inventory" />
+          <span>CRM inventory only</span>
+          <small>Create operational listing drafts. AI indexing can be run later.</small>
+        </label>
+      </fieldset>
+
       <label className={styles.checkbox}>
         <input name="dryRun" type="checkbox" />
         <span>Dry-run only</span>

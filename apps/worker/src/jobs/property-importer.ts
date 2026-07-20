@@ -55,6 +55,7 @@ interface ImportIssue {
 export interface PropertyImportResult {
   [key: string]: unknown;
   dryRun: boolean;
+  importMode: NonNullable<PropertyImportJobPayload["importMode"]>;
   imported: number;
   issues: ImportIssue[];
   propertyIds: string[];
@@ -75,6 +76,7 @@ export class PropertyImporter {
         tenantId: job.data.tenantId,
         source: job.data.source,
         dryRun: job.data.dryRun ?? false,
+        importMode: job.data.importMode ?? "hybrid",
         imported: 0,
         skipped: 0,
         status: "partner-api-adapter-not-configured"
@@ -89,6 +91,8 @@ export class PropertyImporter {
     const rows = job.data.source === "json" ? parseJsonRows(content) : parseCsvRows(content, job.data.columnMapping);
     const issues: ImportIssue[] = [];
     const propertyIds: string[] = [];
+    const importMode = job.data.importMode ?? "hybrid";
+    const shouldCreateCrmInventory = importMode !== "concierge_index_only" && !job.data.dryRun;
     let imported = 0;
     let rowsMissingExternalId = 0;
     let rowsWithExternalId = 0;
@@ -105,7 +109,7 @@ export class PropertyImporter {
           rowsMissingExternalId += 1;
         }
 
-        if (!job.data.dryRun) {
+        if (shouldCreateCrmInventory) {
           propertyIds.push(await this.insertProperty(job.data.tenantId, draft));
         }
 
@@ -130,6 +134,9 @@ export class PropertyImporter {
       tenantId: job.data.tenantId,
       source: job.data.source,
       dryRun: job.data.dryRun ?? false,
+      importMode,
+      crmRecordsCreated: propertyIds.length,
+      aiIndexCandidates: rows.length - issues.length,
       imported,
       skipped: issues.length,
       issues: issues.slice(0, 25),

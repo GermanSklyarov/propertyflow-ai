@@ -22,6 +22,7 @@ const minimumRoleByJob: Record<BackgroundJobName, UserRole> = {
 
 const locales = ["en", "ru", "th", "zh"] as const;
 const importSources = ["csv", "json", "partner-api"] as const;
+const importModes = ["crm_inventory", "concierge_index_only", "hybrid"] as const;
 const searchIndexReasons = ["created", "updated", "manual"] as const;
 const embeddingProviders = ["local-hash", "openai", "anthropic", "gemini"] as const;
 const pricingAlgorithms = ["baseline-refresh", "catboost", "lightgbm"] as const;
@@ -71,6 +72,7 @@ export class BackgroundJobPolicyService {
         return;
       case "properties.import":
         this.requireEnum(payload, "source", importSources);
+        this.optionalEnum(payload, "importMode", importModes);
         this.optionalString(payload, "objectUrl");
         this.optionalStringRecord(payload, "columnMapping", 30);
         this.optionalBoolean(payload, "dryRun");
@@ -136,6 +138,12 @@ export class BackgroundJobPolicyService {
 
   private requireEnum<T extends readonly string[]>(payload: Record<string, unknown>, key: string, values: T): void {
     if (typeof payload[key] !== "string" || !values.includes(payload[key])) {
+      throw new BadRequestException(`${key} must be one of: ${values.join(", ")}`);
+    }
+  }
+
+  private optionalEnum<T extends readonly string[]>(payload: Record<string, unknown>, key: string, values: T): void {
+    if (payload[key] !== undefined && (typeof payload[key] !== "string" || !values.includes(payload[key]))) {
       throw new BadRequestException(`${key} must be one of: ${values.join(", ")}`);
     }
   }

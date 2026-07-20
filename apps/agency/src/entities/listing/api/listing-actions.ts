@@ -204,6 +204,7 @@ export async function importPropertiesCsvAction(formData: FormData) {
   const job = await enqueuePropertyImport({
     columnMapping: getColumnMapping(formData),
     dryRun: formData.get("dryRun") === "on",
+    importMode: getImportMode(formData),
     objectUrl,
     source: "csv"
   });
@@ -213,6 +214,16 @@ export async function importPropertiesCsvAction(formData: FormData) {
   const params = new URLSearchParams({ importJob: job.id });
 
   redirect(`/listings?${params.toString()}#import-listings`);
+}
+
+function getImportMode(formData: FormData) {
+  const value = getOptionalString(formData, "importMode");
+
+  if (value === "crm_inventory" || value === "concierge_index_only" || value === "hybrid") {
+    return value;
+  }
+
+  return "hybrid";
 }
 
 function getColumnMapping(formData: FormData) {

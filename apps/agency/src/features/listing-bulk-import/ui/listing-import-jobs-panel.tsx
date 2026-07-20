@@ -108,9 +108,10 @@ export function ListingImportJobsPanel({ initialJobs, queuedJobId }: ListingImpo
               </div>
               {result ? (
                 <div className={styles.resultSummary}>
-                  <strong>{result.dryRun ? "Dry-run complete" : "Import complete"}</strong>
+                  <strong>{result.dryRun ? "Dry-run complete" : formatImportMode(result.importMode)}</strong>
                   <span>
-                    {result.imported} imported · {result.skipped} skipped · {result.indexed} indexed · {result.total} rows
+                    {result.imported} imported · {result.skipped} skipped · {result.crmRecordsCreated} CRM records ·{" "}
+                    {result.aiIndexCandidates} AI candidates · {result.indexed} indexed · {result.total} rows
                   </span>
                 </div>
               ) : null}
@@ -168,12 +169,27 @@ function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undef
   const skipped = getProgressNumber(job.result.skipped);
   const total = getProgressNumber(job.result.total);
   const indexed = getProgressNumber(job.result.indexed);
+  const aiIndexCandidates = getProgressNumber(job.result.aiIndexCandidates);
+  const crmRecordsCreated = getProgressNumber(job.result.crmRecordsCreated);
+  const importMode = getImportMode(job.result.importMode);
   const rowsMissingExternalId = getProgressNumber(job.result.rowsMissingExternalId);
   const rowsWithExternalId = getProgressNumber(job.result.rowsWithExternalId);
   const dryRun = job.result.dryRun === true;
   const issues = Array.isArray(job.result.issues) ? job.result.issues.filter(isImportIssue).slice(0, 3) : [];
 
-  return { dryRun, imported, indexed, issues, rowsMissingExternalId, rowsWithExternalId, skipped, total };
+  return {
+    aiIndexCandidates,
+    crmRecordsCreated,
+    dryRun,
+    imported,
+    importMode,
+    indexed,
+    issues,
+    rowsMissingExternalId,
+    rowsWithExternalId,
+    skipped,
+    total
+  };
 }
 
 function isProgressObject(value: BackgroundJobMonitorItem["progress"]): value is Record<string, unknown> {
@@ -185,7 +201,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 interface ImportJobResult {
+  aiIndexCandidates: number;
+  crmRecordsCreated: number;
   dryRun: boolean;
+  importMode: "crm_inventory" | "concierge_index_only" | "hybrid";
   imported: number;
   indexed: number;
   issues: ImportIssue[];
@@ -193,6 +212,24 @@ interface ImportJobResult {
   rowsWithExternalId: number;
   skipped: number;
   total: number;
+}
+
+function getImportMode(value: unknown): ImportJobResult["importMode"] {
+  if (value === "crm_inventory" || value === "concierge_index_only" || value === "hybrid") {
+    return value;
+  }
+
+  return "crm_inventory";
+}
+
+function formatImportMode(value: ImportJobResult["importMode"]) {
+  const labels = {
+    concierge_index_only: "AI Concierge only",
+    crm_inventory: "CRM inventory",
+    hybrid: "CRM + AI index"
+  } satisfies Record<ImportJobResult["importMode"], string>;
+
+  return labels[value];
 }
 
 interface ImportIssue {

@@ -155,6 +155,11 @@ export class PropertyImportPayloadDto implements PropertyImportJobPayload {
   @IsIn(["csv", "json", "partner-api"])
   source!: "csv" | "json" | "partner-api";
 
+  @ApiProperty({ enum: ["crm_inventory", "concierge_index_only", "hybrid"], required: false })
+  @IsOptional()
+  @IsIn(["crm_inventory", "concierge_index_only", "hybrid"])
+  importMode?: PropertyImportJobPayload["importMode"];
+
   @ApiProperty({ required: false, type: String })
   @IsOptional()
   @IsString()

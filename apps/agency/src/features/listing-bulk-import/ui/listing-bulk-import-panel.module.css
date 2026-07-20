@@ -298,6 +298,60 @@
   outline: 2px solid rgb(15 118 110 / 12%);
 }
 
+.modePanel {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  margin: 0;
+  padding: 10px;
+}
+
+.modePanel legend {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.modePanel label {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 8px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f7fbfa;
+  padding: 9px;
+}
+
+.modePanel input {
+  grid-row: 1 / span 2;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--teal);
+}
+
+.modePanel span {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.modePanel small {
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.modePanel label:has(input:checked) {
+  border-color: rgb(15 118 110 / 28%);
+  background: #edf8f4;
+}
+
 .checkbox {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
@@ -557,6 +611,7 @@
 
   .templatePanel,
   .mappingPanel,
+  .modePanel,
   .checkbox,
   .jobsPanel,
   .actions {

@@ -139,7 +139,12 @@ export class PropertyflowWorker {
   private async importProperties(job: PropertyImportJob): Promise<Record<string, unknown>> {
     const result = await this.propertyImporter.import(job);
 
-    if (!isPropertyImportResult(result) || result.dryRun || result.propertyIds.length === 0) {
+    if (
+      !isPropertyImportResult(result) ||
+      result.dryRun ||
+      result.importMode === "crm_inventory" ||
+      result.propertyIds.length === 0
+    ) {
       return result;
     }
 
@@ -747,7 +752,12 @@ function assertNever(value: never): never {
 
 function isPropertyImportResult(value: Record<string, unknown>): value is Record<string, unknown> & {
   dryRun: boolean;
+  importMode: "crm_inventory" | "concierge_index_only" | "hybrid";
   propertyIds: string[];
 } {
-  return Array.isArray(value.propertyIds) && typeof value.dryRun === "boolean";
+  return (
+    Array.isArray(value.propertyIds) &&
+    typeof value.dryRun === "boolean" &&
+    (value.importMode === "crm_inventory" || value.importMode === "concierge_index_only" || value.importMode === "hybrid")
+  );
 }

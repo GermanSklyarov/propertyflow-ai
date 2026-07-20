@@ -2154,6 +2154,7 @@ export interface BackgroundJobBasePayload {
 
 export interface PropertyImportJobPayload extends BackgroundJobBasePayload {
   source: "csv" | "json" | "partner-api";
+  importMode?: "crm_inventory" | "concierge_index_only" | "hybrid";
   objectUrl?: string;
   columnMapping?: Record<string, string>;
   dryRun?: boolean;
