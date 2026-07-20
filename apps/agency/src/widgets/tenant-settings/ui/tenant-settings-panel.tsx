@@ -18,23 +18,36 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { UpdateTenantSettingsForm } from "@features/tenant-settings-update/ui/update-tenant-settings-form";
-import type { TenantSnapshot, TenantUsageMetric, TenantUsageResponse } from "@propertyflow/contracts";
+import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
+import type {
+  BackgroundJobMonitorItem,
+  KnowledgeDocumentSnapshot,
+  TenantSnapshot,
+  TenantUsageMetric,
+  TenantUsageResponse
+} from "@propertyflow/contracts";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
 import { buildWidgetInstallPackage } from "../model/widget-install";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
 
 export function TenantSettingsPanel({
+  knowledgeDocuments,
+  knowledgeJobs,
   saved,
   tenant,
   usage
 }: {
+  knowledgeDocuments: KnowledgeDocumentSnapshot[];
+  knowledgeJobs: BackgroundJobMonitorItem[];
   saved?: boolean;
   tenant: TenantSnapshot;
   usage: TenantUsageResponse;
 }) {
   const readinessItems = buildReadinessItems(tenant, usage);
   const completedReadiness = readinessItems.filter((item) => item.done).length;
+  const starterReadiness = buildKnowledgeStarterReadiness(knowledgeDocuments);
+  const activeKnowledgeJobs = knowledgeJobs.some((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed");
   const widgetInstall = buildWidgetInstallPackage(tenant);
 
   return (
@@ -71,57 +84,107 @@ export function TenantSettingsPanel({
               icon={<FileText size={17} />}
               label="1"
               title="Upload your documents"
-              value={`${starterDocumentTypes.length} knowledge types`}
+              value={`${starterReadiness.completed}/${starterReadiness.total} covered`}
             />
-            <LaunchStep icon={<MessageCircle size={17} />} label="2" title="AI indexes knowledge" value="RAG ready" />
+            <LaunchStep
+              icon={<MessageCircle size={17} />}
+              label="2"
+              title="AI indexes knowledge"
+              value={activeKnowledgeJobs ? "Indexing now" : starterReadiness.completed ? "RAG ready" : "Waiting for docs"}
+            />
             <LaunchStep icon={<Code2 size={17} />} label="3" title="Connect the website" value="Widget snippet" />
             <LaunchStep icon={<Languages size={17} />} label="4" title="Set AI personality" value="EN, RU, TH, ZH" />
           </div>
         </div>
 
         <div className={styles.starterDetailGrid}>
-          <section className={styles.starterCard}>
-            <p className="section-kicker">Documents</p>
-            <h3>Upload your knowledge base</h3>
-            <div className={styles.documentChecklist}>
-              {starterDocumentTypes.map((item) => (
-                <span key={item}>
-                  <CheckCircle2 size={15} />
-                  {item}
-                </span>
-              ))}
-            </div>
-            <div className={styles.indexingNotice}>
-              <CircleDot size={15} />
-              AI is indexing your knowledge from background jobs.
-            </div>
-          </section>
+          <div className={styles.starterSetupColumn}>
+            <section className={styles.starterCard}>
+              <p className="section-kicker">Documents</p>
+              <h3>Upload your knowledge base</h3>
+              <div className={styles.knowledgeCoverage}>
+                <strong>
+                  {starterReadiness.completed}/{starterReadiness.total}
+                </strong>
+                <span>{starterReadiness.missing ? `${starterReadiness.missing} source types missing` : "Starter knowledge covered"}</span>
+              </div>
+              <div className={styles.documentChecklist}>
+                {starterReadiness.items.map((item) => {
+                  const Icon = item.done ? CheckCircle2 : CircleDot;
 
-          <section className={styles.starterCard}>
-            <p className="section-kicker">Widget</p>
-            <div className={styles.widgetHeader}>
-              <h3>Copy this code</h3>
-              <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
-            </div>
-            <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
-            <div className={styles.widgetInstallSteps}>
-              {widgetInstall.steps.map((step) => (
-                <ReadinessCard item={step} key={step.label} />
-              ))}
-            </div>
-            <small>Starter mode answers from documents and listings. Growth mode creates leads when visitors request help.</small>
-          </section>
+                  return (
+                    <span className={item.done ? styles.documentDone : styles.documentMissing} key={item.id}>
+                      <Icon size={15} />
+                      {item.title}
+                    </span>
+                  );
+                })}
+              </div>
+              <div className={activeKnowledgeJobs ? styles.indexingNotice : styles.readyNotice}>
+                <CircleDot size={15} />
+                {activeKnowledgeJobs ? "AI is indexing your knowledge from background jobs." : "Upload documents from Knowledge Base to improve Concierge answers."}
+              </div>
+            </section>
 
-          <section className={styles.starterCard}>
-            <p className="section-kicker">Personality</p>
-            <h3>AI consultant profile</h3>
-            <div className={styles.personalityGrid}>
-              <Field label="AI name" value="Anna" />
-              <Field label="Tone" value="Friendly" />
-              <Field label="Welcome message" value="Hi! I'm Anna, your AI property consultant." />
-              <Field label="Languages" value="EN, RU, TH, ZH" />
-            </div>
-          </section>
+            <section className={styles.starterCard}>
+              <p className="section-kicker">Personality</p>
+              <h3>AI consultant profile</h3>
+              <div className={styles.personalityGrid}>
+                <Field label="AI name" value="Anna" />
+                <Field label="Tone" value="Friendly" />
+                <Field label="Welcome message" value="Hi! I'm Anna, your AI property consultant." />
+                <Field label="Languages" value="EN, RU, TH, ZH" />
+              </div>
+            </section>
+          </div>
+
+          <div className={styles.starterSetupColumn}>
+            <section className={styles.starterCard}>
+              <p className="section-kicker">Widget readiness</p>
+              <h3>Concierge can launch when sources are ready</h3>
+              <div className={styles.widgetReadinessList}>
+                <ReadinessCard
+                  item={{
+                    done: starterReadiness.completed > 0,
+                    label: "Knowledge available",
+                    note: starterReadiness.completed
+                      ? `${starterReadiness.completed} starter source types can ground answers.`
+                      : "Add at least FAQ or company information before installing the widget."
+                  }}
+                />
+                <ReadinessCard
+                  item={{
+                    done: !activeKnowledgeJobs && starterReadiness.completed > 0,
+                    label: "Indexing settled",
+                    note: activeKnowledgeJobs ? "Wait for active ingestion jobs to finish." : "No active knowledge jobs are blocking widget copy."
+                  }}
+                />
+                <ReadinessCard
+                  item={{
+                    done: Boolean(tenant.slug),
+                    label: "Tenant key ready",
+                    note: tenant.slug ? `Widget attaches to ${tenant.slug}.` : "Workspace slug is required for widget install."
+                  }}
+                />
+              </div>
+            </section>
+
+            <section className={styles.starterCard}>
+              <p className="section-kicker">Widget</p>
+              <div className={styles.widgetHeader}>
+                <h3>Copy this code</h3>
+                <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
+              </div>
+              <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
+              <div className={styles.widgetInstallSteps}>
+                {widgetInstall.steps.map((step) => (
+                  <ReadinessCard item={step} key={step.label} />
+                ))}
+              </div>
+              <small>Starter mode answers from documents and listings. Growth mode creates leads when visitors request help.</small>
+            </section>
+
+          </div>
         </div>
 
         <div className={styles.planModes}>
@@ -262,18 +325,6 @@ interface ReadinessItem {
   label: string;
   note: string;
 }
-
-const starterDocumentTypes = [
-  "FAQ",
-  "Buying guide",
-  "Selling guide",
-  "Company information",
-  "Condo brochures",
-  "Developer PDFs",
-  "Tax information",
-  "Visa guide",
-  "Internal instructions"
-];
 
 function LaunchStep({
   icon,

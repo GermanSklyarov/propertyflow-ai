@@ -1,4 +1,6 @@
 import { currentTenantQueryOptions, tenantUsageQueryOptions } from "@entities/tenant/api/tenant-queries";
+import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
+import { knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
 import { getErrorMessage } from "@shared/lib/errors";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
@@ -13,12 +15,25 @@ export default async function AgencySettingsPage({
   const queryClient = createPropertyFlowQueryClient();
 
   try {
-    const [tenant, usage] = await Promise.all([
+    const [tenant, usage, documentsResult, jobsResult] = await Promise.all([
       queryClient.ensureQueryData(currentTenantQueryOptions()),
-      queryClient.ensureQueryData(tenantUsageQueryOptions())
+      queryClient.ensureQueryData(tenantUsageQueryOptions()),
+      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 50 })),
+      queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }))
     ]);
+    const knowledgeJobs = jobsResult.items.filter(
+      (job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed"
+    );
 
-    return <SettingsPage settingsSaved={query.updated === "tenant-settings"} tenant={tenant} usage={usage} />;
+    return (
+      <SettingsPage
+        knowledgeDocuments={documentsResult.items}
+        knowledgeJobs={knowledgeJobs}
+        settingsSaved={query.updated === "tenant-settings"}
+        tenant={tenant}
+        usage={usage}
+      />
+    );
   } catch (error) {
     return (
       <PageLoadState

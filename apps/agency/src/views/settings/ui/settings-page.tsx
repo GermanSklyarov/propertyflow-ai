@@ -1,12 +1,16 @@
-import type { TenantSnapshot, TenantUsageResponse } from "@propertyflow/contracts";
+import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, TenantSnapshot, TenantUsageResponse } from "@propertyflow/contracts";
 import { TenantSettingsPanel } from "@widgets/tenant-settings/ui/tenant-settings-panel";
 import styles from "./settings-page.module.css";
 
 export function SettingsPage({
+  knowledgeDocuments,
+  knowledgeJobs,
   settingsSaved,
   tenant,
   usage
 }: {
+  knowledgeDocuments?: KnowledgeDocumentSnapshot[];
+  knowledgeJobs?: BackgroundJobMonitorItem[];
   settingsSaved?: boolean;
   tenant: TenantSnapshot;
   usage: TenantUsageResponse;
@@ -25,7 +29,13 @@ export function SettingsPage({
           <span className={styles.statusBadge}>{tenant.status}</span>
         </header>
 
-        <TenantSettingsPanel saved={settingsSaved} tenant={tenant} usage={usage} />
+        <TenantSettingsPanel
+          knowledgeDocuments={knowledgeDocuments ?? []}
+          knowledgeJobs={knowledgeJobs ?? []}
+          saved={settingsSaved}
+          tenant={tenant}
+          usage={usage}
+        />
       </div>
     </main>
   );
