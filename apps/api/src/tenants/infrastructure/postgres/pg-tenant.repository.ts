@@ -44,6 +44,20 @@ export class PgTenantRepository implements TenantRepository {
     return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
   }
 
+  async findBySlug(slug: string): Promise<TenantSnapshot | null> {
+    const result = await this.pool.query<TenantRow>(
+      `
+        select *
+        from tenants
+        where slug = $1
+        limit 1
+      `,
+      [slug]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async getUsage(tenantId: string, periodStart: Date, periodEnd: Date): Promise<TenantUsageRawMetrics> {
     const [properties, agents, aiCreditsMonthly, publicApiRequestsMonthly] = await Promise.all([
       this.count("select count(*) from properties where tenant_id = $1", [tenantId]),

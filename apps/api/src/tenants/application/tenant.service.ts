@@ -1,5 +1,11 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
-import type { TenantSnapshot, TenantUsageMetric, TenantUsageResponse, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import type {
+  PublicWidgetConfigResponse,
+  TenantSnapshot,
+  TenantUsageMetric,
+  TenantUsageResponse,
+  UpdateTenantSettingsRequest
+} from "@propertyflow/contracts";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
 
 @Injectable()
@@ -24,6 +30,23 @@ export class TenantService {
     }
 
     return tenant;
+  }
+
+  async getPublicWidgetConfig(slug: string): Promise<PublicWidgetConfigResponse> {
+    const tenant = await this.tenants.findBySlug(slug);
+
+    if (!tenant || tenant.status !== "active") {
+      throw new NotFoundException("Widget tenant not found");
+    }
+
+    return {
+      aiName: "Anna",
+      branding: tenant.branding,
+      conciergeMode: tenant.subscriptionPlan,
+      languages: ["en", "ru", "th", "zh"],
+      tenantSlug: tenant.slug,
+      welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+    };
   }
 
   async getUsage(tenantId: string): Promise<TenantUsageResponse> {

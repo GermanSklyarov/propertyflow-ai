@@ -43,6 +43,19 @@ export interface UpdateTenantSettingsRequest {
   };
 }
 
+export interface PublicWidgetConfigResponse {
+  aiName: string;
+  branding: {
+    displayName: string;
+    logoUrl?: string;
+    primaryColor?: string;
+  };
+  conciergeMode: TenantSnapshot["subscriptionPlan"];
+  languages: string[];
+  tenantSlug: string;
+  welcomeMessage: string;
+}
+
 export type TenantUsageMetricKey = "properties" | "agents" | "aiCreditsMonthly" | "publicApiRequestsMonthly";
 
 export interface TenantUsageMetric {
