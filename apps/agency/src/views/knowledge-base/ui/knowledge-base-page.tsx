@@ -3,16 +3,25 @@ import {
   ArrowRight,
   Bot,
   BookOpenText,
+  Building2,
   CheckCircle2,
   CircleDashed,
   DatabaseZap,
   FileText,
+  Globe2,
   Languages,
   Plus,
   SearchCheck,
   Tags,
   UploadCloud
 } from "lucide-react";
+import {
+  knowledgeSourceGroups,
+  knowledgeSourcePipeline,
+  summarizeKnowledgeSourceModes,
+  type KnowledgeSourceConnector,
+  type KnowledgeSourceGroup
+} from "@entities/knowledge/model/knowledge-sources";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import { KnowledgeDocumentCard } from "@entities/knowledge/ui/knowledge-document-card";
 import { CreateKnowledgeDocumentForm } from "@features/knowledge-document-create/ui/create-knowledge-document-form";
@@ -54,6 +63,7 @@ export function KnowledgeBasePage({
   const taggedCount = documents.filter((document) => document.tags.length > 0).length;
   const starterReadiness = buildKnowledgeStarterReadiness(documents);
   const activeKnowledgeJobs = jobs.filter((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed").length;
+  const sourceModeSummary = summarizeKnowledgeSourceModes(knowledgeSourceGroups);
 
   return (
     <main className={styles.page}>
@@ -122,6 +132,32 @@ export function KnowledgeBasePage({
           <KpiCard icon={<FileText size={18} />} label="Content kinds" note="RAG routing" value={kindCount} />
           <KpiCard icon={<Languages size={18} />} label="Locales" note="Multilingual advice" value={localeCount} />
           <KpiCard icon={<Tags size={18} />} label="Tagged docs" note="Retrieval hints" value={taggedCount} />
+        </section>
+
+        <section className={styles.panel} id="knowledge-sources">
+          <div className={styles.panelHeader}>
+            <div>
+              <p className="section-kicker">Knowledge Sources</p>
+              <h2 className={styles.panelTitle}>Feed AI without forcing CRM migration</h2>
+            </div>
+            <span className={styles.statusBadge}>{sourceModeSummary.concierge_index_only} AI-only connectors</span>
+          </div>
+
+          <div className={styles.sourcesGrid}>
+            {knowledgeSourceGroups.map((group) => (
+              <KnowledgeSourceGroupCard group={group} key={group.type} />
+            ))}
+          </div>
+
+          <div className={styles.pipelineStrip} aria-label="Unified knowledge ingestion pipeline">
+            {knowledgeSourcePipeline.map((step, index) => (
+              <div className={styles.pipelineStep} key={step.label}>
+                <span>{index + 1}</span>
+                <strong>{step.label}</strong>
+                <small>{step.note}</small>
+              </div>
+            ))}
+          </div>
         </section>
 
         <section className={styles.panel} id="retrieval-preview">
@@ -233,4 +269,58 @@ function Signal({ icon, label, copy }: { icon: ReactNode; label: string; copy: s
       </div>
     </div>
   );
+}
+
+function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {
+  return (
+    <article className={styles.sourceCard}>
+      <div className={styles.sourceCardHeader}>
+        <div className={styles.sourceIcon}>{getSourceIcon(group.type)}</div>
+        <div>
+          <strong>{group.title}</strong>
+          <span>{group.description}</span>
+        </div>
+      </div>
+
+      <div className={styles.sourceConnectorList}>
+        {group.connectors.map((connector) => (
+          <SourceConnector connector={connector} key={`${group.type}-${connector.label}`} />
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function SourceConnector({ connector }: { connector: KnowledgeSourceConnector }) {
+  return (
+    <div className={styles.sourceConnector}>
+      <CheckCircle2 size={15} />
+      <div>
+        <strong>{connector.label}</strong>
+        <span>{formatSourceMode(connector.mode)}</span>
+      </div>
+      <small className={styles[connector.status]}>{connector.status}</small>
+    </div>
+  );
+}
+
+function getSourceIcon(type: KnowledgeSourceGroup["type"]) {
+  const icons = {
+    document: <FileText size={18} />,
+    external: <DatabaseZap size={18} />,
+    property_feed: <Building2 size={18} />,
+    website: <Globe2 size={18} />
+  } satisfies Record<KnowledgeSourceGroup["type"], ReactNode>;
+
+  return icons[type];
+}
+
+function formatSourceMode(value: KnowledgeSourceConnector["mode"]) {
+  const labels = {
+    concierge_index_only: "AI index only",
+    crm_inventory: "CRM inventory",
+    hybrid: "CRM + AI index"
+  } satisfies Record<KnowledgeSourceConnector["mode"], string>;
+
+  return labels[value];
 }

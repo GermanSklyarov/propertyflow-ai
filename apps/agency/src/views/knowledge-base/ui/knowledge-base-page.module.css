@@ -258,6 +258,157 @@
   gap: 10px;
 }
 
+.sourcesGrid {
+  display: grid;
+  gap: 10px;
+}
+
+.sourceCard {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 12px;
+}
+
+.sourceCardHeader {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.sourceIcon {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+}
+
+.sourceCardHeader div:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.sourceCardHeader strong {
+  color: var(--ink);
+  font-size: 1rem;
+}
+
+.sourceCardHeader span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.42;
+}
+
+.sourceConnectorList {
+  display: grid;
+  gap: 7px;
+}
+
+.sourceConnector {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f7fbfa;
+  padding: 9px;
+}
+
+.sourceConnector svg {
+  color: var(--teal-dark);
+}
+
+.sourceConnector div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.sourceConnector strong,
+.sourceConnector span,
+.sourceConnector small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sourceConnector strong {
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+}
+
+.sourceConnector span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.sourceConnector small {
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-size: 0.68rem;
+  font-weight: 950;
+  padding: 5px 7px;
+  text-transform: uppercase;
+}
+
+.sourceConnector .planned {
+  border-color: rgb(180 83 9 / 18%);
+  background: #fff7ed;
+  color: #7c4a05;
+}
+
+.pipelineStrip {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pipelineStep {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 28px minmax(0, 0.45fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 10px;
+}
+
+.pipelineStep span {
+  display: inline-grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  background: var(--teal);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
+.pipelineStep strong {
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+}
+
+.pipelineStep small {
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .signalItem {
   display: flex;
   align-items: flex-start;
@@ -331,6 +482,23 @@
   .layout {
     grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
   }
+
+  .sourcesGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .pipelineStrip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .pipelineStep {
+    align-content: start;
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .pipelineStep small {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 620px) {
@@ -340,5 +508,22 @@
 
   .primaryLink {
     width: 100%;
+  }
+
+  .sourceConnector {
+    grid-template-columns: 16px minmax(0, 1fr);
+  }
+
+  .sourceConnector small {
+    grid-column: 2;
+    width: fit-content;
+  }
+
+  .pipelineStep {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .pipelineStep small {
+    grid-column: 1 / -1;
   }
 }

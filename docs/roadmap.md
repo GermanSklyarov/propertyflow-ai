@@ -69,6 +69,13 @@
 - Show knowledge indexing progress immediately after upload, using background jobs as the source of truth.
 - Generate a copy-paste website widget snippet tied to the tenant workspace and public AI assistant.
 - Add AI personality settings: assistant name, welcome message, tone, and enabled languages.
+- Add a unified Knowledge Sources hub for documents, property feeds, website pages, and curated external sources.
+- Support source modes:
+  - `concierge_index_only`: index source data for AI Concierge without creating CRM records.
+  - `crm_inventory`: create or update operational CRM inventory.
+  - `hybrid`: create CRM records and index them for Concierge search.
+- Treat property listings as AI sources for agencies that want a website Concierge before migrating to PropertyFlowAI CRM.
+- Route every source through the same pipeline: Source -> Ingestion -> Parsing/Chunking -> Embeddings -> Vector Search -> AI Concierge.
 - Support three product modes:
   - Starter: knowledge base, documents, AI answers, and website widget.
   - Growth: conversations become leads when the visitor asks for a viewing, agent callback, WhatsApp follow-up, or saved search.
