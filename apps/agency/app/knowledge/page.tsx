@@ -24,13 +24,14 @@ export default async function AgencyKnowledgePage({
       queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest))
     ]);
     const chat = chatRequest ? await askAiChat(chatRequest) : undefined;
+    const knowledgeJobs = jobs.items.filter((job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed");
 
     return (
       <KnowledgeBasePage
         chat={chat}
         chatRequest={chatRequest}
         documents={documents.items}
-        jobs={jobs.items.filter((job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed")}
+        jobs={knowledgeJobs}
         notice={
           query.created
             ? { message: `${query.created} was added and queued for ingestion.`, tone: "success" }
@@ -42,6 +43,7 @@ export default async function AgencyKnowledgePage({
         }
         retrieval={retrieval}
         retrievalRequest={retrievalRequest}
+        sourceJobs={jobs.items}
         total={documents.total}
       />
     );

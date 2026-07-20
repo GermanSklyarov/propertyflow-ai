@@ -1,10 +1,14 @@
+import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
+
 export type KnowledgeSourceMode = "crm_inventory" | "concierge_index_only" | "hybrid";
 export type KnowledgeSourceStatus = "connected" | "indexing" | "ready" | "planned";
 export type KnowledgeSourceType = "document" | "property_feed" | "website" | "external";
 
 export interface KnowledgeSourceConnector {
+  countLabel?: string;
   label: string;
   mode: KnowledgeSourceMode;
+  runtimeNote?: string;
   status: KnowledgeSourceStatus;
 }
 
@@ -86,4 +90,83 @@ export function summarizeKnowledgeSourceModes(groups: KnowledgeSourceGroup[]) {
       hybrid: 0
     } satisfies Record<KnowledgeSourceMode, number>
   );
+}
+
+export function buildRuntimeKnowledgeSourceGroups(
+  groups: KnowledgeSourceGroup[],
+  input: {
+    documents: KnowledgeDocumentSnapshot[];
+    jobs: BackgroundJobMonitorItem[];
+    totalDocuments: number;
+  }
+): KnowledgeSourceGroup[] {
+  const activeKnowledgeJobs = input.jobs.some(
+    (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && isRunningJob(job)
+  );
+  const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && isRunningJob(job));
+  const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
+  const uploadedKnowledgeDocuments = Math.max(input.totalDocuments - listingKnowledgeDocuments, 0);
+  const recentImportKnowledgeDocuments = input.jobs
+    .filter((job) => job.name === "properties.import")
+    .reduce((total, job) => total + getResultNumber(job.result, "knowledgeDocumentsCreated"), 0);
+
+  return groups.map((group) => {
+    if (group.type === "document") {
+      return {
+        ...group,
+        connectors: group.connectors.map((connector, index) => ({
+          ...connector,
+          countLabel: index === 0 ? `${uploadedKnowledgeDocuments} docs` : connector.countLabel,
+          runtimeNote:
+            index === 0
+              ? activeKnowledgeJobs
+                ? "Indexing tenant uploads now"
+                : uploadedKnowledgeDocuments
+                  ? "Available to AI Concierge"
+                  : "Upload PDFs or guides to start"
+              : connector.runtimeNote,
+          status: activeKnowledgeJobs ? "indexing" : uploadedKnowledgeDocuments ? "connected" : connector.status
+        }))
+      };
+    }
+
+    if (group.type === "property_feed") {
+      return {
+        ...group,
+        connectors: group.connectors.map((connector) => {
+          if (connector.label !== "CSV upload with field mapping") {
+            return connector;
+          }
+
+          const totalListingKnowledge = listingKnowledgeDocuments || recentImportKnowledgeDocuments;
+
+          return {
+            ...connector,
+            countLabel: `${totalListingKnowledge} listing docs`,
+            runtimeNote: activeImportJobs
+              ? "Import is indexing listing knowledge"
+              : totalListingKnowledge
+                ? "Feeds Concierge without forcing CRM"
+                : "Upload CSV, JSON, or feed data",
+            status: activeImportJobs ? "indexing" : totalListingKnowledge ? "connected" : connector.status
+          };
+        })
+      };
+    }
+
+    return group;
+  });
+}
+
+function isRunningJob(job: BackgroundJobMonitorItem) {
+  return job.state === "active" || job.state === "waiting" || job.state === "delayed";
+}
+
+function getResultNumber(result: BackgroundJobMonitorItem["result"], key: string) {
+  if (typeof result !== "object" || result === null || Array.isArray(result)) {
+    return 0;
+  }
+
+  const value = (result as Record<string, unknown>)[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }

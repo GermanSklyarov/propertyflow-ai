@@ -16,6 +16,7 @@ import {
   UploadCloud
 } from "lucide-react";
 import {
+  buildRuntimeKnowledgeSourceGroups,
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
   summarizeKnowledgeSourceModes,
@@ -47,6 +48,7 @@ export function KnowledgeBasePage({
   notice,
   retrieval,
   retrievalRequest,
+  sourceJobs,
   total
 }: {
   chat?: AiChatResponse;
@@ -56,6 +58,7 @@ export function KnowledgeBasePage({
   notice?: { message: string; tone: "success" };
   retrieval: KnowledgeChunkSearchResponse;
   retrievalRequest: KnowledgeChunkSearchRequest;
+  sourceJobs?: BackgroundJobMonitorItem[];
   total: number;
 }) {
   const kindCount = new Set(documents.map((document) => document.kind)).size;
@@ -63,7 +66,12 @@ export function KnowledgeBasePage({
   const taggedCount = documents.filter((document) => document.tags.length > 0).length;
   const starterReadiness = buildKnowledgeStarterReadiness(documents);
   const activeKnowledgeJobs = jobs.filter((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed").length;
-  const sourceModeSummary = summarizeKnowledgeSourceModes(knowledgeSourceGroups);
+  const runtimeSourceGroups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+    documents,
+    jobs: sourceJobs ?? jobs,
+    totalDocuments: total
+  });
+  const sourceModeSummary = summarizeKnowledgeSourceModes(runtimeSourceGroups);
 
   return (
     <main className={styles.page}>
@@ -144,7 +152,7 @@ export function KnowledgeBasePage({
           </div>
 
           <div className={styles.sourcesGrid}>
-            {knowledgeSourceGroups.map((group) => (
+            {runtimeSourceGroups.map((group) => (
               <KnowledgeSourceGroupCard group={group} key={group.type} />
             ))}
           </div>
@@ -298,8 +306,12 @@ function SourceConnector({ connector }: { connector: KnowledgeSourceConnector })
       <div>
         <strong>{connector.label}</strong>
         <span>{formatSourceMode(connector.mode)}</span>
+        {connector.runtimeNote ? <em>{connector.runtimeNote}</em> : null}
       </div>
-      <small className={styles[connector.status]}>{connector.status}</small>
+      <div className={styles.sourceConnectorBadges}>
+        {connector.countLabel ? <small>{connector.countLabel}</small> : null}
+        <small className={styles[connector.status]}>{connector.status}</small>
+      </div>
     </div>
   );
 }

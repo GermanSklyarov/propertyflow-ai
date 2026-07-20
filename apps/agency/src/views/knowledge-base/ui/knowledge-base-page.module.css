@@ -261,6 +261,7 @@
 .sourcesGrid {
   display: grid;
   gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
 }
 
 .sourceCard {
@@ -316,8 +317,8 @@
 .sourceConnector {
   display: grid;
   min-width: 0;
-  grid-template-columns: 16px minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
   border: 1px solid rgb(15 118 110 / 12%);
   background: #f7fbfa;
@@ -336,6 +337,7 @@
 
 .sourceConnector strong,
 .sourceConnector span,
+.sourceConnector em,
 .sourceConnector small {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -351,6 +353,23 @@
   font-size: 0.72rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.sourceConnector em {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 750;
+  line-height: 1.32;
+}
+
+.sourceConnectorBadges {
+  display: flex;
+  grid-column: 2;
+  min-width: 0;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  gap: 5px;
 }
 
 .sourceConnector small {
@@ -484,7 +503,7 @@
   }
 
   .sourcesGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .pipelineStrip {
@@ -511,11 +530,14 @@
   }
 
   .sourceConnector {
-    grid-template-columns: 16px minmax(0, 1fr);
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .sourceConnectorBadges {
+    justify-content: flex-start;
   }
 
   .sourceConnector small {
-    grid-column: 2;
     width: fit-content;
   }
 
