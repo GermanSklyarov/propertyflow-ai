@@ -10,6 +10,7 @@ import {
   ingestKnowledgeDocument
 } from "@shared/api/agency-client";
 import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
+import { buildKnowledgeSourceTags, resolveKnowledgeSourceKind } from "../model/knowledge-source-presets";
 
 export async function createKnowledgeDocumentAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
@@ -18,15 +19,15 @@ export async function createKnowledgeDocumentAction(formData: FormData) {
   const sourceUpload = sourceFile ? await uploadKnowledgeSourceFile(sourceFile) : undefined;
   const body = await resolveKnowledgeDocumentBody(typedBody, sourceFile, sourceUpload);
   const locale = String(formData.get("locale") ?? "en") as CreateKnowledgeDocumentRequest["locale"];
-  const kind = String(formData.get("kind") ?? "article") as CreateKnowledgeDocumentRequest["kind"];
-  const tags = [
-    ...String(formData.get("tags") ?? "")
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter(Boolean),
-    ...(sourceFile ? ["source-file", sourceFile.name] : []),
-    ...(sourceUpload ? ["storage-backed"] : [])
-  ];
+  const fallbackKind = String(formData.get("kind") ?? "article") as CreateKnowledgeDocumentRequest["kind"];
+  const sourcePresetId = String(formData.get("sourcePreset") ?? "custom");
+  const kind = resolveKnowledgeSourceKind(sourcePresetId, fallbackKind);
+  const tags = buildKnowledgeSourceTags({
+    sourceFileName: sourceFile?.name,
+    sourcePresetId,
+    storageBacked: Boolean(sourceUpload),
+    typedTags: String(formData.get("tags") ?? "")
+  });
 
   if (!title || !body) {
     return;

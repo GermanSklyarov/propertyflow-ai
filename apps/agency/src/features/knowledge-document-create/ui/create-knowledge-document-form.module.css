@@ -13,6 +13,20 @@
   text-transform: uppercase;
 }
 
+.sourceType {
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  padding: 12px;
+}
+
+.sourceType small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-transform: none;
+}
+
 .form input,
 .form select,
 .form textarea {
