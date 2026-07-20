@@ -26,6 +26,20 @@ describe("knowledge sources model", () => {
     );
   });
 
+  it("links ready sources to their operational workflows", () => {
+    const documents = knowledgeSourceGroups.find((group) => group.type === "document");
+    const propertySources = knowledgeSourceGroups.find((group) => group.type === "property_feed");
+
+    expect(documents?.connectors[0]).toMatchObject({
+      actionHref: "#create-knowledge-document",
+      actionLabel: "Add document"
+    });
+    expect(propertySources?.connectors[0]).toMatchObject({
+      actionHref: "/listings#import-listings",
+      actionLabel: "Open importer"
+    });
+  });
+
   it("summarizes source modes for onboarding copy", () => {
     const summary = summarizeKnowledgeSourceModes(knowledgeSourceGroups);
 

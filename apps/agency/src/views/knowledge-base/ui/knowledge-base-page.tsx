@@ -312,6 +312,12 @@ function SourceConnector({ connector }: { connector: KnowledgeSourceConnector })
         {connector.countLabel ? <small>{connector.countLabel}</small> : null}
         <small className={styles[connector.status]}>{connector.status}</small>
       </div>
+      {connector.actionHref ? (
+        <a className={styles.sourceConnectorAction} href={connector.actionHref}>
+          {connector.actionLabel ?? "Open"}
+          <ArrowRight size={14} />
+        </a>
+      ) : null}
     </div>
   );
 }

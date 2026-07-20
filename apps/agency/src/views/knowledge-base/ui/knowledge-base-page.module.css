@@ -363,6 +363,30 @@
   line-height: 1.32;
 }
 
+.sourceConnectorAction {
+  display: inline-flex;
+  grid-column: 2;
+  width: fit-content;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #fff;
+  padding: 0 10px;
+  color: var(--teal-dark);
+  font-size: 0.7rem;
+  font-weight: 950;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.sourceConnectorAction:hover,
+.sourceConnectorAction:focus-visible {
+  background: var(--teal);
+  color: #fff;
+}
+
 .sourceConnectorBadges {
   display: flex;
   grid-column: 2;

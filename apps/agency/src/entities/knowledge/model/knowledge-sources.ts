@@ -5,6 +5,8 @@ export type KnowledgeSourceStatus = "connected" | "indexing" | "ready" | "planne
 export type KnowledgeSourceType = "document" | "property_feed" | "website" | "external";
 
 export interface KnowledgeSourceConnector {
+  actionHref?: string;
+  actionLabel?: string;
   countLabel?: string;
   label: string;
   mode: KnowledgeSourceMode;
@@ -27,9 +29,27 @@ export interface KnowledgeSourcePipelineStep {
 export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
   {
     connectors: [
-      { label: "PDF / DOCX / text upload", mode: "concierge_index_only", status: "ready" },
-      { label: "FAQ, buying, visa, tax guides", mode: "concierge_index_only", status: "ready" },
-      { label: "Developer and condo brochures", mode: "concierge_index_only", status: "ready" }
+      {
+        actionHref: "#create-knowledge-document",
+        actionLabel: "Add document",
+        label: "PDF / DOCX / text upload",
+        mode: "concierge_index_only",
+        status: "ready"
+      },
+      {
+        actionHref: "#create-knowledge-document",
+        actionLabel: "Add guide",
+        label: "FAQ, buying, visa, tax guides",
+        mode: "concierge_index_only",
+        status: "ready"
+      },
+      {
+        actionHref: "#create-knowledge-document",
+        actionLabel: "Add brochure",
+        label: "Developer and condo brochures",
+        mode: "concierge_index_only",
+        status: "ready"
+      }
     ],
     description: "Agency-approved documents become searchable knowledge for Concierge answers.",
     title: "Documents",
@@ -37,7 +57,13 @@ export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
   },
   {
     connectors: [
-      { label: "CSV upload with field mapping", mode: "hybrid", status: "ready" },
+      {
+        actionHref: "/listings#import-listings",
+        actionLabel: "Open importer",
+        label: "CSV upload with field mapping",
+        mode: "hybrid",
+        status: "ready"
+      },
       { label: "REST API inventory sync", mode: "concierge_index_only", status: "planned" },
       { label: "XML feed import", mode: "concierge_index_only", status: "planned" }
     ],
