@@ -1,9 +1,10 @@
 import type { Job } from "bullmq";
-import type { Pool } from "pg";
+import type { Pool, PoolClient } from "pg";
 import type { PropertyImportJobPayload } from "@propertyflow/contracts";
 import type { PropertyKind, PropertyListingType, PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
 
 type PropertyImportJob = Job<PropertyImportJobPayload, unknown, "properties.import">;
+type PropertyImportMode = NonNullable<PropertyImportJobPayload["importMode"]>;
 
 const supportedMarkets = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"] as const;
 const supportedKinds = ["condo", "villa", "townhouse", "land", "commercial"] as const;
@@ -55,9 +56,10 @@ interface ImportIssue {
 export interface PropertyImportResult {
   [key: string]: unknown;
   dryRun: boolean;
-  importMode: NonNullable<PropertyImportJobPayload["importMode"]>;
+  importMode: PropertyImportMode;
   imported: number;
   issues: ImportIssue[];
+  knowledgeDocumentsCreated: number;
   propertyIds: string[];
   rowsMissingExternalId: number;
   rowsWithExternalId: number;
@@ -93,11 +95,13 @@ export class PropertyImporter {
     const propertyIds: string[] = [];
     const importMode = job.data.importMode ?? "hybrid";
     const shouldCreateCrmInventory = importMode !== "concierge_index_only" && !job.data.dryRun;
+    const shouldCreateAiKnowledge = importMode !== "crm_inventory" && !job.data.dryRun;
     let imported = 0;
+    let knowledgeDocumentsCreated = 0;
     let rowsMissingExternalId = 0;
     let rowsWithExternalId = 0;
 
-    await job.updateProgress({ imported, skipped: 0, total: rows.length });
+    await job.updateProgress({ imported, knowledgeDocumentsCreated, skipped: 0, total: rows.length });
 
     for (const [index, row] of rows.entries()) {
       try {
@@ -113,6 +117,11 @@ export class PropertyImporter {
           propertyIds.push(await this.insertProperty(job.data.tenantId, draft));
         }
 
+        if (shouldCreateAiKnowledge) {
+          await this.upsertKnowledgeListing(job.data.tenantId, draft, job.data.source, importMode);
+          knowledgeDocumentsCreated += 1;
+        }
+
         imported += 1;
       } catch (error) {
         issues.push({
@@ -124,6 +133,7 @@ export class PropertyImporter {
 
       await job.updateProgress({
         imported,
+        knowledgeDocumentsCreated,
         skipped: issues.length,
         total: rows.length,
         percent: rows.length > 0 ? Math.round(((index + 1) / rows.length) * 100) : 100
@@ -136,8 +146,9 @@ export class PropertyImporter {
       dryRun: job.data.dryRun ?? false,
       importMode,
       crmRecordsCreated: propertyIds.length,
-      aiIndexCandidates: rows.length - issues.length,
+      aiIndexCandidates: shouldCreateAiKnowledge ? knowledgeDocumentsCreated : 0,
       imported,
+      knowledgeDocumentsCreated,
       skipped: issues.length,
       issues: issues.slice(0, 25),
       propertyIds,
@@ -399,6 +410,230 @@ export class PropertyImporter {
 
     return result.rows[0].id;
   }
+
+  private async upsertKnowledgeListing(
+    tenantId: string,
+    draft: ImportedPropertyDraft,
+    source: PropertyImportJobPayload["source"],
+    importMode: PropertyImportMode
+  ): Promise<void> {
+    const now = new Date().toISOString();
+    const documentId = crypto.randomUUID();
+    const body = buildListingKnowledgeBody(draft);
+    const tags = buildListingKnowledgeTags(draft, source, importMode);
+    const externalTag = draft.externalId ? externalIdTag(draft.externalId) : undefined;
+    const chunks = this.chunkKnowledgeDocument(draft.title, body);
+    const embeddingModel = "local-hash-16";
+    const embeddingDimensions = 16;
+    const client = await this.pool.connect();
+
+    try {
+      await client.query("begin");
+
+      if (externalTag) {
+        await this.deleteExistingKnowledgeListing(client, tenantId, externalTag);
+      }
+
+      await client.query(
+        `
+          insert into knowledge_documents (
+            id,
+            tenant_id,
+            title,
+            body,
+            locale,
+            kind,
+            tags,
+            created_at,
+            updated_at
+          ) values (
+            $1,
+            $2,
+            $3,
+            $4,
+            'en',
+            'article',
+            $5,
+            $6,
+            $7
+          )
+        `,
+        [documentId, tenantId, draft.title, body, tags, now, now]
+      );
+
+      for (const [index, chunk] of chunks.entries()) {
+        const searchText = this.buildKnowledgeSearchText(draft.title, chunk, tags);
+
+        await client.query(
+          `
+            insert into knowledge_document_chunks (
+              id,
+              tenant_id,
+              document_id,
+              chunk_index,
+              title,
+              content,
+              locale,
+              kind,
+              tags,
+              token_estimate,
+              search_text,
+              embedding,
+              embedding_model,
+              embedding_status,
+              created_at,
+              updated_at
+            ) values (
+              $1,
+              $2,
+              $3,
+              $4,
+              $5,
+              $6,
+              'en',
+              'article',
+              $7,
+              $8,
+              $9,
+              $10,
+              $11,
+              'embedded',
+              $12,
+              $13
+            )
+          `,
+          [
+            crypto.randomUUID(),
+            tenantId,
+            documentId,
+            index,
+            draft.title,
+            chunk,
+            tags,
+            this.estimateTokens(chunk),
+            searchText,
+            this.embedText(searchText, embeddingDimensions),
+            embeddingModel,
+            now,
+            now
+          ]
+        );
+      }
+
+      await client.query("commit");
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
+  }
+
+  private async deleteExistingKnowledgeListing(client: PoolClient, tenantId: string, externalTag: string) {
+    await client.query(
+      `
+        delete from knowledge_document_chunks
+        where tenant_id = $1
+          and document_id in (
+            select id
+            from knowledge_documents
+            where tenant_id = $1
+              and 'property-listing' = any(tags)
+              and $2 = any(tags)
+          )
+      `,
+      [tenantId, externalTag]
+    );
+    await client.query(
+      `
+        delete from knowledge_documents
+        where tenant_id = $1
+          and 'property-listing' = any(tags)
+          and $2 = any(tags)
+      `,
+      [tenantId, externalTag]
+    );
+  }
+
+  private chunkKnowledgeDocument(title: string, body: string): string[] {
+    const paragraphs = body
+      .replace(/\r\n/g, "\n")
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.replace(/\s+/g, " ").trim())
+      .filter(Boolean);
+    const chunks: string[] = [];
+    let current = "";
+    const maxCharacters = 900;
+
+    for (const paragraph of paragraphs.length ? paragraphs : [body.replace(/\s+/g, " ").trim()]) {
+      if (!paragraph) {
+        continue;
+      }
+
+      const next = current ? `${current}\n\n${paragraph}` : paragraph;
+      if (next.length <= maxCharacters) {
+        current = next;
+        continue;
+      }
+
+      if (current) {
+        chunks.push(current);
+      }
+
+      if (paragraph.length <= maxCharacters) {
+        current = paragraph;
+        continue;
+      }
+
+      for (let offset = 0; offset < paragraph.length; offset += maxCharacters) {
+        chunks.push(paragraph.slice(offset, offset + maxCharacters));
+      }
+      current = "";
+    }
+
+    if (current) {
+      chunks.push(current);
+    }
+
+    return chunks.length ? chunks : [title];
+  }
+
+  private estimateTokens(text: string): number {
+    return Math.max(1, Math.ceil(text.length / 4));
+  }
+
+  private buildKnowledgeSearchText(title: string, chunk: string, tags: string[]): string {
+    return [title, chunk, tags.join(" ")].join(" ").toLowerCase().replaceAll("ё", "е");
+  }
+
+  private embedText(text: string, dimensions: number): number[] {
+    const vector = Array.from({ length: dimensions }, () => 0);
+    const tokens = text
+      .toLowerCase()
+      .replaceAll("ё", "е")
+      .split(/[^a-zа-я0-9-]+/i)
+      .map((token) => token.trim())
+      .filter(Boolean);
+
+    for (const token of tokens.length ? tokens : [text]) {
+      const hash = this.hashToken(token);
+      const index = Math.abs(hash) % dimensions;
+      vector[index] += hash < 0 ? -1 : 1;
+    }
+
+    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
+    return vector.map((value) => Number((value / magnitude).toFixed(6)));
+  }
+
+  private hashToken(token: string): number {
+    let hash = 0;
+
+    for (let index = 0; index < token.length; index += 1) {
+      hash = (hash * 31 + token.charCodeAt(index)) | 0;
+    }
+
+    return hash;
+  }
 }
 
 function parseJsonRows(content: string): ImportRow[] {
@@ -599,6 +834,77 @@ function getAmenities(value: unknown) {
     .split(/[|,]/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
+  return [
+    `Listing type: ${formatListingType(draft.listingType)}`,
+    `Property kind: ${draft.kind}`,
+    `Market: ${draft.market}`,
+    draft.address ? `Address or landmark: ${draft.address}` : undefined,
+    draft.projectName ? `Project: ${draft.projectName}` : undefined,
+    draft.projectDeveloper ? `Developer: ${draft.projectDeveloper}` : undefined,
+    draft.projectStatus ? `Project status: ${draft.projectStatus}` : undefined,
+    `Price: THB ${draft.priceThb}`,
+    draft.rentalPriceMonthlyThb ? `Monthly rent: THB ${draft.rentalPriceMonthlyThb}` : undefined,
+    draft.monthlyRentEstimateThb ? `Estimated monthly rent: THB ${draft.monthlyRentEstimateThb}` : undefined,
+    draft.maintenanceFeeMonthlyThb ? `Maintenance fee: THB ${draft.maintenanceFeeMonthlyThb} per month` : undefined,
+    `Area: ${draft.areaSqm} sqm`,
+    `Bedrooms: ${draft.bedrooms}`,
+    `Bathrooms: ${draft.bathrooms}`,
+    draft.floor ? `Floor: ${draft.floor}` : undefined,
+    draft.beachDistanceMeters ? `Beach distance: ${draft.beachDistanceMeters} meters` : undefined,
+    draft.amenities.length ? `Amenities: ${draft.amenities.join(", ")}` : undefined,
+    draft.description ? `Description: ${draft.description}` : undefined
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildListingKnowledgeTags(
+  draft: ImportedPropertyDraft,
+  source: PropertyImportJobPayload["source"],
+  importMode: PropertyImportMode
+) {
+  return uniqueStrings(
+    [
+      "property-listing",
+      `source:${source}`,
+      `import-mode:${importMode}`,
+      `market:${draft.market}`,
+      `kind:${draft.kind}`,
+      `listing-type:${draft.listingType}`,
+      draft.externalId ? externalIdTag(draft.externalId) : undefined,
+      draft.projectName ? `project:${normalizeProjectName(draft.projectName)}` : undefined,
+      ...draft.amenities.map((amenity) => `amenity:${normalizeTagValue(amenity)}`)
+    ].filter(isString)
+  );
+}
+
+function externalIdTag(externalId: string) {
+  return `external-id:${normalizeTagValue(externalId)}`;
+}
+
+function normalizeTagValue(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9_-]/g, "");
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean)));
+}
+
+function isString(value: string | undefined): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+function formatListingType(value: PropertyListingType) {
+  const labels = {
+    rent: "for rent",
+    sale: "for sale",
+    sale_or_rent: "for sale or rent"
+  } satisfies Record<PropertyListingType, string>;
+
+  return labels[value];
 }
 
 function readDataUrl(objectUrl: string) {

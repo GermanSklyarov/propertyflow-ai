@@ -111,7 +111,8 @@ export function ListingImportJobsPanel({ initialJobs, queuedJobId }: ListingImpo
                   <strong>{result.dryRun ? "Dry-run complete" : formatImportMode(result.importMode)}</strong>
                   <span>
                     {result.imported} imported · {result.skipped} skipped · {result.crmRecordsCreated} CRM records ·{" "}
-                    {result.aiIndexCandidates} AI candidates · {result.indexed} indexed · {result.total} rows
+                    {result.knowledgeDocumentsCreated} knowledge docs · {result.aiIndexCandidates} AI candidates ·{" "}
+                    {result.indexed} indexed · {result.total} rows
                   </span>
                 </div>
               ) : null}
@@ -171,6 +172,7 @@ function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undef
   const indexed = getProgressNumber(job.result.indexed);
   const aiIndexCandidates = getProgressNumber(job.result.aiIndexCandidates);
   const crmRecordsCreated = getProgressNumber(job.result.crmRecordsCreated);
+  const knowledgeDocumentsCreated = getProgressNumber(job.result.knowledgeDocumentsCreated);
   const importMode = getImportMode(job.result.importMode);
   const rowsMissingExternalId = getProgressNumber(job.result.rowsMissingExternalId);
   const rowsWithExternalId = getProgressNumber(job.result.rowsWithExternalId);
@@ -184,6 +186,7 @@ function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undef
     imported,
     importMode,
     indexed,
+    knowledgeDocumentsCreated,
     issues,
     rowsMissingExternalId,
     rowsWithExternalId,
@@ -207,6 +210,7 @@ interface ImportJobResult {
   importMode: "crm_inventory" | "concierge_index_only" | "hybrid";
   imported: number;
   indexed: number;
+  knowledgeDocumentsCreated: number;
   issues: ImportIssue[];
   rowsMissingExternalId: number;
   rowsWithExternalId: number;
