@@ -20,6 +20,7 @@ import {
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
   summarizeKnowledgeSourceModes,
+  summarizeKnowledgeSourceReadiness,
   type KnowledgeSourceConnector,
   type KnowledgeSourceGroup
 } from "@entities/knowledge/model/knowledge-sources";
@@ -72,6 +73,7 @@ export function KnowledgeBasePage({
     totalDocuments: total
   });
   const sourceModeSummary = summarizeKnowledgeSourceModes(runtimeSourceGroups);
+  const sourceReadiness = summarizeKnowledgeSourceReadiness(runtimeSourceGroups);
 
   return (
     <main className={styles.page}>
@@ -149,6 +151,13 @@ export function KnowledgeBasePage({
               <h2 className={styles.panelTitle}>Feed AI without forcing CRM migration</h2>
             </div>
             <span className={styles.statusBadge}>{sourceModeSummary.concierge_index_only} AI-only connectors</span>
+          </div>
+
+          <div className={styles.sourceReadinessStrip} aria-label="Knowledge source readiness">
+            <SourceReadinessMetric label="Connected" note="feeding AI now" value={sourceReadiness.connected} />
+            <SourceReadinessMetric label="Indexing" note="worker active" value={sourceReadiness.indexing} />
+            <SourceReadinessMetric label="Actionable" note="setup links ready" value={sourceReadiness.actionable} />
+            <SourceReadinessMetric label="Planned" note="roadmap sources" value={sourceReadiness.planned} />
           </div>
 
           <div className={styles.sourcesGrid}>
@@ -276,6 +285,16 @@ function Signal({ icon, label, copy }: { icon: ReactNode; label: string; copy: s
         <span>{copy}</span>
       </div>
     </div>
+  );
+}
+
+function SourceReadinessMetric({ label, note, value }: { label: string; note: string; value: number }) {
+  return (
+    <article className={styles.sourceReadinessMetric}>
+      <strong>{value}</strong>
+      <span>{label}</span>
+      <small>{note}</small>
+    </article>
   );
 }
 

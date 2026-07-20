@@ -4,7 +4,8 @@ import {
   buildRuntimeKnowledgeSourceGroups,
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
-  summarizeKnowledgeSourceModes
+  summarizeKnowledgeSourceModes,
+  summarizeKnowledgeSourceReadiness
 } from "./knowledge-sources";
 
 describe("knowledge sources model", () => {
@@ -46,6 +47,21 @@ describe("knowledge sources model", () => {
     expect(summary.concierge_index_only).toBeGreaterThan(summary.hybrid);
     expect(summary.hybrid).toBe(1);
     expect(summary.crm_inventory).toBe(0);
+  });
+
+  it("summarizes source readiness for the source hub", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [knowledgeDocument({ tags: ["faq"] }), knowledgeDocument({ id: "knowledge-2", tags: ["property-listing", "source:csv"] })],
+      jobs: [],
+      totalDocuments: 2
+    });
+    const summary = summarizeKnowledgeSourceReadiness(groups);
+
+    expect(summary.total).toBe(12);
+    expect(summary.connected).toBe(4);
+    expect(summary.ready).toBe(0);
+    expect(summary.planned).toBe(8);
+    expect(summary.actionable).toBe(4);
   });
 
   it("documents the unified ingestion pipeline", () => {

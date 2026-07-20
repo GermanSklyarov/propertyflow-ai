@@ -26,6 +26,15 @@ export interface KnowledgeSourcePipelineStep {
   note: string;
 }
 
+export interface KnowledgeSourceReadinessSummary {
+  actionable: number;
+  connected: number;
+  indexing: number;
+  planned: number;
+  ready: number;
+  total: number;
+}
+
 export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
   {
     connectors: [
@@ -115,6 +124,32 @@ export function summarizeKnowledgeSourceModes(groups: KnowledgeSourceGroup[]) {
       crm_inventory: 0,
       hybrid: 0
     } satisfies Record<KnowledgeSourceMode, number>
+  );
+}
+
+export function summarizeKnowledgeSourceReadiness(groups: KnowledgeSourceGroup[]): KnowledgeSourceReadinessSummary {
+  return groups.reduce(
+    (summary, group) => {
+      for (const connector of group.connectors) {
+        summary.total += 1;
+
+        if (connector.actionHref) {
+          summary.actionable += 1;
+        }
+
+        summary[connector.status] += 1;
+      }
+
+      return summary;
+    },
+    {
+      actionable: 0,
+      connected: 0,
+      indexing: 0,
+      planned: 0,
+      ready: 0,
+      total: 0
+    } satisfies KnowledgeSourceReadinessSummary
   );
 }
 

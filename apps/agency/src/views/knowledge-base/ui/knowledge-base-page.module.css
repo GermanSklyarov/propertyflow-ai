@@ -264,6 +264,43 @@
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
 }
 
+.sourceReadinessStrip {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+  margin-bottom: 12px;
+}
+
+.sourceReadinessMetric {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 12px;
+}
+
+.sourceReadinessMetric strong {
+  color: var(--teal-dark);
+  font-size: clamp(1.45rem, 2.2vw, 2.1rem);
+  line-height: 0.95;
+}
+
+.sourceReadinessMetric span,
+.sourceReadinessMetric small {
+  min-width: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.sourceReadinessMetric span {
+  color: var(--teal-dark);
+}
+
 .sourceCard {
   display: grid;
   min-width: 0;
