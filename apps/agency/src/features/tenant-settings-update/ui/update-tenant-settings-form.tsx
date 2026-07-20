@@ -1,5 +1,6 @@
-import { CheckCircle2, Globe2, Palette, Save } from "lucide-react";
+import { Bot, CheckCircle2, Globe2, Palette, Save } from "lucide-react";
 import { updateTenantSettingsAction } from "@entities/tenant/api/tenant-actions";
+import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import type { TenantSnapshot } from "@propertyflow/contracts";
 import styles from "./update-tenant-settings-form.module.css";
 
@@ -18,6 +19,8 @@ export function UpdateTenantSettingsForm({
   saved?: boolean;
   tenant: TenantSnapshot;
 }) {
+  const widgetSettings = getTenantWidgetSettings(tenant);
+
   return (
     <form action={updateTenantSettingsAction} className={styles.form} id="tenant-settings-form">
       {saved ? (
@@ -70,6 +73,30 @@ export function UpdateTenantSettingsForm({
         </label>
         <p className={styles.hint}>
           Domain verification stays backend-controlled; this form updates the requested domain and keeps the current verification status visible.
+        </p>
+      </section>
+
+      <section className={styles.section} id="concierge-personality-settings">
+        <div className={styles.sectionTitle}>
+          <Bot size={16} />
+          AI Concierge personality
+        </div>
+        <div className={styles.fieldGrid}>
+          <label className={styles.field}>
+            <span>AI name</span>
+            <input defaultValue={widgetSettings.aiName} name="aiName" required />
+          </label>
+          <label className={styles.field}>
+            <span>Languages</span>
+            <input defaultValue={widgetSettings.languages.join(", ")} name="languages" placeholder="en, ru, th, zh" required />
+          </label>
+        </div>
+        <label className={styles.field}>
+          <span>Welcome message</span>
+          <textarea defaultValue={widgetSettings.welcomeMessage} name="welcomeMessage" required rows={3} />
+        </label>
+        <p className={styles.hint}>
+          These values power the copy-paste widget snippet and the public Concierge launcher, including Starter agencies without CRM.
         </p>
       </section>
 

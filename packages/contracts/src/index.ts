@@ -29,8 +29,15 @@ export interface TenantSnapshot {
     primaryColor?: string;
     logoUrl?: string;
   };
+  widget: TenantWidgetSettings;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface TenantWidgetSettings {
+  aiName: string;
+  languages: string[];
+  welcomeMessage: string;
 }
 
 export interface UpdateTenantSettingsRequest {
@@ -41,6 +48,7 @@ export interface UpdateTenantSettingsRequest {
     primaryColor?: string;
     logoUrl?: string;
   };
+  widget?: Partial<TenantWidgetSettings>;
 }
 
 export interface PublicWidgetConfigResponse {
@@ -51,7 +59,7 @@ export interface PublicWidgetConfigResponse {
     primaryColor?: string;
   };
   conciergeMode: TenantSnapshot["subscriptionPlan"];
-  languages: string[];
+  languages: TenantWidgetSettings["languages"];
   tenantSlug: string;
   welcomeMessage: string;
 }

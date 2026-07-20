@@ -40,12 +40,12 @@ export class TenantService {
     }
 
     return {
-      aiName: "Anna",
+      aiName: tenant.widget.aiName,
       branding: tenant.branding,
       conciergeMode: tenant.subscriptionPlan,
-      languages: ["en", "ru", "th", "zh"],
+      languages: tenant.widget.languages,
       tenantSlug: tenant.slug,
-      welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+      welcomeMessage: tenant.widget.welcomeMessage
     };
   }
 
@@ -76,7 +76,7 @@ export class TenantService {
   }
 
   async updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot> {
-    const tenant = await this.tenants.updateSettings(tenantId, request);
+    const tenant = await this.tenants.updateSettings(tenantId, normalizeUpdateTenantSettingsRequest(request));
 
     if (!tenant) {
       throw new NotFoundException("Tenant not found");
@@ -94,4 +94,22 @@ export class TenantService {
       utilizationRate: limit > 0 ? Math.round((used / limit) * 10_000) / 100 : 0
     };
   }
+}
+
+function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsRequest): UpdateTenantSettingsRequest {
+  const languages = request.widget?.languages
+    ?.map((language) => language.trim().toLowerCase())
+    .filter((language, index, values) => Boolean(language) && values.indexOf(language) === index);
+
+  return {
+    ...request,
+    widget: request.widget
+      ? {
+          ...request.widget,
+          aiName: request.widget.aiName?.trim() || undefined,
+          languages: languages?.length ? languages : undefined,
+          welcomeMessage: request.widget.welcomeMessage?.trim() || undefined
+        }
+      : undefined
+  };
 }

@@ -13,6 +13,9 @@ create table if not exists tenants (
   branding_display_name text not null,
   branding_primary_color text,
   branding_logo_url text,
+  widget_ai_name text not null default 'Anna',
+  widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.',
+  widget_languages text[] not null default array['en','ru','th','zh'],
   created_at timestamptz not null,
   updated_at timestamptz not null
 );
@@ -21,6 +24,9 @@ alter table tenants add column if not exists custom_domain text;
 alter table tenants add column if not exists domain_status text not null default 'not-configured';
 alter table tenants add column if not exists subscription_plan text not null default 'starter';
 alter table tenants add column if not exists limits jsonb not null default '{"properties":100,"agents":5,"aiCreditsMonthly":1000,"publicApiRequestsMonthly":10000}'::jsonb;
+alter table tenants add column if not exists widget_ai_name text not null default 'Anna';
+alter table tenants add column if not exists widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.';
+alter table tenants add column if not exists widget_languages text[] not null default array['en','ru','th','zh'];
 create unique index if not exists idx_tenants_custom_domain on tenants (custom_domain) where custom_domain is not null;
 
 insert into tenants (
@@ -36,6 +42,9 @@ insert into tenants (
   branding_display_name,
   branding_primary_color,
   branding_logo_url,
+  widget_ai_name,
+  widget_welcome_message,
+  widget_languages,
   created_at,
   updated_at
 ) values (
@@ -51,6 +60,9 @@ insert into tenants (
   'Demo Agency',
   '#0f766e',
   null,
+  'Anna',
+  'Hi! I''m Anna, your AI property consultant.',
+  array['en','ru','th','zh'],
   now(),
   now()
 ) on conflict (id) do nothing;

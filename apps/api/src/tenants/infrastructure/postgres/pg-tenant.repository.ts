@@ -18,6 +18,9 @@ interface TenantRow {
   branding_display_name: string;
   branding_primary_color: string | null;
   branding_logo_url: string | null;
+  widget_ai_name: string;
+  widget_welcome_message: string;
+  widget_languages: string[];
   created_at: Date;
   updated_at: Date;
 }
@@ -25,6 +28,12 @@ interface TenantRow {
 interface CountRow {
   count: string;
 }
+
+const defaultWidgetSettings: TenantSnapshot["widget"] = {
+  aiName: "Anna",
+  languages: ["en", "ru", "th", "zh"],
+  welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+};
 
 @Injectable()
 export class PgTenantRepository implements TenantRepository {
@@ -125,7 +134,10 @@ export class PgTenantRepository implements TenantRepository {
           branding_display_name = $5,
           branding_primary_color = $6,
           branding_logo_url = $7,
-          updated_at = $8
+          widget_ai_name = $8,
+          widget_welcome_message = $9,
+          widget_languages = $10,
+          updated_at = $11
         where id = $1
         returning *
       `,
@@ -137,6 +149,9 @@ export class PgTenantRepository implements TenantRepository {
         request.branding?.displayName ?? current.branding.displayName,
         request.branding?.primaryColor ?? current.branding.primaryColor ?? null,
         request.branding?.logoUrl ?? current.branding.logoUrl ?? null,
+        request.widget?.aiName ?? current.widget.aiName,
+        request.widget?.welcomeMessage ?? current.widget.welcomeMessage,
+        request.widget?.languages?.length ? request.widget.languages : current.widget.languages,
         new Date().toISOString()
       ]
     );
@@ -159,6 +174,11 @@ export class PgTenantRepository implements TenantRepository {
         displayName: row.branding_display_name,
         primaryColor: row.branding_primary_color ?? undefined,
         logoUrl: row.branding_logo_url ?? undefined
+      },
+      widget: {
+        aiName: row.widget_ai_name || defaultWidgetSettings.aiName,
+        languages: row.widget_languages?.length ? row.widget_languages : defaultWidgetSettings.languages,
+        welcomeMessage: row.widget_welcome_message || defaultWidgetSettings.welcomeMessage
       },
       createdAt: row.created_at.toISOString(),
       updatedAt: row.updated_at.toISOString()

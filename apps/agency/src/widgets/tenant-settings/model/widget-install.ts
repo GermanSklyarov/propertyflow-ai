@@ -1,4 +1,5 @@
 import type { TenantSnapshot } from "@propertyflow/contracts";
+import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 
 export interface WidgetInstallConfig {
   aiName: string;
@@ -21,15 +22,14 @@ export interface WidgetInstallPackage {
   steps: WidgetInstallStep[];
 }
 
-const defaultLanguageCodes = ["en", "ru", "th", "zh"];
-
 export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstallPackage {
+  const widget = getTenantWidgetSettings(tenant);
   const config: WidgetInstallConfig = {
-    aiName: "Anna",
-    languageCodes: defaultLanguageCodes,
+    aiName: widget.aiName,
+    languageCodes: widget.languages,
     mode: tenant.subscriptionPlan,
     tenantSlug: tenant.slug,
-    welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+    welcomeMessage: widget.welcomeMessage
   };
 
   return {

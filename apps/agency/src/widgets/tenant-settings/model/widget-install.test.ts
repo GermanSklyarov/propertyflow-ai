@@ -4,12 +4,21 @@ import { buildWidgetInstallPackage, buildWidgetSnippet } from "./widget-install"
 
 describe("widget install model", () => {
   it("builds a copy-paste snippet bound to the tenant", () => {
-    const install = buildWidgetInstallPackage(tenantFactory({ slug: "pattaya-demo" }));
+    const install = buildWidgetInstallPackage(
+      tenantFactory({
+        slug: "pattaya-demo",
+        widget: {
+          aiName: "Mali",
+          languages: ["en", "th"],
+          welcomeMessage: "Sawadee, I can help with Pattaya condos."
+        }
+      })
+    );
 
     expect(install.snippet).toContain('data-tenant="pattaya-demo"');
     expect(install.snippet).toContain('data-mode="starter"');
-    expect(install.snippet).toContain('data-ai-name="Anna"');
-    expect(install.snippet).toContain('data-languages="en,ru,th,zh"');
+    expect(install.snippet).toContain('data-ai-name="Mali"');
+    expect(install.snippet).toContain('data-languages="en,th"');
     expect(install.steps.every((step) => step.done)).toBe(true);
   });
 
@@ -25,6 +34,16 @@ describe("widget install model", () => {
     expect(snippet).toContain('data-tenant="demo&lt;script&gt;"');
     expect(snippet).toContain('data-ai-name="Anna &quot;AI&quot;"');
     expect(snippet).toContain('data-welcome-message="Hi &lt;buyer&gt; &amp; family"');
+  });
+
+  it("keeps settings renderable for tenants loaded before widget fields exist", () => {
+    const legacyTenant = tenantFactory();
+    delete (legacyTenant as Partial<TenantSnapshot>).widget;
+
+    const install = buildWidgetInstallPackage(legacyTenant);
+
+    expect(install.snippet).toContain('data-ai-name="Anna"');
+    expect(install.snippet).toContain('data-languages="en,ru,th,zh"');
   });
 });
 
@@ -48,6 +67,11 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
     status: "active",
     subscriptionPlan: "starter",
     updatedAt: "2026-07-20T00:00:00.000Z",
+    widget: {
+      aiName: "Anna",
+      languages: ["en", "ru", "th", "zh"],
+      welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+    },
     ...overrides
   };
 }

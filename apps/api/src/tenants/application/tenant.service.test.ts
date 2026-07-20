@@ -1,6 +1,6 @@
 import { NotFoundException } from "@nestjs/common";
 import { describe, expect, it } from "vitest";
-import type { TenantSnapshot } from "@propertyflow/contracts";
+import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import type { TenantRepository } from "../domain/tenant.repository.js";
 import { TenantService } from "./tenant.service.js";
 
@@ -16,22 +16,27 @@ describe("TenantService", () => {
               primaryColor: "#0f766e"
             },
             slug: "riviera-pattaya",
-            subscriptionPlan: "starter"
+            subscriptionPlan: "starter",
+            widget: {
+              aiName: "Nadia",
+              languages: ["en", "ru"],
+              welcomeMessage: "Hi, I can help with Pattaya property."
+            }
           })
       })
     );
 
     await expect(service.getPublicWidgetConfig("riviera-pattaya")).resolves.toEqual({
-      aiName: "Anna",
+      aiName: "Nadia",
       branding: {
         displayName: "Riviera Pattaya",
         logoUrl: "https://cdn.example.com/logo.png",
         primaryColor: "#0f766e"
       },
       conciergeMode: "starter",
-      languages: ["en", "ru", "th", "zh"],
+      languages: ["en", "ru"],
       tenantSlug: "riviera-pattaya",
-      welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+      welcomeMessage: "Hi, I can help with Pattaya property."
     });
   });
 
@@ -41,6 +46,35 @@ describe("TenantService", () => {
 
     await expect(missing.getPublicWidgetConfig("missing")).rejects.toBeInstanceOf(NotFoundException);
     await expect(suspended.getPublicWidgetConfig("demo-agency")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it("normalizes widget language updates before saving settings", async () => {
+    let capturedRequest: UpdateTenantSettingsRequest | undefined;
+    const service = new TenantService(
+      repository({
+        updateSettings: async (_tenantId, request) => {
+          capturedRequest = request;
+
+          return tenant();
+        }
+      })
+    );
+
+    await service.updateSettings("demo-agency", {
+      widget: {
+        aiName: " Anna ",
+        languages: [" EN ", "ru", "", "en"],
+        welcomeMessage: " Welcome "
+      }
+    });
+
+    expect(capturedRequest).toEqual({
+      widget: {
+        aiName: "Anna",
+        languages: ["en", "ru"],
+        welcomeMessage: "Welcome"
+      }
+    });
   });
 });
 
@@ -78,6 +112,11 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
     status: "active",
     subscriptionPlan: "starter",
     updatedAt: "2026-07-20T00:00:00.000Z",
+    widget: {
+      aiName: "Anna",
+      languages: ["en", "ru", "th", "zh"],
+      welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+    },
     ...overrides
   };
 }

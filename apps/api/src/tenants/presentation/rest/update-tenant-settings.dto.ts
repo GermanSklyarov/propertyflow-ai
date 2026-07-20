@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn, IsOptional, IsString, Matches, ValidateNested } from "class-validator";
+import { IsArray, IsIn, IsOptional, IsString, Matches, ValidateNested } from "class-validator";
 import type { UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 
@@ -23,6 +23,24 @@ export class UpdateTenantBrandingDto {
   logoUrl?: string;
 }
 
+export class UpdateTenantWidgetDto {
+  @ApiProperty({ required: false, example: "Anna" })
+  @IsOptional()
+  @IsString()
+  aiName?: string;
+
+  @ApiProperty({ required: false, example: "Hi! I'm Anna, your AI property consultant." })
+  @IsOptional()
+  @IsString()
+  welcomeMessage?: string;
+
+  @ApiProperty({ required: false, example: ["en", "ru", "th", "zh"], type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  languages?: string[];
+}
+
 export class UpdateTenantSettingsDto implements UpdateTenantSettingsRequest {
   @ApiProperty({ required: false, enum: markets })
   @IsOptional()
@@ -39,4 +57,10 @@ export class UpdateTenantSettingsDto implements UpdateTenantSettingsRequest {
   @ValidateNested()
   @Type(() => UpdateTenantBrandingDto)
   branding?: UpdateTenantBrandingDto;
+
+  @ApiProperty({ required: false, type: UpdateTenantWidgetDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdateTenantWidgetDto)
+  widget?: UpdateTenantWidgetDto;
 }

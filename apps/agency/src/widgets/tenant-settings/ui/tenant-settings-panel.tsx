@@ -10,6 +10,7 @@ import {
   Languages,
   MessageCircle,
   Palette,
+  Pencil,
   Rocket,
   ShieldAlert,
   ShieldCheck,
@@ -26,6 +27,7 @@ import type {
   TenantUsageMetric,
   TenantUsageResponse
 } from "@propertyflow/contracts";
+import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
 import { buildWidgetInstallPackage } from "../model/widget-install";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
@@ -49,6 +51,7 @@ export function TenantSettingsPanel({
   const starterReadiness = buildKnowledgeStarterReadiness(knowledgeDocuments);
   const activeKnowledgeJobs = knowledgeJobs.some((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed");
   const widgetInstall = buildWidgetInstallPackage(tenant);
+  const widgetSettings = getTenantWidgetSettings(tenant);
 
   return (
     <>
@@ -93,7 +96,12 @@ export function TenantSettingsPanel({
               value={activeKnowledgeJobs ? "Indexing now" : starterReadiness.completed ? "RAG ready" : "Waiting for docs"}
             />
             <LaunchStep icon={<Code2 size={17} />} label="3" title="Connect the website" value="Widget snippet" />
-            <LaunchStep icon={<Languages size={17} />} label="4" title="Set AI personality" value="EN, RU, TH, ZH" />
+            <LaunchStep
+              icon={<Languages size={17} />}
+              label="4"
+              title="Set AI personality"
+              value={widgetSettings.languages.map((language) => language.toUpperCase()).join(", ")}
+            />
           </div>
         </div>
 
@@ -127,13 +135,21 @@ export function TenantSettingsPanel({
             </section>
 
             <section className={styles.starterCard}>
-              <p className="section-kicker">Personality</p>
-              <h3>AI consultant profile</h3>
+              <div className={styles.cardTitleRow}>
+                <div>
+                  <p className="section-kicker">Personality</p>
+                  <h3>AI consultant profile</h3>
+                </div>
+                <a className={styles.inlineAction} href="#concierge-personality-settings">
+                  <Pencil size={15} />
+                  Edit
+                </a>
+              </div>
               <div className={styles.personalityGrid}>
-                <Field label="AI name" value="Anna" />
+                <Field label="AI name" value={widgetSettings.aiName} />
                 <Field label="Tone" value="Friendly" />
-                <Field label="Welcome message" value="Hi! I'm Anna, your AI property consultant." />
-                <Field label="Languages" value="EN, RU, TH, ZH" />
+                <Field label="Welcome message" value={widgetSettings.welcomeMessage} />
+                <Field label="Languages" value={widgetSettings.languages.map((language) => language.toUpperCase()).join(", ")} />
               </div>
             </section>
           </div>

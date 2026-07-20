@@ -22,6 +22,7 @@
 .section {
   display: grid;
   gap: 10px;
+  scroll-margin-top: 96px;
 }
 
 .sectionTitle {
@@ -53,7 +54,8 @@
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   min-width: 0;
   min-height: 42px;
   width: 100%;
@@ -66,8 +68,16 @@
   font-weight: 800;
 }
 
+.field textarea {
+  min-height: 92px;
+  resize: vertical;
+  padding-block: 10px;
+  line-height: 1.4;
+}
+
 .field input:focus,
-.field select:focus {
+.field select:focus,
+.field textarea:focus {
   border-color: rgb(15 118 110 / 48%);
   outline: 2px solid rgb(15 118 110 / 12%);
   outline-offset: 0;
