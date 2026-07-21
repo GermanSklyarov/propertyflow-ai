@@ -7,6 +7,7 @@ export interface WidgetInstallConfig {
   mode: "starter" | "growth" | "enterprise";
   tenantSlug: string;
   welcomeMessage: string;
+  welcomeMessages: Record<string, string | undefined>;
 }
 
 export interface WidgetInstallStep {
@@ -29,7 +30,8 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
     languageCodes: widget.languages,
     mode: tenant.subscriptionPlan,
     tenantSlug: tenant.slug,
-    welcomeMessage: widget.welcomeMessage
+    welcomeMessage: widget.welcomeMessage,
+    welcomeMessages: widget.welcomeMessages
   };
 
   return {
@@ -46,7 +48,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
 }
 
 export function buildWidgetSnippet(config: WidgetInstallConfig): string {
-  return `<script src="https://cdn.propertyflow.ai/widget.js" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-ai-name="${escapeAttribute(config.aiName)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
+  return `<script src="https://cdn.propertyflow.ai/widget.js" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="auto" data-ai-name="${escapeAttribute(config.aiName)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
 }
 
 function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {

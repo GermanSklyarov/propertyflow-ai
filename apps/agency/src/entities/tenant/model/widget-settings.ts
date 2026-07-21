@@ -1,15 +1,34 @@
-import type { TenantSnapshot } from "@propertyflow/contracts";
+import type { TenantSnapshot, TenantWidgetLanguage } from "@propertyflow/contracts";
+
+export const supportedTenantWidgetLanguageOptions: Array<{ label: string; value: TenantWidgetLanguage }> = [
+  { label: "English", value: "en" },
+  { label: "Русский", value: "ru" },
+  { label: "ไทย", value: "th" },
+  { label: "中文", value: "zh" }
+];
 
 export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   aiName: "Anna",
   languages: ["en", "ru", "th", "zh"],
-  welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+  welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
+  welcomeMessages: {
+    en: "Hi! I'm Anna, your AI property consultant.",
+    ru: "Привет! Я Анна, ваш AI-консультант по недвижимости.",
+    th: "สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
+    zh: "你好！我是 Anna，你的 AI 房产顾问。"
+  }
 };
 
 export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot["widget"] {
+  const welcomeMessages = {
+    ...defaultTenantWidgetSettings.welcomeMessages,
+    ...tenant.widget?.welcomeMessages
+  };
+
   return {
     aiName: tenant.widget?.aiName || defaultTenantWidgetSettings.aiName,
     languages: tenant.widget?.languages?.length ? tenant.widget.languages : defaultTenantWidgetSettings.languages,
-    welcomeMessage: tenant.widget?.welcomeMessage || defaultTenantWidgetSettings.welcomeMessage
+    welcomeMessage: tenant.widget?.welcomeMessage || welcomeMessages.en || defaultTenantWidgetSettings.welcomeMessage,
+    welcomeMessages
   };
 }

@@ -20,7 +20,11 @@ describe("TenantService", () => {
             widget: {
               aiName: "Nadia",
               languages: ["en", "ru"],
-              welcomeMessage: "Hi, I can help with Pattaya property."
+              welcomeMessage: "Hi, I can help with Pattaya property.",
+              welcomeMessages: {
+                en: "Hi, I can help with Pattaya property.",
+                ru: "Привет, помогу с недвижимостью в Паттайе."
+              }
             }
           })
       })
@@ -36,7 +40,11 @@ describe("TenantService", () => {
       conciergeMode: "starter",
       languages: ["en", "ru"],
       tenantSlug: "riviera-pattaya",
-      welcomeMessage: "Hi, I can help with Pattaya property."
+      welcomeMessage: "Hi, I can help with Pattaya property.",
+      welcomeMessages: {
+        en: "Hi, I can help with Pattaya property.",
+        ru: "Привет, помогу с недвижимостью в Паттайе."
+      }
     });
   });
 
@@ -63,8 +71,15 @@ describe("TenantService", () => {
     await service.updateSettings("demo-agency", {
       widget: {
         aiName: " Anna ",
-        languages: [" EN ", "ru", "", "en"],
-        welcomeMessage: " Welcome "
+        languages: [" EN ", "ru", "es", "en"] as NonNullable<
+          UpdateTenantSettingsRequest["widget"]
+        >["languages"],
+        welcomeMessage: " Welcome ",
+        welcomeMessages: {
+          en: " Welcome ",
+          ru: " Привет ",
+          zh: ""
+        }
       }
     });
 
@@ -72,7 +87,11 @@ describe("TenantService", () => {
       widget: {
         aiName: "Anna",
         languages: ["en", "ru"],
-        welcomeMessage: "Welcome"
+        welcomeMessage: "Welcome",
+        welcomeMessages: {
+          en: "Welcome",
+          ru: "Привет"
+        }
       }
     });
   });
@@ -115,7 +134,13 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
     widget: {
       aiName: "Anna",
       languages: ["en", "ru", "th", "zh"],
-      welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+      welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
+      welcomeMessages: {
+        en: "Hi! I'm Anna, your AI property consultant.",
+        ru: "Привет! Я Анна, ваш AI-консультант по недвижимости.",
+        th: "สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
+        zh: "你好！我是 Anna，你的 AI 房产顾问。"
+      }
     },
     ...overrides
   };

@@ -34,10 +34,15 @@ export interface TenantSnapshot {
   updatedAt: string;
 }
 
+export const supportedTenantWidgetLanguages = ["en", "ru", "th", "zh"] as const;
+
+export type TenantWidgetLanguage = (typeof supportedTenantWidgetLanguages)[number];
+
 export interface TenantWidgetSettings {
   aiName: string;
-  languages: string[];
+  languages: TenantWidgetLanguage[];
   welcomeMessage: string;
+  welcomeMessages: Partial<Record<TenantWidgetLanguage, string>>;
 }
 
 export interface UpdateTenantSettingsRequest {
@@ -62,6 +67,7 @@ export interface PublicWidgetConfigResponse {
   languages: TenantWidgetSettings["languages"];
   tenantSlug: string;
   welcomeMessage: string;
+  welcomeMessages: TenantWidgetSettings["welcomeMessages"];
 }
 
 export type TenantUsageMetricKey = "properties" | "agents" | "aiCreditsMonthly" | "publicApiRequestsMonthly";

@@ -10,15 +10,21 @@ describe("widget install model", () => {
         widget: {
           aiName: "Mali",
           languages: ["en", "th"],
-          welcomeMessage: "Sawadee, I can help with Pattaya condos."
+          welcomeMessage: "Sawadee, I can help with Pattaya condos.",
+          welcomeMessages: {
+            en: "Sawadee, I can help with Pattaya condos.",
+            th: "สวัสดีค่ะ"
+          }
         }
       })
     );
 
     expect(install.snippet).toContain('data-tenant="pattaya-demo"');
     expect(install.snippet).toContain('data-mode="starter"');
+    expect(install.snippet).toContain('data-locale="auto"');
     expect(install.snippet).toContain('data-ai-name="Mali"');
     expect(install.snippet).toContain('data-languages="en,th"');
+    expect(install.snippet).toContain("&quot;en&quot;:&quot;Sawadee");
     expect(install.steps.every((step) => step.done)).toBe(true);
   });
 
@@ -28,7 +34,11 @@ describe("widget install model", () => {
       languageCodes: ["en", "ru"],
       mode: "growth",
       tenantSlug: "demo<script>",
-      welcomeMessage: "Hi <buyer> & family"
+      welcomeMessage: "Hi <buyer> & family",
+      welcomeMessages: {
+        en: "Hi <buyer> & family",
+        ru: "Привет"
+      }
     });
 
     expect(snippet).toContain('data-tenant="demo&lt;script&gt;"');
@@ -70,7 +80,10 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
     widget: {
       aiName: "Anna",
       languages: ["en", "ru", "th", "zh"],
-      welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+      welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
+      welcomeMessages: {
+        en: "Hi! I'm Anna, your AI property consultant."
+      }
     },
     ...overrides
   };

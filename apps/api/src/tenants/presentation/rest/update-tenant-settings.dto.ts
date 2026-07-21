@@ -1,10 +1,11 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsIn, IsOptional, IsString, Matches, ValidateNested } from "class-validator";
-import type { UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import { IsArray, IsIn, IsObject, IsOptional, IsString, Matches, ValidateNested } from "class-validator";
+import type { TenantWidgetLanguage, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
+const widgetLanguages = ["en", "ru", "th", "zh"];
 
 export class UpdateTenantBrandingDto {
   @ApiProperty({ required: false })
@@ -37,8 +38,19 @@ export class UpdateTenantWidgetDto {
   @ApiProperty({ required: false, example: ["en", "ru", "th", "zh"], type: [String] })
   @IsOptional()
   @IsArray()
-  @IsString({ each: true })
-  languages?: string[];
+  @IsIn(widgetLanguages, { each: true })
+  languages?: TenantWidgetLanguage[];
+
+  @ApiProperty({
+    required: false,
+    example: {
+      en: "Hi! I'm Anna, your AI property consultant.",
+      ru: "Привет! Я Анна, ваш AI-консультант по недвижимости."
+    }
+  })
+  @IsOptional()
+  @IsObject()
+  welcomeMessages?: Partial<Record<TenantWidgetLanguage, string>>;
 }
 
 export class UpdateTenantSettingsDto implements UpdateTenantSettingsRequest {

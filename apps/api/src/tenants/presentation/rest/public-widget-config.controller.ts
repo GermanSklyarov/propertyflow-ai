@@ -23,7 +23,13 @@ export class PublicWidgetConfigController {
         conciergeMode: "starter",
         languages: ["en", "ru", "th", "zh"],
         tenantSlug: "demo-agency",
-        welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+        welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
+        welcomeMessages: {
+          en: "Hi! I'm Anna, your AI property consultant.",
+          ru: "Привет! Я Анна, ваш AI-консультант по недвижимости.",
+          th: "สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
+          zh: "你好！我是 Anna，你的 AI 房产顾问。"
+        }
       }
     }
   })

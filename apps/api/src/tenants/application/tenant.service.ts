@@ -2,6 +2,7 @@ import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   PublicWidgetConfigResponse,
   TenantSnapshot,
+  TenantWidgetLanguage,
   TenantUsageMetric,
   TenantUsageResponse,
   UpdateTenantSettingsRequest
@@ -45,7 +46,8 @@ export class TenantService {
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
       tenantSlug: tenant.slug,
-      welcomeMessage: tenant.widget.welcomeMessage
+      welcomeMessage: tenant.widget.welcomeMessage,
+      welcomeMessages: tenant.widget.welcomeMessages
     };
   }
 
@@ -96,10 +98,15 @@ export class TenantService {
   }
 }
 
+const supportedWidgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
+
 function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsRequest): UpdateTenantSettingsRequest {
   const languages = request.widget?.languages
     ?.map((language) => language.trim().toLowerCase())
-    .filter((language, index, values) => Boolean(language) && values.indexOf(language) === index);
+    .filter((language, index, values): language is TenantWidgetLanguage =>
+      supportedWidgetLanguages.includes(language as TenantWidgetLanguage) && values.indexOf(language) === index
+    );
+  const welcomeMessages = normalizeWelcomeMessages(request.widget?.welcomeMessages);
 
   return {
     ...request,
@@ -108,8 +115,25 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
           ...request.widget,
           aiName: request.widget.aiName?.trim() || undefined,
           languages: languages?.length ? languages : undefined,
-          welcomeMessage: request.widget.welcomeMessage?.trim() || undefined
+          welcomeMessage: request.widget.welcomeMessage?.trim() || welcomeMessages?.en || undefined,
+          welcomeMessages
         }
       : undefined
   };
+}
+
+function normalizeWelcomeMessages(messages: Partial<Record<TenantWidgetLanguage, string>> | undefined) {
+  if (!messages) {
+    return undefined;
+  }
+
+  return supportedWidgetLanguages.reduce<Partial<Record<TenantWidgetLanguage, string>>>((normalized, language) => {
+    const value = messages[language]?.trim();
+
+    if (value) {
+      normalized[language] = value;
+    }
+
+    return normalized;
+  }, {});
 }
