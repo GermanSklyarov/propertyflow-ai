@@ -3,6 +3,7 @@ import type {
   PublicWidgetConfigResponse,
   TenantSnapshot,
   TenantWidgetLanguage,
+  TenantWidgetInstallCheckResponse,
   TenantWidgetTone,
   TenantUsageMetric,
   TenantUsageResponse,
@@ -114,6 +115,96 @@ export class TenantService {
     return this.tenants.recordUsage(tenant.id, "public-widget.ask", metadata);
   }
 
+  async verifyWidgetInstall(tenant: TenantSnapshot, url: string): Promise<TenantWidgetInstallCheckResponse> {
+    const checkedAt = new Date().toISOString();
+    const parsedUrl = new URL(url);
+    const normalizedUrl = parsedUrl.toString();
+    const origin = parsedUrl.origin.toLowerCase();
+    const allowedOrigin = !tenant.widget.allowedOrigins.length || tenant.widget.allowedOrigins.includes(origin);
+
+    if (!allowedOrigin) {
+      return {
+        allowedOrigin,
+        checkedAt,
+        expectedTenantSlug: tenant.slug,
+        message: `Add ${origin} to allowed website origins before using this widget there.`,
+        origin,
+        status: "blocked-origin",
+        url: normalizedUrl
+      };
+    }
+
+    try {
+      const response = await fetch(normalizedUrl, {
+        headers: {
+          accept: "text/html"
+        }
+      });
+
+      if (!response.ok) {
+        return {
+          allowedOrigin,
+          checkedAt,
+          expectedTenantSlug: tenant.slug,
+          message: `The page responded with HTTP ${response.status}. Check that the URL is public and reachable.`,
+          origin,
+          status: "unreachable",
+          url: normalizedUrl
+        };
+      }
+
+      const html = await response.text();
+      const detectedTenantSlug = detectWidgetTenantSlug(html);
+      const hasWidgetScript = hasPropertyFlowWidgetScript(html);
+
+      if (!hasWidgetScript) {
+        return {
+          allowedOrigin,
+          checkedAt,
+          expectedTenantSlug: tenant.slug,
+          message: "PropertyFlow widget script was not found on this page.",
+          origin,
+          status: "missing-widget",
+          url: normalizedUrl
+        };
+      }
+
+      if (detectedTenantSlug && detectedTenantSlug !== tenant.slug) {
+        return {
+          allowedOrigin,
+          checkedAt,
+          detectedTenantSlug,
+          expectedTenantSlug: tenant.slug,
+          message: `Widget is installed, but it points to ${detectedTenantSlug} instead of ${tenant.slug}.`,
+          origin,
+          status: "wrong-tenant",
+          url: normalizedUrl
+        };
+      }
+
+      return {
+        allowedOrigin,
+        checkedAt,
+        detectedTenantSlug,
+        expectedTenantSlug: tenant.slug,
+        message: "Widget script is installed and points to this agency workspace.",
+        origin,
+        status: "verified",
+        url: normalizedUrl
+      };
+    } catch (_error) {
+      return {
+        allowedOrigin,
+        checkedAt,
+        expectedTenantSlug: tenant.slug,
+        message: "Could not reach this page. Check the URL or try again after the site is deployed.",
+        origin,
+        status: "unreachable",
+        url: normalizedUrl
+      };
+    }
+  }
+
   private toUsageMetric(key: TenantUsageMetric["key"], used: number, limit: number): TenantUsageMetric {
     return {
       key,
@@ -123,6 +214,16 @@ export class TenantService {
       utilizationRate: limit > 0 ? Math.round((used / limit) * 10_000) / 100 : 0
     };
   }
+}
+
+function hasPropertyFlowWidgetScript(html: string) {
+  return /<script\b[^>]*\bsrc=["'][^"']*(?:propertyflow\.ai\/widget\.js|\/widget\.js)[^"']*["'][^>]*>/i.test(html);
+}
+
+function detectWidgetTenantSlug(html: string) {
+  const match = html.match(/\bdata-tenant=["']([^"']+)["']/i);
+
+  return match?.[1];
 }
 
 const supportedWidgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];

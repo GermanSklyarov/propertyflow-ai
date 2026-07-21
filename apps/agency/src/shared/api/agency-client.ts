@@ -68,6 +68,8 @@ import type {
   SavedSearchOpportunitiesResponse,
   TenantDashboardMetrics,
   TenantSnapshot,
+  TenantWidgetInstallCheckRequest,
+  TenantWidgetInstallCheckResponse,
   TenantUserSnapshot,
   TenantUsageResponse,
   UpdateLeadFollowUpRequest,
@@ -1155,6 +1157,25 @@ export async function updateTenantSettings(request: UpdateTenantSettingsRequest)
   }
 
   return (await response.json()) as TenantSnapshot;
+}
+
+export async function verifyWidgetInstall(
+  request: TenantWidgetInstallCheckRequest
+): Promise<TenantWidgetInstallCheckResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/current/widget/install-check`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...demoHeaders
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify widget install: ${response.status}`);
+  }
+
+  return (await response.json()) as TenantWidgetInstallCheckResponse;
 }
 
 function toQueryString(request: object) {

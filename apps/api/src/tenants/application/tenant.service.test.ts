@@ -1,10 +1,14 @@
 import { NotFoundException } from "@nestjs/common";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import type { TenantRepository } from "../domain/tenant.repository.js";
 import { TenantService } from "./tenant.service.js";
 
 describe("TenantService", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("returns public widget config for an active tenant slug", async () => {
     const service = new TenantService(
       repository({
@@ -120,6 +124,76 @@ describe("TenantService", () => {
     await service.recordPublicWidgetAsk(tenant({ id: "tenant-widget" }), { locale: "en" });
 
     expect(recorded).toEqual([{ metadata: { locale: "en" }, tenantId: "tenant-widget" }]);
+  });
+
+  it("verifies an installed widget script for the current tenant", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        text: async () => '<script src="https://cdn.propertyflow.ai/widget.js" data-tenant="demo-agency"></script>'
+      }))
+    );
+    const service = new TenantService(repository());
+
+    await expect(service.verifyWidgetInstall(tenant(), "https://agency.example.com/listings")).resolves.toMatchObject({
+      allowedOrigin: true,
+      detectedTenantSlug: "demo-agency",
+      expectedTenantSlug: "demo-agency",
+      origin: "https://agency.example.com",
+      status: "verified",
+      url: "https://agency.example.com/listings"
+    });
+  });
+
+  it("blocks widget install checks for origins outside the tenant allowlist", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new TenantService(repository());
+
+    await expect(
+      service.verifyWidgetInstall(
+        tenant({
+          widget: {
+            ...tenant().widget,
+            allowedOrigins: ["https://agency.example.com"]
+          }
+        }),
+        "https://preview.example.com"
+      )
+    ).resolves.toMatchObject({
+      allowedOrigin: false,
+      origin: "https://preview.example.com",
+      status: "blocked-origin"
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("reports a widget script installed for another tenant", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        text: async () => '<script src="/widget.js" data-tenant="other-agency"></script>'
+      }))
+    );
+    const service = new TenantService(repository());
+
+    await expect(service.verifyWidgetInstall(tenant(), "https://agency.example.com")).resolves.toMatchObject({
+      detectedTenantSlug: "other-agency",
+      expectedTenantSlug: "demo-agency",
+      status: "wrong-tenant"
+    });
+  });
+
+  it("reports unreachable widget install pages without throwing", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 404 })));
+    const service = new TenantService(repository());
+
+    await expect(service.verifyWidgetInstall(tenant(), "https://agency.example.com/missing")).resolves.toMatchObject({
+      origin: "https://agency.example.com",
+      status: "unreachable"
+    });
   });
 
   it("normalizes widget language updates before saving settings", async () => {

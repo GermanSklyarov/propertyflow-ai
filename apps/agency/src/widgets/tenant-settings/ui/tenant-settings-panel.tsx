@@ -32,6 +32,7 @@ import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters"
 import { buildWidgetInstallPackage } from "../model/widget-install";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
+import { WidgetInstallCheckForm } from "./widget-install-check-form";
 
 export function TenantSettingsPanel({
   knowledgeDocuments,
@@ -205,6 +206,7 @@ export function TenantSettingsPanel({
                 <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
               </div>
               <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
+              <WidgetInstallCheckForm defaultUrl={tenant.customDomain ? `https://${tenant.customDomain}` : undefined} />
               <div className={styles.widgetInstallSteps}>
                 {widgetInstall.steps.map((step) => (
                   <ReadinessCard item={step} key={step.label} />

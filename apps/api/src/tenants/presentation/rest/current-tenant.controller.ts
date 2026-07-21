@@ -1,6 +1,6 @@
-import { Body, Controller, Get, Inject, Patch, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { RequestUser, TenantSnapshot, TenantUsageResponse } from "@propertyflow/contracts";
+import type { RequestUser, TenantSnapshot, TenantUsageResponse, TenantWidgetInstallCheckResponse } from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -9,6 +9,7 @@ import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { Tenant } from "../../../shared/presentation/tenant.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { TenantService } from "../../application/tenant.service.js";
+import { TenantWidgetInstallCheckDto } from "./tenant-widget-install-check.dto.js";
 import { UpdateTenantSettingsDto } from "./update-tenant-settings.dto.js";
 
 @Controller("tenants")
@@ -71,5 +72,14 @@ export class CurrentTenantController {
     });
 
     return updated;
+  }
+
+  @Post("current/widget/install-check")
+  @Roles("manager", "admin")
+  verifyWidgetInstall(
+    @Tenant() tenant: TenantSnapshot,
+    @Body() payload: TenantWidgetInstallCheckDto
+  ): Promise<TenantWidgetInstallCheckResponse> {
+    return this.tenants.verifyWidgetInstall(tenant, payload.url);
   }
 }

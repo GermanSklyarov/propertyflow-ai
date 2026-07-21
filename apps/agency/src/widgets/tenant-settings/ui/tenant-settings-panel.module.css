@@ -381,6 +381,109 @@
   gap: 8px;
 }
 
+.installCheck {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbfa;
+  padding: 10px;
+}
+
+.installCheck label {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.installCheckRow {
+  display: grid;
+  gap: 8px;
+}
+
+.installCheckRow input,
+.installCheckRow button {
+  min-width: 0;
+  min-height: 38px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  font: inherit;
+  font-weight: 900;
+}
+
+.installCheckRow input {
+  background: #fff;
+  color: var(--ink);
+  padding: 0 10px;
+}
+
+.installCheckRow button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--teal);
+  color: #fff;
+  cursor: pointer;
+  padding: 0 12px;
+  text-transform: uppercase;
+}
+
+.installCheckRow button:hover:not(:disabled) {
+  background: #0f766e;
+}
+
+.installCheckRow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.installCheckResult {
+  display: grid;
+  grid-template-columns: 17px minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  padding: 9px;
+}
+
+.installCheckResult strong,
+.installCheckResult span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.installCheckResult strong {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.installCheckResult span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.installCheckVerified {
+  background: #ecfdf3;
+  border-color: rgb(21 128 61 / 20%);
+}
+
+.installCheckVerified svg {
+  color: #15803d;
+}
+
+.installCheckWarning {
+  background: #fff7ed;
+  border-color: rgb(180 83 9 / 20%);
+}
+
+.installCheckWarning svg {
+  color: #9a5d0a;
+}
+
 .widgetInstallSteps .readinessCard {
   grid-template-columns: 18px minmax(0, 1fr);
   background: #f7fbfa;
@@ -697,6 +800,10 @@
   .readinessGrid,
   .usageGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .installCheckRow {
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 }
 

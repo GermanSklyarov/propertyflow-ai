@@ -90,6 +90,28 @@ export interface PublicWidgetAskResponse extends AiChatResponse {
   tenantSlug: string;
 }
 
+export type TenantWidgetInstallCheckStatus =
+  | "verified"
+  | "missing-widget"
+  | "wrong-tenant"
+  | "blocked-origin"
+  | "unreachable";
+
+export interface TenantWidgetInstallCheckRequest {
+  url: string;
+}
+
+export interface TenantWidgetInstallCheckResponse {
+  allowedOrigin: boolean;
+  checkedAt: string;
+  detectedTenantSlug?: string;
+  expectedTenantSlug: string;
+  message: string;
+  origin: string;
+  status: TenantWidgetInstallCheckStatus;
+  url: string;
+}
+
 export type TenantUsageMetricKey = "properties" | "agents" | "aiCreditsMonthly" | "publicApiRequestsMonthly";
 
 export interface TenantUsageMetric {
