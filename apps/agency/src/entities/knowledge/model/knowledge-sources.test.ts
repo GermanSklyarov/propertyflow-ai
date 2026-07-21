@@ -59,9 +59,9 @@ describe("knowledge sources model", () => {
 
     expect(summary.total).toBe(12);
     expect(summary.connected).toBe(4);
-    expect(summary.ready).toBe(0);
-    expect(summary.planned).toBe(8);
-    expect(summary.actionable).toBe(4);
+    expect(summary.ready).toBe(2);
+    expect(summary.planned).toBe(6);
+    expect(summary.actionable).toBe(6);
   });
 
   it("documents the unified ingestion pipeline", () => {
@@ -100,6 +100,29 @@ describe("knowledge sources model", () => {
     expect(propertyFeed?.connectors[0]).toMatchObject({
       countLabel: "1 listing docs",
       runtimeNote: "Feeds Concierge without forcing CRM",
+      status: "connected"
+    });
+  });
+
+  it("surfaces pasted website pages as concierge knowledge sources", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [
+        knowledgeDocument({ tags: ["website", "source:website-faq-pages"] }),
+        knowledgeDocument({ id: "knowledge-2", tags: ["blog", "source:website-blog-articles"] })
+      ],
+      jobs: [],
+      totalDocuments: 2
+    });
+    const website = groups.find((group) => group.type === "website");
+
+    expect(website?.connectors[0]).toMatchObject({
+      countLabel: "1 pages",
+      runtimeNote: "FAQ pages ready for Concierge",
+      status: "connected"
+    });
+    expect(website?.connectors[1]).toMatchObject({
+      countLabel: "1 pages",
+      runtimeNote: "Website articles ready for Concierge",
       status: "connected"
     });
   });

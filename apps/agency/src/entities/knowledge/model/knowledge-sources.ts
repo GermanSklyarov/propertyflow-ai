@@ -82,8 +82,20 @@ export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
   },
   {
     connectors: [
-      { label: "FAQ pages", mode: "concierge_index_only", status: "planned" },
-      { label: "Blog article import", mode: "concierge_index_only", status: "planned" },
+      {
+        actionHref: "#create-knowledge-document",
+        actionLabel: "Add website FAQ",
+        label: "FAQ pages",
+        mode: "concierge_index_only",
+        status: "ready"
+      },
+      {
+        actionHref: "#create-knowledge-document",
+        actionLabel: "Add article",
+        label: "Blog article import",
+        mode: "concierge_index_only",
+        status: "ready"
+      },
       { label: "Sitemap crawler", mode: "concierge_index_only", status: "planned" }
     ],
     description: "Existing website content becomes part of the same retrieval layer as uploaded documents.",
@@ -166,6 +178,8 @@ export function buildRuntimeKnowledgeSourceGroups(
   );
   const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && isRunningJob(job));
   const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
+  const websiteFaqDocuments = countDocumentsWithTags(input.documents, ["source:website-faq-pages", "faq-page"]);
+  const websiteArticleDocuments = countDocumentsWithTags(input.documents, ["source:website-blog-articles", "blog"]);
   const uploadedKnowledgeDocuments = Math.max(input.totalDocuments - listingKnowledgeDocuments, 0);
   const recentImportKnowledgeDocuments = input.jobs
     .filter((job) => job.name === "properties.import")
@@ -215,8 +229,43 @@ export function buildRuntimeKnowledgeSourceGroups(
       };
     }
 
+    if (group.type === "website") {
+      return {
+        ...group,
+        connectors: group.connectors.map((connector) => {
+          if (connector.label === "FAQ pages") {
+            return buildRuntimeWebsiteConnector(connector, websiteFaqDocuments, activeKnowledgeJobs, "FAQ pages ready for Concierge");
+          }
+
+          if (connector.label === "Blog article import") {
+            return buildRuntimeWebsiteConnector(connector, websiteArticleDocuments, activeKnowledgeJobs, "Website articles ready for Concierge");
+          }
+
+          return connector;
+        })
+      };
+    }
+
     return group;
   });
+}
+
+function buildRuntimeWebsiteConnector(
+  connector: KnowledgeSourceConnector,
+  count: number,
+  activeKnowledgeJobs: boolean,
+  connectedNote: string
+): KnowledgeSourceConnector {
+  return {
+    ...connector,
+    countLabel: `${count} pages`,
+    runtimeNote: activeKnowledgeJobs ? "Indexing website source content" : count ? connectedNote : "Paste page copy or upload HTML",
+    status: activeKnowledgeJobs ? "indexing" : count ? "connected" : connector.status
+  };
+}
+
+function countDocumentsWithTags(documents: KnowledgeDocumentSnapshot[], tags: string[]) {
+  return documents.filter((document) => tags.some((tag) => document.tags.includes(tag))).length;
 }
 
 function isRunningJob(job: BackgroundJobMonitorItem) {

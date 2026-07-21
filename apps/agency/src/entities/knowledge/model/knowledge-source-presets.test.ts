@@ -45,7 +45,19 @@ describe("knowledge source presets", () => {
       "tax-information",
       "visa-guide",
       "internal-instructions",
+      "website-faq-pages",
+      "website-blog-articles",
       "custom"
     ]);
+  });
+
+  it("tags website sources for starter concierge retrieval", () => {
+    const tags = buildKnowledgeSourceTags({
+      sourcePresetId: "website-faq-pages",
+      storageBacked: false,
+      typedTags: "website url"
+    });
+
+    expect(tags).toEqual(expect.arrayContaining(["source:website-faq-pages", "website", "faq-page", "public-site", "website-url"]));
   });
 });

@@ -73,6 +73,20 @@ export const knowledgeDocumentSourcePresets: KnowledgeDocumentSourcePreset[] = [
     title: "Internal instructions"
   },
   {
+    defaultKind: "faq",
+    description: "Existing website FAQ pages copied into the same AI retrieval layer as uploaded documents.",
+    id: "website-faq-pages",
+    tags: ["website", "faq-page", "public-site", "source-url"],
+    title: "Website FAQ pages"
+  },
+  {
+    defaultKind: "article",
+    description: "Blog articles, area guides, and public website content that should answer client questions.",
+    id: "website-blog-articles",
+    tags: ["website", "blog", "article", "public-site", "source-url"],
+    title: "Website blog articles"
+  },
+  {
     defaultKind: "article",
     description: "Use this for one-off knowledge that does not belong to the starter checklist.",
     id: "custom",
