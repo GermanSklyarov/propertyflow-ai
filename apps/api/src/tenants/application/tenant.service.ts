@@ -34,12 +34,18 @@ export class TenantService {
     return tenant;
   }
 
-  async getPublicWidgetConfig(slug: string): Promise<PublicWidgetConfigResponse> {
+  async getActiveTenantBySlugOrThrow(slug: string, message = "Tenant not found"): Promise<TenantSnapshot> {
     const tenant = await this.tenants.findBySlug(slug);
 
     if (!tenant || tenant.status !== "active") {
-      throw new NotFoundException("Widget tenant not found");
+      throw new NotFoundException(message);
     }
+
+    return tenant;
+  }
+
+  async getPublicWidgetConfig(slug: string): Promise<PublicWidgetConfigResponse> {
+    const tenant = await this.getActiveTenantBySlugOrThrow(slug, "Widget tenant not found");
 
     return {
       aiName: tenant.widget.aiName,

@@ -7,10 +7,11 @@ import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
 import { AiChatService } from "./application/ai-chat.service.js";
 import { ChatController } from "./presentation/rest/chat.controller.js";
+import { PublicWidgetChatController } from "./presentation/rest/public-widget-chat.controller.js";
 
 @Module({
   imports: [AuditModule, AuthModule, KnowledgeModule, PropertiesModule, SearchObservabilityModule, TenantsModule],
-  controllers: [ChatController],
+  controllers: [ChatController, PublicWidgetChatController],
   providers: [AiChatService]
 })
 export class ChatModule {}

@@ -383,10 +383,11 @@ function demoPropertyImageGallery(propertyId: string): PropertyImageGalleryRespo
   const now = new Date().toISOString();
 
   if (!property) {
-    return { images: [], propertyId };
+    return { deletedImages: [], images: [], propertyId };
   }
 
   return {
+    deletedImages: [],
     images: demoPropertyImageUrls(property).map((imageUrl, index) => ({
       caption: index === 0 ? `${property.title} cover` : `${property.title} photo ${index + 1}`,
       createdAt: now,

@@ -74,6 +74,17 @@ describe("TenantService", () => {
     await expect(suspended.getPublicWidgetConfig("demo-agency")).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it("resolves only active tenants for public widget runtime endpoints", async () => {
+    const active = new TenantService(repository({ findBySlug: async () => tenant({ id: "tenant-active", slug: "active-agency" }) }));
+    const suspended = new TenantService(repository({ findBySlug: async () => tenant({ status: "suspended" }) }));
+
+    await expect(active.getActiveTenantBySlugOrThrow("active-agency")).resolves.toMatchObject({
+      id: "tenant-active",
+      slug: "active-agency"
+    });
+    await expect(suspended.getActiveTenantBySlugOrThrow("demo-agency")).rejects.toBeInstanceOf(NotFoundException);
+  });
+
   it("normalizes widget language updates before saving settings", async () => {
     let capturedRequest: UpdateTenantSettingsRequest | undefined;
     const service = new TenantService(

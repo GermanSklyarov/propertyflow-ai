@@ -29,6 +29,7 @@ describe("widget install model", () => {
     );
 
     expect(install.snippet).toContain('data-tenant="pattaya-demo"');
+    expect(install.snippet).toContain('data-api-base="https://api.propertyflow.ai"');
     expect(install.snippet).toContain('data-mode="starter"');
     expect(install.snippet).toContain('data-locale="auto"');
     expect(install.snippet).toContain('data-ai-name="Mali"');

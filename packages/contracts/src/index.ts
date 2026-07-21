@@ -80,6 +80,14 @@ export interface PublicWidgetConfigResponse {
   welcomeMessages: TenantWidgetSettings["welcomeMessages"];
 }
 
+export interface PublicWidgetAskRequest extends AiChatRequest {}
+
+export interface PublicWidgetAskResponse extends AiChatResponse {
+  conciergeMode: TenantSnapshot["subscriptionPlan"];
+  locale: TenantWidgetLanguage;
+  tenantSlug: string;
+}
+
 export type TenantUsageMetricKey = "properties" | "agents" | "aiCreditsMonthly" | "publicApiRequestsMonthly";
 
 export interface TenantUsageMetric {

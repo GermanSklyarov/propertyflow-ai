@@ -2,6 +2,7 @@ import type { TenantSnapshot } from "@propertyflow/contracts";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 
 export interface WidgetInstallConfig {
+  apiBaseUrl?: string;
   aiName: string;
   aiNames: Record<string, string | undefined>;
   languageCodes: string[];
@@ -55,7 +56,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
 }
 
 export function buildWidgetSnippet(config: WidgetInstallConfig): string {
-  return `<script src="https://cdn.propertyflow.ai/widget.js" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="auto" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
+  return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="auto" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
 }
 
 function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
