@@ -16,12 +16,24 @@ export class PublicWidgetConfigController {
     schema: {
       example: {
         aiName: "Anna",
+        aiNames: {
+          en: "Anna",
+          ru: "Анна",
+          th: "มาลี",
+          zh: "安娜"
+        },
         branding: {
           displayName: "Demo Agency",
           primaryColor: "#0f766e"
         },
         conciergeMode: "starter",
         languages: ["en", "ru", "th", "zh"],
+        personaGenders: {
+          en: "feminine",
+          ru: "feminine",
+          th: "feminine",
+          zh: "neutral"
+        },
         tenantSlug: "demo-agency",
         welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
         welcomeMessages: {

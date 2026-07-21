@@ -14,8 +14,10 @@ create table if not exists tenants (
   branding_primary_color text,
   branding_logo_url text,
   widget_ai_name text not null default 'Anna',
+  widget_ai_names jsonb not null default '{"en":"Anna","ru":"Анна","th":"มาลี","zh":"安娜"}'::jsonb,
   widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.',
   widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb,
+  widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
   widget_languages text[] not null default array['en','ru','th','zh'],
   created_at timestamptz not null,
   updated_at timestamptz not null
@@ -26,8 +28,10 @@ alter table tenants add column if not exists domain_status text not null default
 alter table tenants add column if not exists subscription_plan text not null default 'starter';
 alter table tenants add column if not exists limits jsonb not null default '{"properties":100,"agents":5,"aiCreditsMonthly":1000,"publicApiRequestsMonthly":10000}'::jsonb;
 alter table tenants add column if not exists widget_ai_name text not null default 'Anna';
+alter table tenants add column if not exists widget_ai_names jsonb not null default '{"en":"Anna","ru":"Анна","th":"มาลี","zh":"安娜"}'::jsonb;
 alter table tenants add column if not exists widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.';
 alter table tenants add column if not exists widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb;
+alter table tenants add column if not exists widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb;
 alter table tenants add column if not exists widget_languages text[] not null default array['en','ru','th','zh'];
 create unique index if not exists idx_tenants_custom_domain on tenants (custom_domain) where custom_domain is not null;
 
@@ -45,8 +49,10 @@ insert into tenants (
   branding_primary_color,
   branding_logo_url,
   widget_ai_name,
+  widget_ai_names,
   widget_welcome_message,
   widget_welcome_messages,
+  widget_persona_genders,
   widget_languages,
   created_at,
   updated_at
@@ -64,8 +70,10 @@ insert into tenants (
   '#0f766e',
   null,
   'Anna',
+  '{"en":"Anna","ru":"Анна","th":"มาลี","zh":"安娜"}'::jsonb,
   'Hi! I''m Anna, your AI property consultant.',
   '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb,
+  '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
   array['en','ru','th','zh'],
   now(),
   now()

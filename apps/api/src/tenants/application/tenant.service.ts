@@ -42,9 +42,11 @@ export class TenantService {
 
     return {
       aiName: tenant.widget.aiName,
+      aiNames: tenant.widget.aiNames,
       branding: tenant.branding,
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
+      personaGenders: tenant.widget.personaGenders,
       tenantSlug: tenant.slug,
       welcomeMessage: tenant.widget.welcomeMessage,
       welcomeMessages: tenant.widget.welcomeMessages
@@ -99,6 +101,7 @@ export class TenantService {
 }
 
 const supportedWidgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
+const supportedPersonaGenders = ["feminine", "masculine", "neutral"] as const;
 
 function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsRequest): UpdateTenantSettingsRequest {
   const languages = request.widget?.languages
@@ -106,7 +109,9 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
     .filter((language, index, values): language is TenantWidgetLanguage =>
       supportedWidgetLanguages.includes(language as TenantWidgetLanguage) && values.indexOf(language) === index
     );
-  const welcomeMessages = normalizeWelcomeMessages(request.widget?.welcomeMessages);
+  const aiNames = normalizeLocalizedStrings(request.widget?.aiNames);
+  const welcomeMessages = normalizeLocalizedStrings(request.widget?.welcomeMessages);
+  const personaGenders = normalizePersonaGenders(request.widget?.personaGenders);
 
   return {
     ...request,
@@ -114,7 +119,9 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
       ? {
           ...request.widget,
           aiName: request.widget.aiName?.trim() || undefined,
+          aiNames,
           languages: languages?.length ? languages : undefined,
+          personaGenders,
           welcomeMessage: request.widget.welcomeMessage?.trim() || welcomeMessages?.en || undefined,
           welcomeMessages
         }
@@ -122,13 +129,13 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
   };
 }
 
-function normalizeWelcomeMessages(messages: Partial<Record<TenantWidgetLanguage, string>> | undefined) {
-  if (!messages) {
+function normalizeLocalizedStrings(values: Partial<Record<TenantWidgetLanguage, string>> | undefined) {
+  if (!values) {
     return undefined;
   }
 
   return supportedWidgetLanguages.reduce<Partial<Record<TenantWidgetLanguage, string>>>((normalized, language) => {
-    const value = messages[language]?.trim();
+    const value = values[language]?.trim();
 
     if (value) {
       normalized[language] = value;
@@ -136,4 +143,25 @@ function normalizeWelcomeMessages(messages: Partial<Record<TenantWidgetLanguage,
 
     return normalized;
   }, {});
+}
+
+function normalizePersonaGenders(
+  values: Partial<Record<TenantWidgetLanguage, (typeof supportedPersonaGenders)[number]>> | undefined
+) {
+  if (!values) {
+    return undefined;
+  }
+
+  return supportedWidgetLanguages.reduce<Partial<Record<TenantWidgetLanguage, (typeof supportedPersonaGenders)[number]>>>(
+    (normalized, language) => {
+      const value = values[language];
+
+      if (supportedPersonaGenders.includes(value as (typeof supportedPersonaGenders)[number])) {
+        normalized[language] = value;
+      }
+
+      return normalized;
+    },
+    {}
+  );
 }

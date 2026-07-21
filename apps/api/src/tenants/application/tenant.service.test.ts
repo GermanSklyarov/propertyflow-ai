@@ -19,7 +19,15 @@ describe("TenantService", () => {
             subscriptionPlan: "starter",
             widget: {
               aiName: "Nadia",
+              aiNames: {
+                en: "Nadia",
+                ru: "Надя"
+              },
               languages: ["en", "ru"],
+              personaGenders: {
+                en: "feminine",
+                ru: "feminine"
+              },
               welcomeMessage: "Hi, I can help with Pattaya property.",
               welcomeMessages: {
                 en: "Hi, I can help with Pattaya property.",
@@ -32,6 +40,10 @@ describe("TenantService", () => {
 
     await expect(service.getPublicWidgetConfig("riviera-pattaya")).resolves.toEqual({
       aiName: "Nadia",
+      aiNames: {
+        en: "Nadia",
+        ru: "Надя"
+      },
       branding: {
         displayName: "Riviera Pattaya",
         logoUrl: "https://cdn.example.com/logo.png",
@@ -39,6 +51,10 @@ describe("TenantService", () => {
       },
       conciergeMode: "starter",
       languages: ["en", "ru"],
+      personaGenders: {
+        en: "feminine",
+        ru: "feminine"
+      },
       tenantSlug: "riviera-pattaya",
       welcomeMessage: "Hi, I can help with Pattaya property.",
       welcomeMessages: {
@@ -71,9 +87,19 @@ describe("TenantService", () => {
     await service.updateSettings("demo-agency", {
       widget: {
         aiName: " Anna ",
+        aiNames: {
+          en: " Anna ",
+          ru: " Анна ",
+          zh: ""
+        },
         languages: [" EN ", "ru", "es", "en"] as NonNullable<
           UpdateTenantSettingsRequest["widget"]
         >["languages"],
+        personaGenders: {
+          en: "feminine",
+          ru: "wizard" as never,
+          zh: "neutral"
+        },
         welcomeMessage: " Welcome ",
         welcomeMessages: {
           en: " Welcome ",
@@ -86,7 +112,15 @@ describe("TenantService", () => {
     expect(capturedRequest).toEqual({
       widget: {
         aiName: "Anna",
+        aiNames: {
+          en: "Anna",
+          ru: "Анна"
+        },
         languages: ["en", "ru"],
+        personaGenders: {
+          en: "feminine",
+          zh: "neutral"
+        },
         welcomeMessage: "Welcome",
         welcomeMessages: {
           en: "Welcome",
@@ -133,7 +167,19 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
     updatedAt: "2026-07-20T00:00:00.000Z",
     widget: {
       aiName: "Anna",
+      aiNames: {
+        en: "Anna",
+        ru: "Анна",
+        th: "มาลี",
+        zh: "安娜"
+      },
       languages: ["en", "ru", "th", "zh"],
+      personaGenders: {
+        en: "feminine",
+        ru: "feminine",
+        th: "feminine",
+        zh: "neutral"
+      },
       welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
       welcomeMessages: {
         en: "Hi! I'm Anna, your AI property consultant.",

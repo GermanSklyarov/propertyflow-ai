@@ -1,7 +1,8 @@
 import { Bot, CheckCircle2, Globe2, Palette, Save } from "lucide-react";
 import { updateTenantSettingsAction } from "@entities/tenant/api/tenant-actions";
-import { getTenantWidgetSettings, supportedTenantWidgetLanguageOptions } from "@entities/tenant/model/widget-settings";
+import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import type { TenantSnapshot } from "@propertyflow/contracts";
+import { TenantWidgetPersonaFields } from "./tenant-widget-persona-fields";
 import styles from "./update-tenant-settings-form.module.css";
 
 const markets = [
@@ -81,40 +82,7 @@ export function UpdateTenantSettingsForm({
           <Bot size={16} />
           AI Concierge personality
         </div>
-        <div className={styles.fieldGrid}>
-          <label className={styles.field}>
-            <span>AI name</span>
-            <input defaultValue={widgetSettings.aiName} name="aiName" required />
-          </label>
-        </div>
-        <div className={styles.field}>
-          <span>Languages</span>
-          <div className={styles.languageOptions}>
-            {supportedTenantWidgetLanguageOptions.map((language) => (
-              <label className={styles.languageOption} key={language.value}>
-                <input defaultChecked={widgetSettings.languages.includes(language.value)} name="languages" type="checkbox" value={language.value} />
-                <span>{language.label}</span>
-                <strong>{language.value.toUpperCase()}</strong>
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className={styles.localizedMessages}>
-          {supportedTenantWidgetLanguageOptions.map((language) => (
-            <label className={styles.field} key={language.value}>
-              <span>{language.label} welcome message</span>
-              <textarea
-                defaultValue={widgetSettings.welcomeMessages[language.value] ?? widgetSettings.welcomeMessage}
-                name={`welcomeMessage.${language.value}`}
-                required={widgetSettings.languages.includes(language.value)}
-                rows={3}
-              />
-            </label>
-          ))}
-        </div>
-        <p className={styles.hint}>
-          The widget can read the site locale from its embed attribute and pick the matching welcome message. Unsupported languages stay hidden until we add them.
-        </p>
+        <TenantWidgetPersonaFields widgetSettings={widgetSettings} />
       </section>
 
       <div className={styles.actions}>

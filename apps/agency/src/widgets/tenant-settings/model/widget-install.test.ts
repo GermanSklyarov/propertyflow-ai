@@ -9,7 +9,15 @@ describe("widget install model", () => {
         slug: "pattaya-demo",
         widget: {
           aiName: "Mali",
+          aiNames: {
+            en: "Mali",
+            th: "มาลี"
+          },
           languages: ["en", "th"],
+          personaGenders: {
+            en: "feminine",
+            th: "feminine"
+          },
           welcomeMessage: "Sawadee, I can help with Pattaya condos.",
           welcomeMessages: {
             en: "Sawadee, I can help with Pattaya condos.",
@@ -23,6 +31,8 @@ describe("widget install model", () => {
     expect(install.snippet).toContain('data-mode="starter"');
     expect(install.snippet).toContain('data-locale="auto"');
     expect(install.snippet).toContain('data-ai-name="Mali"');
+    expect(install.snippet).toContain("data-ai-names=");
+    expect(install.snippet).toContain("data-persona-genders=");
     expect(install.snippet).toContain('data-languages="en,th"');
     expect(install.snippet).toContain("&quot;en&quot;:&quot;Sawadee");
     expect(install.steps.every((step) => step.done)).toBe(true);
@@ -31,8 +41,16 @@ describe("widget install model", () => {
   it("escapes snippet attributes", () => {
     const snippet = buildWidgetSnippet({
       aiName: 'Anna "AI"',
+      aiNames: {
+        en: 'Anna "AI"',
+        ru: "Анна"
+      },
       languageCodes: ["en", "ru"],
       mode: "growth",
+      personaGenders: {
+        en: "feminine",
+        ru: "feminine"
+      },
       tenantSlug: "demo<script>",
       welcomeMessage: "Hi <buyer> & family",
       welcomeMessages: {
@@ -79,7 +97,19 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
     updatedAt: "2026-07-20T00:00:00.000Z",
     widget: {
       aiName: "Anna",
+      aiNames: {
+        en: "Anna",
+        ru: "Анна",
+        th: "มาลี",
+        zh: "安娜"
+      },
       languages: ["en", "ru", "th", "zh"],
+      personaGenders: {
+        en: "feminine",
+        ru: "feminine",
+        th: "feminine",
+        zh: "neutral"
+      },
       welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
       welcomeMessages: {
         en: "Hi! I'm Anna, your AI property consultant."

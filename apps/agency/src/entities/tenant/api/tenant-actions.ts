@@ -8,6 +8,7 @@ import { updateTenantSettings } from "@shared/api/agency-client";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const widgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
+const widgetPersonaGenders = ["feminine", "masculine", "neutral"] as const;
 
 export async function updateTenantSettingsAction(formData: FormData) {
   const displayName = getOptionalString(formData, "displayName");
@@ -15,8 +16,10 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const logoUrl = getOptionalString(formData, "logoUrl");
   const customDomain = getOptionalString(formData, "customDomain");
   const primaryMarket = getOptionalMarket(formData);
-  const aiName = getOptionalString(formData, "aiName");
   const languages = getLanguageCodes(formData);
+  const aiNames = getLocalizedStrings(formData, "aiName");
+  const aiName = aiNames.en;
+  const personaGenders = getPersonaGenders(formData);
   const welcomeMessages = getWelcomeMessages(formData);
   const welcomeMessage = welcomeMessages.en;
 
@@ -30,7 +33,9 @@ export async function updateTenantSettingsAction(formData: FormData) {
     },
     widget: {
       ...(aiName ? { aiName } : {}),
+      ...(Object.keys(aiNames).length ? { aiNames } : {}),
       ...(languages.length ? { languages } : {}),
+      ...(Object.keys(personaGenders).length ? { personaGenders } : {}),
       ...(welcomeMessage ? { welcomeMessage } : {}),
       ...(Object.keys(welcomeMessages).length ? { welcomeMessages } : {})
     }
@@ -59,8 +64,12 @@ function getLanguageCodes(formData: FormData): TenantWidgetLanguage[] {
 }
 
 function getWelcomeMessages(formData: FormData): Partial<Record<TenantWidgetLanguage, string>> {
+  return getLocalizedStrings(formData, "welcomeMessage");
+}
+
+function getLocalizedStrings(formData: FormData, fieldName: string): Partial<Record<TenantWidgetLanguage, string>> {
   return widgetLanguages.reduce<Partial<Record<TenantWidgetLanguage, string>>>((messages, language) => {
-    const value = getOptionalString(formData, `welcomeMessage.${language}`);
+    const value = getOptionalString(formData, `${fieldName}.${language}`);
 
     if (value) {
       messages[language] = value;
@@ -68,4 +77,19 @@ function getWelcomeMessages(formData: FormData): Partial<Record<TenantWidgetLang
 
     return messages;
   }, {});
+}
+
+function getPersonaGenders(formData: FormData) {
+  return widgetLanguages.reduce<Partial<Record<TenantWidgetLanguage, (typeof widgetPersonaGenders)[number]>>>(
+    (genders, language) => {
+      const value = String(formData.get(`personaGender.${language}`) ?? "").trim();
+
+      if (widgetPersonaGenders.includes(value as (typeof widgetPersonaGenders)[number])) {
+        genders[language] = value as (typeof widgetPersonaGenders)[number];
+      }
+
+      return genders;
+    },
+    {}
+  );
 }

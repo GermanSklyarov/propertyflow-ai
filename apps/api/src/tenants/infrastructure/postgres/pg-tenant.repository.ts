@@ -1,5 +1,10 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { TenantSnapshot, TenantWidgetLanguage, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import type {
+  TenantSnapshot,
+  TenantWidgetLanguage,
+  TenantWidgetPersonaGender,
+  UpdateTenantSettingsRequest
+} from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
@@ -19,8 +24,10 @@ interface TenantRow {
   branding_primary_color: string | null;
   branding_logo_url: string | null;
   widget_ai_name: string;
+  widget_ai_names: Partial<Record<TenantWidgetLanguage, string>> | null;
   widget_welcome_message: string;
   widget_welcome_messages: Partial<Record<TenantWidgetLanguage, string>> | null;
+  widget_persona_genders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>> | null;
   widget_languages: string[];
   created_at: Date;
   updated_at: Date;
@@ -32,7 +39,19 @@ interface CountRow {
 
 const defaultWidgetSettings: TenantSnapshot["widget"] = {
   aiName: "Anna",
+  aiNames: {
+    en: "Anna",
+    ru: "Анна",
+    th: "มาลี",
+    zh: "安娜"
+  },
   languages: ["en", "ru", "th", "zh"],
+  personaGenders: {
+    en: "feminine",
+    ru: "feminine",
+    th: "feminine",
+    zh: "neutral"
+  },
   welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
   welcomeMessages: {
     en: "Hi! I'm Anna, your AI property consultant.",
@@ -142,10 +161,12 @@ export class PgTenantRepository implements TenantRepository {
           branding_primary_color = $6,
           branding_logo_url = $7,
           widget_ai_name = $8,
-          widget_welcome_message = $9,
-          widget_welcome_messages = $10,
-          widget_languages = $11,
-          updated_at = $12
+          widget_ai_names = $9,
+          widget_welcome_message = $10,
+          widget_welcome_messages = $11,
+          widget_persona_genders = $12,
+          widget_languages = $13,
+          updated_at = $14
         where id = $1
         returning *
       `,
@@ -158,8 +179,10 @@ export class PgTenantRepository implements TenantRepository {
         request.branding?.primaryColor ?? current.branding.primaryColor ?? null,
         request.branding?.logoUrl ?? current.branding.logoUrl ?? null,
         request.widget?.aiName ?? current.widget.aiName,
+        request.widget?.aiNames ?? current.widget.aiNames,
         request.widget?.welcomeMessage ?? current.widget.welcomeMessage,
         request.widget?.welcomeMessages ?? current.widget.welcomeMessages,
+        request.widget?.personaGenders ?? current.widget.personaGenders,
         request.widget?.languages?.length ? request.widget.languages : current.widget.languages,
         new Date().toISOString()
       ]
@@ -186,7 +209,16 @@ export class PgTenantRepository implements TenantRepository {
       },
       widget: {
         aiName: row.widget_ai_name || defaultWidgetSettings.aiName,
+        aiNames: {
+          ...defaultWidgetSettings.aiNames,
+          ...(row.widget_ai_names ?? {}),
+          en: row.widget_ai_name || row.widget_ai_names?.en || defaultWidgetSettings.aiNames.en
+        },
         languages: filterSupportedLanguages(row.widget_languages),
+        personaGenders: {
+          ...defaultWidgetSettings.personaGenders,
+          ...(row.widget_persona_genders ?? {})
+        },
         welcomeMessage: row.widget_welcome_message || defaultWidgetSettings.welcomeMessage,
         welcomeMessages: {
           ...defaultWidgetSettings.welcomeMessages,

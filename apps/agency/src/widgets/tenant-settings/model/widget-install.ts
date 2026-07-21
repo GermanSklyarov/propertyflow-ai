@@ -3,8 +3,10 @@ import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings"
 
 export interface WidgetInstallConfig {
   aiName: string;
+  aiNames: Record<string, string | undefined>;
   languageCodes: string[];
   mode: "starter" | "growth" | "enterprise";
+  personaGenders: Record<string, string | undefined>;
   tenantSlug: string;
   welcomeMessage: string;
   welcomeMessages: Record<string, string | undefined>;
@@ -27,8 +29,10 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
   const widget = getTenantWidgetSettings(tenant);
   const config: WidgetInstallConfig = {
     aiName: widget.aiName,
+    aiNames: widget.aiNames,
     languageCodes: widget.languages,
     mode: tenant.subscriptionPlan,
+    personaGenders: widget.personaGenders,
     tenantSlug: tenant.slug,
     welcomeMessage: widget.welcomeMessage,
     welcomeMessages: widget.welcomeMessages
@@ -48,7 +52,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
 }
 
 export function buildWidgetSnippet(config: WidgetInstallConfig): string {
-  return `<script src="https://cdn.propertyflow.ai/widget.js" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="auto" data-ai-name="${escapeAttribute(config.aiName)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
+  return `<script src="https://cdn.propertyflow.ai/widget.js" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="auto" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
 }
 
 function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {

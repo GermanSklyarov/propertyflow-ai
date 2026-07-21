@@ -124,6 +124,59 @@
   font-weight: 950;
 }
 
+.personaBuilder {
+  display: grid;
+  gap: 12px;
+}
+
+.personaTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.personaTab,
+.personaTabActive {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0 12px;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.personaTabActive {
+  border-color: rgb(15 118 110 / 32%);
+  background: var(--teal);
+  color: #fff;
+}
+
+.personaTab strong,
+.personaTabActive strong {
+  font-size: 0.68rem;
+  font-weight: 950;
+  opacity: 0.75;
+}
+
+.personaEditor {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fbfdfc;
+  padding: 12px;
+}
+
+.personaMessageField {
+  grid-column: 1 / -1;
+}
+
 .field input:focus,
 .field select:focus,
 .field textarea:focus {
@@ -175,6 +228,10 @@
   }
 
   .localizedMessages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .personaEditor {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -9,7 +9,19 @@ export const supportedTenantWidgetLanguageOptions: Array<{ label: string; value:
 
 export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   aiName: "Anna",
+  aiNames: {
+    en: "Anna",
+    ru: "Анна",
+    th: "มาลี",
+    zh: "安娜"
+  },
   languages: ["en", "ru", "th", "zh"],
+  personaGenders: {
+    en: "feminine",
+    ru: "feminine",
+    th: "feminine",
+    zh: "neutral"
+  },
   welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
   welcomeMessages: {
     en: "Hi! I'm Anna, your AI property consultant.",
@@ -24,10 +36,19 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
     ...defaultTenantWidgetSettings.welcomeMessages,
     ...tenant.widget?.welcomeMessages
   };
+  const aiNames = {
+    ...defaultTenantWidgetSettings.aiNames,
+    ...tenant.widget?.aiNames
+  };
 
   return {
-    aiName: tenant.widget?.aiName || defaultTenantWidgetSettings.aiName,
+    aiName: tenant.widget?.aiName || aiNames.en || defaultTenantWidgetSettings.aiName,
+    aiNames,
     languages: tenant.widget?.languages?.length ? tenant.widget.languages : defaultTenantWidgetSettings.languages,
+    personaGenders: {
+      ...defaultTenantWidgetSettings.personaGenders,
+      ...tenant.widget?.personaGenders
+    },
     welcomeMessage: tenant.widget?.welcomeMessage || welcomeMessages.en || defaultTenantWidgetSettings.welcomeMessage,
     welcomeMessages
   };

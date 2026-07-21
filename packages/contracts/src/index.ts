@@ -38,9 +38,13 @@ export const supportedTenantWidgetLanguages = ["en", "ru", "th", "zh"] as const;
 
 export type TenantWidgetLanguage = (typeof supportedTenantWidgetLanguages)[number];
 
+export type TenantWidgetPersonaGender = "feminine" | "masculine" | "neutral";
+
 export interface TenantWidgetSettings {
   aiName: string;
+  aiNames: Partial<Record<TenantWidgetLanguage, string>>;
   languages: TenantWidgetLanguage[];
+  personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
   welcomeMessage: string;
   welcomeMessages: Partial<Record<TenantWidgetLanguage, string>>;
 }
@@ -58,6 +62,7 @@ export interface UpdateTenantSettingsRequest {
 
 export interface PublicWidgetConfigResponse {
   aiName: string;
+  aiNames: TenantWidgetSettings["aiNames"];
   branding: {
     displayName: string;
     logoUrl?: string;
@@ -65,6 +70,7 @@ export interface PublicWidgetConfigResponse {
   };
   conciergeMode: TenantSnapshot["subscriptionPlan"];
   languages: TenantWidgetSettings["languages"];
+  personaGenders: TenantWidgetSettings["personaGenders"];
   tenantSlug: string;
   welcomeMessage: string;
   welcomeMessages: TenantWidgetSettings["welcomeMessages"];
