@@ -40,11 +40,14 @@ export type TenantWidgetLanguage = (typeof supportedTenantWidgetLanguages)[numbe
 
 export type TenantWidgetPersonaGender = "feminine" | "masculine" | "neutral";
 
+export type TenantWidgetTone = "friendly" | "professional" | "luxury" | "concise";
+
 export interface TenantWidgetSettings {
   aiName: string;
   aiNames: Partial<Record<TenantWidgetLanguage, string>>;
   languages: TenantWidgetLanguage[];
   personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
+  tone: TenantWidgetTone;
   welcomeMessage: string;
   welcomeMessages: Partial<Record<TenantWidgetLanguage, string>>;
 }
@@ -72,6 +75,7 @@ export interface PublicWidgetConfigResponse {
   languages: TenantWidgetSettings["languages"];
   personaGenders: TenantWidgetSettings["personaGenders"];
   tenantSlug: string;
+  tone: TenantWidgetSettings["tone"];
   welcomeMessage: string;
   welcomeMessages: TenantWidgetSettings["welcomeMessages"];
 }

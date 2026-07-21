@@ -18,6 +18,7 @@ describe("widget install model", () => {
             en: "feminine",
             th: "feminine"
           },
+          tone: "friendly",
           welcomeMessage: "Sawadee, I can help with Pattaya condos.",
           welcomeMessages: {
             en: "Sawadee, I can help with Pattaya condos.",
@@ -33,6 +34,7 @@ describe("widget install model", () => {
     expect(install.snippet).toContain('data-ai-name="Mali"');
     expect(install.snippet).toContain("data-ai-names=");
     expect(install.snippet).toContain("data-persona-genders=");
+    expect(install.snippet).toContain('data-tone="friendly"');
     expect(install.snippet).toContain('data-languages="en,th"');
     expect(install.snippet).toContain("&quot;en&quot;:&quot;Sawadee");
     expect(install.steps.every((step) => step.done)).toBe(true);
@@ -51,6 +53,7 @@ describe("widget install model", () => {
         en: "feminine",
         ru: "feminine"
       },
+      tone: "professional",
       tenantSlug: "demo<script>",
       welcomeMessage: "Hi <buyer> & family",
       welcomeMessages: {
@@ -110,6 +113,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
         th: "feminine",
         zh: "neutral"
       },
+      tone: "friendly",
       welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
       welcomeMessages: {
         en: "Hi! I'm Anna, your AI property consultant."

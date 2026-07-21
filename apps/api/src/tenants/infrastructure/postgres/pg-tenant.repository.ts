@@ -3,6 +3,7 @@ import type {
   TenantSnapshot,
   TenantWidgetLanguage,
   TenantWidgetPersonaGender,
+  TenantWidgetTone,
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
 import type { Pool } from "pg";
@@ -28,6 +29,7 @@ interface TenantRow {
   widget_welcome_message: string;
   widget_welcome_messages: Partial<Record<TenantWidgetLanguage, string>> | null;
   widget_persona_genders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>> | null;
+  widget_tone: TenantWidgetTone | null;
   widget_languages: string[];
   created_at: Date;
   updated_at: Date;
@@ -52,6 +54,7 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
     th: "feminine",
     zh: "neutral"
   },
+  tone: "friendly",
   welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
   welcomeMessages: {
     en: "Hi! I'm Anna, your AI property consultant.",
@@ -165,8 +168,9 @@ export class PgTenantRepository implements TenantRepository {
           widget_welcome_message = $10,
           widget_welcome_messages = $11,
           widget_persona_genders = $12,
-          widget_languages = $13,
-          updated_at = $14
+          widget_tone = $13,
+          widget_languages = $14,
+          updated_at = $15
         where id = $1
         returning *
       `,
@@ -183,6 +187,7 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.welcomeMessage ?? current.widget.welcomeMessage,
         request.widget?.welcomeMessages ?? current.widget.welcomeMessages,
         request.widget?.personaGenders ?? current.widget.personaGenders,
+        request.widget?.tone ?? current.widget.tone,
         request.widget?.languages?.length ? request.widget.languages : current.widget.languages,
         new Date().toISOString()
       ]
@@ -219,6 +224,7 @@ export class PgTenantRepository implements TenantRepository {
           ...defaultWidgetSettings.personaGenders,
           ...(row.widget_persona_genders ?? {})
         },
+        tone: row.widget_tone || defaultWidgetSettings.tone,
         welcomeMessage: row.widget_welcome_message || defaultWidgetSettings.welcomeMessage,
         welcomeMessages: {
           ...defaultWidgetSettings.welcomeMessages,

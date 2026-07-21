@@ -28,6 +28,7 @@ describe("TenantService", () => {
                 en: "feminine",
                 ru: "feminine"
               },
+              tone: "professional",
               welcomeMessage: "Hi, I can help with Pattaya property.",
               welcomeMessages: {
                 en: "Hi, I can help with Pattaya property.",
@@ -56,6 +57,7 @@ describe("TenantService", () => {
         ru: "feminine"
       },
       tenantSlug: "riviera-pattaya",
+      tone: "professional",
       welcomeMessage: "Hi, I can help with Pattaya property.",
       welcomeMessages: {
         en: "Hi, I can help with Pattaya property.",
@@ -100,6 +102,7 @@ describe("TenantService", () => {
           ru: "wizard" as never,
           zh: "neutral"
         },
+        tone: "luxury",
         welcomeMessage: " Welcome ",
         welcomeMessages: {
           en: " Welcome ",
@@ -121,6 +124,7 @@ describe("TenantService", () => {
           en: "feminine",
           zh: "neutral"
         },
+        tone: "luxury",
         welcomeMessage: "Welcome",
         welcomeMessages: {
           en: "Welcome",
@@ -180,6 +184,7 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
         th: "feminine",
         zh: "neutral"
       },
+      tone: "friendly",
       welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
       welcomeMessages: {
         en: "Hi! I'm Anna, your AI property consultant.",

@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { TenantWidgetLanguage, TenantWidgetPersonaGender, TenantWidgetSettings } from "@propertyflow/contracts";
+import type {
+  TenantWidgetLanguage,
+  TenantWidgetPersonaGender,
+  TenantWidgetSettings,
+  TenantWidgetTone
+} from "@propertyflow/contracts";
 import { supportedTenantWidgetLanguageOptions } from "@entities/tenant/model/widget-settings";
 import styles from "./update-tenant-settings-form.module.css";
 
@@ -9,6 +14,13 @@ const personaGenderOptions: Array<{ label: string; value: TenantWidgetPersonaGen
   { label: "Feminine voice", value: "feminine" },
   { label: "Masculine voice", value: "masculine" },
   { label: "Neutral voice", value: "neutral" }
+];
+
+const toneOptions: Array<{ label: string; value: TenantWidgetTone }> = [
+  { label: "Friendly", value: "friendly" },
+  { label: "Professional", value: "professional" },
+  { label: "Luxury", value: "luxury" },
+  { label: "Concise", value: "concise" }
 ];
 
 export function TenantWidgetPersonaFields({ widgetSettings }: { widgetSettings: TenantWidgetSettings }) {
@@ -100,6 +112,17 @@ export function TenantWidgetPersonaFields({ widgetSettings }: { widgetSettings: 
         </div>
       </div>
 
+      <label className={styles.field}>
+        <span>Conversation tone</span>
+        <select defaultValue={widgetSettings.tone} name="tone">
+          {toneOptions.map((tone) => (
+            <option key={tone.value} value={tone.value}>
+              {tone.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <div className={styles.personaTabs} role="tablist">
         {visibleLanguages.map((language) => (
           <button
@@ -159,7 +182,7 @@ export function TenantWidgetPersonaFields({ widgetSettings }: { widgetSettings: 
       ) : null}
 
       {supportedTenantWidgetLanguageOptions
-        .filter((language) => !languages.includes(language.value))
+        .filter((language) => language.value !== activeOption?.value)
         .map((language) => (
           <div hidden key={language.value}>
             <input name={`aiName.${language.value}`} readOnly value={aiNames[language.value]} />
@@ -199,11 +222,41 @@ function getCompleteWelcomeMessages(widgetSettings: TenantWidgetSettings): Recor
   const personaGenders = getCompletePersonaGenders(widgetSettings);
 
   return {
-    en: widgetSettings.welcomeMessages.en ?? buildWelcomeMessage("en", names.en, personaGenders.en),
-    ru: widgetSettings.welcomeMessages.ru ?? buildWelcomeMessage("ru", names.ru, personaGenders.ru),
-    th: widgetSettings.welcomeMessages.th ?? buildWelcomeMessage("th", names.th, personaGenders.th),
-    zh: widgetSettings.welcomeMessages.zh ?? buildWelcomeMessage("zh", names.zh, personaGenders.zh)
+    en: getWelcomeMessage("en", widgetSettings, names.en, personaGenders.en),
+    ru: getWelcomeMessage("ru", widgetSettings, names.ru, personaGenders.ru),
+    th: getWelcomeMessage("th", widgetSettings, names.th, personaGenders.th),
+    zh: getWelcomeMessage("zh", widgetSettings, names.zh, personaGenders.zh)
   };
+}
+
+function getWelcomeMessage(
+  language: TenantWidgetLanguage,
+  widgetSettings: TenantWidgetSettings,
+  name: string,
+  personaGender: TenantWidgetPersonaGender
+) {
+  const message = widgetSettings.welcomeMessages[language];
+
+  if (!message || isDefaultWelcomeMessage(language, message, personaGender)) {
+    return buildWelcomeMessage(language, name, personaGender);
+  }
+
+  return message;
+}
+
+function isDefaultWelcomeMessage(
+  language: TenantWidgetLanguage,
+  message: string,
+  personaGender: TenantWidgetPersonaGender
+) {
+  const defaultNames: Record<TenantWidgetLanguage, string[]> = {
+    en: ["Anna"],
+    ru: ["Анна", "Anna"],
+    th: ["มาลี", "Anna"],
+    zh: ["安娜", "Anna"]
+  };
+
+  return defaultNames[language].some((defaultName) => message === buildWelcomeMessage(language, defaultName, personaGender));
 }
 
 function buildWelcomeMessage(

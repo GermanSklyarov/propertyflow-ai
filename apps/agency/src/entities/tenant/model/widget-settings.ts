@@ -22,6 +22,7 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
     th: "feminine",
     zh: "neutral"
   },
+  tone: "friendly",
   welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
   welcomeMessages: {
     en: "Hi! I'm Anna, your AI property consultant.",
@@ -49,6 +50,7 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
       ...defaultTenantWidgetSettings.personaGenders,
       ...tenant.widget?.personaGenders
     },
+    tone: tenant.widget?.tone ?? defaultTenantWidgetSettings.tone,
     welcomeMessage: tenant.widget?.welcomeMessage || welcomeMessages.en || defaultTenantWidgetSettings.welcomeMessage,
     welcomeMessages
   };

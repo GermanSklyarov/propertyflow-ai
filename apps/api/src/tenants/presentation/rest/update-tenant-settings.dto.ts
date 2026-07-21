@@ -1,11 +1,17 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsArray, IsIn, IsObject, IsOptional, IsString, Matches, ValidateNested } from "class-validator";
-import type { TenantWidgetLanguage, TenantWidgetPersonaGender, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import type {
+  TenantWidgetLanguage,
+  TenantWidgetPersonaGender,
+  TenantWidgetTone,
+  UpdateTenantSettingsRequest
+} from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const widgetLanguages = ["en", "ru", "th", "zh"];
+const widgetTones = ["friendly", "professional", "luxury", "concise"];
 
 export class UpdateTenantBrandingDto {
   @ApiProperty({ required: false })
@@ -66,6 +72,11 @@ export class UpdateTenantWidgetDto {
   @IsOptional()
   @IsObject()
   personaGenders?: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
+
+  @ApiProperty({ required: false, enum: widgetTones, example: "friendly" })
+  @IsOptional()
+  @IsIn(widgetTones)
+  tone?: TenantWidgetTone;
 
   @ApiProperty({
     required: false,

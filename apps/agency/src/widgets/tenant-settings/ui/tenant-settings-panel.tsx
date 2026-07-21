@@ -146,10 +146,18 @@ export function TenantSettingsPanel({
                 </a>
               </div>
               <div className={styles.personalityGrid}>
-                <Field label="AI name" value={widgetSettings.aiName} />
-                <Field label="Tone" value="Friendly" />
-                <Field label="Welcome message" value={widgetSettings.welcomeMessage} />
-                <Field label="Languages" value={widgetSettings.languages.map((language) => language.toUpperCase()).join(", ")} />
+                <Field label="Languages" value={`${widgetSettings.languages.length} active`} />
+                <Field label="Tone" value={formatWidgetTone(widgetSettings.tone)} />
+                <Field label="Default welcome" value={widgetSettings.welcomeMessage} />
+              </div>
+              <div className={styles.personaSummaryList}>
+                {widgetSettings.languages.map((language) => (
+                  <span key={language}>
+                    <strong>{language.toUpperCase()}</strong>
+                    {widgetSettings.aiNames[language] ?? widgetSettings.aiName}
+                    <small>{formatPersonaGender(widgetSettings.personaGenders[language])}</small>
+                  </span>
+                ))}
               </div>
             </section>
           </div>
@@ -414,6 +422,27 @@ function Field({ label, value }: { label: string; value: string }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function formatWidgetTone(tone: string) {
+  const labels: Record<string, string> = {
+    concise: "Concise",
+    friendly: "Friendly",
+    luxury: "Luxury",
+    professional: "Professional"
+  };
+
+  return labels[tone] ?? tone;
+}
+
+function formatPersonaGender(gender?: string) {
+  const labels: Record<string, string> = {
+    feminine: "feminine voice",
+    masculine: "masculine voice",
+    neutral: "neutral voice"
+  };
+
+  return labels[gender ?? "neutral"] ?? "neutral voice";
 }
 
 function UsageCard({ item }: { item: TenantUsageMetric }) {

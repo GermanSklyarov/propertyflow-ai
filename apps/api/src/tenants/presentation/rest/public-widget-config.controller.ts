@@ -35,6 +35,7 @@ export class PublicWidgetConfigController {
           zh: "neutral"
         },
         tenantSlug: "demo-agency",
+        tone: "friendly",
         welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
         welcomeMessages: {
           en: "Hi! I'm Anna, your AI property consultant.",

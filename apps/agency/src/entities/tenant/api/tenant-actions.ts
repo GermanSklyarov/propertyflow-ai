@@ -2,13 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { TenantWidgetLanguage } from "@propertyflow/contracts";
+import type { TenantWidgetLanguage, TenantWidgetTone } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { updateTenantSettings } from "@shared/api/agency-client";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const widgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
 const widgetPersonaGenders = ["feminine", "masculine", "neutral"] as const;
+const widgetTones: TenantWidgetTone[] = ["friendly", "professional", "luxury", "concise"];
 
 export async function updateTenantSettingsAction(formData: FormData) {
   const displayName = getOptionalString(formData, "displayName");
@@ -20,6 +21,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const aiNames = getLocalizedStrings(formData, "aiName");
   const aiName = aiNames.en;
   const personaGenders = getPersonaGenders(formData);
+  const tone = getWidgetTone(formData);
   const welcomeMessages = getWelcomeMessages(formData);
   const welcomeMessage = welcomeMessages.en;
 
@@ -36,6 +38,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
       ...(Object.keys(aiNames).length ? { aiNames } : {}),
       ...(languages.length ? { languages } : {}),
       ...(Object.keys(personaGenders).length ? { personaGenders } : {}),
+      ...(tone ? { tone } : {}),
       ...(welcomeMessage ? { welcomeMessage } : {}),
       ...(Object.keys(welcomeMessages).length ? { welcomeMessages } : {})
     }
@@ -43,6 +46,12 @@ export async function updateTenantSettingsAction(formData: FormData) {
 
   revalidatePath("/settings");
   redirect("/settings?updated=tenant-settings#tenant-settings-form");
+}
+
+function getWidgetTone(formData: FormData): TenantWidgetTone | undefined {
+  const value = String(formData.get("tone") ?? "").trim();
+
+  return widgetTones.includes(value as TenantWidgetTone) ? (value as TenantWidgetTone) : undefined;
 }
 
 function getOptionalString(formData: FormData, key: string) {

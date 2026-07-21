@@ -3,6 +3,7 @@ import type {
   PublicWidgetConfigResponse,
   TenantSnapshot,
   TenantWidgetLanguage,
+  TenantWidgetTone,
   TenantUsageMetric,
   TenantUsageResponse,
   UpdateTenantSettingsRequest
@@ -48,6 +49,7 @@ export class TenantService {
       languages: tenant.widget.languages,
       personaGenders: tenant.widget.personaGenders,
       tenantSlug: tenant.slug,
+      tone: tenant.widget.tone,
       welcomeMessage: tenant.widget.welcomeMessage,
       welcomeMessages: tenant.widget.welcomeMessages
     };
@@ -102,6 +104,7 @@ export class TenantService {
 
 const supportedWidgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
 const supportedPersonaGenders = ["feminine", "masculine", "neutral"] as const;
+const supportedWidgetTones: TenantWidgetTone[] = ["friendly", "professional", "luxury", "concise"];
 
 function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsRequest): UpdateTenantSettingsRequest {
   const languages = request.widget?.languages
@@ -122,11 +125,16 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
           aiNames,
           languages: languages?.length ? languages : undefined,
           personaGenders,
+          tone: normalizeWidgetTone(request.widget.tone),
           welcomeMessage: request.widget.welcomeMessage?.trim() || welcomeMessages?.en || undefined,
           welcomeMessages
         }
       : undefined
   };
+}
+
+function normalizeWidgetTone(tone: TenantWidgetTone | undefined) {
+  return tone && supportedWidgetTones.includes(tone) ? tone : undefined;
 }
 
 function normalizeLocalizedStrings(values: Partial<Record<TenantWidgetLanguage, string>> | undefined) {

@@ -18,6 +18,7 @@ create table if not exists tenants (
   widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.',
   widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb,
   widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
+  widget_tone text not null default 'friendly',
   widget_languages text[] not null default array['en','ru','th','zh'],
   created_at timestamptz not null,
   updated_at timestamptz not null
@@ -32,6 +33,7 @@ alter table tenants add column if not exists widget_ai_names jsonb not null defa
 alter table tenants add column if not exists widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.';
 alter table tenants add column if not exists widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb;
 alter table tenants add column if not exists widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb;
+alter table tenants add column if not exists widget_tone text not null default 'friendly';
 alter table tenants add column if not exists widget_languages text[] not null default array['en','ru','th','zh'];
 create unique index if not exists idx_tenants_custom_domain on tenants (custom_domain) where custom_domain is not null;
 
@@ -53,6 +55,7 @@ insert into tenants (
   widget_welcome_message,
   widget_welcome_messages,
   widget_persona_genders,
+  widget_tone,
   widget_languages,
   created_at,
   updated_at
@@ -74,6 +77,7 @@ insert into tenants (
   'Hi! I''m Anna, your AI property consultant.',
   '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb,
   '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
+  'friendly',
   array['en','ru','th','zh'],
   now(),
   now()
