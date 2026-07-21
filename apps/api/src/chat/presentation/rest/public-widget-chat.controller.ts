@@ -1,16 +1,18 @@
-import { Body, Controller, Headers, Inject, Param, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Headers, Inject, Param, Post } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
-import type { PublicWidgetAskResponse, TenantWidgetLanguage } from "@propertyflow/contracts";
+import type { PublicWidgetAskResponse, PublicWidgetLeadResponse, TenantWidgetLanguage } from "@propertyflow/contracts";
+import { LeadService } from "../../../leads/application/lead.service.js";
 import { TenantService } from "../../../tenants/application/tenant.service.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
-import { PublicWidgetAskDto } from "./public-widget-chat.dto.js";
+import { PublicWidgetAskDto, PublicWidgetLeadDto } from "./public-widget-chat.dto.js";
 
 @Controller("public/v1/widget")
 @ApiTags("public-widget")
 export class PublicWidgetChatController {
   constructor(
     @Inject(TenantService) private readonly tenants: TenantService,
-    @Inject(AiChatService) private readonly chat: AiChatService
+    @Inject(AiChatService) private readonly chat: AiChatService,
+    @Inject(LeadService) private readonly leads: LeadService
   ) {}
 
   @Post("ask/:tenantSlug")
@@ -59,6 +61,57 @@ export class PublicWidgetChatController {
       tenantSlug: tenant.slug
     };
   }
+
+  @Post("leads/:tenantSlug")
+  @ApiOperation({ summary: "Create a tenant-scoped lead from the public AI Concierge widget" })
+  @ApiParam({ name: "tenantSlug", example: "demo-agency" })
+  @ApiOkResponse({
+    description: "Lead captured from a public widget handoff without exposing a public API key",
+    schema: {
+      example: {
+        conciergeMode: "starter",
+        leadId: "lead-1",
+        locale: "en",
+        message: "Thanks. The agency has your request and can follow up from CRM.",
+        status: "new",
+        tenantSlug: "demo-agency"
+      }
+    }
+  })
+  async createLead(
+    @Param("tenantSlug") tenantSlug: string,
+    @Body() payload: PublicWidgetLeadDto,
+    @Headers("origin") origin?: string,
+    @Headers("referer") referer?: string
+  ): Promise<PublicWidgetLeadResponse> {
+    const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
+    this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
+    const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
+    const contactEmail = normalizeOptional(payload.contactEmail);
+    const contactPhone = normalizeOptional(payload.contactPhone);
+
+    if (!contactEmail && !contactPhone) {
+      throw new BadRequestException("Email or phone is required for widget handoff");
+    }
+
+    const lead = await this.leads.create(tenant.id, {
+      contactEmail,
+      contactName: payload.contactName.trim(),
+      contactPhone,
+      message: normalizeOptional(payload.message),
+      preferredLocale: locale,
+      source: "ai-concierge"
+    });
+
+    return {
+      conciergeMode: tenant.subscriptionPlan,
+      leadId: lead.id,
+      locale,
+      message: "Thanks. The agency has your request and can follow up from CRM.",
+      status: lead.status,
+      tenantSlug: tenant.slug
+    };
+  }
 }
 
 function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requestedLocale: TenantWidgetLanguage): TenantWidgetLanguage {
@@ -67,4 +120,10 @@ function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requested
   }
 
   return enabledLanguages[0] ?? "en";
+}
+
+function normalizeOptional(value?: string): string | undefined {
+  const trimmed = value?.trim();
+
+  return trimmed ? trimmed : undefined;
 }

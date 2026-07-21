@@ -1,5 +1,5 @@
-import { IsIn, IsOptional, IsString, IsUUID, MinLength } from "class-validator";
-import type { PublicWidgetAskRequest } from "@propertyflow/contracts";
+import { IsEmail, IsIn, IsOptional, IsString, IsUUID, MinLength } from "class-validator";
+import type { PublicWidgetAskRequest, PublicWidgetLeadRequest } from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 
 const locales: PublicWidgetAskRequest["locale"][] = ["en", "ru", "th", "zh"];
@@ -25,4 +25,25 @@ export class PublicWidgetAskDto implements PublicWidgetAskRequest {
   @IsOptional()
   @IsIn(purposes)
   purpose?: PropertyPurpose;
+}
+
+export class PublicWidgetLeadDto implements PublicWidgetLeadRequest {
+  @IsString()
+  @MinLength(2)
+  contactName!: string;
+
+  @IsOptional()
+  @IsEmail()
+  contactEmail?: string;
+
+  @IsOptional()
+  @IsString()
+  contactPhone?: string;
+
+  @IsIn(locales)
+  locale!: PublicWidgetLeadRequest["locale"];
+
+  @IsOptional()
+  @IsString()
+  message?: string;
 }

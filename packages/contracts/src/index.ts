@@ -90,6 +90,23 @@ export interface PublicWidgetAskResponse extends AiChatResponse {
   tenantSlug: string;
 }
 
+export interface PublicWidgetLeadRequest {
+  contactName: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  locale: TenantWidgetLanguage;
+  message?: string;
+}
+
+export interface PublicWidgetLeadResponse {
+  conciergeMode: TenantSnapshot["subscriptionPlan"];
+  leadId: string;
+  locale: TenantWidgetLanguage;
+  message: string;
+  status: LeadSnapshot["status"];
+  tenantSlug: string;
+}
+
 export type TenantWidgetInstallCheckStatus =
   | "verified"
   | "missing-widget"

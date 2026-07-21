@@ -33,6 +33,15 @@
 
   var state = {
     config: fallbackConfig,
+    handoff: {
+      contactEmail: "",
+      contactName: "",
+      contactPhone: "",
+      error: "",
+      message: ""
+    },
+    isHandoffOpen: false,
+    isHandoffSending: false,
     isOpen: false,
     isReady: false,
     isSending: false,
@@ -81,6 +90,7 @@
     var aiName = escapeText(getLocalizedValue(config.aiNames, state.locale, config.aiName || "Anna"));
     var mode = escapeText(config.conciergeMode || "starter");
     var languageLabel = escapeText(state.locale.toUpperCase());
+    var handoff = state.handoff;
     var messages = state.messages
       .map(function (message) {
         return '<div class="pf-message pf-message-' + message.role + '">' + escapeText(message.text) + "</div>";
@@ -128,6 +138,51 @@
           ">Ask</button>" +
           "</form>" +
           '<small class="pf-note">Answers use this agency knowledge base and listings. CRM is not required for Starter mode.</small>' +
+          '<div class="pf-handoff">' +
+          '<button class="pf-handoff-toggle" type="button" aria-expanded="' +
+          String(state.isHandoffOpen) +
+          '">' +
+          getHandoffCta(state.locale) +
+          "</button>" +
+          (state.isHandoffOpen
+            ? '<form class="pf-handoff-form">' +
+              (handoff.error ? '<p class="pf-handoff-error">' + escapeText(handoff.error) + "</p>" : "") +
+              '<input name="contactName" placeholder="' +
+              escapeText(getHandoffNamePlaceholder(state.locale)) +
+              '" value="' +
+              escapeText(handoff.contactName) +
+              '"' +
+              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+              " />" +
+              '<div class="pf-handoff-grid">' +
+              '<input name="contactEmail" type="email" placeholder="Email" value="' +
+              escapeText(handoff.contactEmail) +
+              '"' +
+              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+              " />" +
+              '<input name="contactPhone" placeholder="' +
+              escapeText(getHandoffPhonePlaceholder(state.locale)) +
+              '" value="' +
+              escapeText(handoff.contactPhone) +
+              '"' +
+              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+              " />" +
+              "</div>" +
+              '<textarea name="handoffMessage" rows="2" placeholder="' +
+              escapeText(getHandoffMessagePlaceholder(state.locale)) +
+              '"' +
+              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+              ">" +
+              escapeText(handoff.message) +
+              "</textarea>" +
+              '<button type="submit"' +
+              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+              ">" +
+              (state.isHandoffSending ? getSendingLabel(state.locale) : getHandoffSubmitLabel(state.locale)) +
+              "</button>" +
+              "</form>"
+            : "") +
+          "</div>" +
           "</section>"
         : "") +
       "</div>";
@@ -155,6 +210,23 @@
       form.addEventListener("submit", function (event) {
         event.preventDefault();
         ask(form.elements.message.value);
+      });
+    }
+
+    var handoffToggle = app.querySelector(".pf-handoff-toggle");
+    if (handoffToggle) {
+      handoffToggle.addEventListener("click", function () {
+        state.isHandoffOpen = !state.isHandoffOpen;
+        state.handoff.error = "";
+        render();
+      });
+    }
+
+    var handoffForm = app.querySelector(".pf-handoff-form");
+    if (handoffForm) {
+      handoffForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        submitHandoff(handoffForm);
       });
     }
   }
@@ -213,6 +285,90 @@
         state.isSending = false;
         render();
       });
+  }
+
+  function submitHandoff(form) {
+    if (state.isHandoffSending) {
+      return;
+    }
+
+    state.handoff = {
+      contactEmail: String(form.elements.contactEmail.value || "").trim(),
+      contactName: String(form.elements.contactName.value || "").trim(),
+      contactPhone: String(form.elements.contactPhone.value || "").trim(),
+      error: "",
+      message: String(form.elements.handoffMessage.value || "").trim()
+    };
+
+    if (!state.handoff.contactName || (!state.handoff.contactEmail && !state.handoff.contactPhone)) {
+      state.handoff.error = getHandoffValidationMessage(state.locale);
+      render();
+      return;
+    }
+
+    state.isHandoffSending = true;
+    render();
+
+    fetch(apiBase.replace(/\/$/, "") + "/public/v1/widget/leads/" + encodeURIComponent(tenantSlug), {
+      body: JSON.stringify({
+        contactEmail: state.handoff.contactEmail || undefined,
+        contactName: state.handoff.contactName,
+        contactPhone: state.handoff.contactPhone || undefined,
+        locale: state.locale,
+        message: buildHandoffMessage(state.handoff.message)
+      }),
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      method: "POST"
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throw new Error("Widget lead failed");
+        }
+
+        return response.json();
+      })
+      .then(function (response) {
+        state.messages.push(assistantMessage(response.message || getHandoffSuccessMessage(state.locale)));
+        state.handoff = {
+          contactEmail: "",
+          contactName: "",
+          contactPhone: "",
+          error: "",
+          message: ""
+        };
+        state.isHandoffOpen = false;
+        persistMessages();
+      })
+      .catch(function () {
+        state.handoff.error = getHandoffFailureMessage(state.locale);
+      })
+      .finally(function () {
+        state.isHandoffSending = false;
+        render();
+      });
+  }
+
+  function buildHandoffMessage(customMessage) {
+    var recentConversation = state.messages
+      .slice(-6)
+      .map(function (message) {
+        return message.role + ": " + message.text;
+      })
+      .join("\n");
+    var lines = ["Widget handoff request."];
+
+    if (customMessage) {
+      lines.push("Visitor note: " + customMessage);
+    }
+
+    if (recentConversation) {
+      lines.push("Recent widget conversation:\n" + recentConversation);
+    }
+
+    return lines.join("\n\n").slice(0, 3000);
   }
 
   function assistantMessage(text) {
@@ -365,6 +521,105 @@
     return placeholders[locale] || placeholders.en;
   }
 
+  function getHandoffCta(locale) {
+    var labels = {
+      en: "Ask an agent to contact me",
+      ru: "Попросить агента связаться",
+      th: "ให้เอเจนต์ติดต่อกลับ",
+      zh: "让经纪人联系我"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getHandoffSubmitLabel(locale) {
+    var labels = {
+      en: "Send request",
+      ru: "Отправить запрос",
+      th: "ส่งคำขอ",
+      zh: "发送请求"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getSendingLabel(locale) {
+    var labels = {
+      en: "Sending...",
+      ru: "Отправляем...",
+      th: "กำลังส่ง...",
+      zh: "正在发送..."
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getHandoffNamePlaceholder(locale) {
+    var labels = {
+      en: "Your name",
+      ru: "Ваше имя",
+      th: "ชื่อของคุณ",
+      zh: "您的姓名"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getHandoffPhonePlaceholder(locale) {
+    var labels = {
+      en: "Phone or WhatsApp",
+      ru: "Телефон или WhatsApp",
+      th: "โทรศัพท์หรือ WhatsApp",
+      zh: "电话或 WhatsApp"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getHandoffMessagePlaceholder(locale) {
+    var labels = {
+      en: "What should the agent help with?",
+      ru: "С чем агенту помочь?",
+      th: "ต้องการให้เอเจนต์ช่วยเรื่องอะไร?",
+      zh: "希望经纪人帮您什么？"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getHandoffValidationMessage(locale) {
+    var labels = {
+      en: "Please add your name and at least email or phone.",
+      ru: "Укажите имя и хотя бы email или телефон.",
+      th: "กรุณาใส่ชื่อ และอีเมลหรือเบอร์โทรอย่างน้อยหนึ่งอย่าง",
+      zh: "请填写姓名，并至少留下邮箱或电话。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getHandoffFailureMessage(locale) {
+    var labels = {
+      en: "I could not send the request right now. Please try again in a minute.",
+      ru: "Не удалось отправить запрос. Попробуйте еще раз через минуту.",
+      th: "ยังส่งคำขอไม่ได้ตอนนี้ กรุณาลองใหม่อีกครั้ง",
+      zh: "暂时无法发送请求，请稍后再试。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getHandoffSuccessMessage(locale) {
+    var labels = {
+      en: "Thanks. The agency has your request and can follow up from CRM.",
+      ru: "Спасибо. Агентство получило запрос и сможет связаться с вами.",
+      th: "ขอบคุณค่ะ เอเจนซี่ได้รับคำขอของคุณแล้วและจะติดต่อกลับ",
+      zh: "谢谢。机构已收到您的请求，并会跟进。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
   function sanitizeColor(value) {
     return /^#[0-9a-f]{3,8}$/i.test(value) ? value : "#0f766e";
   }
@@ -405,6 +660,17 @@
       ".pf-form button{border:0;background:var(--pf-primary);color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:900;text-transform:uppercase}",
       ".pf-form button:disabled,.pf-form textarea:disabled{cursor:not-allowed;opacity:.6}",
       ".pf-note{display:block;color:#66736f;font-size:11px;font-weight:800;line-height:1.4;padding:0 12px 12px}",
+      ".pf-handoff{border-top:1px solid #d9e7e3;padding:12px}",
+      ".pf-handoff-toggle{width:100%;border:1px solid color-mix(in srgb,var(--pf-primary),white 62%);background:#edf8f4;color:#0b4f49;cursor:pointer;font:inherit;font-size:12px;font-weight:900;padding:10px;text-align:center;text-transform:uppercase}",
+      ".pf-handoff-toggle:hover{background:#def1eb}",
+      ".pf-handoff-form{display:grid;gap:8px;margin-top:10px}",
+      ".pf-handoff-form input,.pf-handoff-form textarea{min-width:0;border:1px solid #d9e7e3;color:#12211f;font:inherit;font-size:13px;font-weight:750;padding:9px}",
+      ".pf-handoff-form textarea{resize:none}",
+      ".pf-handoff-form input:focus,.pf-handoff-form textarea:focus{border-color:var(--pf-primary);outline:none}",
+      ".pf-handoff-form button{border:0;background:var(--pf-primary);color:#fff;cursor:pointer;font:inherit;font-size:12px;font-weight:900;padding:10px;text-transform:uppercase}",
+      ".pf-handoff-form button:disabled,.pf-handoff-form input:disabled,.pf-handoff-form textarea:disabled{cursor:not-allowed;opacity:.6}",
+      ".pf-handoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}",
+      ".pf-handoff-error{border:1px solid #fed7aa;background:#fff7ed;color:#7c4a05;font-size:12px;font-weight:800;line-height:1.4;margin:0;padding:8px}",
       "@media (max-width:480px){.pf-shell{right:12px;bottom:12px}.pf-panel{bottom:62px;width:calc(100vw - 24px)}}"
     ].join("");
   }
