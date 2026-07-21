@@ -55,12 +55,20 @@
       state.config = mergeConfig(fallbackConfig, config);
       state.locale = pickLocale(requestedLocale, state.config.languages);
       state.isReady = true;
-      state.messages = [assistantMessage(getWelcomeMessage(state.config, state.locale))];
+      state.messages = loadStoredMessages();
+      if (!state.messages.length) {
+        state.messages = [assistantMessage(getWelcomeMessage(state.config, state.locale))];
+        persistMessages();
+      }
       render();
     })
     .catch(function () {
       state.locale = pickLocale(requestedLocale, state.config.languages);
-      state.messages = [assistantMessage(getWelcomeMessage(state.config, state.locale))];
+      state.messages = loadStoredMessages();
+      if (!state.messages.length) {
+        state.messages = [assistantMessage(getWelcomeMessage(state.config, state.locale))];
+        persistMessages();
+      }
       render("The concierge is running from embedded settings. Live knowledge answers are unavailable right now.");
     });
 
@@ -103,7 +111,7 @@
           mode +
           " · " +
           languageLabel +
-          '</span></div><button class="pf-close" type="button" aria-label="Close">×</button></header>' +
+          '</span></div><div class="pf-header-actions"><button class="pf-reset" type="button">Start over</button><button class="pf-close" type="button" aria-label="Close">×</button></div></header>' +
           (errorMessage ? '<p class="pf-error">' + escapeText(errorMessage) + "</p>" : "") +
           '<div class="pf-thread">' +
           messages +
@@ -137,6 +145,11 @@
       });
     }
 
+    var resetButton = app.querySelector(".pf-reset");
+    if (resetButton) {
+      resetButton.addEventListener("click", resetConversation);
+    }
+
     var form = app.querySelector(".pf-form");
     if (form) {
       form.addEventListener("submit", function (event) {
@@ -166,6 +179,7 @@
     }
 
     state.messages.push({ role: "user", text: trimmed });
+    persistMessages();
     state.isSending = true;
     render();
 
@@ -189,9 +203,11 @@
       })
       .then(function (response) {
         state.messages.push(assistantMessage(response.answer || "I could not produce an answer yet."));
+        persistMessages();
       })
       .catch(function () {
         state.messages.push(assistantMessage("I cannot reach the agency knowledge base right now. Please try again in a minute."));
+        persistMessages();
       })
       .finally(function () {
         state.isSending = false;
@@ -201,6 +217,54 @@
 
   function assistantMessage(text) {
     return { role: "assistant", text: text };
+  }
+
+  function resetConversation() {
+    state.messages = [assistantMessage(getWelcomeMessage(state.config, state.locale))];
+    persistMessages();
+    render();
+  }
+
+  function loadStoredMessages() {
+    try {
+      var raw = window.sessionStorage.getItem(getStorageKey());
+      var parsed = raw ? JSON.parse(raw) : [];
+
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+
+      return parsed
+        .filter(function (message) {
+          return (
+            message &&
+            (message.role === "assistant" || message.role === "user") &&
+            typeof message.text === "string" &&
+            message.text.trim()
+          );
+        })
+        .map(function (message) {
+          return {
+            role: message.role,
+            text: message.text.slice(0, 2000)
+          };
+        })
+        .slice(-24);
+    } catch (_error) {
+      return [];
+    }
+  }
+
+  function persistMessages() {
+    try {
+      window.sessionStorage.setItem(getStorageKey(), JSON.stringify(state.messages.slice(-24)));
+    } catch (_error) {
+      return undefined;
+    }
+  }
+
+  function getStorageKey() {
+    return "propertyflow.widget." + tenantSlug + "." + state.locale;
   }
 
   function mergeConfig(fallback, remote) {
@@ -325,7 +389,11 @@
       ".pf-panel header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#0b211d;color:#fff;padding:14px}",
       ".pf-panel header strong{display:block;font-size:16px}",
       ".pf-panel header span{display:block;color:#d8e8e3;font-size:12px;font-weight:800;margin-top:3px}",
-      ".pf-close{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;cursor:pointer;font-size:22px;line-height:1;width:32px;height:32px}",
+      ".pf-header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}",
+      ".pf-reset,.pf-close{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;cursor:pointer;font:inherit}",
+      ".pf-reset{height:32px;padding:0 9px;font-size:11px;font-weight:900;text-transform:uppercase}",
+      ".pf-close{font-size:22px;line-height:1;width:32px;height:32px}",
+      ".pf-reset:hover,.pf-close:hover{background:rgba(255,255,255,.12)}",
       ".pf-error{margin:12px 12px 0;border:1px solid #fed7aa;background:#fff7ed;color:#7c4a05;font-size:12px;font-weight:800;line-height:1.4;padding:10px}",
       ".pf-thread{display:grid;gap:10px;max-height:310px;overflow:auto;padding:12px}",
       ".pf-message{border:1px solid #d9e7e3;font-size:14px;font-weight:750;line-height:1.45;padding:10px;white-space:pre-wrap}",
