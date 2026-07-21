@@ -23,6 +23,7 @@ describe("TenantService", () => {
                 en: "Nadia",
                 ru: "Надя"
               },
+              allowedOrigins: [],
               languages: ["en", "ru"],
               personaGenders: {
                 en: "feminine",
@@ -45,6 +46,7 @@ describe("TenantService", () => {
         en: "Nadia",
         ru: "Надя"
       },
+      allowedOriginsConfigured: false,
       branding: {
         displayName: "Riviera Pattaya",
         logoUrl: "https://cdn.example.com/logo.png",
@@ -85,6 +87,41 @@ describe("TenantService", () => {
     await expect(suspended.getActiveTenantBySlugOrThrow("demo-agency")).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it("enforces widget origin allowlist when configured", () => {
+    const service = new TenantService(repository());
+    const openTenant = tenant();
+    const lockedTenant = tenant({
+      widget: {
+        ...tenant().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+
+    expect(() => service.assertPublicWidgetOriginAllowed(openTenant, "https://unknown.example.com")).not.toThrow();
+    expect(() => service.assertPublicWidgetOriginAllowed(lockedTenant, "https://agency.example.com")).not.toThrow();
+    expect(() =>
+      service.assertPublicWidgetOriginAllowed(lockedTenant, undefined, "https://agency.example.com/listings/1")
+    ).not.toThrow();
+    expect(() => service.assertPublicWidgetOriginAllowed(lockedTenant, "https://evil.example.com")).toThrow(
+      "Widget origin is not allowed for this tenant"
+    );
+  });
+
+  it("records public widget ask usage", async () => {
+    const recorded: Array<{ tenantId: string; metadata?: Record<string, unknown> }> = [];
+    const service = new TenantService(
+      repository({
+        recordUsage: async (tenantId, _eventType, metadata) => {
+          recorded.push({ tenantId, metadata });
+        }
+      })
+    );
+
+    await service.recordPublicWidgetAsk(tenant({ id: "tenant-widget" }), { locale: "en" });
+
+    expect(recorded).toEqual([{ metadata: { locale: "en" }, tenantId: "tenant-widget" }]);
+  });
+
   it("normalizes widget language updates before saving settings", async () => {
     let capturedRequest: UpdateTenantSettingsRequest | undefined;
     const service = new TenantService(
@@ -105,6 +142,7 @@ describe("TenantService", () => {
           ru: " Анна ",
           zh: ""
         },
+        allowedOrigins: [" HTTPS://Agency.Example.com/widget ", "https://agency.example.com/contact", "not a url"],
         languages: [" EN ", "ru", "es", "en"] as NonNullable<
           UpdateTenantSettingsRequest["widget"]
         >["languages"],
@@ -130,6 +168,7 @@ describe("TenantService", () => {
           en: "Anna",
           ru: "Анна"
         },
+        allowedOrigins: ["https://agency.example.com"],
         languages: ["en", "ru"],
         personaGenders: {
           en: "feminine",
@@ -156,6 +195,7 @@ function repository(overrides: Partial<TenantRepository> = {}): TenantRepository
       properties: 0,
       publicApiRequestsMonthly: 0
     }),
+    recordUsage: async () => undefined,
     updateSettings: async () => null,
     ...overrides
   };
@@ -188,6 +228,7 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
         th: "มาลี",
         zh: "安娜"
       },
+      allowedOrigins: [],
       languages: ["en", "ru", "th", "zh"],
       personaGenders: {
         en: "feminine",

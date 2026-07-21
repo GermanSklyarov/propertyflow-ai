@@ -13,6 +13,7 @@ describe("widget install model", () => {
             en: "Mali",
             th: "มาลี"
           },
+          allowedOrigins: ["https://pattaya-demo.example.com"],
           languages: ["en", "th"],
           personaGenders: {
             en: "feminine",
@@ -48,6 +49,7 @@ describe("widget install model", () => {
         en: 'Anna "AI"',
         ru: "Анна"
       },
+      allowedOrigins: [],
       languageCodes: ["en", "ru"],
       mode: "growth",
       personaGenders: {
@@ -107,6 +109,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
         th: "มาลี",
         zh: "安娜"
       },
+      allowedOrigins: [],
       languages: ["en", "ru", "th", "zh"],
       personaGenders: {
         en: "feminine",

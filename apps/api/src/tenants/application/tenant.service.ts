@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   PublicWidgetConfigResponse,
   TenantSnapshot,
@@ -50,6 +50,7 @@ export class TenantService {
     return {
       aiName: tenant.widget.aiName,
       aiNames: tenant.widget.aiNames,
+      allowedOriginsConfigured: tenant.widget.allowedOrigins.length > 0,
       branding: tenant.branding,
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
@@ -97,6 +98,22 @@ export class TenantService {
     return tenant;
   }
 
+  assertPublicWidgetOriginAllowed(tenant: TenantSnapshot, originHeader?: string, refererHeader?: string): void {
+    if (!tenant.widget.allowedOrigins.length) {
+      return;
+    }
+
+    const requestOrigin = normalizeRequestOrigin(originHeader) ?? normalizeRequestOrigin(refererHeader);
+
+    if (!requestOrigin || !tenant.widget.allowedOrigins.includes(requestOrigin)) {
+      throw new ForbiddenException("Widget origin is not allowed for this tenant");
+    }
+  }
+
+  recordPublicWidgetAsk(tenant: TenantSnapshot, metadata: Record<string, unknown> = {}): Promise<void> {
+    return this.tenants.recordUsage(tenant.id, "public-widget.ask", metadata);
+  }
+
   private toUsageMetric(key: TenantUsageMetric["key"], used: number, limit: number): TenantUsageMetric {
     return {
       key,
@@ -121,6 +138,7 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
   const aiNames = normalizeLocalizedStrings(request.widget?.aiNames);
   const welcomeMessages = normalizeLocalizedStrings(request.widget?.welcomeMessages);
   const personaGenders = normalizePersonaGenders(request.widget?.personaGenders);
+  const allowedOrigins = normalizeAllowedOrigins(request.widget?.allowedOrigins);
 
   return {
     ...request,
@@ -129,6 +147,7 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
           ...request.widget,
           aiName: request.widget.aiName?.trim() || undefined,
           aiNames,
+          allowedOrigins,
           languages: languages?.length ? languages : undefined,
           personaGenders,
           tone: normalizeWidgetTone(request.widget.tone),
@@ -137,6 +156,29 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
         }
       : undefined
   };
+}
+
+function normalizeAllowedOrigins(origins: string[] | undefined) {
+  if (!origins) {
+    return undefined;
+  }
+
+  return origins
+    .map((origin) => normalizeRequestOrigin(origin))
+    .filter((origin, index, values): origin is string => Boolean(origin) && values.indexOf(origin) === index);
+}
+
+function normalizeRequestOrigin(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(value);
+    return url.origin.toLowerCase();
+  } catch (_error) {
+    return undefined;
+  }
 }
 
 function normalizeWidgetTone(tone: TenantWidgetTone | undefined) {

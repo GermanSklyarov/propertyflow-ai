@@ -16,6 +16,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const primaryColor = getOptionalString(formData, "primaryColor");
   const logoUrl = getOptionalString(formData, "logoUrl");
   const customDomain = getOptionalString(formData, "customDomain");
+  const allowedOrigins = getAllowedOrigins(formData);
   const primaryMarket = getOptionalMarket(formData);
   const languages = getLanguageCodes(formData);
   const aiNames = getLocalizedStrings(formData, "aiName");
@@ -36,6 +37,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
     widget: {
       ...(aiName ? { aiName } : {}),
       ...(Object.keys(aiNames).length ? { aiNames } : {}),
+      ...(allowedOrigins ? { allowedOrigins } : {}),
       ...(languages.length ? { languages } : {}),
       ...(Object.keys(personaGenders).length ? { personaGenders } : {}),
       ...(tone ? { tone } : {}),
@@ -46,6 +48,25 @@ export async function updateTenantSettingsAction(formData: FormData) {
 
   revalidatePath("/settings");
   redirect("/settings?updated=tenant-settings#tenant-settings-form");
+}
+
+function getAllowedOrigins(formData: FormData): string[] | undefined {
+  if (!formData.has("allowedOrigins")) {
+    return undefined;
+  }
+
+  const raw = String(formData.get("allowedOrigins") ?? "");
+
+  if (!raw) {
+    return [];
+  }
+
+  const origins = raw
+    .split(/\r?\n|,/)
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return origins;
 }
 
 function getWidgetTone(formData: FormData): TenantWidgetTone | undefined {

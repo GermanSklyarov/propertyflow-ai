@@ -1,4 +1,4 @@
-import { Body, Controller, Inject, Param, Post } from "@nestjs/common";
+import { Body, Controller, Headers, Inject, Param, Post } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import type { PublicWidgetAskResponse, TenantWidgetLanguage } from "@propertyflow/contracts";
 import { TenantService } from "../../../tenants/application/tenant.service.js";
@@ -33,12 +33,23 @@ export class PublicWidgetChatController {
       }
     }
   })
-  async ask(@Param("tenantSlug") tenantSlug: string, @Body() payload: PublicWidgetAskDto): Promise<PublicWidgetAskResponse> {
+  async ask(
+    @Param("tenantSlug") tenantSlug: string,
+    @Body() payload: PublicWidgetAskDto,
+    @Headers("origin") origin?: string,
+    @Headers("referer") referer?: string
+  ): Promise<PublicWidgetAskResponse> {
     const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
+    this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
     const response = await this.chat.ask(tenant.id, {
       ...payload,
       locale
+    });
+    await this.tenants.recordPublicWidgetAsk(tenant, {
+      locale,
+      origin: origin ?? null,
+      referer: referer ?? null
     });
 
     return {

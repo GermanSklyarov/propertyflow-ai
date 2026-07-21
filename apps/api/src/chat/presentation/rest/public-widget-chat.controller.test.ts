@@ -15,7 +15,9 @@ describe("PublicWidgetChatController", () => {
       }
     });
     const tenants = {
-      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant)
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
     } as unknown as TenantService;
     const chat = {
       ask: vi.fn().mockResolvedValue(chatResponse())
@@ -23,11 +25,15 @@ describe("PublicWidgetChatController", () => {
     const controller = new PublicWidgetChatController(tenants, chat);
 
     await expect(
-      controller.ask("demo-agency", {
-        locale: "ru",
-        message: "Квартира в Паттайе до 5 млн",
-        market: "pattaya"
-      })
+      controller.ask(
+        "demo-agency",
+        {
+          locale: "ru",
+          message: "Квартира в Паттайе до 5 млн",
+          market: "pattaya"
+        },
+        "https://agency.example.com"
+      )
     ).resolves.toMatchObject({
       conciergeMode: "starter",
       locale: "ru",
@@ -39,10 +45,17 @@ describe("PublicWidgetChatController", () => {
       market: "pattaya",
       message: "Квартира в Паттайе до 5 млн"
     });
+    expect(tenants.assertPublicWidgetOriginAllowed).toHaveBeenCalledWith(tenant, "https://agency.example.com", undefined);
+    expect(tenants.recordPublicWidgetAsk).toHaveBeenCalledWith(tenant, {
+      locale: "ru",
+      origin: "https://agency.example.com",
+      referer: null
+    });
   });
 
   it("falls back to the first enabled tenant widget language", async () => {
     const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
       getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(
         tenantFactory({
           widget: {
@@ -50,7 +63,8 @@ describe("PublicWidgetChatController", () => {
             languages: ["ru"]
           }
         })
-      )
+      ),
+      recordPublicWidgetAsk: vi.fn()
     } as unknown as TenantService;
     const chat = {
       ask: vi.fn().mockResolvedValue(chatResponse())
@@ -109,6 +123,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
         en: "Anna",
         ru: "Анна"
       },
+      allowedOrigins: [],
       languages: ["en", "ru"],
       personaGenders: {
         en: "feminine",

@@ -5,6 +5,7 @@ export interface WidgetInstallConfig {
   apiBaseUrl?: string;
   aiName: string;
   aiNames: Record<string, string | undefined>;
+  allowedOrigins: string[];
   languageCodes: string[];
   mode: "starter" | "growth" | "enterprise";
   personaGenders: Record<string, string | undefined>;
@@ -32,6 +33,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
   const config: WidgetInstallConfig = {
     aiName: widget.aiName,
     aiNames: widget.aiNames,
+    allowedOrigins: widget.allowedOrigins,
     languageCodes: widget.languages,
     mode: tenant.subscriptionPlan,
     personaGenders: widget.personaGenders,
@@ -47,6 +49,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
       { label: "Tenant", value: config.tenantSlug },
       { label: "Mode", value: config.mode },
       { label: "AI name", value: config.aiName },
+      { label: "Allowed origins", value: config.allowedOrigins.length ? String(config.allowedOrigins.length) : "Open while testing" },
       { label: "Languages", value: config.languageCodes.join(", ") },
       { label: "Tone", value: config.tone }
     ],
@@ -60,6 +63,8 @@ export function buildWidgetSnippet(config: WidgetInstallConfig): string {
 }
 
 function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
+  const widget = getTenantWidgetSettings(tenant);
+
   return [
     {
       done: Boolean(tenant.slug),
@@ -77,6 +82,13 @@ function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
       done: tenant.subscriptionPlan === "starter" || tenant.subscriptionPlan === "growth" || tenant.subscriptionPlan === "enterprise",
       label: "Plan mode",
       note: `${tenant.subscriptionPlan} mode controls whether conversations stay as AI answers or create CRM leads.`
+    },
+    {
+      done: widget.allowedOrigins.length > 0,
+      label: "Website origins",
+      note: widget.allowedOrigins.length
+        ? "Widget requests are limited to configured agency website origins."
+        : "Add production origins before sharing the snippet publicly."
     }
   ];
 }

@@ -15,6 +15,7 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
     th: "มาลี",
     zh: "安娜"
   },
+  allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
   personaGenders: {
     en: "feminine",
@@ -45,6 +46,7 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
   return {
     aiName: tenant.widget?.aiName || aiNames.en || defaultTenantWidgetSettings.aiName,
     aiNames,
+    allowedOrigins: tenant.widget?.allowedOrigins ?? defaultTenantWidgetSettings.allowedOrigins,
     languages: tenant.widget?.languages?.length ? tenant.widget.languages : defaultTenantWidgetSettings.languages,
     personaGenders: {
       ...defaultTenantWidgetSettings.personaGenders,

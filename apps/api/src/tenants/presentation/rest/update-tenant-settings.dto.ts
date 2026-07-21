@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsIn, IsObject, IsOptional, IsString, Matches, ValidateNested } from "class-validator";
+import { IsArray, IsIn, IsObject, IsOptional, IsString, IsUrl, Matches, ValidateNested } from "class-validator";
 import type {
   TenantWidgetLanguage,
   TenantWidgetPersonaGender,
@@ -48,6 +48,12 @@ export class UpdateTenantWidgetDto {
   @IsOptional()
   @IsObject()
   aiNames?: Partial<Record<TenantWidgetLanguage, string>>;
+
+  @ApiProperty({ required: false, example: ["https://agency.example.com", "https://www.agency.example.com"], type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsUrl({ require_tld: false, require_protocol: true }, { each: true })
+  allowedOrigins?: string[];
 
   @ApiProperty({ required: false, example: "Hi! I'm Anna, your AI property consultant." })
   @IsOptional()

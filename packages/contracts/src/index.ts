@@ -45,6 +45,7 @@ export type TenantWidgetTone = "friendly" | "professional" | "luxury" | "concise
 export interface TenantWidgetSettings {
   aiName: string;
   aiNames: Partial<Record<TenantWidgetLanguage, string>>;
+  allowedOrigins: string[];
   languages: TenantWidgetLanguage[];
   personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
   tone: TenantWidgetTone;
@@ -66,6 +67,7 @@ export interface UpdateTenantSettingsRequest {
 export interface PublicWidgetConfigResponse {
   aiName: string;
   aiNames: TenantWidgetSettings["aiNames"];
+  allowedOriginsConfigured: boolean;
   branding: {
     displayName: string;
     logoUrl?: string;

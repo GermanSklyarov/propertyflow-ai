@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   TenantSnapshot,
@@ -9,7 +10,7 @@ import type {
 import type { Pool } from "pg";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { TenantRepository, TenantUsageRawMetrics } from "../../domain/tenant.repository.js";
+import type { TenantRepository, TenantUsageEventType, TenantUsageRawMetrics } from "../../domain/tenant.repository.js";
 
 interface TenantRow {
   id: string;
@@ -29,6 +30,7 @@ interface TenantRow {
   widget_welcome_message: string;
   widget_welcome_messages: Partial<Record<TenantWidgetLanguage, string>> | null;
   widget_persona_genders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>> | null;
+  widget_allowed_origins: string[] | null;
   widget_tone: TenantWidgetTone | null;
   widget_languages: string[];
   created_at: Date;
@@ -47,6 +49,7 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
     th: "มาลี",
     zh: "安娜"
   },
+  allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
   personaGenders: {
     en: "feminine",
@@ -129,11 +132,11 @@ export class PgTenantRepository implements TenantRepository {
           select coalesce(sum(quantity), 0) as count
           from tenant_usage_events
           where tenant_id = $1
-            and event_type = 'public-api.request'
+            and event_type = any($4)
             and created_at >= $2
             and created_at < $3
         `,
-        [tenantId, periodStart.toISOString(), periodEnd.toISOString()]
+        [tenantId, periodStart.toISOString(), periodEnd.toISOString(), ["public-api.request", "public-widget.ask"]]
       )
     ]);
 
@@ -143,6 +146,29 @@ export class PgTenantRepository implements TenantRepository {
       aiCreditsMonthly,
       publicApiRequestsMonthly
     };
+  }
+
+  async recordUsage(tenantId: string, eventType: TenantUsageEventType, metadata: Record<string, unknown> = {}): Promise<void> {
+    await this.pool.query(
+      `
+        insert into tenant_usage_events (
+          id,
+          tenant_id,
+          event_type,
+          quantity,
+          metadata,
+          created_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          1,
+          $4,
+          $5
+        )
+      `,
+      [randomUUID(), tenantId, eventType, JSON.stringify(metadata), new Date().toISOString()]
+    );
   }
 
   async updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot | null> {
@@ -168,9 +194,10 @@ export class PgTenantRepository implements TenantRepository {
           widget_welcome_message = $10,
           widget_welcome_messages = $11,
           widget_persona_genders = $12,
-          widget_tone = $13,
-          widget_languages = $14,
-          updated_at = $15
+          widget_allowed_origins = $13,
+          widget_tone = $14,
+          widget_languages = $15,
+          updated_at = $16
         where id = $1
         returning *
       `,
@@ -187,6 +214,7 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.welcomeMessage ?? current.widget.welcomeMessage,
         request.widget?.welcomeMessages ?? current.widget.welcomeMessages,
         request.widget?.personaGenders ?? current.widget.personaGenders,
+        request.widget?.allowedOrigins ?? current.widget.allowedOrigins,
         request.widget?.tone ?? current.widget.tone,
         request.widget?.languages?.length ? request.widget.languages : current.widget.languages,
         new Date().toISOString()
@@ -219,6 +247,7 @@ export class PgTenantRepository implements TenantRepository {
           ...(row.widget_ai_names ?? {}),
           en: row.widget_ai_name || row.widget_ai_names?.en || defaultWidgetSettings.aiNames.en
         },
+        allowedOrigins: filterAllowedOrigins(row.widget_allowed_origins),
         languages: filterSupportedLanguages(row.widget_languages),
         personaGenders: {
           ...defaultWidgetSettings.personaGenders,
@@ -250,4 +279,8 @@ function filterSupportedLanguages(languages: string[] | null | undefined): Tenan
   );
 
   return filtered.length ? filtered : defaultWidgetSettings.languages;
+}
+
+function filterAllowedOrigins(origins: string[] | null | undefined): string[] {
+  return (origins ?? []).map((origin) => origin.trim().toLowerCase()).filter(Boolean);
 }
