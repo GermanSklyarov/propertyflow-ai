@@ -10,14 +10,26 @@ describe("knowledge document draft", () => {
 
   it("appends storage source references when a file upload exists", async () => {
     const body = await resolveKnowledgeDocumentBody("Agent pasted FAQ", fileFactory("guide.md", "File body"), {
-      objectKey: "tenants/demo-agency/knowledge/source.md",
-      objectUrl: "https://storage.example.com/source.md"
+      sourceUpload: {
+        objectKey: "tenants/demo-agency/knowledge/source.md",
+        objectUrl: "https://storage.example.com/source.md"
+      }
     });
 
     expect(body).toContain("Agent pasted FAQ");
-    expect(body).toContain("Source upload:");
+    expect(body).toContain("Source reference:");
     expect(body).toContain("tenants/demo-agency/knowledge/source.md");
     expect(body).toContain("https://storage.example.com/source.md");
+  });
+
+  it("appends source URLs even when content is pasted without a file", async () => {
+    const body = await resolveKnowledgeDocumentBody("Agency website FAQ", null, {
+      sourceUrl: "https://agency.example.com/faq"
+    });
+
+    expect(body).toContain("Agency website FAQ");
+    expect(body).toContain("Source reference:");
+    expect(body).toContain("https://agency.example.com/faq");
   });
 
   it("reads supported text files when body is empty", async () => {

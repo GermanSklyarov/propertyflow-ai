@@ -105,6 +105,7 @@ export function resolveKnowledgeSourceKind(
 export function buildKnowledgeSourceTags(input: {
   sourceFileName?: string;
   sourcePresetId?: string;
+  sourceUrl?: string;
   storageBacked?: boolean;
   typedTags: string;
 }) {
@@ -117,6 +118,7 @@ export function buildKnowledgeSourceTags(input: {
   return uniqueStrings([
     ...(preset ? [`source:${preset.id}`, ...preset.tags] : []),
     ...typedTags,
+    ...buildSourceUrlTags(input.sourceUrl),
     ...(input.sourceFileName ? ["source-file", normalizeTag(input.sourceFileName)] : []),
     ...(input.storageBacked ? ["storage-backed"] : [])
   ]);
@@ -128,6 +130,23 @@ function getKnowledgeDocumentSourcePreset(sourcePresetId: string | undefined) {
 
 function normalizeTag(value: string) {
   return value.trim().toLowerCase().replace(/\s+/g, "-");
+}
+
+function buildSourceUrlTags(sourceUrl?: string) {
+  const trimmed = sourceUrl?.trim();
+
+  if (!trimmed) {
+    return [];
+  }
+
+  try {
+    const url = new URL(trimmed);
+    const hostname = url.hostname.replace(/^www\./, "");
+
+    return ["source-url", `source-domain:${normalizeTag(hostname)}`];
+  } catch (_error) {
+    return ["source-url"];
+  }
 }
 
 function uniqueStrings(values: string[]) {

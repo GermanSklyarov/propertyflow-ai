@@ -48,6 +48,11 @@ export function CreateKnowledgeDocumentForm() {
         Extra tags
         <input name="tags" placeholder="pattaya, wongamat, transfer-fee, developer-name" />
       </label>
+      <label className={`${styles.wide} ${styles.sourceUrl}`}>
+        Source URL
+        <input name="sourceUrl" placeholder="https://agency.example.com/faq/buying-property-in-thailand" type="url" />
+        <small>Optional, but useful for website pages, blog articles, public PDFs, and future re-sync checks.</small>
+      </label>
       <label className={styles.wide}>
         Body
         <textarea

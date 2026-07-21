@@ -10,6 +10,11 @@ export interface KnowledgeSourceUpload {
   objectUrl: string;
 }
 
+export interface KnowledgeDocumentSourceReference {
+  sourceUrl?: string;
+  sourceUpload?: KnowledgeSourceUpload;
+}
+
 const supportedTextFileExtensions = [".csv", ".html", ".json", ".md", ".txt", ".xml"];
 const supportedTextMimeTypes = [
   "application/csv",
@@ -36,48 +41,68 @@ export function canReadKnowledgeSourceFile(file: KnowledgeSourceFileLike): boole
 export async function resolveKnowledgeDocumentBody(
   typedBody: string,
   sourceFile: KnowledgeSourceFileLike | null,
-  sourceUpload?: KnowledgeSourceUpload
+  sourceReference: KnowledgeDocumentSourceReference = {}
 ): Promise<string> {
   const body = typedBody.trim();
 
   if (!sourceFile || sourceFile.size === 0) {
-    return body;
+    return appendSourceReference(body, sourceReference);
   }
 
   if (body) {
-    return appendSourceUploadReference(body, sourceFile, sourceUpload);
+    return appendSourceReference(body, sourceReference, sourceFile);
   }
 
   if (!canReadKnowledgeSourceFile(sourceFile)) {
-    return appendSourceUploadReference(
+    return appendSourceReference(
       [
         `Source file uploaded: ${sourceFile.name}.`,
         "",
         "Binary PDF/image ingestion is not enabled for this MVP path yet. Use a text export or paste the extracted content here until the OCR/PDF worker is connected."
       ].join("\n"),
+      sourceReference,
       sourceFile,
-      sourceUpload
     );
   }
 
-  return appendSourceUploadReference((await sourceFile.text()).trim(), sourceFile, sourceUpload);
+  return appendSourceReference((await sourceFile.text()).trim(), sourceReference, sourceFile);
 }
 
-function appendSourceUploadReference(
+function appendSourceReference(
   body: string,
-  sourceFile: KnowledgeSourceFileLike,
-  sourceUpload?: KnowledgeSourceUpload
+  sourceReference: KnowledgeDocumentSourceReference,
+  sourceFile?: KnowledgeSourceFileLike
 ): string {
-  if (!sourceUpload) {
+  const sourceUrl = normalizeSourceUrl(sourceReference.sourceUrl);
+  const sourceUpload = sourceReference.sourceUpload;
+
+  if (!sourceUrl && (!sourceFile || !sourceUpload)) {
     return body;
   }
 
-  return [
-    body,
-    "",
-    "Source upload:",
-    `- Filename: ${sourceFile.name}`,
-    `- Object key: ${sourceUpload.objectKey}`,
-    `- Object URL: ${sourceUpload.objectUrl}`
-  ].join("\n");
+  const lines = [body, "", "Source reference:"];
+
+  if (sourceUrl) {
+    lines.push(`- Source URL: ${sourceUrl}`);
+  }
+
+  if (sourceFile && sourceUpload) {
+    lines.push(`- Filename: ${sourceFile.name}`, `- Object key: ${sourceUpload.objectKey}`, `- Object URL: ${sourceUpload.objectUrl}`);
+  }
+
+  return lines.join("\n");
+}
+
+function normalizeSourceUrl(value?: string) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  try {
+    return new URL(trimmed).toString();
+  } catch (_error) {
+    return trimmed;
+  }
 }

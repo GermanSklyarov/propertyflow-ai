@@ -27,6 +27,20 @@
   text-transform: none;
 }
 
+.sourceUrl {
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f7fbfa;
+  padding: 12px;
+}
+
+.sourceUrl small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.35;
+  text-transform: none;
+}
+
 .form input,
 .form select,
 .form textarea {

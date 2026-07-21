@@ -15,9 +15,10 @@ import { buildKnowledgeSourceTags, resolveKnowledgeSourceKind } from "../model/k
 export async function createKnowledgeDocumentAction(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const typedBody = String(formData.get("body") ?? "").trim();
+  const sourceUrl = String(formData.get("sourceUrl") ?? "").trim();
   const sourceFile = getSourceFile(formData.get("sourceFile"));
   const sourceUpload = sourceFile ? await uploadKnowledgeSourceFile(sourceFile) : undefined;
-  const body = await resolveKnowledgeDocumentBody(typedBody, sourceFile, sourceUpload);
+  const body = await resolveKnowledgeDocumentBody(typedBody, sourceFile, { sourceUpload, sourceUrl });
   const locale = String(formData.get("locale") ?? "en") as CreateKnowledgeDocumentRequest["locale"];
   const fallbackKind = String(formData.get("kind") ?? "article") as CreateKnowledgeDocumentRequest["kind"];
   const sourcePresetId = String(formData.get("sourcePreset") ?? "custom");
@@ -25,6 +26,7 @@ export async function createKnowledgeDocumentAction(formData: FormData) {
   const tags = buildKnowledgeSourceTags({
     sourceFileName: sourceFile?.name,
     sourcePresetId,
+    sourceUrl,
     storageBacked: Boolean(sourceUpload),
     typedTags: String(formData.get("tags") ?? "")
   });

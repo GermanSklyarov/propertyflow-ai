@@ -54,10 +54,21 @@ describe("knowledge source presets", () => {
   it("tags website sources for starter concierge retrieval", () => {
     const tags = buildKnowledgeSourceTags({
       sourcePresetId: "website-faq-pages",
+      sourceUrl: "https://www.agency.example.com/faq",
       storageBacked: false,
       typedTags: "website url"
     });
 
-    expect(tags).toEqual(expect.arrayContaining(["source:website-faq-pages", "website", "faq-page", "public-site", "website-url"]));
+    expect(tags).toEqual(
+      expect.arrayContaining([
+        "source:website-faq-pages",
+        "website",
+        "faq-page",
+        "public-site",
+        "website-url",
+        "source-url",
+        "source-domain:agency.example.com"
+      ])
+    );
   });
 });
