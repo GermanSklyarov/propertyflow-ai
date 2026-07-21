@@ -148,17 +148,22 @@ export function TenantSettingsPanel({
               <div className={styles.personalityGrid}>
                 <Field label="Languages" value={`${widgetSettings.languages.length} active`} />
                 <Field label="Tone" value={formatWidgetTone(widgetSettings.tone)} />
-                <Field label="Default welcome" value={widgetSettings.welcomeMessage} />
               </div>
-              <div className={styles.personaSummaryList}>
-                {widgetSettings.languages.map((language) => (
-                  <span key={language}>
-                    <strong>{language.toUpperCase()}</strong>
-                    {widgetSettings.aiNames[language] ?? widgetSettings.aiName}
-                    <small>{formatPersonaGender(widgetSettings.personaGenders[language])}</small>
-                  </span>
-                ))}
-              </div>
+              <details className={styles.personaDetails}>
+                <summary>
+                  Language personas
+                  <span>{widgetSettings.languages.map((language) => language.toUpperCase()).join(", ")}</span>
+                </summary>
+                <div className={styles.personaSummaryList}>
+                  {widgetSettings.languages.map((language) => (
+                    <span key={language}>
+                      <strong>{language.toUpperCase()}</strong>
+                      {widgetSettings.aiNames[language] ?? widgetSettings.aiName}
+                      <small>{formatPersonaGender(widgetSettings.personaGenders[language])}</small>
+                    </span>
+                  ))}
+                </div>
+              </details>
             </section>
           </div>
 
