@@ -56,6 +56,7 @@ export class TenantService {
       aiNames: tenant.widget.aiNames,
       allowedOriginsConfigured: tenant.widget.allowedOrigins.length > 0,
       branding: tenant.branding,
+      capabilities: buildPublicWidgetCapabilities(tenant),
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
       personaGenders: tenant.widget.personaGenders,
@@ -271,6 +272,14 @@ function buildPublicWidgetReadiness(tenant: TenantSnapshot): PublicWidgetReadine
     checks,
     nextAction: nextActions[status],
     status
+  };
+}
+
+function buildPublicWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetConfigResponse["capabilities"] {
+  return {
+    knowledgeAnswers: true,
+    leadCapture: tenant.subscriptionPlan === "growth" || tenant.subscriptionPlan === "enterprise",
+    propertySearch: true
   };
 }
 

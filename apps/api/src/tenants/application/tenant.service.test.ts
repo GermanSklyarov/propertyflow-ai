@@ -56,6 +56,11 @@ describe("TenantService", () => {
         logoUrl: "https://cdn.example.com/logo.png",
         primaryColor: "#0f766e"
       },
+      capabilities: {
+        knowledgeAnswers: true,
+        leadCapture: false,
+        propertySearch: true
+      },
       conciergeMode: "starter",
       languages: ["en", "ru"],
       personaGenders: {
@@ -101,6 +106,7 @@ describe("TenantService", () => {
       repository({
         findBySlug: async () =>
           tenant({
+            subscriptionPlan: "growth",
             widget: {
               aiName: "Mali",
               aiNames: {
@@ -125,6 +131,11 @@ describe("TenantService", () => {
     );
 
     await expect(service.getPublicWidgetConfig("demo-agency")).resolves.toMatchObject({
+      capabilities: {
+        knowledgeAnswers: true,
+        leadCapture: true,
+        propertySearch: true
+      },
       readiness: {
         nextAction: "Widget configuration is ready for production installation.",
         status: "ready"

@@ -26,6 +26,11 @@ export class PublicWidgetConfigController {
           displayName: "Demo Agency",
           primaryColor: "#0f766e"
         },
+        capabilities: {
+          knowledgeAnswers: true,
+          leadCapture: false,
+          propertySearch: true
+        },
         conciergeMode: "starter",
         languages: ["en", "ru", "th", "zh"],
         personaGenders: {

@@ -14,6 +14,7 @@
   }
 
   var apiBase = readAttribute(script, "api-base", inferApiBase(script.src));
+  var embedMode = readAttribute(script, "mode", "starter");
   var requestedLocale = resolveRequestedLocale(readAttribute(script, "locale", "auto"));
   var fallbackConfig = {
     aiName: readAttribute(script, "ai-name", "Anna"),
@@ -22,7 +23,12 @@
       displayName: "PropertyFlowAI",
       primaryColor: "#0f766e"
     },
-    conciergeMode: readAttribute(script, "mode", "starter"),
+    capabilities: {
+      knowledgeAnswers: true,
+      leadCapture: embedMode === "growth" || embedMode === "enterprise",
+      propertySearch: true
+    },
+    conciergeMode: embedMode,
     languages: readAttribute(script, "languages", "en").split(",").filter(Boolean),
     personaGenders: readJsonAttribute(script, "persona-genders", {}),
     readiness: {
@@ -94,7 +100,7 @@
     var displayName = escapeText(config.branding.displayName || "PropertyFlowAI");
     var aiName = escapeText(getLocalizedValue(config.aiNames, state.locale, config.aiName || "Anna"));
     var mode = escapeText(config.conciergeMode || "starter");
-    var canCreateLead = config.conciergeMode === "growth" || config.conciergeMode === "enterprise";
+    var canCreateLead = config.capabilities && config.capabilities.leadCapture === true;
     var languageLabel = escapeText(state.locale.toUpperCase());
     var handoff = state.handoff;
     var messages = state.messages
@@ -436,6 +442,7 @@
       aiName: remote.aiName || fallback.aiName,
       aiNames: Object.assign({}, fallback.aiNames, remote.aiNames || {}),
       branding: Object.assign({}, fallback.branding, remote.branding || {}),
+      capabilities: Object.assign({}, fallback.capabilities, remote.capabilities || {}),
       conciergeMode: remote.conciergeMode || fallback.conciergeMode,
       languages: Array.isArray(remote.languages) && remote.languages.length ? remote.languages : fallback.languages,
       personaGenders: Object.assign({}, fallback.personaGenders, remote.personaGenders || {}),

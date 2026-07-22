@@ -81,6 +81,12 @@ export interface PublicWidgetReadiness {
   status: PublicWidgetReadinessStatus;
 }
 
+export interface PublicWidgetCapabilities {
+  knowledgeAnswers: boolean;
+  leadCapture: boolean;
+  propertySearch: boolean;
+}
+
 export interface PublicWidgetConfigResponse {
   aiName: string;
   aiNames: TenantWidgetSettings["aiNames"];
@@ -90,6 +96,7 @@ export interface PublicWidgetConfigResponse {
     logoUrl?: string;
     primaryColor?: string;
   };
+  capabilities: PublicWidgetCapabilities;
   conciergeMode: TenantSnapshot["subscriptionPlan"];
   languages: TenantWidgetSettings["languages"];
   personaGenders: TenantWidgetSettings["personaGenders"];
