@@ -94,6 +94,7 @@
     var displayName = escapeText(config.branding.displayName || "PropertyFlowAI");
     var aiName = escapeText(getLocalizedValue(config.aiNames, state.locale, config.aiName || "Anna"));
     var mode = escapeText(config.conciergeMode || "starter");
+    var canCreateLead = config.conciergeMode === "growth" || config.conciergeMode === "enterprise";
     var languageLabel = escapeText(state.locale.toUpperCase());
     var handoff = state.handoff;
     var messages = state.messages
@@ -143,51 +144,53 @@
           ">Ask</button>" +
           "</form>" +
           '<small class="pf-note">Answers use this agency knowledge base and listings. CRM is not required for Starter mode.</small>' +
-          '<div class="pf-handoff">' +
-          '<button class="pf-handoff-toggle" type="button" aria-expanded="' +
-          String(state.isHandoffOpen) +
-          '">' +
-          getHandoffCta(state.locale) +
-          "</button>" +
-          (state.isHandoffOpen
-            ? '<form class="pf-handoff-form">' +
-              (handoff.error ? '<p class="pf-handoff-error">' + escapeText(handoff.error) + "</p>" : "") +
-              '<input name="contactName" placeholder="' +
-              escapeText(getHandoffNamePlaceholder(state.locale)) +
-              '" value="' +
-              escapeText(handoff.contactName) +
-              '"' +
-              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
-              " />" +
-              '<div class="pf-handoff-grid">' +
-              '<input name="contactEmail" type="email" placeholder="Email" value="' +
-              escapeText(handoff.contactEmail) +
-              '"' +
-              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
-              " />" +
-              '<input name="contactPhone" placeholder="' +
-              escapeText(getHandoffPhonePlaceholder(state.locale)) +
-              '" value="' +
-              escapeText(handoff.contactPhone) +
-              '"' +
-              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
-              " />" +
-              "</div>" +
-              '<textarea name="handoffMessage" rows="2" placeholder="' +
-              escapeText(getHandoffMessagePlaceholder(state.locale)) +
-              '"' +
-              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
-              ">" +
-              escapeText(handoff.message) +
-              "</textarea>" +
-              '<button type="submit"' +
-              (state.isReady && !state.isHandoffSending ? "" : " disabled") +
-              ">" +
-              (state.isHandoffSending ? getSendingLabel(state.locale) : getHandoffSubmitLabel(state.locale)) +
+          (canCreateLead
+            ? '<div class="pf-handoff">' +
+              '<button class="pf-handoff-toggle" type="button" aria-expanded="' +
+              String(state.isHandoffOpen) +
+              '">' +
+              getHandoffCta(state.locale) +
               "</button>" +
-              "</form>"
+              (state.isHandoffOpen
+                ? '<form class="pf-handoff-form">' +
+                  (handoff.error ? '<p class="pf-handoff-error">' + escapeText(handoff.error) + "</p>" : "") +
+                  '<input name="contactName" placeholder="' +
+                  escapeText(getHandoffNamePlaceholder(state.locale)) +
+                  '" value="' +
+                  escapeText(handoff.contactName) +
+                  '"' +
+                  (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+                  " />" +
+                  '<div class="pf-handoff-grid">' +
+                  '<input name="contactEmail" type="email" placeholder="Email" value="' +
+                  escapeText(handoff.contactEmail) +
+                  '"' +
+                  (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+                  " />" +
+                  '<input name="contactPhone" placeholder="' +
+                  escapeText(getHandoffPhonePlaceholder(state.locale)) +
+                  '" value="' +
+                  escapeText(handoff.contactPhone) +
+                  '"' +
+                  (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+                  " />" +
+                  "</div>" +
+                  '<textarea name="handoffMessage" rows="2" placeholder="' +
+                  escapeText(getHandoffMessagePlaceholder(state.locale)) +
+                  '"' +
+                  (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+                  ">" +
+                  escapeText(handoff.message) +
+                  "</textarea>" +
+                  '<button type="submit"' +
+                  (state.isReady && !state.isHandoffSending ? "" : " disabled") +
+                  ">" +
+                  (state.isHandoffSending ? getSendingLabel(state.locale) : getHandoffSubmitLabel(state.locale)) +
+                  "</button>" +
+                  "</form>"
+                : "") +
+              "</div>"
             : "") +
-          "</div>" +
           "</section>"
         : "") +
       "</div>";

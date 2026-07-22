@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Headers, Inject, Param, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, ForbiddenException, Headers, Inject, Param, Post } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import type { PublicWidgetAskResponse, PublicWidgetLeadResponse, TenantWidgetLanguage } from "@propertyflow/contracts";
 import { LeadService } from "../../../leads/application/lead.service.js";
@@ -43,6 +43,7 @@ export class PublicWidgetChatController {
   ): Promise<PublicWidgetAskResponse> {
     const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
     this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
+
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
     const response = await this.chat.ask(tenant.id, {
       ...payload,
@@ -63,13 +64,13 @@ export class PublicWidgetChatController {
   }
 
   @Post("leads/:tenantSlug")
-  @ApiOperation({ summary: "Create a tenant-scoped lead from the public AI Concierge widget" })
+  @ApiOperation({ summary: "Create a tenant-scoped Growth or Enterprise lead from the public AI Concierge widget" })
   @ApiParam({ name: "tenantSlug", example: "demo-agency" })
   @ApiOkResponse({
-    description: "Lead captured from a public widget handoff without exposing a public API key",
+    description: "Lead captured from a Growth or Enterprise public widget handoff without exposing a public API key",
     schema: {
       example: {
-        conciergeMode: "starter",
+        conciergeMode: "growth",
         leadId: "lead-1",
         locale: "en",
         message: "Thanks. The agency has your request and can follow up from CRM.",
@@ -86,6 +87,11 @@ export class PublicWidgetChatController {
   ): Promise<PublicWidgetLeadResponse> {
     const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
     this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
+
+    if (tenant.subscriptionPlan === "starter") {
+      throw new ForbiddenException("Widget CRM handoff requires Growth or Enterprise mode");
+    }
+
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
     const contactEmail = normalizeOptional(payload.contactEmail);
     const contactPhone = normalizeOptional(payload.contactPhone);

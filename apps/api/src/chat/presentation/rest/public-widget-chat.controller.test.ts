@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import type { AiChatResponse, LeadSnapshot, TenantSnapshot } from "@propertyflow/contracts";
 import { LeadService } from "../../../leads/application/lead.service.js";
@@ -95,6 +95,7 @@ describe("PublicWidgetChatController", () => {
     const tenant = tenantFactory({
       id: "tenant-handoff",
       slug: "demo-agency",
+      subscriptionPlan: "growth",
       widget: {
         ...tenantFactory().widget,
         languages: ["en", "ru"]
@@ -126,7 +127,7 @@ describe("PublicWidgetChatController", () => {
         "https://agency.example.com/listing"
       )
     ).resolves.toMatchObject({
-      conciergeMode: "starter",
+      conciergeMode: "growth",
       leadId: "lead-widget-1",
       locale: "ru",
       status: "new",
@@ -148,8 +149,44 @@ describe("PublicWidgetChatController", () => {
     });
   });
 
+  it("keeps Starter widget handoff out of CRM", async () => {
+    const tenant = tenantFactory({
+      subscriptionPlan: "starter"
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn()
+    } as unknown as AiChatService;
+    const leads = {
+      create: vi.fn()
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(tenants, chat, leads);
+
+    await expect(
+      controller.createLead(
+        "demo-agency",
+        {
+          contactEmail: "buyer@example.com",
+          contactName: "Buyer",
+          locale: "en",
+          message: "Please contact me."
+        },
+        "https://agency.example.com"
+      )
+    ).rejects.toBeInstanceOf(ForbiddenException);
+
+    expect(tenants.assertPublicWidgetOriginAllowed).toHaveBeenCalledWith(tenant, "https://agency.example.com", undefined);
+    expect(leads.create).not.toHaveBeenCalled();
+  });
+
   it("rejects widget handoff without email or phone", async () => {
-    const tenant = tenantFactory();
+    const tenant = tenantFactory({
+      subscriptionPlan: "growth"
+    });
     const tenants = {
       assertPublicWidgetOriginAllowed: vi.fn(),
       getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
