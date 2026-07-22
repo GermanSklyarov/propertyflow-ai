@@ -173,7 +173,21 @@ export function TenantSettingsPanel({
             <section className={styles.starterCard}>
               <p className="section-kicker">Widget readiness</p>
               <h3>Concierge can launch when sources are ready</h3>
+              <div className={styles.widgetRuntimeStatus} data-status={widgetInstall.readiness.status}>
+                <strong>{formatWidgetReadinessStatus(widgetInstall.readiness.status)}</strong>
+                <span>{widgetInstall.readiness.nextAction}</span>
+              </div>
               <div className={styles.widgetReadinessList}>
+                {widgetInstall.readiness.checks.map((check) => (
+                  <ReadinessCard
+                    item={{
+                      done: check.ready,
+                      label: check.label,
+                      note: check.note
+                    }}
+                    key={check.key}
+                  />
+                ))}
                 <ReadinessCard
                   item={{
                     done: starterReadiness.completed > 0,
@@ -450,6 +464,16 @@ function formatWidgetTone(tone: string) {
   };
 
   return labels[tone] ?? tone;
+}
+
+function formatWidgetReadinessStatus(status: string) {
+  const labels: Record<string, string> = {
+    "needs-setup": "Needs setup",
+    ready: "Ready",
+    "test-mode": "Test mode"
+  };
+
+  return labels[status] ?? status;
 }
 
 function formatPersonaGender(gender?: string) {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TenantSnapshot } from "@propertyflow/contracts";
-import { buildWidgetInstallPackage, buildWidgetSnippet } from "./widget-install";
+import { buildWidgetInstallPackage, buildWidgetRuntimeReadiness, buildWidgetSnippet } from "./widget-install";
 
 describe("widget install model", () => {
   it("builds a copy-paste snippet bound to the tenant", () => {
@@ -51,6 +51,10 @@ describe("widget install model", () => {
         value: 'data-locale="en"'
       }
     ]);
+    expect(install.readiness).toMatchObject({
+      nextAction: "Widget configuration is ready for production installation.",
+      status: "ready"
+    });
     expect(install.steps.every((step) => step.done)).toBe(true);
   });
 
@@ -90,6 +94,60 @@ describe("widget install model", () => {
 
     expect(install.snippet).toContain('data-ai-name="Anna"');
     expect(install.snippet).toContain('data-languages="en,ru,th,zh"');
+  });
+
+  it("marks widget runtime test-mode until production origins are configured", () => {
+    const readiness = buildWidgetRuntimeReadiness({
+      aiName: "Anna",
+      aiNames: {
+        en: "Anna"
+      },
+      allowedOrigins: [],
+      languageCodes: ["en"],
+      mode: "starter",
+      personaGenders: {
+        en: "feminine"
+      },
+      tenantSlug: "demo-agency",
+      tone: "friendly",
+      welcomeMessage: "Hi",
+      welcomeMessages: {
+        en: "Hi"
+      }
+    });
+
+    expect(readiness.status).toBe("test-mode");
+    expect(readiness.nextAction).toBe("Add production website origins before sharing the widget with live visitors.");
+  });
+
+  it("requires localized welcomes for every enabled language", () => {
+    const readiness = buildWidgetRuntimeReadiness({
+      aiName: "Anna",
+      aiNames: {
+        en: "Anna"
+      },
+      allowedOrigins: ["https://demo.example.com"],
+      languageCodes: ["en", "ru"],
+      mode: "starter",
+      personaGenders: {
+        en: "feminine",
+        ru: "feminine"
+      },
+      tenantSlug: "demo-agency",
+      tone: "friendly",
+      welcomeMessage: "Hi",
+      welcomeMessages: {
+        en: "Hi"
+      }
+    });
+
+    expect(readiness.status).toBe("needs-setup");
+    expect(readiness.checks).toContainEqual({
+      key: "localized-welcome",
+      label: "Localized welcome",
+      note: "Add a welcome message for every enabled language.",
+      ready: false
+    });
   });
 });
 
