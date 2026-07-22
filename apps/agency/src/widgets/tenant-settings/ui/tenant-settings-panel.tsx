@@ -53,6 +53,11 @@ export function TenantSettingsPanel({
   const activeKnowledgeJobs = knowledgeJobs.some((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed");
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
+  const widgetReadinessCompleted =
+    widgetInstall.readiness.checks.filter((check) => check.ready).length +
+    Number(starterReadiness.completed > 0) +
+    Number(!activeKnowledgeJobs && starterReadiness.completed > 0) +
+    Number(Boolean(tenant.slug));
 
   return (
     <>
@@ -181,48 +186,51 @@ export function TenantSettingsPanel({
                 {widgetInstall.capabilities.map((capability) => (
                   <div className={styles.widgetCapability} data-enabled={String(capability.enabled)} key={capability.label}>
                     {capability.enabled ? <CheckCircle2 size={15} /> : <CircleDot size={15} />}
-                    <div>
-                      <strong>{capability.label}</strong>
-                      <span>{capability.note}</span>
-                    </div>
+                    <strong>{capability.label}</strong>
                   </div>
                 ))}
               </div>
-              <div className={styles.widgetReadinessList}>
-                {widgetInstall.readiness.checks.map((check) => (
+              <details className={styles.widgetReadinessDetails}>
+                <summary>
+                  Readiness checks
+                  <span>{widgetReadinessCompleted}/6 ready</span>
+                </summary>
+                <div className={styles.widgetReadinessList}>
+                  {widgetInstall.readiness.checks.map((check) => (
+                    <ReadinessCard
+                      item={{
+                        done: check.ready,
+                        label: check.label,
+                        note: check.note
+                      }}
+                      key={check.key}
+                    />
+                  ))}
                   <ReadinessCard
                     item={{
-                      done: check.ready,
-                      label: check.label,
-                      note: check.note
+                      done: starterReadiness.completed > 0,
+                      label: "Knowledge available",
+                      note: starterReadiness.completed
+                        ? `${starterReadiness.completed} starter source types have AI-ready documents.`
+                        : "Add at least one AI-ready FAQ or company source before installing the widget."
                     }}
-                    key={check.key}
                   />
-                ))}
-                <ReadinessCard
-                  item={{
-                    done: starterReadiness.completed > 0,
-                    label: "Knowledge available",
-                    note: starterReadiness.completed
-                      ? `${starterReadiness.completed} starter source types have AI-ready documents.`
-                      : "Add at least one AI-ready FAQ or company source before installing the widget."
-                  }}
-                />
-                <ReadinessCard
-                  item={{
-                    done: !activeKnowledgeJobs && starterReadiness.completed > 0,
-                    label: "Indexing settled",
-                    note: activeKnowledgeJobs ? "Wait for active ingestion jobs to finish." : "No active knowledge jobs are blocking widget copy."
-                  }}
-                />
-                <ReadinessCard
-                  item={{
-                    done: Boolean(tenant.slug),
-                    label: "Tenant key ready",
-                    note: tenant.slug ? `Widget attaches to ${tenant.slug}.` : "Workspace slug is required for widget install."
-                  }}
-                />
-              </div>
+                  <ReadinessCard
+                    item={{
+                      done: !activeKnowledgeJobs && starterReadiness.completed > 0,
+                      label: "Indexing settled",
+                      note: activeKnowledgeJobs ? "Wait for active ingestion jobs to finish." : "No active knowledge jobs are blocking widget copy."
+                    }}
+                  />
+                  <ReadinessCard
+                    item={{
+                      done: Boolean(tenant.slug),
+                      label: "Tenant key ready",
+                      note: tenant.slug ? `Widget attaches to ${tenant.slug}.` : "Workspace slug is required for widget install."
+                    }}
+                  />
+                </div>
+              </details>
             </section>
 
             <section className={styles.starterCard}>
