@@ -177,6 +177,17 @@ export function TenantSettingsPanel({
                 <strong>{formatWidgetReadinessStatus(widgetInstall.readiness.status)}</strong>
                 <span>{widgetInstall.readiness.nextAction}</span>
               </div>
+              <div className={styles.widgetCapabilityList} aria-label="Widget runtime capabilities">
+                {widgetInstall.capabilities.map((capability) => (
+                  <div className={styles.widgetCapability} data-enabled={String(capability.enabled)} key={capability.label}>
+                    {capability.enabled ? <CheckCircle2 size={15} /> : <CircleDot size={15} />}
+                    <div>
+                      <strong>{capability.label}</strong>
+                      <span>{capability.note}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
               <div className={styles.widgetReadinessList}>
                 {widgetInstall.readiness.checks.map((check) => (
                   <ReadinessCard

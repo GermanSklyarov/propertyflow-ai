@@ -361,6 +361,58 @@
   border-color: rgb(185 28 28 / 22%);
 }
 
+.widgetCapabilityList {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.widgetCapability {
+  align-items: start;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  padding: 10px;
+}
+
+.widgetCapability[data-enabled="false"] {
+  background: #f8fbfa;
+  color: var(--muted);
+}
+
+.widgetCapability svg {
+  margin-top: 2px;
+}
+
+.widgetCapability div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.widgetCapability strong,
+.widgetCapability span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.widgetCapability strong {
+  font-size: 0.82rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.widgetCapability span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
 .widgetReadinessList .readinessCard {
   grid-template-columns: 18px minmax(0, 1fr);
   padding: 10px;

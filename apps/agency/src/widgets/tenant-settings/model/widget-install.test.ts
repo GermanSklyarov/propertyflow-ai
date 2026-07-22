@@ -78,6 +78,11 @@ describe("widget install model", () => {
       welcomeMessages: {
         en: "Hi <buyer> & family",
         ru: "Привет"
+      },
+      capabilities: {
+        knowledgeAnswers: true,
+        leadCapture: true,
+        propertySearch: true
       }
     });
 
@@ -103,6 +108,11 @@ describe("widget install model", () => {
         en: "Anna"
       },
       allowedOrigins: [],
+      capabilities: {
+        knowledgeAnswers: true,
+        leadCapture: false,
+        propertySearch: true
+      },
       languageCodes: ["en"],
       mode: "starter",
       personaGenders: {
@@ -127,6 +137,11 @@ describe("widget install model", () => {
         en: "Anna"
       },
       allowedOrigins: ["https://demo.example.com"],
+      capabilities: {
+        knowledgeAnswers: true,
+        leadCapture: false,
+        propertySearch: true
+      },
       languageCodes: ["en", "ru"],
       mode: "starter",
       personaGenders: {
@@ -147,6 +162,32 @@ describe("widget install model", () => {
       label: "Localized welcome",
       note: "Add a welcome message for every enabled language.",
       ready: false
+    });
+  });
+
+  it("describes starter widget capabilities without CRM lead capture", () => {
+    const install = buildWidgetInstallPackage(tenantFactory({ subscriptionPlan: "starter" }));
+
+    expect(install.config.capabilities).toEqual({
+      knowledgeAnswers: true,
+      leadCapture: false,
+      propertySearch: true
+    });
+    expect(install.capabilities).toContainEqual({
+      enabled: false,
+      label: "CRM lead capture",
+      note: "Starter keeps visitor conversations as AI answers until Growth is enabled."
+    });
+  });
+
+  it("enables CRM lead capture for growth widgets", () => {
+    const install = buildWidgetInstallPackage(tenantFactory({ subscriptionPlan: "growth" }));
+
+    expect(install.config.capabilities.leadCapture).toBe(true);
+    expect(install.capabilities).toContainEqual({
+      enabled: true,
+      label: "CRM lead capture",
+      note: "Growth and Enterprise handoff can create CRM leads."
     });
   });
 });

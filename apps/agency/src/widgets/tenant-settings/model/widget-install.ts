@@ -1,4 +1,4 @@
-import type { PublicWidgetReadiness, PublicWidgetReadinessCheck, TenantSnapshot } from "@propertyflow/contracts";
+import type { PublicWidgetCapabilities, PublicWidgetReadiness, PublicWidgetReadinessCheck, TenantSnapshot } from "@propertyflow/contracts";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 
 export interface WidgetInstallConfig {
@@ -6,6 +6,7 @@ export interface WidgetInstallConfig {
   aiName: string;
   aiNames: Record<string, string | undefined>;
   allowedOrigins: string[];
+  capabilities: PublicWidgetCapabilities;
   languageCodes: string[];
   mode: "starter" | "growth" | "enterprise";
   personaGenders: Record<string, string | undefined>;
@@ -27,7 +28,14 @@ export interface WidgetLocaleIntegrationOption {
   value: string;
 }
 
+export interface WidgetCapabilityItem {
+  enabled: boolean;
+  label: string;
+  note: string;
+}
+
 export interface WidgetInstallPackage {
+  capabilities: WidgetCapabilityItem[];
   config: WidgetInstallConfig;
   dataAttributes: Array<{ label: string; value: string }>;
   localeOptions: WidgetLocaleIntegrationOption[];
@@ -38,10 +46,12 @@ export interface WidgetInstallPackage {
 
 export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstallPackage {
   const widget = getTenantWidgetSettings(tenant);
+  const capabilities = buildWidgetCapabilities(tenant);
   const config: WidgetInstallConfig = {
     aiName: widget.aiName,
     aiNames: widget.aiNames,
     allowedOrigins: widget.allowedOrigins,
+    capabilities,
     languageCodes: widget.languages,
     mode: tenant.subscriptionPlan,
     personaGenders: widget.personaGenders,
@@ -52,6 +62,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
   };
 
   return {
+    capabilities: buildWidgetCapabilityItems(capabilities),
     config,
     dataAttributes: [
       { label: "Tenant", value: config.tenantSlug },
@@ -70,6 +81,36 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
 
 export function buildWidgetSnippet(config: WidgetInstallConfig): string {
   return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="auto" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
+}
+
+export function buildWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetCapabilities {
+  return {
+    knowledgeAnswers: true,
+    leadCapture: tenant.subscriptionPlan === "growth" || tenant.subscriptionPlan === "enterprise",
+    propertySearch: true
+  };
+}
+
+export function buildWidgetCapabilityItems(capabilities: PublicWidgetCapabilities): WidgetCapabilityItem[] {
+  return [
+    {
+      enabled: capabilities.knowledgeAnswers,
+      label: "Knowledge answers",
+      note: "Concierge answers from agency documents and approved knowledge sources."
+    },
+    {
+      enabled: capabilities.propertySearch,
+      label: "Property search",
+      note: "Imported listings feed Concierge search without forcing CRM adoption."
+    },
+    {
+      enabled: capabilities.leadCapture,
+      label: "CRM lead capture",
+      note: capabilities.leadCapture
+        ? "Growth and Enterprise handoff can create CRM leads."
+        : "Starter keeps visitor conversations as AI answers until Growth is enabled."
+    }
+  ];
 }
 
 function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
