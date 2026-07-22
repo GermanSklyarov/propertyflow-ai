@@ -65,8 +65,8 @@ export function KnowledgeBasePage({
   const kindCount = new Set(documents.map((document) => document.kind)).size;
   const localeCount = new Set(documents.map((document) => document.locale)).size;
   const taggedCount = documents.filter((document) => document.tags.length > 0).length;
-  const starterReadiness = buildKnowledgeStarterReadiness(documents);
   const activeKnowledgeJobs = jobs.filter((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed").length;
+  const starterReadiness = buildKnowledgeStarterReadiness(documents, activeKnowledgeJobs);
   const runtimeSourceGroups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
     documents,
     jobs: sourceJobs ?? jobs,
@@ -115,7 +115,12 @@ export function KnowledgeBasePage({
               {starterReadiness.completed}/{starterReadiness.total}
             </strong>
             <span>AI-ready source types</span>
-            <small>{activeKnowledgeJobs ? "AI is indexing your knowledge..." : "Ready for the next source"}</small>
+            <small>{starterReadiness.summary}</small>
+          </div>
+
+          <div className={styles.launchAction} data-phase={starterReadiness.phase}>
+            <strong>{formatStarterPhase(starterReadiness.phase)}</strong>
+            <span>{starterReadiness.nextAction}</span>
           </div>
 
           <div className={styles.requirementGrid} aria-label="Starter knowledge checklist">
@@ -297,6 +302,17 @@ function SourceReadinessMetric({ label, note, value }: { label: string; note: st
       <small>{note}</small>
     </article>
   );
+}
+
+function formatStarterPhase(phase: ReturnType<typeof buildKnowledgeStarterReadiness>["phase"]) {
+  const labels = {
+    empty: "Upload first source",
+    indexing: "Indexing knowledge",
+    "launch-ready": "Starter ready",
+    review: "Needs coverage"
+  };
+
+  return labels[phase];
 }
 
 function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {

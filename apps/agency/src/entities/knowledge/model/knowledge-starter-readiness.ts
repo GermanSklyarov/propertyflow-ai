@@ -17,7 +17,11 @@ export interface KnowledgeStarterReadinessItem extends KnowledgeStarterRequireme
 export interface KnowledgeStarterReadiness {
   completed: number;
   items: KnowledgeStarterReadinessItem[];
+  launchReady: boolean;
   missing: number;
+  nextAction: string;
+  phase: "empty" | "indexing" | "review" | "launch-ready";
+  summary: string;
   total: number;
 }
 
@@ -78,7 +82,7 @@ export const knowledgeStarterRequirements: KnowledgeStarterRequirement[] = [
   }
 ];
 
-export function buildKnowledgeStarterReadiness(documents: KnowledgeDocumentSnapshot[]): KnowledgeStarterReadiness {
+export function buildKnowledgeStarterReadiness(documents: KnowledgeDocumentSnapshot[], activeJobCount = 0): KnowledgeStarterReadiness {
   const items = knowledgeStarterRequirements.map((requirement) => {
     const matchedDocuments = documents.filter((document) => matchesRequirement(document, requirement));
     const readyDocuments = matchedDocuments.filter((document) => assessKnowledgeDocumentReadiness(document).status === "ready").length;
@@ -92,12 +96,70 @@ export function buildKnowledgeStarterReadiness(documents: KnowledgeDocumentSnaps
   });
 
   const completed = items.filter((item) => item.done).length;
+  const launchState = buildStarterLaunchState({
+    activeJobCount,
+    completed,
+    documents,
+    items
+  });
 
   return {
     completed,
     items,
+    launchReady: launchState.phase === "launch-ready",
     missing: items.length - completed,
+    nextAction: launchState.nextAction,
+    phase: launchState.phase,
+    summary: launchState.summary,
     total: items.length
+  };
+}
+
+function buildStarterLaunchState({
+  activeJobCount,
+  completed,
+  documents,
+  items
+}: {
+  activeJobCount: number;
+  completed: number;
+  documents: KnowledgeDocumentSnapshot[];
+  items: KnowledgeStarterReadinessItem[];
+}): Pick<KnowledgeStarterReadiness, "nextAction" | "phase" | "summary"> {
+  const faqReady = Boolean(items.find((item) => item.id === "faq")?.done);
+  const companyReady = Boolean(items.find((item) => item.id === "company-information")?.done);
+  const starterMinimumMet = completed >= 3 && faqReady;
+
+  if (!documents.length) {
+    return {
+      nextAction: "Upload an FAQ or company information document first.",
+      phase: "empty",
+      summary: "No tenant knowledge has been added yet."
+    };
+  }
+
+  if (activeJobCount > 0) {
+    return {
+      nextAction: "Wait for indexing to finish, then run an AI answer check.",
+      phase: "indexing",
+      summary: "AI is indexing your knowledge."
+    };
+  }
+
+  if (starterMinimumMet) {
+    return {
+      nextAction: "Install the widget and test a real buyer question.",
+      phase: "launch-ready",
+      summary: companyReady
+        ? "Core documents are ready for Starter Concierge answers."
+        : "Core FAQ and buyer documents are ready; company information can follow."
+    };
+  }
+
+  return {
+    nextAction: faqReady ? "Add buying, company, or visa guidance to improve first answers." : "Add an AI-ready FAQ before installing the widget.",
+    phase: "review",
+    summary: "Knowledge exists, but Starter Concierge still needs stronger coverage."
   };
 }
 

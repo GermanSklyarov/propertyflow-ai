@@ -12,7 +12,11 @@ describe("buildKnowledgeStarterReadiness", () => {
     ]);
 
     expect(readiness.completed).toBe(4);
+    expect(readiness.launchReady).toBe(true);
     expect(readiness.missing).toBe(5);
+    expect(readiness.nextAction).toBe("Install the widget and test a real buyer question.");
+    expect(readiness.phase).toBe("launch-ready");
+    expect(readiness.summary).toBe("Core documents are ready for Starter Concierge answers.");
     expect(readiness.items.find((item) => item.id === "faq")?.done).toBe(true);
     expect(readiness.items.find((item) => item.id === "visa-guide")?.done).toBe(true);
     expect(readiness.items.find((item) => item.id === "tax-information")?.done).toBe(true);
@@ -24,6 +28,9 @@ describe("buildKnowledgeStarterReadiness", () => {
     const readiness = buildKnowledgeStarterReadiness([]);
 
     expect(readiness.completed).toBe(0);
+    expect(readiness.launchReady).toBe(false);
+    expect(readiness.nextAction).toBe("Upload an FAQ or company information document first.");
+    expect(readiness.phase).toBe("empty");
     expect(readiness.total).toBe(9);
     expect(readiness.items.every((item) => !item.done)).toBe(true);
   });
@@ -38,6 +45,23 @@ describe("buildKnowledgeStarterReadiness", () => {
       readyDocuments: 0
     });
     expect(readiness.completed).toBe(0);
+    expect(readiness.nextAction).toBe("Add an AI-ready FAQ before installing the widget.");
+    expect(readiness.phase).toBe("review");
+  });
+
+  it("keeps launch blocked while knowledge jobs are still indexing", () => {
+    const readiness = buildKnowledgeStarterReadiness(
+      [
+        documentFactory({ kind: "faq", tags: ["faq", "source-url"], title: "Client FAQ" }),
+        documentFactory({ kind: "article", tags: ["company", "source-url"], title: "Company information" }),
+        documentFactory({ kind: "article", tags: ["buying", "source-url"], title: "Buying guide" })
+      ],
+      2
+    );
+
+    expect(readiness.launchReady).toBe(false);
+    expect(readiness.nextAction).toBe("Wait for indexing to finish, then run an AI answer check.");
+    expect(readiness.phase).toBe("indexing");
   });
 });
 
