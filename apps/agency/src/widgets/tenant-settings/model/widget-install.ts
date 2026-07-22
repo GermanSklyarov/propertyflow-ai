@@ -21,9 +21,16 @@ export interface WidgetInstallStep {
   note: string;
 }
 
+export interface WidgetLocaleIntegrationOption {
+  label: string;
+  note: string;
+  value: string;
+}
+
 export interface WidgetInstallPackage {
   config: WidgetInstallConfig;
   dataAttributes: Array<{ label: string; value: string }>;
+  localeOptions: WidgetLocaleIntegrationOption[];
   snippet: string;
   steps: WidgetInstallStep[];
 }
@@ -53,6 +60,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
       { label: "Languages", value: config.languageCodes.join(", ") },
       { label: "Tone", value: config.tone }
     ],
+    localeOptions: buildWidgetLocaleOptions(config),
     snippet: buildWidgetSnippet(config),
     steps: buildWidgetInstallSteps(tenant)
   };
@@ -89,6 +97,26 @@ function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
       note: widget.allowedOrigins.length
         ? "Widget requests are limited to configured agency website origins."
         : "Add production origins before sharing the snippet publicly."
+    }
+  ];
+}
+
+function buildWidgetLocaleOptions(config: WidgetInstallConfig): WidgetLocaleIntegrationOption[] {
+  const primaryLanguage = config.languageCodes[0]?.toLowerCase() ?? "en";
+  const enabledLanguages = config.languageCodes.length
+    ? config.languageCodes.map((language) => language.toUpperCase()).join(", ")
+    : "EN";
+
+  return [
+    {
+      label: "Auto locale",
+      value: 'data-locale="auto"',
+      note: `Reads the page language and uses ${primaryLanguage.toUpperCase()} as the fallback. Enabled: ${enabledLanguages}.`
+    },
+    {
+      label: "Fixed locale",
+      value: `data-locale="${primaryLanguage}"`,
+      note: "Use this on a localized page, or update the attribute from the agency site language switcher."
     }
   ];
 }

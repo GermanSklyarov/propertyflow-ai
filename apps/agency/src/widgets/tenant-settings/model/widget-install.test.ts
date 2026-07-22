@@ -39,6 +39,18 @@ describe("widget install model", () => {
     expect(install.snippet).toContain('data-tone="friendly"');
     expect(install.snippet).toContain('data-languages="en,th"');
     expect(install.snippet).toContain("&quot;en&quot;:&quot;Sawadee");
+    expect(install.localeOptions).toEqual([
+      {
+        label: "Auto locale",
+        note: "Reads the page language and uses EN as the fallback. Enabled: EN, TH.",
+        value: 'data-locale="auto"'
+      },
+      {
+        label: "Fixed locale",
+        note: "Use this on a localized page, or update the attribute from the agency site language switcher.",
+        value: 'data-locale="en"'
+      }
+    ]);
     expect(install.steps.every((step) => step.done)).toBe(true);
   });
 

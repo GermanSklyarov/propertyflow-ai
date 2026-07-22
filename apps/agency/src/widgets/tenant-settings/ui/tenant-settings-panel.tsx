@@ -207,6 +207,15 @@ export function TenantSettingsPanel({
                 <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
               </div>
               <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
+              <div className={styles.localeInstallList} aria-label="Widget locale integration options">
+                {widgetInstall.localeOptions.map((option) => (
+                  <div className={styles.localeInstallOption} key={option.label}>
+                    <span>{option.label}</span>
+                    <code>{option.value}</code>
+                    <small>{option.note}</small>
+                  </div>
+                ))}
+              </div>
               <WidgetInstallCheckForm defaultUrl={tenant.customDomain ? `https://${tenant.customDomain}` : undefined} />
               <div className={styles.widgetInstallSteps}>
                 {widgetInstall.steps.map((step) => (

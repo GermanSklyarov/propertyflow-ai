@@ -346,6 +346,47 @@
   white-space: pre;
 }
 
+.localeInstallList {
+  display: grid;
+  gap: 8px;
+}
+
+.localeInstallOption {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbfa;
+  padding: 10px;
+}
+
+.localeInstallOption span {
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.localeInstallOption code,
+.localeInstallOption small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.localeInstallOption code {
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.localeInstallOption small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .widgetHeader {
   display: flex;
   flex-wrap: wrap;
