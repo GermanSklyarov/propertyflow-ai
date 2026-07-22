@@ -114,7 +114,7 @@ export function KnowledgeBasePage({
             <strong>
               {starterReadiness.completed}/{starterReadiness.total}
             </strong>
-            <span>knowledge types covered</span>
+            <span>AI-ready source types</span>
             <small>{activeKnowledgeJobs ? "AI is indexing your knowledge..." : "Ready for the next source"}</small>
           </div>
 
@@ -126,6 +126,7 @@ export function KnowledgeBasePage({
                 <span className={item.done ? styles.requirementDone : styles.requirementMissing} key={item.id}>
                   <Icon size={15} />
                   {item.title}
+                  {!item.done && item.matchedDocuments ? <small>{item.matchedDocuments} in review</small> : null}
                 </span>
               );
             })}

@@ -154,6 +154,16 @@
   flex: 0 0 auto;
 }
 
+.requirementDone small,
+.requirementMissing small {
+  color: inherit;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+
 .requirementMissing {
   border-color: rgb(180 83 9 / 20%);
   background: #fff7ed;

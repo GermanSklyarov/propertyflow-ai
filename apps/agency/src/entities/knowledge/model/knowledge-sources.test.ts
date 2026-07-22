@@ -58,8 +58,8 @@ describe("knowledge sources model", () => {
     const summary = summarizeKnowledgeSourceReadiness(groups);
 
     expect(summary.total).toBe(12);
-    expect(summary.connected).toBe(4);
-    expect(summary.ready).toBe(2);
+    expect(summary.connected).toBe(3);
+    expect(summary.ready).toBe(3);
     expect(summary.planned).toBe(6);
     expect(summary.actionable).toBe(6);
   });
@@ -83,9 +83,24 @@ describe("knowledge sources model", () => {
     const documents = groups.find((group) => group.type === "document");
 
     expect(documents?.connectors[0]).toMatchObject({
-      countLabel: "1 docs",
+      countLabel: "1/1 ready docs",
       runtimeNote: "Available to AI Concierge",
       status: "connected"
+    });
+  });
+
+  it("keeps weak matching documents in review instead of marking sources connected", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [knowledgeDocument({ body: "Tiny FAQ", tags: ["faq"], title: "FAQ" })],
+      jobs: [],
+      totalDocuments: 1
+    });
+    const documents = groups.find((group) => group.type === "document");
+
+    expect(documents?.connectors[0]).toMatchObject({
+      countLabel: "0/1 ready docs",
+      runtimeNote: "Review document readiness before widget launch",
+      status: "ready"
     });
   });
 
@@ -116,12 +131,12 @@ describe("knowledge sources model", () => {
     const website = groups.find((group) => group.type === "website");
 
     expect(website?.connectors[0]).toMatchObject({
-      countLabel: "1 pages",
+      countLabel: "1/1 ready pages",
       runtimeNote: "FAQ pages ready for Concierge",
       status: "connected"
     });
     expect(website?.connectors[1]).toMatchObject({
-      countLabel: "1 pages",
+      countLabel: "1/1 ready pages",
       runtimeNote: "Website articles ready for Concierge",
       status: "connected"
     });
@@ -130,7 +145,7 @@ describe("knowledge sources model", () => {
 
 function knowledgeDocument(overrides: Partial<KnowledgeDocumentSnapshot> = {}): KnowledgeDocumentSnapshot {
   return {
-    body: "Knowledge body",
+    body: `${"Knowledge body with enough useful details for retrieval and AI Concierge answers. ".repeat(4)}\n\nSource reference:\n- Source URL: https://agency.example.com/source`,
     createdAt: "2026-07-20T00:00:00.000Z",
     id: "knowledge-1",
     kind: "faq",

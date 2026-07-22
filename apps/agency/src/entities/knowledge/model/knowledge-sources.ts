@@ -1,4 +1,5 @@
 import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
+import { assessKnowledgeDocumentReadiness } from "./knowledge-document-readiness";
 
 export type KnowledgeSourceMode = "crm_inventory" | "concierge_index_only" | "hybrid";
 export type KnowledgeSourceStatus = "connected" | "indexing" | "ready" | "planned";
@@ -178,9 +179,50 @@ export function buildRuntimeKnowledgeSourceGroups(
   );
   const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && isRunningJob(job));
   const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
+  const readyGuideDocuments = countReadyDocumentsWithTags(input.documents, [
+    "faq",
+    "source:faq",
+    "source:buying-guide",
+    "source:selling-guide",
+    "source:visa-guide",
+    "source:tax-information",
+    "buying",
+    "selling",
+    "visa",
+    "tax"
+  ]);
+  const matchedGuideDocuments = countDocumentsWithTags(input.documents, [
+    "faq",
+    "source:faq",
+    "source:buying-guide",
+    "source:selling-guide",
+    "source:visa-guide",
+    "source:tax-information",
+    "buying",
+    "selling",
+    "visa",
+    "tax"
+  ]);
+  const readyBrochureDocuments = countReadyDocumentsWithTags(input.documents, [
+    "brochure",
+    "condo",
+    "developer",
+    "source:condo-brochures",
+    "source:developer-pdfs"
+  ]);
+  const matchedBrochureDocuments = countDocumentsWithTags(input.documents, [
+    "brochure",
+    "condo",
+    "developer",
+    "source:condo-brochures",
+    "source:developer-pdfs"
+  ]);
   const websiteFaqDocuments = countDocumentsWithTags(input.documents, ["source:website-faq-pages", "faq-page"]);
+  const readyWebsiteFaqDocuments = countReadyDocumentsWithTags(input.documents, ["source:website-faq-pages", "faq-page"]);
   const websiteArticleDocuments = countDocumentsWithTags(input.documents, ["source:website-blog-articles", "blog"]);
+  const readyWebsiteArticleDocuments = countReadyDocumentsWithTags(input.documents, ["source:website-blog-articles", "blog"]);
   const uploadedKnowledgeDocuments = Math.max(input.totalDocuments - listingKnowledgeDocuments, 0);
+  const readyUploadedKnowledgeDocuments = input.documents.filter((document) => !document.tags.includes("property-listing") && isAiReadyDocument(document)).length;
   const recentImportKnowledgeDocuments = input.jobs
     .filter((job) => job.name === "properties.import")
     .reduce((total, job) => total + getResultNumber(job.result, "knowledgeDocumentsCreated"), 0);
@@ -189,19 +231,45 @@ export function buildRuntimeKnowledgeSourceGroups(
     if (group.type === "document") {
       return {
         ...group,
-        connectors: group.connectors.map((connector, index) => ({
-          ...connector,
-          countLabel: index === 0 ? `${uploadedKnowledgeDocuments} docs` : connector.countLabel,
-          runtimeNote:
-            index === 0
-              ? activeKnowledgeJobs
-                ? "Indexing tenant uploads now"
-                : uploadedKnowledgeDocuments
-                  ? "Available to AI Concierge"
-                  : "Upload PDFs or guides to start"
-              : connector.runtimeNote,
-          status: activeKnowledgeJobs ? "indexing" : uploadedKnowledgeDocuments ? "connected" : connector.status
-        }))
+        connectors: group.connectors.map((connector, index) => {
+          if (index === 0) {
+            return buildRuntimeDocumentConnector({
+              activeKnowledgeJobs,
+              connectedNote: "Available to AI Concierge",
+              connector,
+              emptyNote: "Upload PDFs or guides to start",
+              matchedCount: uploadedKnowledgeDocuments,
+              readyCount: readyUploadedKnowledgeDocuments,
+              unit: "docs"
+            });
+          }
+
+          if (connector.label === "FAQ, buying, visa, tax guides") {
+            return buildRuntimeDocumentConnector({
+              activeKnowledgeJobs,
+              connectedNote: "Starter guides are ready for Concierge answers",
+              connector,
+              emptyNote: "Add FAQ, buying, visa, or tax guides",
+              matchedCount: matchedGuideDocuments,
+              readyCount: readyGuideDocuments,
+              unit: "guides"
+            });
+          }
+
+          if (connector.label === "Developer and condo brochures") {
+            return buildRuntimeDocumentConnector({
+              activeKnowledgeJobs,
+              connectedNote: "Project brochures are ready for property questions",
+              connector,
+              emptyNote: "Add developer PDFs or condo brochures",
+              matchedCount: matchedBrochureDocuments,
+              readyCount: readyBrochureDocuments,
+              unit: "brochures"
+            });
+          }
+
+          return connector;
+        })
       };
     }
 
@@ -234,11 +302,23 @@ export function buildRuntimeKnowledgeSourceGroups(
         ...group,
         connectors: group.connectors.map((connector) => {
           if (connector.label === "FAQ pages") {
-            return buildRuntimeWebsiteConnector(connector, websiteFaqDocuments, activeKnowledgeJobs, "FAQ pages ready for Concierge");
+            return buildRuntimeWebsiteConnector({
+              activeKnowledgeJobs,
+              connectedNote: "FAQ pages ready for Concierge",
+              connector,
+              matchedCount: websiteFaqDocuments,
+              readyCount: readyWebsiteFaqDocuments
+            });
           }
 
           if (connector.label === "Blog article import") {
-            return buildRuntimeWebsiteConnector(connector, websiteArticleDocuments, activeKnowledgeJobs, "Website articles ready for Concierge");
+            return buildRuntimeWebsiteConnector({
+              activeKnowledgeJobs,
+              connectedNote: "Website articles ready for Concierge",
+              connector,
+              matchedCount: websiteArticleDocuments,
+              readyCount: readyWebsiteArticleDocuments
+            });
           }
 
           return connector;
@@ -250,22 +330,60 @@ export function buildRuntimeKnowledgeSourceGroups(
   });
 }
 
-function buildRuntimeWebsiteConnector(
-  connector: KnowledgeSourceConnector,
-  count: number,
-  activeKnowledgeJobs: boolean,
-  connectedNote: string
-): KnowledgeSourceConnector {
+function buildRuntimeDocumentConnector(input: {
+  activeKnowledgeJobs: boolean;
+  connectedNote: string;
+  connector: KnowledgeSourceConnector;
+  emptyNote: string;
+  matchedCount: number;
+  readyCount: number;
+  unit: string;
+}): KnowledgeSourceConnector {
   return {
-    ...connector,
-    countLabel: `${count} pages`,
-    runtimeNote: activeKnowledgeJobs ? "Indexing website source content" : count ? connectedNote : "Paste page copy or upload HTML",
-    status: activeKnowledgeJobs ? "indexing" : count ? "connected" : connector.status
+    ...input.connector,
+    countLabel: `${input.readyCount}/${input.matchedCount} ready ${input.unit}`,
+    runtimeNote: input.activeKnowledgeJobs
+      ? "Indexing tenant uploads now"
+      : input.readyCount
+        ? input.connectedNote
+        : input.matchedCount
+          ? "Review document readiness before widget launch"
+          : input.emptyNote,
+    status: input.activeKnowledgeJobs ? "indexing" : input.readyCount ? "connected" : input.connector.status
+  };
+}
+
+function buildRuntimeWebsiteConnector(input: {
+  activeKnowledgeJobs: boolean;
+  connectedNote: string;
+  connector: KnowledgeSourceConnector;
+  matchedCount: number;
+  readyCount: number;
+}): KnowledgeSourceConnector {
+  return {
+    ...input.connector,
+    countLabel: `${input.readyCount}/${input.matchedCount} ready pages`,
+    runtimeNote: input.activeKnowledgeJobs
+      ? "Indexing website source content"
+      : input.readyCount
+        ? input.connectedNote
+        : input.matchedCount
+          ? "Review source text, tags, and URL before widget launch"
+          : "Paste page copy or upload HTML",
+    status: input.activeKnowledgeJobs ? "indexing" : input.readyCount ? "connected" : input.connector.status
   };
 }
 
 function countDocumentsWithTags(documents: KnowledgeDocumentSnapshot[], tags: string[]) {
   return documents.filter((document) => tags.some((tag) => document.tags.includes(tag))).length;
+}
+
+function countReadyDocumentsWithTags(documents: KnowledgeDocumentSnapshot[], tags: string[]) {
+  return documents.filter((document) => tags.some((tag) => document.tags.includes(tag)) && isAiReadyDocument(document)).length;
+}
+
+function isAiReadyDocument(document: KnowledgeDocumentSnapshot) {
+  return assessKnowledgeDocumentReadiness(document).status === "ready";
 }
 
 function isRunningJob(job: BackgroundJobMonitorItem) {
