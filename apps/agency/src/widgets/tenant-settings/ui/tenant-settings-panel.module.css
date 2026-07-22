@@ -276,6 +276,15 @@
   overflow-wrap: anywhere;
 }
 
+.documentChecklist small {
+  color: inherit;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1;
+  opacity: 0.72;
+  text-transform: uppercase;
+}
+
 .documentChecklist svg,
 .indexingNotice svg,
 .readyNotice svg {

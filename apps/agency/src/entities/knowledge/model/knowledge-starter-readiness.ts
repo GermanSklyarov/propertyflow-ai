@@ -1,4 +1,5 @@
 import type { KnowledgeDocumentKind, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
+import { assessKnowledgeDocumentReadiness } from "./knowledge-document-readiness";
 
 export interface KnowledgeStarterRequirement {
   acceptedKinds: KnowledgeDocumentKind[];
@@ -10,6 +11,7 @@ export interface KnowledgeStarterRequirement {
 export interface KnowledgeStarterReadinessItem extends KnowledgeStarterRequirement {
   done: boolean;
   matchedDocuments: number;
+  readyDocuments: number;
 }
 
 export interface KnowledgeStarterReadiness {
@@ -78,12 +80,14 @@ export const knowledgeStarterRequirements: KnowledgeStarterRequirement[] = [
 
 export function buildKnowledgeStarterReadiness(documents: KnowledgeDocumentSnapshot[]): KnowledgeStarterReadiness {
   const items = knowledgeStarterRequirements.map((requirement) => {
-    const matchedDocuments = documents.filter((document) => matchesRequirement(document, requirement)).length;
+    const matchedDocuments = documents.filter((document) => matchesRequirement(document, requirement));
+    const readyDocuments = matchedDocuments.filter((document) => assessKnowledgeDocumentReadiness(document).status === "ready").length;
 
     return {
       ...requirement,
-      done: matchedDocuments > 0,
-      matchedDocuments
+      done: readyDocuments > 0,
+      matchedDocuments: matchedDocuments.length,
+      readyDocuments
     };
   });
 

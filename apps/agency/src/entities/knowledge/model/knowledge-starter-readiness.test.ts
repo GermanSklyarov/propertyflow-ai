@@ -5,10 +5,10 @@ import { buildKnowledgeStarterReadiness } from "./knowledge-starter-readiness";
 describe("buildKnowledgeStarterReadiness", () => {
   it("matches starter requirements from title, tags, and kind", () => {
     const readiness = buildKnowledgeStarterReadiness([
-      documentFactory({ kind: "faq", title: "Client questions and answers" }),
-      documentFactory({ kind: "legal", tags: ["visa", "retirement"], title: "Thailand relocation rules" }),
-      documentFactory({ kind: "investment", tags: ["tax"], title: "Transfer cost assumptions" }),
-      documentFactory({ kind: "article", tags: ["company"], title: "About our Pattaya agency" })
+      documentFactory({ kind: "faq", tags: ["faq", "source-url"], title: "Client questions and answers" }),
+      documentFactory({ kind: "legal", tags: ["visa", "retirement", "source-url"], title: "Thailand relocation rules" }),
+      documentFactory({ kind: "investment", tags: ["tax", "source-url"], title: "Transfer cost assumptions" }),
+      documentFactory({ kind: "article", tags: ["company", "source-url"], title: "About our Pattaya agency" })
     ]);
 
     expect(readiness.completed).toBe(4);
@@ -17,6 +17,7 @@ describe("buildKnowledgeStarterReadiness", () => {
     expect(readiness.items.find((item) => item.id === "visa-guide")?.done).toBe(true);
     expect(readiness.items.find((item) => item.id === "tax-information")?.done).toBe(true);
     expect(readiness.items.find((item) => item.id === "company-information")?.done).toBe(true);
+    expect(readiness.items.find((item) => item.id === "faq")?.readyDocuments).toBe(1);
   });
 
   it("keeps uncovered starter documents visible", () => {
@@ -26,11 +27,23 @@ describe("buildKnowledgeStarterReadiness", () => {
     expect(readiness.total).toBe(9);
     expect(readiness.items.every((item) => !item.done)).toBe(true);
   });
+
+  it("does not mark low-quality matching documents as done", () => {
+    const readiness = buildKnowledgeStarterReadiness([documentFactory({ body: "Short FAQ", kind: "faq", tags: ["faq"], title: "FAQ" })]);
+    const faq = readiness.items.find((item) => item.id === "faq");
+
+    expect(faq).toMatchObject({
+      done: false,
+      matchedDocuments: 1,
+      readyDocuments: 0
+    });
+    expect(readiness.completed).toBe(0);
+  });
 });
 
 function documentFactory(overrides: Partial<KnowledgeDocumentSnapshot>): KnowledgeDocumentSnapshot {
   return {
-    body: "Demo body",
+    body: `${"Demo source body with enough context for retrieval and concierge answers. ".repeat(4)}\n\nSource reference:\n- Source URL: https://agency.example.com/source`,
     createdAt: "2026-07-19T00:00:00.000Z",
     id: overrides.id ?? crypto.randomUUID(),
     kind: "article",

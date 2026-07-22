@@ -88,7 +88,7 @@ export function TenantSettingsPanel({
               icon={<FileText size={17} />}
               label="1"
               title="Upload your documents"
-              value={`${starterReadiness.completed}/${starterReadiness.total} covered`}
+              value={`${starterReadiness.completed}/${starterReadiness.total} AI ready`}
             />
             <LaunchStep
               icon={<MessageCircle size={17} />}
@@ -115,7 +115,7 @@ export function TenantSettingsPanel({
                 <strong>
                   {starterReadiness.completed}/{starterReadiness.total}
                 </strong>
-                <span>{starterReadiness.missing ? `${starterReadiness.missing} source types missing` : "Starter knowledge covered"}</span>
+                <span>{starterReadiness.missing ? `${starterReadiness.missing} source types need AI-ready documents` : "Starter knowledge is AI ready"}</span>
               </div>
               <div className={styles.documentChecklist}>
                 {starterReadiness.items.map((item) => {
@@ -125,6 +125,7 @@ export function TenantSettingsPanel({
                     <span className={item.done ? styles.documentDone : styles.documentMissing} key={item.id}>
                       <Icon size={15} />
                       {item.title}
+                      {!item.done && item.matchedDocuments ? <small>{item.matchedDocuments} in review</small> : null}
                     </span>
                   );
                 })}
@@ -178,8 +179,8 @@ export function TenantSettingsPanel({
                     done: starterReadiness.completed > 0,
                     label: "Knowledge available",
                     note: starterReadiness.completed
-                      ? `${starterReadiness.completed} starter source types can ground answers.`
-                      : "Add at least FAQ or company information before installing the widget."
+                      ? `${starterReadiness.completed} starter source types have AI-ready documents.`
+                      : "Add at least one AI-ready FAQ or company source before installing the widget."
                   }}
                 />
                 <ReadinessCard
