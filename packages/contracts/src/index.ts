@@ -118,12 +118,24 @@ export interface TenantWidgetInstallCheckRequest {
   url: string;
 }
 
+export type TenantWidgetInstallCheckItemKey = "origin" | "page" | "script" | "tenant";
+export type TenantWidgetInstallCheckItemStatus = "passed" | "warning" | "failed";
+
+export interface TenantWidgetInstallCheckItem {
+  key: TenantWidgetInstallCheckItemKey;
+  label: string;
+  note: string;
+  status: TenantWidgetInstallCheckItemStatus;
+}
+
 export interface TenantWidgetInstallCheckResponse {
   allowedOrigin: boolean;
   checkedAt: string;
+  checks: TenantWidgetInstallCheckItem[];
   detectedTenantSlug?: string;
   expectedTenantSlug: string;
   message: string;
+  nextAction: string;
   origin: string;
   status: TenantWidgetInstallCheckStatus;
   url: string;

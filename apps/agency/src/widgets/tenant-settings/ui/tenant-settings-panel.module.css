@@ -496,7 +496,8 @@
 }
 
 .installCheckResult strong,
-.installCheckResult span {
+.installCheckResult span,
+.installCheckResult em {
   display: block;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -514,6 +515,65 @@
   font-size: 0.76rem;
   font-weight: 850;
   line-height: 1.35;
+}
+
+.installCheckResult em {
+  margin-top: 5px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.installCheckDiagnostics {
+  display: grid;
+  gap: 8px;
+}
+
+.installCheckDiagnostic {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 9px;
+}
+
+.installCheckDiagnostic strong,
+.installCheckDiagnostic span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.installCheckDiagnostic strong {
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.installCheckDiagnostic span {
+  color: var(--muted);
+  font-size: 0.71rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.installCheckDiagnostic[data-status="passed"] {
+  background: #f0fdf4;
+  border-color: rgb(22 163 74 / 20%);
+}
+
+.installCheckDiagnostic[data-status="failed"] {
+  background: #fff1f0;
+  border-color: rgb(185 28 28 / 22%);
+}
+
+.installCheckDiagnostic[data-status="warning"] {
+  background: #fff9ed;
+  border-color: rgb(180 83 9 / 20%);
 }
 
 .installCheckVerified {
@@ -854,6 +914,10 @@
 
   .installCheckRow {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .installCheckDiagnostics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

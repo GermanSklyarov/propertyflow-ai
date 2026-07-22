@@ -138,8 +138,15 @@ describe("TenantService", () => {
 
     await expect(service.verifyWidgetInstall(tenant(), "https://agency.example.com/listings")).resolves.toMatchObject({
       allowedOrigin: true,
+      checks: [
+        { key: "origin", status: "passed" },
+        { key: "page", status: "passed" },
+        { key: "script", status: "passed" },
+        { key: "tenant", status: "passed" }
+      ],
       detectedTenantSlug: "demo-agency",
       expectedTenantSlug: "demo-agency",
+      nextAction: "Open the page and confirm the launcher appears in each enabled language.",
       origin: "https://agency.example.com",
       status: "verified",
       url: "https://agency.example.com/listings"
@@ -163,6 +170,13 @@ describe("TenantService", () => {
       )
     ).resolves.toMatchObject({
       allowedOrigin: false,
+      checks: [
+        { key: "origin", status: "failed" },
+        { key: "page", status: "warning" },
+        { key: "script", status: "warning" },
+        { key: "tenant", status: "warning" }
+      ],
+      nextAction: "Add this origin in Widget website origins, then run the check again.",
       origin: "https://preview.example.com",
       status: "blocked-origin"
     });
@@ -182,6 +196,7 @@ describe("TenantService", () => {
     await expect(service.verifyWidgetInstall(tenant(), "https://agency.example.com")).resolves.toMatchObject({
       detectedTenantSlug: "other-agency",
       expectedTenantSlug: "demo-agency",
+      nextAction: "Replace the snippet with the current workspace snippet from this settings page.",
       status: "wrong-tenant"
     });
   });
@@ -191,6 +206,13 @@ describe("TenantService", () => {
     const service = new TenantService(repository());
 
     await expect(service.verifyWidgetInstall(tenant(), "https://agency.example.com/missing")).resolves.toMatchObject({
+      checks: [
+        { key: "origin", status: "passed" },
+        { key: "page", status: "failed" },
+        { key: "script", status: "warning" },
+        { key: "tenant", status: "warning" }
+      ],
+      nextAction: "Use a public page URL that returns HTML, then run the check again.",
       origin: "https://agency.example.com",
       status: "unreachable"
     });

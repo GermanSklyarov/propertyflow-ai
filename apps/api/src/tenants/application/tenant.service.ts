@@ -2,8 +2,9 @@ import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nest
 import type {
   PublicWidgetConfigResponse,
   TenantSnapshot,
-  TenantWidgetLanguage,
+  TenantWidgetInstallCheckItem,
   TenantWidgetInstallCheckResponse,
+  TenantWidgetLanguage,
   TenantWidgetTone,
   TenantUsageMetric,
   TenantUsageResponse,
@@ -123,15 +124,14 @@ export class TenantService {
     const allowedOrigin = !tenant.widget.allowedOrigins.length || tenant.widget.allowedOrigins.includes(origin);
 
     if (!allowedOrigin) {
-      return {
+      return buildWidgetInstallCheckResponse({
         allowedOrigin,
         checkedAt,
         expectedTenantSlug: tenant.slug,
-        message: `Add ${origin} to allowed website origins before using this widget there.`,
         origin,
         status: "blocked-origin",
         url: normalizedUrl
-      };
+      });
     }
 
     try {
@@ -142,15 +142,15 @@ export class TenantService {
       });
 
       if (!response.ok) {
-        return {
+        return buildWidgetInstallCheckResponse({
           allowedOrigin,
           checkedAt,
           expectedTenantSlug: tenant.slug,
-          message: `The page responded with HTTP ${response.status}. Check that the URL is public and reachable.`,
           origin,
+          pageStatus: response.status,
           status: "unreachable",
           url: normalizedUrl
-        };
+        });
       }
 
       const html = await response.text();
@@ -158,50 +158,46 @@ export class TenantService {
       const hasWidgetScript = hasPropertyFlowWidgetScript(html);
 
       if (!hasWidgetScript) {
-        return {
+        return buildWidgetInstallCheckResponse({
           allowedOrigin,
           checkedAt,
           expectedTenantSlug: tenant.slug,
-          message: "PropertyFlow widget script was not found on this page.",
           origin,
           status: "missing-widget",
           url: normalizedUrl
-        };
+        });
       }
 
       if (detectedTenantSlug && detectedTenantSlug !== tenant.slug) {
-        return {
+        return buildWidgetInstallCheckResponse({
           allowedOrigin,
           checkedAt,
           detectedTenantSlug,
           expectedTenantSlug: tenant.slug,
-          message: `Widget is installed, but it points to ${detectedTenantSlug} instead of ${tenant.slug}.`,
           origin,
           status: "wrong-tenant",
           url: normalizedUrl
-        };
+        });
       }
 
-      return {
+      return buildWidgetInstallCheckResponse({
         allowedOrigin,
         checkedAt,
         detectedTenantSlug,
         expectedTenantSlug: tenant.slug,
-        message: "Widget script is installed and points to this agency workspace.",
         origin,
         status: "verified",
         url: normalizedUrl
-      };
+      });
     } catch (_error) {
-      return {
+      return buildWidgetInstallCheckResponse({
         allowedOrigin,
         checkedAt,
         expectedTenantSlug: tenant.slug,
-        message: "Could not reach this page. Check the URL or try again after the site is deployed.",
         origin,
         status: "unreachable",
         url: normalizedUrl
-      };
+      });
     }
   }
 
@@ -224,6 +220,94 @@ function detectWidgetTenantSlug(html: string) {
   const match = html.match(/\bdata-tenant=["']([^"']+)["']/i);
 
   return match?.[1];
+}
+
+function buildWidgetInstallCheckResponse(input: {
+  allowedOrigin: boolean;
+  checkedAt: string;
+  detectedTenantSlug?: string;
+  expectedTenantSlug: string;
+  origin: string;
+  pageStatus?: number;
+  status: TenantWidgetInstallCheckResponse["status"];
+  url: string;
+}): TenantWidgetInstallCheckResponse {
+  const messages: Record<TenantWidgetInstallCheckResponse["status"], string> = {
+    "blocked-origin": `Add ${input.origin} to allowed website origins before using this widget there.`,
+    "missing-widget": "PropertyFlow widget script was not found on this page.",
+    unreachable: input.pageStatus
+      ? `The page responded with HTTP ${input.pageStatus}. Check that the URL is public and reachable.`
+      : "Could not reach this page. Check the URL or try again after the site is deployed.",
+    verified: "Widget script is installed and points to this agency workspace.",
+    "wrong-tenant": `Widget is installed, but it points to ${input.detectedTenantSlug} instead of ${input.expectedTenantSlug}.`
+  };
+  const nextActions: Record<TenantWidgetInstallCheckResponse["status"], string> = {
+    "blocked-origin": "Add this origin in Widget website origins, then run the check again.",
+    "missing-widget": "Paste the widget snippet before the closing body tag or into the agency tag manager.",
+    unreachable: "Use a public page URL that returns HTML, then run the check again.",
+    verified: "Open the page and confirm the launcher appears in each enabled language.",
+    "wrong-tenant": "Replace the snippet with the current workspace snippet from this settings page."
+  };
+
+  return {
+    allowedOrigin: input.allowedOrigin,
+    checkedAt: input.checkedAt,
+    checks: buildWidgetInstallChecks(input),
+    detectedTenantSlug: input.detectedTenantSlug,
+    expectedTenantSlug: input.expectedTenantSlug,
+    message: messages[input.status],
+    nextAction: nextActions[input.status],
+    origin: input.origin,
+    status: input.status,
+    url: input.url
+  };
+}
+
+function buildWidgetInstallChecks(input: {
+  allowedOrigin: boolean;
+  detectedTenantSlug?: string;
+  expectedTenantSlug: string;
+  status: TenantWidgetInstallCheckResponse["status"];
+}): TenantWidgetInstallCheckItem[] {
+  return [
+    {
+      key: "origin",
+      label: "Origin allowlist",
+      note: input.allowedOrigin ? "This website origin can use the widget." : "This website origin is not allowed yet.",
+      status: input.allowedOrigin ? "passed" : "failed"
+    },
+    {
+      key: "page",
+      label: "Page reachable",
+      note: input.status === "unreachable" ? "The install check could not read a public HTML page." : "The page can be checked.",
+      status: input.status === "blocked-origin" ? "warning" : input.status === "unreachable" ? "failed" : "passed"
+    },
+    {
+      key: "script",
+      label: "Widget script",
+      note: input.status === "missing-widget" ? "No PropertyFlow widget script was found." : "Widget script is present.",
+      status:
+        input.status === "blocked-origin" || input.status === "unreachable"
+          ? "warning"
+          : input.status === "missing-widget"
+            ? "failed"
+            : "passed"
+    },
+    {
+      key: "tenant",
+      label: "Tenant key",
+      note:
+        input.status === "wrong-tenant"
+          ? `Detected ${input.detectedTenantSlug}; expected ${input.expectedTenantSlug}.`
+          : `Expected tenant ${input.expectedTenantSlug}.`,
+      status:
+        input.status === "blocked-origin" || input.status === "unreachable" || input.status === "missing-widget"
+          ? "warning"
+          : input.status === "wrong-tenant"
+            ? "failed"
+            : "passed"
+    }
+  ];
 }
 
 const supportedWidgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];

@@ -61,7 +61,18 @@ export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) 
           <div>
             <strong>{formatInstallCheckStatus(result.status)}</strong>
             <span>{result.message}</span>
+            <em>{result.nextAction}</em>
           </div>
+        </div>
+      ) : null}
+      {result?.checks?.length ? (
+        <div className={styles.installCheckDiagnostics} aria-label="Widget install diagnostics">
+          {result.checks.map((check) => (
+            <div className={styles.installCheckDiagnostic} data-status={check.status} key={check.key}>
+              <strong>{check.label}</strong>
+              <span>{check.note}</span>
+            </div>
+          ))}
         </div>
       ) : null}
       {error ? (
