@@ -34,6 +34,30 @@ export class PublicWidgetConfigController {
           th: "feminine",
           zh: "neutral"
         },
+        readiness: {
+          checks: [
+            {
+              key: "origin-policy",
+              label: "Origin policy",
+              note: "Website origins are explicitly allowed for production installs.",
+              ready: true
+            },
+            {
+              key: "languages",
+              label: "Languages",
+              note: "4 locales enabled for the launcher.",
+              ready: true
+            },
+            {
+              key: "localized-welcome",
+              label: "Localized welcome",
+              note: "Every enabled language has a welcome message.",
+              ready: true
+            }
+          ],
+          nextAction: "Widget configuration is ready for production installation.",
+          status: "ready"
+        },
         tenantSlug: "demo-agency",
         tone: "friendly",
         welcomeMessage: "Hi! I'm Anna, your AI property consultant.",

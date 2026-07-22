@@ -1,6 +1,8 @@
 import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
   PublicWidgetConfigResponse,
+  PublicWidgetReadiness,
+  PublicWidgetReadinessCheck,
   TenantSnapshot,
   TenantWidgetInstallCheckItem,
   TenantWidgetInstallCheckResponse,
@@ -57,6 +59,7 @@ export class TenantService {
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
       personaGenders: tenant.widget.personaGenders,
+      readiness: buildPublicWidgetReadiness(tenant),
       tenantSlug: tenant.slug,
       tone: tenant.widget.tone,
       welcomeMessage: tenant.widget.welcomeMessage,
@@ -220,6 +223,55 @@ function detectWidgetTenantSlug(html: string) {
   const match = html.match(/\bdata-tenant=["']([^"']+)["']/i);
 
   return match?.[1];
+}
+
+function buildPublicWidgetReadiness(tenant: TenantSnapshot): PublicWidgetReadiness {
+  const enabledLanguages = tenant.widget.languages;
+  const hasLocalizedWelcome = enabledLanguages.every((language) =>
+    Boolean(tenant.widget.welcomeMessages[language]?.trim())
+  );
+  const checks: PublicWidgetReadinessCheck[] = [
+    {
+      key: "origin-policy",
+      label: "Origin policy",
+      note: tenant.widget.allowedOrigins.length
+        ? "Website origins are explicitly allowed for production installs."
+        : "No origin allowlist is configured yet, so the widget is still in test mode.",
+      ready: tenant.widget.allowedOrigins.length > 0
+    },
+    {
+      key: "languages",
+      label: "Languages",
+      note: enabledLanguages.length
+        ? `${enabledLanguages.length} locale${enabledLanguages.length === 1 ? "" : "s"} enabled for the launcher.`
+        : "Enable at least one supported widget language.",
+      ready: enabledLanguages.length > 0
+    },
+    {
+      key: "localized-welcome",
+      label: "Localized welcome",
+      note: hasLocalizedWelcome
+        ? "Every enabled language has a welcome message."
+        : "Add a welcome message for every enabled language.",
+      ready: enabledLanguages.length > 0 && hasLocalizedWelcome
+    }
+  ];
+  const status: PublicWidgetReadiness["status"] = checks.some((check) => check.key !== "origin-policy" && !check.ready)
+    ? "needs-setup"
+    : checks.every((check) => check.ready)
+      ? "ready"
+      : "test-mode";
+  const nextActions: Record<PublicWidgetReadiness["status"], string> = {
+    "needs-setup": "Finish language and localized welcome settings before installing the widget.",
+    ready: "Widget configuration is ready for production installation.",
+    "test-mode": "Add production website origins before sharing the widget with live visitors."
+  };
+
+  return {
+    checks,
+    nextAction: nextActions[status],
+    status
+  };
 }
 
 function buildWidgetInstallCheckResponse(input: {

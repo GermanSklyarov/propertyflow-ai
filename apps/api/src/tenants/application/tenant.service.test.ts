@@ -62,12 +62,72 @@ describe("TenantService", () => {
         en: "feminine",
         ru: "feminine"
       },
+      readiness: {
+        checks: [
+          {
+            key: "origin-policy",
+            label: "Origin policy",
+            note: "No origin allowlist is configured yet, so the widget is still in test mode.",
+            ready: false
+          },
+          {
+            key: "languages",
+            label: "Languages",
+            note: "2 locales enabled for the launcher.",
+            ready: true
+          },
+          {
+            key: "localized-welcome",
+            label: "Localized welcome",
+            note: "Every enabled language has a welcome message.",
+            ready: true
+          }
+        ],
+        nextAction: "Add production website origins before sharing the widget with live visitors.",
+        status: "test-mode"
+      },
       tenantSlug: "riviera-pattaya",
       tone: "professional",
       welcomeMessage: "Hi, I can help with Pattaya property.",
       welcomeMessages: {
         en: "Hi, I can help with Pattaya property.",
         ru: "Привет, помогу с недвижимостью в Паттайе."
+      }
+    });
+  });
+
+  it("marks public widget config ready when production origins and localized welcomes are configured", async () => {
+    const service = new TenantService(
+      repository({
+        findBySlug: async () =>
+          tenant({
+            widget: {
+              aiName: "Mali",
+              aiNames: {
+                en: "Mali",
+                th: "มาลี"
+              },
+              allowedOrigins: ["https://agency.example.com"],
+              languages: ["en", "th"],
+              personaGenders: {
+                en: "feminine",
+                th: "feminine"
+              },
+              tone: "friendly",
+              welcomeMessage: "Hi! I'm Mali.",
+              welcomeMessages: {
+                en: "Hi! I'm Mali.",
+                th: "สวัสดีค่ะ ฉันชื่อมาลี"
+              }
+            }
+          })
+      })
+    );
+
+    await expect(service.getPublicWidgetConfig("demo-agency")).resolves.toMatchObject({
+      readiness: {
+        nextAction: "Widget configuration is ready for production installation.",
+        status: "ready"
       }
     });
   });

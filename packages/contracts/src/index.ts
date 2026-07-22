@@ -64,6 +64,23 @@ export interface UpdateTenantSettingsRequest {
   widget?: Partial<TenantWidgetSettings>;
 }
 
+export type PublicWidgetReadinessStatus = "ready" | "test-mode" | "needs-setup";
+
+export type PublicWidgetReadinessCheckKey = "origin-policy" | "languages" | "localized-welcome";
+
+export interface PublicWidgetReadinessCheck {
+  key: PublicWidgetReadinessCheckKey;
+  label: string;
+  note: string;
+  ready: boolean;
+}
+
+export interface PublicWidgetReadiness {
+  checks: PublicWidgetReadinessCheck[];
+  nextAction: string;
+  status: PublicWidgetReadinessStatus;
+}
+
 export interface PublicWidgetConfigResponse {
   aiName: string;
   aiNames: TenantWidgetSettings["aiNames"];
@@ -76,6 +93,7 @@ export interface PublicWidgetConfigResponse {
   conciergeMode: TenantSnapshot["subscriptionPlan"];
   languages: TenantWidgetSettings["languages"];
   personaGenders: TenantWidgetSettings["personaGenders"];
+  readiness: PublicWidgetReadiness;
   tenantSlug: string;
   tone: TenantWidgetSettings["tone"];
   welcomeMessage: string;

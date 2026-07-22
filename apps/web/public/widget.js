@@ -25,6 +25,11 @@
     conciergeMode: readAttribute(script, "mode", "starter"),
     languages: readAttribute(script, "languages", "en").split(",").filter(Boolean),
     personaGenders: readJsonAttribute(script, "persona-genders", {}),
+    readiness: {
+      checks: [],
+      nextAction: "",
+      status: "test-mode"
+    },
     tenantSlug: tenantSlug,
     tone: readAttribute(script, "tone", "friendly"),
     welcomeMessage: readAttribute(script, "welcome-message", "Hi! I can help you find the right property."),
@@ -431,6 +436,7 @@
       conciergeMode: remote.conciergeMode || fallback.conciergeMode,
       languages: Array.isArray(remote.languages) && remote.languages.length ? remote.languages : fallback.languages,
       personaGenders: Object.assign({}, fallback.personaGenders, remote.personaGenders || {}),
+      readiness: remote.readiness || fallback.readiness,
       tenantSlug: remote.tenantSlug || fallback.tenantSlug,
       tone: remote.tone || fallback.tone,
       welcomeMessage: remote.welcomeMessage || fallback.welcomeMessage,
