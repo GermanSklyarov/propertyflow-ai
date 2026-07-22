@@ -193,6 +193,112 @@
   line-height: 1.45;
 }
 
+.originBuilder {
+  display: grid;
+  gap: 10px;
+}
+
+.originInputRow {
+  display: grid;
+  gap: 10px;
+}
+
+.originInputRow button,
+.originSuggestion,
+.originChip button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 18%);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.originInputRow button {
+  align-self: end;
+  background: var(--teal);
+  color: #fff;
+  padding: 0 12px;
+}
+
+.originInputRow button:hover:not(:disabled),
+.originInputRow button:focus-visible {
+  background: var(--teal-dark);
+}
+
+.originInputRow button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.originSuggestion {
+  width: fit-content;
+  max-width: 100%;
+  background: #edf8f4;
+  color: var(--teal-dark);
+  overflow-wrap: anywhere;
+  padding: 0 12px;
+  text-align: left;
+}
+
+.originSuggestion:hover,
+.originSuggestion:focus-visible {
+  background: #dff4ec;
+  border-color: rgb(15 118 110 / 32%);
+}
+
+.originList {
+  display: grid;
+  gap: 8px;
+}
+
+.originChip {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 40px;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #f7fbfa;
+}
+
+.originChip span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.originChip button {
+  min-height: 100%;
+  border-width: 0 0 0 1px;
+  background: #fff;
+  color: #9f3a32;
+  padding: 0;
+}
+
+.originChip button:hover,
+.originChip button:focus-visible {
+  background: #fff1f0;
+}
+
+.originEmpty {
+  border: 1px dashed rgb(15 118 110 / 24%);
+  background: #f7fbfa;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
@@ -232,6 +338,14 @@
   }
 
   .personaEditor {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .originInputRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .originList {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

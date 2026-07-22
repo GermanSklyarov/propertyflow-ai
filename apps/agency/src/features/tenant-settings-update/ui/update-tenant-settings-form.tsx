@@ -2,6 +2,7 @@ import { Bot, CheckCircle2, Globe2, Palette, Save, ShieldCheck } from "lucide-re
 import { updateTenantSettingsAction } from "@entities/tenant/api/tenant-actions";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import type { TenantSnapshot } from "@propertyflow/contracts";
+import { TenantWidgetOriginFields } from "./tenant-widget-origin-fields";
 import { TenantWidgetPersonaFields } from "./tenant-widget-persona-fields";
 import styles from "./update-tenant-settings-form.module.css";
 
@@ -82,16 +83,9 @@ export function UpdateTenantSettingsForm({
           <ShieldCheck size={16} />
           Widget install origins
         </div>
-        <label className={styles.field}>
-          <span>Allowed website origins</span>
-          <textarea
-            defaultValue={widgetSettings.allowedOrigins.join("\n")}
-            name="allowedOrigins"
-            placeholder={"https://agency.example.com\nhttps://www.agency.example.com"}
-          />
-        </label>
+        <TenantWidgetOriginFields customDomain={tenant.customDomain} origins={widgetSettings.allowedOrigins} />
         <p className={styles.hint}>
-          One origin per line. Leave empty while testing locally; add production website origins before sharing the widget code.
+          Add only origins, not full listing URLs. The backend normalizes duplicates and blocks widget calls from unknown websites.
         </p>
       </section>
 
