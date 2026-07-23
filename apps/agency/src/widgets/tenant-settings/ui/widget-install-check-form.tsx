@@ -1,8 +1,9 @@
 "use client";
 
 import { CheckCircle2, SearchCheck, ShieldAlert } from "lucide-react";
-import { useState, useTransition } from "react";
+import { type FormEvent, useState, useTransition } from "react";
 import type { TenantWidgetInstallCheckResponse } from "@propertyflow/contracts";
+import { formatWidgetInstallCheckStatus, isWidgetInstallVerified } from "../model/widget-install-check";
 import styles from "./tenant-settings-panel.module.css";
 
 export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) {
@@ -11,7 +12,8 @@ export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) 
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const verify = () => {
+  const verify = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setError(null);
     setResult(null);
 
@@ -36,21 +38,25 @@ export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) 
     });
   };
 
-  const isVerified = result?.status === "verified";
+  const isVerified = isWidgetInstallVerified(result);
   const ResultIcon = isVerified ? CheckCircle2 : ShieldAlert;
 
   return (
-    <div className={styles.installCheck}>
+    <form className={styles.installCheck} onSubmit={verify}>
       <label htmlFor="widget-install-url">Check installed widget</label>
       <div className={styles.installCheckRow}>
         <input
           id="widget-install-url"
-          onChange={(event) => setUrl(event.target.value)}
+          onChange={(event) => {
+            setUrl(event.target.value);
+            setError(null);
+            setResult(null);
+          }}
           placeholder="https://agency.example.com"
           type="url"
           value={url}
         />
-        <button disabled={isPending || !url.trim()} onClick={verify} type="button">
+        <button disabled={isPending || !url.trim()} type="submit">
           <SearchCheck size={17} />
           {isPending ? "Checking" : "Run check"}
         </button>
@@ -59,7 +65,7 @@ export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) 
         <div className={`${styles.installCheckResult} ${isVerified ? styles.installCheckVerified : styles.installCheckWarning}`} aria-live="polite">
           <ResultIcon size={17} />
           <div>
-            <strong>{formatInstallCheckStatus(result.status)}</strong>
+            <strong>{formatWidgetInstallCheckStatus(result.status)}</strong>
             <span>{result.message}</span>
             <em>{result.nextAction}</em>
           </div>
@@ -81,18 +87,6 @@ export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) 
           <span>{error}</span>
         </div>
       ) : null}
-    </div>
+    </form>
   );
-}
-
-function formatInstallCheckStatus(status: TenantWidgetInstallCheckResponse["status"]) {
-  const labels: Record<TenantWidgetInstallCheckResponse["status"], string> = {
-    "blocked-origin": "Origin blocked",
-    "missing-widget": "Widget missing",
-    unreachable: "Page unreachable",
-    verified: "Widget verified",
-    "wrong-tenant": "Wrong tenant"
-  };
-
-  return labels[status];
 }
