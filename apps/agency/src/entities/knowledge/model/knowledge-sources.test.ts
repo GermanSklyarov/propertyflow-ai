@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
 import {
+  buildKnowledgeSourceCoverage,
   buildKnowledgeSourceGroupAction,
   buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
@@ -84,6 +85,66 @@ describe("knowledge sources model", () => {
     expect(summary.ready).toBe(3);
     expect(summary.planned).toBe(6);
     expect(summary.actionable).toBe(6);
+  });
+
+  it("builds compact source coverage for the starter dashboard", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [
+        knowledgeDocument({ tags: ["faq"] }),
+        knowledgeDocument({ id: "knowledge-2", tags: ["property-listing", "source:csv"] })
+      ],
+      jobs: [],
+      totalDocuments: 2
+    });
+    const coverage = buildKnowledgeSourceCoverage(groups);
+
+    expect(coverage).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          connected: 2,
+          description: "2/3 sources feeding AI",
+          label: "Documents",
+          status: "connected",
+          type: "document"
+        }),
+        expect.objectContaining({
+          action: {
+            href: "/listings#import-listings",
+            label: "Open importer"
+          },
+          connected: 1,
+          description: "1/3 sources feeding AI",
+          label: "Property Listings",
+          status: "connected",
+          type: "property_feed"
+        }),
+        expect.objectContaining({
+          description: "2 setup paths available",
+          label: "Website",
+          status: "ready"
+        }),
+        expect.objectContaining({
+          description: "3 planned connectors",
+          label: "External Sources",
+          status: "planned"
+        })
+      ])
+    );
+  });
+
+  it("prioritizes indexing in source coverage", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [backgroundJob({ name: "knowledge.documents.ingest", state: "active" })],
+      totalDocuments: 0
+    });
+    const coverage = buildKnowledgeSourceCoverage(groups);
+
+    expect(coverage.find((item) => item.type === "document")).toMatchObject({
+      description: "3 indexing, 0 already connected",
+      indexing: 3,
+      status: "indexing"
+    });
   });
 
   it("blocks widget launch when no source is connected", () => {

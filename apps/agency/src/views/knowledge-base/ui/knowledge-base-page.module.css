@@ -503,6 +503,100 @@
   border-color: rgb(180 83 9 / 20%);
 }
 
+.sourceCoverageGrid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  margin-bottom: 12px;
+}
+
+.sourceCoverageCard {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbfa;
+  padding: 10px;
+}
+
+.sourceCoverageIcon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+}
+
+.sourceCoverageCard div:nth-child(2) {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.sourceCoverageCard strong,
+.sourceCoverageCard span,
+.sourceCoverageCard small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sourceCoverageCard strong {
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.sourceCoverageCard span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.sourceCoverageCard small {
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-size: 0.68rem;
+  font-weight: 950;
+  padding: 5px 7px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.sourceCoverageCard a {
+  display: inline-grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #fff;
+  color: var(--teal-dark);
+}
+
+.sourceCoverageCard a:hover,
+.sourceCoverageCard a:focus-visible {
+  background: var(--teal);
+  color: #fff;
+}
+
+.sourceCoverageCard[data-status="connected"] {
+  border-color: rgb(22 163 74 / 18%);
+  background: #f0fdf4;
+}
+
+.sourceCoverageCard[data-status="indexing"] {
+  border-color: rgb(180 83 9 / 20%);
+  background: #fff9ed;
+}
+
+.sourceCoverageCard[data-status="planned"] {
+  background: #fff;
+}
+
 .sourceCard {
   display: grid;
   min-width: 0;
@@ -817,6 +911,16 @@
 
   .sourceCardHeader {
     grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .sourceCoverageCard {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .sourceCoverageCard small,
+  .sourceCoverageCard a {
+    grid-column: 2;
+    width: fit-content;
   }
 
   .sourceGroupAction {

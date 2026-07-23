@@ -17,6 +17,7 @@ import {
   UploadCloud
 } from "lucide-react";
 import {
+  buildKnowledgeSourceCoverage,
   buildKnowledgeSourceGroupAction,
   buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
@@ -25,6 +26,7 @@ import {
   summarizeKnowledgeSourceModes,
   summarizeKnowledgeSourceReadiness,
   type KnowledgeSourceConnector,
+  type KnowledgeSourceCoverageItem,
   type KnowledgeSourceGroup
 } from "@entities/knowledge/model/knowledge-sources";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
@@ -78,6 +80,7 @@ export function KnowledgeBasePage({
   const sourceModeSummary = summarizeKnowledgeSourceModes(runtimeSourceGroups);
   const sourceReadiness = summarizeKnowledgeSourceReadiness(runtimeSourceGroups);
   const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness);
+  const sourceCoverage = buildKnowledgeSourceCoverage(runtimeSourceGroups);
 
   return (
     <main className={styles.page}>
@@ -176,6 +179,12 @@ export function KnowledgeBasePage({
               <strong>{sourceLaunchGate.summary}</strong>
               <span>{sourceLaunchGate.nextAction}</span>
             </div>
+          </div>
+
+          <div className={styles.sourceCoverageGrid} aria-label="AI source coverage">
+            {sourceCoverage.map((item) => (
+              <SourceCoverageCard item={item} key={item.type} />
+            ))}
           </div>
 
           <div className={styles.sourcesGrid}>
@@ -316,6 +325,26 @@ function SourceReadinessMetric({ label, note, value }: { label: string; note: st
       <strong>{value}</strong>
       <span>{label}</span>
       <small>{note}</small>
+    </article>
+  );
+}
+
+function SourceCoverageCard({ item }: { item: KnowledgeSourceCoverageItem }) {
+  return (
+    <article className={styles.sourceCoverageCard} data-status={item.status}>
+      <div className={styles.sourceCoverageIcon}>{getSourceIcon(item.type)}</div>
+      <div>
+        <strong>{item.label}</strong>
+        <span>{item.description}</span>
+      </div>
+      <small>
+        {item.connected ? `${item.connected} live` : item.indexing ? `${item.indexing} indexing` : item.planned ? `${item.planned} planned` : "setup"}
+      </small>
+      {item.action ? (
+        <a href={item.action.href} title={item.action.label}>
+          <ArrowRight size={14} />
+        </a>
+      ) : null}
     </article>
   );
 }

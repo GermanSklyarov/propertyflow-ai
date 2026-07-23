@@ -48,6 +48,19 @@ export interface KnowledgeSourceLaunchGate {
   summary: string;
 }
 
+export interface KnowledgeSourceCoverageItem {
+  action?: KnowledgeSourceGroupAction;
+  connected: number;
+  description: string;
+  indexing: number;
+  label: string;
+  planned: number;
+  ready: number;
+  status: "connected" | "indexing" | "ready" | "planned";
+  total: number;
+  type: KnowledgeSourceType;
+}
+
 export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
   {
     connectors: [
@@ -215,6 +228,25 @@ export function buildKnowledgeSourceGroupAction(group: KnowledgeSourceGroup): Kn
     href: connector.actionHref,
     label: connector.actionLabel ?? "Open source"
   };
+}
+
+export function buildKnowledgeSourceCoverage(groups: KnowledgeSourceGroup[]): KnowledgeSourceCoverageItem[] {
+  return groups.map((group) => {
+    const summary = summarizeKnowledgeSourceReadiness([group]);
+
+    return {
+      action: buildKnowledgeSourceGroupAction(group),
+      connected: summary.connected,
+      description: buildKnowledgeSourceCoverageDescription(summary),
+      indexing: summary.indexing,
+      label: group.title,
+      planned: summary.planned,
+      ready: summary.ready,
+      status: buildKnowledgeSourceCoverageStatus(summary),
+      total: summary.total,
+      type: group.type
+    };
+  });
 }
 
 export function buildRuntimeKnowledgeSourceGroups(
@@ -435,6 +467,38 @@ function countReadyDocumentsWithTags(documents: KnowledgeDocumentSnapshot[], tag
 
 function isAiReadyDocument(document: KnowledgeDocumentSnapshot) {
   return assessKnowledgeDocumentReadiness(document).status === "ready";
+}
+
+function buildKnowledgeSourceCoverageStatus(summary: KnowledgeSourceReadinessSummary): KnowledgeSourceCoverageItem["status"] {
+  if (summary.indexing > 0) {
+    return "indexing";
+  }
+
+  if (summary.connected > 0) {
+    return "connected";
+  }
+
+  if (summary.ready > 0 || summary.actionable > 0) {
+    return "ready";
+  }
+
+  return "planned";
+}
+
+function buildKnowledgeSourceCoverageDescription(summary: KnowledgeSourceReadinessSummary) {
+  if (summary.indexing > 0) {
+    return `${summary.indexing} indexing, ${summary.connected} already connected`;
+  }
+
+  if (summary.connected > 0) {
+    return `${summary.connected}/${summary.total} sources feeding AI`;
+  }
+
+  if (summary.ready > 0 || summary.actionable > 0) {
+    return `${summary.actionable} setup path${summary.actionable === 1 ? "" : "s"} available`;
+  }
+
+  return `${summary.planned} planned connector${summary.planned === 1 ? "" : "s"}`;
 }
 
 function getResultNumber(result: BackgroundJobMonitorItem["result"], key: string) {
