@@ -104,9 +104,9 @@
 
 .sourcePresetGrid {
   display: grid;
-  max-height: 186px;
+  max-height: 214px;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   overflow: auto;
   padding-right: 4px;
 }
@@ -118,7 +118,7 @@
   min-width: 0;
   align-items: center;
   gap: 8px 10px;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: 22px minmax(160px, 1fr) minmax(140px, auto);
   border: 1px solid rgb(15 118 110 / 14%);
   background: #fff;
   padding: 10px;
@@ -151,6 +151,7 @@
   font-weight: 950;
   line-height: 1.1;
   overflow-wrap: anywhere;
+  hyphens: auto;
   text-transform: none;
 }
 
@@ -307,6 +308,15 @@
     grid-template-columns: 1fr;
   }
 
+  .sourcePresetCard {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .sourcePresetCard em {
+    grid-column: 2;
+    width: fit-content;
+  }
+
   .wizardFooter button {
     width: 100%;
   }
@@ -315,5 +325,9 @@
 @media (min-width: 621px) and (max-width: 1040px) {
   .sourcePresetGrid {
     grid-template-columns: 1fr;
+  }
+
+  .sourcePresetCard {
+    grid-template-columns: 22px minmax(0, 1fr) minmax(140px, auto);
   }
 }

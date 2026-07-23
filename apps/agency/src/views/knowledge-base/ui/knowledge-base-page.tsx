@@ -240,7 +240,8 @@ export function KnowledgeBasePage({
               </div>
               <span>
                 <Plus size={18} />
-                Open form
+                <b className={styles.openFormText}>Open form</b>
+                <b className={styles.closeFormText}>Close form</b>
               </span>
             </summary>
 

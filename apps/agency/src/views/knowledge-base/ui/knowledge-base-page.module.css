@@ -368,6 +368,14 @@
   text-transform: uppercase;
 }
 
+.createSourceSummary b {
+  font: inherit;
+}
+
+.closeFormText {
+  display: none;
+}
+
 .createSourceSummary svg {
   transition: transform 160ms ease;
 }
@@ -378,6 +386,14 @@
 
 .createSourcePanel[open] .createSourceSummary svg {
   transform: rotate(45deg);
+}
+
+.createSourcePanel[open] .openFormText {
+  display: none;
+}
+
+.createSourcePanel[open] .closeFormText {
+  display: inline;
 }
 
 .panelTitle,
