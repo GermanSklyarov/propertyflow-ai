@@ -5,6 +5,7 @@ import {
   buildWidgetLaunchReadinessItems,
   buildWidgetRuntimeReadiness,
   buildWidgetSnippet,
+  summarizeWidgetInstallSteps,
   summarizeWidgetLaunchReadiness
 } from "./widget-install";
 
@@ -253,6 +254,15 @@ describe("widget install model", () => {
       label: "Indexing settled",
       note: "Wait for active ingestion jobs to finish."
     });
+  });
+
+  it("summarizes install prerequisites", () => {
+    expect(
+      summarizeWidgetInstallSteps([
+        { done: true, label: "Tenant key", note: "Ready" },
+        { done: false, label: "Website origins", note: "Missing" }
+      ])
+    ).toEqual({ completed: 1, total: 2 });
   });
 });
 

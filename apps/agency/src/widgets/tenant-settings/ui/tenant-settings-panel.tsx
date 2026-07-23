@@ -30,7 +30,12 @@ import type {
 } from "@propertyflow/contracts";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
-import { buildWidgetInstallPackage, buildWidgetLaunchReadinessItems, summarizeWidgetLaunchReadiness } from "../model/widget-install";
+import {
+  buildWidgetInstallPackage,
+  buildWidgetLaunchReadinessItems,
+  summarizeWidgetInstallSteps,
+  summarizeWidgetLaunchReadiness
+} from "../model/widget-install";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
 import { WidgetInstallCheckForm } from "./widget-install-check-form";
@@ -68,6 +73,7 @@ export function TenantSettingsPanel({
     starterSourceTypesReady: starterReadiness.completed,
     tenantSlug: tenant.slug
   });
+  const widgetInstallStepSummary = summarizeWidgetInstallSteps(widgetInstall.steps);
 
   return (
     <>
@@ -232,11 +238,19 @@ export function TenantSettingsPanel({
                 ))}
               </div>
               <WidgetInstallCheckForm defaultUrl={tenant.customDomain ? `https://${tenant.customDomain}` : undefined} />
-              <div className={styles.widgetInstallSteps}>
-                {widgetInstall.steps.map((step) => (
-                  <ReadinessCard item={step} key={step.label} />
-                ))}
-              </div>
+              <details className={styles.widgetReadinessDetails}>
+                <summary>
+                  Install prerequisites
+                  <span>
+                    {widgetInstallStepSummary.completed}/{widgetInstallStepSummary.total} ready
+                  </span>
+                </summary>
+                <div className={styles.widgetInstallSteps}>
+                  {widgetInstall.steps.map((step) => (
+                    <ReadinessCard item={step} key={step.label} />
+                  ))}
+                </div>
+              </details>
               <small>Starter mode answers from documents and listings. Growth mode creates leads when visitors request help.</small>
             </section>
 
