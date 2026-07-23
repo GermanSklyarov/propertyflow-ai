@@ -1,4 +1,5 @@
 import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
+import { isRunningBackgroundJob } from "@entities/jobs/model/background-jobs";
 import { assessKnowledgeDocumentReadiness } from "./knowledge-document-readiness";
 
 export type KnowledgeSourceMode = "crm_inventory" | "concierge_index_only" | "hybrid";
@@ -225,9 +226,9 @@ export function buildRuntimeKnowledgeSourceGroups(
   }
 ): KnowledgeSourceGroup[] {
   const activeKnowledgeJobs = input.jobs.some(
-    (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && isRunningJob(job)
+    (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && isRunningBackgroundJob(job)
   );
-  const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && isRunningJob(job));
+  const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && isRunningBackgroundJob(job));
   const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
   const readyGuideDocuments = countReadyDocumentsWithTags(input.documents, [
     "faq",
@@ -434,10 +435,6 @@ function countReadyDocumentsWithTags(documents: KnowledgeDocumentSnapshot[], tag
 
 function isAiReadyDocument(document: KnowledgeDocumentSnapshot) {
   return assessKnowledgeDocumentReadiness(document).status === "ready";
-}
-
-function isRunningJob(job: BackgroundJobMonitorItem) {
-  return job.state === "active" || job.state === "waiting" || job.state === "delayed";
 }
 
 function getResultNumber(result: BackgroundJobMonitorItem["result"], key: string) {
