@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildKnowledgeDocumentSourceIntake,
   buildKnowledgeSourceTags,
   knowledgeDocumentSourcePresets,
   resolveKnowledgeSourceKind
@@ -70,5 +71,20 @@ describe("knowledge source presets", () => {
         "source-domain:agency.example.com"
       ])
     );
+  });
+
+  it("describes the ingestion route for source-first forms", () => {
+    expect(buildKnowledgeDocumentSourceIntake("website-blog-articles")).toMatchObject({
+      checklistLabel: "Website content",
+      routeLabel: "Website page -> parsing -> embeddings -> AI Concierge"
+    });
+    expect(buildKnowledgeDocumentSourceIntake("developer-pdfs")).toMatchObject({
+      checklistLabel: "Project knowledge",
+      routeLabel: "Brochure -> parsing -> embeddings -> AI Concierge"
+    });
+    expect(buildKnowledgeDocumentSourceIntake("unknown")).toMatchObject({
+      checklistLabel: "Custom knowledge",
+      sourceLabel: "Custom source"
+    });
   });
 });

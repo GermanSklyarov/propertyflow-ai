@@ -232,17 +232,20 @@ export function KnowledgeBasePage({
         </section>
 
         <section className={styles.layout}>
-          <section className={styles.panel} id="create-knowledge-document">
-            <div className={styles.panelHeader}>
+          <details className={`${styles.panel} ${styles.createSourcePanel}`} id="create-knowledge-document">
+            <summary className={styles.createSourceSummary}>
               <div>
                 <p className="section-kicker">Add source</p>
-                <h2 className={styles.panelTitle}>Create knowledge document</h2>
+                <h2 className={styles.panelTitle}>Create knowledge source</h2>
               </div>
-              <Plus size={20} />
-            </div>
+              <span>
+                <Plus size={18} />
+                Open form
+              </span>
+            </summary>
 
             <CreateKnowledgeDocumentForm />
-          </section>
+          </details>
 
           <aside className={styles.sidePanel}>
             <p className="section-kicker">Retrieval posture</p>

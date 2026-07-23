@@ -8,6 +8,12 @@ export interface KnowledgeDocumentSourcePreset {
   title: string;
 }
 
+export interface KnowledgeDocumentSourceIntake {
+  checklistLabel: string;
+  routeLabel: string;
+  sourceLabel: string;
+}
+
 export const knowledgeDocumentSourcePresets: KnowledgeDocumentSourcePreset[] = [
   {
     defaultKind: "faq",
@@ -100,6 +106,48 @@ export function resolveKnowledgeSourceKind(
   fallbackKind: CreateKnowledgeDocumentRequest["kind"]
 ): CreateKnowledgeDocumentRequest["kind"] {
   return getKnowledgeDocumentSourcePreset(sourcePresetId)?.defaultKind ?? fallbackKind;
+}
+
+export function buildKnowledgeDocumentSourceIntake(sourcePresetId: string | undefined): KnowledgeDocumentSourceIntake {
+  const preset = getKnowledgeDocumentSourcePreset(sourcePresetId);
+
+  if (!preset) {
+    return {
+      checklistLabel: "Custom knowledge",
+      routeLabel: "Source -> parsing -> embeddings -> AI Concierge",
+      sourceLabel: "Custom source"
+    };
+  }
+
+  if (preset.id.startsWith("website-")) {
+    return {
+      checklistLabel: "Website content",
+      routeLabel: "Website page -> parsing -> embeddings -> AI Concierge",
+      sourceLabel: preset.title
+    };
+  }
+
+  if (preset.id === "condo-brochures" || preset.id === "developer-pdfs") {
+    return {
+      checklistLabel: "Project knowledge",
+      routeLabel: "Brochure -> parsing -> embeddings -> AI Concierge",
+      sourceLabel: preset.title
+    };
+  }
+
+  if (preset.id === "internal-instructions") {
+    return {
+      checklistLabel: "Internal guardrails",
+      routeLabel: "Instructions -> parsing -> embeddings -> AI Concierge",
+      sourceLabel: preset.title
+    };
+  }
+
+  return {
+    checklistLabel: "Starter knowledge",
+    routeLabel: "Document -> parsing -> embeddings -> AI Concierge",
+    sourceLabel: preset.title
+  };
 }
 
 export function buildKnowledgeSourceTags(input: {
