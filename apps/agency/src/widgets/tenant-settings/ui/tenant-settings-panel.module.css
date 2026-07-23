@@ -517,6 +517,42 @@
   padding: 2px 1px 0;
 }
 
+.widgetAttributeList {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+}
+
+.widgetAttribute {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(90px, 0.45fr) minmax(0, 1fr);
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.widgetAttribute span,
+.widgetAttribute strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.widgetAttribute span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.widgetAttribute strong {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
 .widgetHeader {
   display: flex;
   flex-wrap: wrap;

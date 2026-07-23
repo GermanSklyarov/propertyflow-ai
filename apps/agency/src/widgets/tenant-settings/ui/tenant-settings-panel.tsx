@@ -231,6 +231,20 @@ export function TenantSettingsPanel({
               <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
               <details className={styles.widgetReadinessDetails}>
                 <summary>
+                  Snippet summary
+                  <span>{widgetInstall.dataAttributes.length} attributes</span>
+                </summary>
+                <div className={styles.widgetAttributeList} aria-label="Widget snippet attributes">
+                  {widgetInstall.dataAttributes.map((attribute) => (
+                    <div className={styles.widgetAttribute} key={attribute.label}>
+                      <span>{attribute.label}</span>
+                      <strong>{attribute.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              </details>
+              <details className={styles.widgetReadinessDetails}>
+                <summary>
                   Localized page snippets
                   <span>{localizedWidgetSnippets.length} variants</span>
                 </summary>
