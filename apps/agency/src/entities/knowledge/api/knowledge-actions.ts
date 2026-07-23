@@ -42,10 +42,17 @@ export async function createKnowledgeDocumentAction(formData: FormData) {
     tags,
     title
   });
+  await ingestKnowledgeDocument(document.id);
 
   revalidatePath("/knowledge");
 
-  redirect(`/knowledge?created=${encodeURIComponent(document.title)}#knowledge-list`);
+  const params = new URLSearchParams({
+    created: document.title,
+    document: document.title,
+    ingest: "queued"
+  });
+
+  redirect(`/knowledge?${params.toString()}#knowledge-jobs`);
 }
 
 function getSourceFile(value: FormDataEntryValue | null): File | null {
@@ -80,7 +87,7 @@ export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumen
 
   revalidatePath("/knowledge");
 
-  redirect(`/knowledge?ingest=queued&document=${encodeURIComponent(title)}#knowledge-list`);
+  redirect(`/knowledge?ingest=queued&document=${encodeURIComponent(title)}#knowledge-jobs`);
 }
 
 export async function embedKnowledgeChunksAction(formData: FormData) {
