@@ -44,6 +44,18 @@ export interface WidgetInstallPackage {
   steps: WidgetInstallStep[];
 }
 
+export interface WidgetLaunchReadinessInput {
+  hasActiveKnowledgeJobs: boolean;
+  hasKnowledge: boolean;
+  hasTenantSlug: boolean;
+  runtimeReadiness: PublicWidgetReadiness;
+}
+
+export interface WidgetLaunchReadinessSummary {
+  completed: number;
+  total: number;
+}
+
 export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstallPackage {
   const widget = getTenantWidgetSettings(tenant);
   const capabilities = buildWidgetCapabilities(tenant);
@@ -76,6 +88,15 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
     readiness: buildWidgetRuntimeReadiness(config),
     snippet: buildWidgetSnippet(config),
     steps: buildWidgetInstallSteps(tenant)
+  };
+}
+
+export function summarizeWidgetLaunchReadiness(input: WidgetLaunchReadinessInput): WidgetLaunchReadinessSummary {
+  const extraChecks = [input.hasKnowledge, input.hasKnowledge && !input.hasActiveKnowledgeJobs, input.hasTenantSlug];
+
+  return {
+    completed: input.runtimeReadiness.checks.filter((check) => check.ready).length + extraChecks.filter(Boolean).length,
+    total: input.runtimeReadiness.checks.length + extraChecks.length
   };
 }
 

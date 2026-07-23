@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { UpdateTenantSettingsForm } from "@features/tenant-settings-update/ui/update-tenant-settings-form";
+import { hasRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import type {
   BackgroundJobMonitorItem,
@@ -29,7 +30,7 @@ import type {
 } from "@propertyflow/contracts";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
-import { buildWidgetInstallPackage } from "../model/widget-install";
+import { buildWidgetInstallPackage, summarizeWidgetLaunchReadiness } from "../model/widget-install";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
 import { WidgetInstallCheckForm } from "./widget-install-check-form";
@@ -50,14 +51,15 @@ export function TenantSettingsPanel({
   const readinessItems = buildReadinessItems(tenant, usage);
   const completedReadiness = readinessItems.filter((item) => item.done).length;
   const starterReadiness = buildKnowledgeStarterReadiness(knowledgeDocuments);
-  const activeKnowledgeJobs = knowledgeJobs.some((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed");
+  const activeKnowledgeJobs = hasRunningKnowledgeJobs(knowledgeJobs);
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
-  const widgetReadinessCompleted =
-    widgetInstall.readiness.checks.filter((check) => check.ready).length +
-    Number(starterReadiness.completed > 0) +
-    Number(!activeKnowledgeJobs && starterReadiness.completed > 0) +
-    Number(Boolean(tenant.slug));
+  const widgetLaunchReadiness = summarizeWidgetLaunchReadiness({
+    hasActiveKnowledgeJobs: activeKnowledgeJobs,
+    hasKnowledge: starterReadiness.completed > 0,
+    hasTenantSlug: Boolean(tenant.slug),
+    runtimeReadiness: widgetInstall.readiness
+  });
 
   return (
     <>
@@ -193,7 +195,9 @@ export function TenantSettingsPanel({
               <details className={styles.widgetReadinessDetails}>
                 <summary>
                   Readiness checks
-                  <span>{widgetReadinessCompleted}/6 ready</span>
+                  <span>
+                    {widgetLaunchReadiness.completed}/{widgetLaunchReadiness.total} ready
+                  </span>
                 </summary>
                 <div className={styles.widgetReadinessList}>
                   {widgetInstall.readiness.checks.map((check) => (

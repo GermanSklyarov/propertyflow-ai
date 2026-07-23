@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { TenantSnapshot } from "@propertyflow/contracts";
-import { buildWidgetInstallPackage, buildWidgetRuntimeReadiness, buildWidgetSnippet } from "./widget-install";
+import { buildWidgetInstallPackage, buildWidgetRuntimeReadiness, buildWidgetSnippet, summarizeWidgetLaunchReadiness } from "./widget-install";
 
 describe("widget install model", () => {
   it("builds a copy-paste snippet bound to the tenant", () => {
@@ -189,6 +189,45 @@ describe("widget install model", () => {
       label: "CRM lead capture",
       note: "Growth and Enterprise handoff can create CRM leads."
     });
+  });
+
+  it("summarizes widget launch readiness from runtime and starter gates", () => {
+    const install = buildWidgetInstallPackage(
+      tenantFactory({
+        widget: {
+          ...tenantFactory().widget,
+          allowedOrigins: ["https://demo.example.com"],
+          welcomeMessages: {
+            en: "Hi",
+            ru: "Привет",
+            th: "สวัสดีค่ะ",
+            zh: "你好"
+          }
+        }
+      })
+    );
+
+    expect(
+      summarizeWidgetLaunchReadiness({
+        hasActiveKnowledgeJobs: false,
+        hasKnowledge: true,
+        hasTenantSlug: true,
+        runtimeReadiness: install.readiness
+      })
+    ).toEqual({ completed: 6, total: 6 });
+  });
+
+  it("keeps the indexing gate open while knowledge jobs run", () => {
+    const install = buildWidgetInstallPackage(tenantFactory());
+
+    expect(
+      summarizeWidgetLaunchReadiness({
+        hasActiveKnowledgeJobs: true,
+        hasKnowledge: true,
+        hasTenantSlug: true,
+        runtimeReadiness: install.readiness
+      })
+    ).toEqual({ completed: 4, total: 6 });
   });
 });
 
