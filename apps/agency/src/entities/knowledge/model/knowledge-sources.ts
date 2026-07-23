@@ -22,6 +22,11 @@ export interface KnowledgeSourceGroup {
   type: KnowledgeSourceType;
 }
 
+export interface KnowledgeSourceGroupAction {
+  href: string;
+  label: string;
+}
+
 export interface KnowledgeSourcePipelineStep {
   label: string;
   note: string;
@@ -195,6 +200,19 @@ export function buildKnowledgeSourceLaunchGate(summary: KnowledgeSourceReadiness
       : "Create a knowledge source connector before sharing the widget.",
     status: "blocked",
     summary: "No connected AI sources yet"
+  };
+}
+
+export function buildKnowledgeSourceGroupAction(group: KnowledgeSourceGroup): KnowledgeSourceGroupAction | undefined {
+  const connector = group.connectors.find((item) => item.actionHref && item.status !== "planned");
+
+  if (!connector?.actionHref) {
+    return undefined;
+  }
+
+  return {
+    href: connector.actionHref,
+    label: connector.actionLabel ?? "Open source"
   };
 }
 

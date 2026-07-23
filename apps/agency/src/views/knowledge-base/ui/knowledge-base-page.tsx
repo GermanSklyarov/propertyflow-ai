@@ -17,6 +17,7 @@ import {
   UploadCloud
 } from "lucide-react";
 import {
+  buildKnowledgeSourceGroupAction,
   buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
   knowledgeSourceGroups,
@@ -327,6 +328,8 @@ function formatStarterPhase(phase: ReturnType<typeof buildKnowledgeStarterReadin
 }
 
 function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {
+  const action = buildKnowledgeSourceGroupAction(group);
+
   return (
     <article className={styles.sourceCard}>
       <div className={styles.sourceCardHeader}>
@@ -335,6 +338,12 @@ function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {
           <strong>{group.title}</strong>
           <span>{group.description}</span>
         </div>
+        {action ? (
+          <a className={styles.sourceGroupAction} href={action.href}>
+            {action.label}
+            <ArrowRight size={14} />
+          </a>
+        ) : null}
       </div>
 
       <div className={styles.sourceConnectorList}>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
 import {
+  buildKnowledgeSourceGroupAction,
   buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
   knowledgeSourceGroups,
@@ -40,6 +41,26 @@ describe("knowledge sources model", () => {
       actionHref: "/listings#import-listings",
       actionLabel: "Open importer"
     });
+  });
+
+  it("builds primary source group actions from ready connectors", () => {
+    const documents = knowledgeSourceGroups.find((group) => group.type === "document");
+    const propertySources = knowledgeSourceGroups.find((group) => group.type === "property_feed");
+
+    expect(documents ? buildKnowledgeSourceGroupAction(documents) : undefined).toEqual({
+      href: "#create-knowledge-document",
+      label: "Add document"
+    });
+    expect(propertySources ? buildKnowledgeSourceGroupAction(propertySources) : undefined).toEqual({
+      href: "/listings#import-listings",
+      label: "Open importer"
+    });
+  });
+
+  it("does not create a primary action for planned-only source groups", () => {
+    const external = knowledgeSourceGroups.find((group) => group.type === "external");
+
+    expect(external ? buildKnowledgeSourceGroupAction(external) : undefined).toBeUndefined();
   });
 
   it("summarizes source modes for onboarding copy", () => {
