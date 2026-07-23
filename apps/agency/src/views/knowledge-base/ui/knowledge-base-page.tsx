@@ -11,11 +11,13 @@ import {
   Globe2,
   Languages,
   Plus,
+  Rocket,
   SearchCheck,
   Tags,
   UploadCloud
 } from "lucide-react";
 import {
+  buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
@@ -74,6 +76,7 @@ export function KnowledgeBasePage({
   });
   const sourceModeSummary = summarizeKnowledgeSourceModes(runtimeSourceGroups);
   const sourceReadiness = summarizeKnowledgeSourceReadiness(runtimeSourceGroups);
+  const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness);
 
   return (
     <main className={styles.page}>
@@ -164,6 +167,14 @@ export function KnowledgeBasePage({
             <SourceReadinessMetric label="Indexing" note="worker active" value={sourceReadiness.indexing} />
             <SourceReadinessMetric label="Actionable" note="setup links ready" value={sourceReadiness.actionable} />
             <SourceReadinessMetric label="Planned" note="roadmap sources" value={sourceReadiness.planned} />
+          </div>
+
+          <div className={styles.sourceLaunchGate} data-status={sourceLaunchGate.status}>
+            <Rocket size={17} />
+            <div>
+              <strong>{sourceLaunchGate.summary}</strong>
+              <span>{sourceLaunchGate.nextAction}</span>
+            </div>
           </div>
 
           <div className={styles.sourcesGrid}>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
 import {
+  buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
@@ -62,6 +63,46 @@ describe("knowledge sources model", () => {
     expect(summary.ready).toBe(3);
     expect(summary.planned).toBe(6);
     expect(summary.actionable).toBe(6);
+  });
+
+  it("blocks widget launch when no source is connected", () => {
+    const summary = summarizeKnowledgeSourceReadiness(knowledgeSourceGroups);
+
+    expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      nextAction: "Add at least one document, website page, or listing feed before sharing the widget.",
+      status: "blocked",
+      summary: "No connected AI sources yet"
+    });
+  });
+
+  it("marks launch gate as indexing while source workers are active", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [backgroundJob({ name: "knowledge.documents.ingest", state: "active" })],
+      totalDocuments: 0
+    });
+    const summary = summarizeKnowledgeSourceReadiness(groups);
+
+    expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      nextAction: "Wait for active ingestion jobs to finish before installing the widget.",
+      status: "indexing",
+      summary: "5 sources indexing now"
+    });
+  });
+
+  it("marks launch gate ready once at least one source feeds AI", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [knowledgeDocument({ tags: ["faq"] })],
+      jobs: [],
+      totalDocuments: 1
+    });
+    const summary = summarizeKnowledgeSourceReadiness(groups);
+
+    expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      nextAction: "Copy the widget once origins and localized messages are configured.",
+      status: "ready",
+      summary: "2 connected sources feeding AI"
+    });
   });
 
   it("documents the unified ingestion pipeline", () => {

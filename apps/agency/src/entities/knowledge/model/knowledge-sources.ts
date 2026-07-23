@@ -36,6 +36,12 @@ export interface KnowledgeSourceReadinessSummary {
   total: number;
 }
 
+export interface KnowledgeSourceLaunchGate {
+  nextAction: string;
+  status: "blocked" | "indexing" | "ready";
+  summary: string;
+}
+
 export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
   {
     connectors: [
@@ -164,6 +170,32 @@ export function summarizeKnowledgeSourceReadiness(groups: KnowledgeSourceGroup[]
       total: 0
     } satisfies KnowledgeSourceReadinessSummary
   );
+}
+
+export function buildKnowledgeSourceLaunchGate(summary: KnowledgeSourceReadinessSummary): KnowledgeSourceLaunchGate {
+  if (summary.indexing > 0) {
+    return {
+      nextAction: "Wait for active ingestion jobs to finish before installing the widget.",
+      status: "indexing",
+      summary: `${summary.indexing} source${summary.indexing === 1 ? "" : "s"} indexing now`
+    };
+  }
+
+  if (summary.connected > 0) {
+    return {
+      nextAction: "Copy the widget once origins and localized messages are configured.",
+      status: "ready",
+      summary: `${summary.connected} connected source${summary.connected === 1 ? "" : "s"} feeding AI`
+    };
+  }
+
+  return {
+    nextAction: summary.actionable
+      ? "Add at least one document, website page, or listing feed before sharing the widget."
+      : "Create a knowledge source connector before sharing the widget.",
+    status: "blocked",
+    summary: "No connected AI sources yet"
+  };
 }
 
 export function buildRuntimeKnowledgeSourceGroups(
