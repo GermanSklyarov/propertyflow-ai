@@ -2,6 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { buildCustomDomainOriginSuggestion, normalizeWidgetOrigin, normalizeWidgetOrigins } from "../model/widget-origins";
 import styles from "./update-tenant-settings-form.module.css";
 
 export function TenantWidgetOriginFields({
@@ -12,13 +13,13 @@ export function TenantWidgetOriginFields({
   origins: string[];
 }) {
   const [originInput, setOriginInput] = useState("");
-  const [originList, setOriginList] = useState(() => normalizeOrigins(origins));
-  const suggestedOrigin = customDomain ? normalizeOrigin(`https://${customDomain}`) : undefined;
+  const [originList, setOriginList] = useState(() => normalizeWidgetOrigins(origins));
+  const suggestedOrigin = buildCustomDomainOriginSuggestion(customDomain);
   const canAddSuggestedOrigin = Boolean(suggestedOrigin && !originList.includes(suggestedOrigin));
   const serializedOrigins = useMemo(() => originList.join("\n"), [originList]);
 
   function addOrigin(value: string) {
-    const normalizedOrigin = normalizeOrigin(value);
+    const normalizedOrigin = normalizeWidgetOrigin(value);
 
     if (!normalizedOrigin) {
       return;
@@ -83,24 +84,4 @@ export function TenantWidgetOriginFields({
       )}
     </div>
   );
-}
-
-function normalizeOrigins(origins: string[]) {
-  return origins.reduce<string[]>((normalizedOrigins, origin) => {
-    const normalizedOrigin = normalizeOrigin(origin);
-
-    if (normalizedOrigin && !normalizedOrigins.includes(normalizedOrigin)) {
-      normalizedOrigins.push(normalizedOrigin);
-    }
-
-    return normalizedOrigins;
-  }, []);
-}
-
-function normalizeOrigin(value: string) {
-  try {
-    return new URL(value.trim()).origin.toLowerCase();
-  } catch (_error) {
-    return undefined;
-  }
 }
