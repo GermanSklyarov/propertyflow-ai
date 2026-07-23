@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
-import { buildCustomDomainOriginSuggestion, normalizeWidgetOrigin, normalizeWidgetOrigins } from "../model/widget-origins";
+import { buildCustomDomainOriginSuggestion, normalizeWidgetOrigins, parseWidgetOriginInput } from "../model/widget-origins";
 import styles from "./update-tenant-settings-form.module.css";
 
 export function TenantWidgetOriginFields({
@@ -18,14 +18,14 @@ export function TenantWidgetOriginFields({
   const canAddSuggestedOrigin = Boolean(suggestedOrigin && !originList.includes(suggestedOrigin));
   const serializedOrigins = useMemo(() => originList.join("\n"), [originList]);
 
-  function addOrigin(value: string) {
-    const normalizedOrigin = normalizeWidgetOrigin(value);
+  function addOrigins(value: string) {
+    const normalizedOrigins = parseWidgetOriginInput(value);
 
-    if (!normalizedOrigin) {
+    if (!normalizedOrigins.length) {
       return;
     }
 
-    setOriginList((current) => (current.includes(normalizedOrigin) ? current : [...current, normalizedOrigin]));
+    setOriginList((current) => normalizeWidgetOrigins([...current, ...normalizedOrigins]));
     setOriginInput("");
   }
 
@@ -45,22 +45,22 @@ export function TenantWidgetOriginFields({
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
-                addOrigin(originInput);
+                addOrigins(originInput);
               }
             }}
-            placeholder="https://agency.example.com"
-            type="url"
+            placeholder="https://agency.example.com, https://blog.example.com"
+            type="text"
             value={originInput}
           />
         </label>
-        <button disabled={!originInput.trim()} onClick={() => addOrigin(originInput)} type="button">
+        <button disabled={!originInput.trim()} onClick={() => addOrigins(originInput)} type="button">
           <Plus size={16} />
-          Add origin
+          Add origins
         </button>
       </div>
 
       {canAddSuggestedOrigin ? (
-        <button className={styles.originSuggestion} onClick={() => addOrigin(suggestedOrigin ?? "")} type="button">
+        <button className={styles.originSuggestion} onClick={() => addOrigins(suggestedOrigin ?? "")} type="button">
           <Plus size={15} />
           Use custom domain: {suggestedOrigin}
         </button>

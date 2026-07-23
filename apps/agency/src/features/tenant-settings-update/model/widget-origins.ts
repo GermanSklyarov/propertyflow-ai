@@ -18,6 +18,15 @@ export function normalizeWidgetOrigins(origins: string[]) {
   }, []);
 }
 
+export function parseWidgetOriginInput(value: string) {
+  return normalizeWidgetOrigins(
+    value
+      .split(/[\s,;]+/)
+      .map((origin) => origin.trim())
+      .filter(Boolean)
+  );
+}
+
 export function buildCustomDomainOriginSuggestion(customDomain?: string) {
   if (!customDomain?.trim()) {
     return undefined;
