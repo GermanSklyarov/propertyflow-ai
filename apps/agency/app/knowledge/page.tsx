@@ -1,5 +1,6 @@
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { knowledgeChunkSearchQueryOptions, knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
+import { buildKnowledgePageNotice } from "@entities/knowledge/model/knowledge-page-notice";
 import type { AiChatRequest, KnowledgeChunkSearchRequest } from "@propertyflow/contracts";
 import { askAiChat } from "@shared/api/agency-client";
 import { getErrorMessage } from "@shared/lib/errors";
@@ -32,15 +33,7 @@ export default async function AgencyKnowledgePage({
         chatRequest={chatRequest}
         documents={documents.items}
         jobs={knowledgeJobs}
-        notice={
-          query.created
-            ? { message: `${query.created} was added and queued for ingestion.`, tone: "success" }
-            : query.ingest === "queued"
-              ? { message: `${query.document ?? "Knowledge document"} was queued for re-ingestion.`, tone: "success" }
-              : query.embed === "queued"
-                ? { message: "Knowledge chunk embedding was queued for the current tenant.", tone: "success" }
-                : undefined
-        }
+        notice={buildKnowledgePageNotice(query)}
         retrieval={retrieval}
         retrievalRequest={retrievalRequest}
         sourceJobs={jobs.items}
