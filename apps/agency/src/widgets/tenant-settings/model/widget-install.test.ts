@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { TenantSnapshot } from "@propertyflow/contracts";
-import { buildWidgetInstallPackage, buildWidgetRuntimeReadiness, buildWidgetSnippet, summarizeWidgetLaunchReadiness } from "./widget-install";
+import {
+  buildWidgetInstallPackage,
+  buildWidgetLaunchReadinessItems,
+  buildWidgetRuntimeReadiness,
+  buildWidgetSnippet,
+  summarizeWidgetLaunchReadiness
+} from "./widget-install";
 
 describe("widget install model", () => {
   it("builds a copy-paste snippet bound to the tenant", () => {
@@ -228,6 +234,25 @@ describe("widget install model", () => {
         runtimeReadiness: install.readiness
       })
     ).toEqual({ completed: 4, total: 6 });
+  });
+
+  it("builds launch readiness cards from runtime and starter gates", () => {
+    const install = buildWidgetInstallPackage(tenantFactory());
+
+    expect(
+      buildWidgetLaunchReadinessItems({
+        hasActiveKnowledgeJobs: true,
+        hasKnowledge: true,
+        hasTenantSlug: true,
+        runtimeReadiness: install.readiness,
+        starterSourceTypesReady: 3,
+        tenantSlug: "demo-agency"
+      })
+    ).toContainEqual({
+      done: false,
+      label: "Indexing settled",
+      note: "Wait for active ingestion jobs to finish."
+    });
   });
 });
 

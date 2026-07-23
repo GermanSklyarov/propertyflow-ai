@@ -30,7 +30,7 @@ import type {
 } from "@propertyflow/contracts";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
-import { buildWidgetInstallPackage, summarizeWidgetLaunchReadiness } from "../model/widget-install";
+import { buildWidgetInstallPackage, buildWidgetLaunchReadinessItems, summarizeWidgetLaunchReadiness } from "../model/widget-install";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
 import { WidgetInstallCheckForm } from "./widget-install-check-form";
@@ -59,6 +59,14 @@ export function TenantSettingsPanel({
     hasKnowledge: starterReadiness.completed > 0,
     hasTenantSlug: Boolean(tenant.slug),
     runtimeReadiness: widgetInstall.readiness
+  });
+  const widgetLaunchReadinessItems = buildWidgetLaunchReadinessItems({
+    hasActiveKnowledgeJobs: activeKnowledgeJobs,
+    hasKnowledge: starterReadiness.completed > 0,
+    hasTenantSlug: Boolean(tenant.slug),
+    runtimeReadiness: widgetInstall.readiness,
+    starterSourceTypesReady: starterReadiness.completed,
+    tenantSlug: tenant.slug
   });
 
   return (
@@ -200,39 +208,9 @@ export function TenantSettingsPanel({
                   </span>
                 </summary>
                 <div className={styles.widgetReadinessList}>
-                  {widgetInstall.readiness.checks.map((check) => (
-                    <ReadinessCard
-                      item={{
-                        done: check.ready,
-                        label: check.label,
-                        note: check.note
-                      }}
-                      key={check.key}
-                    />
+                  {widgetLaunchReadinessItems.map((item) => (
+                    <ReadinessCard item={item} key={item.label} />
                   ))}
-                  <ReadinessCard
-                    item={{
-                      done: starterReadiness.completed > 0,
-                      label: "Knowledge available",
-                      note: starterReadiness.completed
-                        ? `${starterReadiness.completed} starter source types have AI-ready documents.`
-                        : "Add at least one AI-ready FAQ or company source before installing the widget."
-                    }}
-                  />
-                  <ReadinessCard
-                    item={{
-                      done: !activeKnowledgeJobs && starterReadiness.completed > 0,
-                      label: "Indexing settled",
-                      note: activeKnowledgeJobs ? "Wait for active ingestion jobs to finish." : "No active knowledge jobs are blocking widget copy."
-                    }}
-                  />
-                  <ReadinessCard
-                    item={{
-                      done: Boolean(tenant.slug),
-                      label: "Tenant key ready",
-                      note: tenant.slug ? `Widget attaches to ${tenant.slug}.` : "Workspace slug is required for widget install."
-                    }}
-                  />
                 </div>
               </details>
             </section>

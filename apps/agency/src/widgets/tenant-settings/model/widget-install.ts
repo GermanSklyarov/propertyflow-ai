@@ -51,6 +51,11 @@ export interface WidgetLaunchReadinessInput {
   runtimeReadiness: PublicWidgetReadiness;
 }
 
+export interface WidgetLaunchReadinessItemsInput extends WidgetLaunchReadinessInput {
+  starterSourceTypesReady: number;
+  tenantSlug?: string;
+}
+
 export interface WidgetLaunchReadinessSummary {
   completed: number;
   total: number;
@@ -98,6 +103,33 @@ export function summarizeWidgetLaunchReadiness(input: WidgetLaunchReadinessInput
     completed: input.runtimeReadiness.checks.filter((check) => check.ready).length + extraChecks.filter(Boolean).length,
     total: input.runtimeReadiness.checks.length + extraChecks.length
   };
+}
+
+export function buildWidgetLaunchReadinessItems(input: WidgetLaunchReadinessItemsInput): WidgetInstallStep[] {
+  return [
+    ...input.runtimeReadiness.checks.map((check) => ({
+      done: check.ready,
+      label: check.label,
+      note: check.note
+    })),
+    {
+      done: input.hasKnowledge,
+      label: "Knowledge available",
+      note: input.hasKnowledge
+        ? `${input.starterSourceTypesReady} starter source types have AI-ready documents.`
+        : "Add at least one AI-ready FAQ or company source before installing the widget."
+    },
+    {
+      done: input.hasKnowledge && !input.hasActiveKnowledgeJobs,
+      label: "Indexing settled",
+      note: input.hasActiveKnowledgeJobs ? "Wait for active ingestion jobs to finish." : "No active knowledge jobs are blocking widget copy."
+    },
+    {
+      done: input.hasTenantSlug,
+      label: "Tenant key ready",
+      note: input.tenantSlug ? `Widget attaches to ${input.tenantSlug}.` : "Workspace slug is required for widget install."
+    }
+  ];
 }
 
 export function buildWidgetSnippet(config: WidgetInstallConfig): string {
