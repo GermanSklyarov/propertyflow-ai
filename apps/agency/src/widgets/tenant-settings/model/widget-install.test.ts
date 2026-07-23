@@ -46,18 +46,25 @@ describe("widget install model", () => {
     expect(install.snippet).toContain('data-tone="friendly"');
     expect(install.snippet).toContain('data-languages="en,th"');
     expect(install.snippet).toContain("&quot;en&quot;:&quot;Sawadee");
-    expect(install.localeOptions).toEqual([
+    expect(install.localeOptions).toMatchObject([
       {
         label: "Auto locale",
         note: "Reads the page language and uses EN as the fallback. Enabled: EN, TH.",
         value: 'data-locale="auto"'
       },
       {
-        label: "Fixed locale",
-        note: "Use this on a localized page, or update the attribute from the agency site language switcher.",
+        label: "EN page",
+        note: "Use this on a dedicated localized page, or set the same locale from the agency site language switcher.",
         value: 'data-locale="en"'
+      },
+      {
+        label: "TH page",
+        note: "Use this on a dedicated localized page, or set the same locale from the agency site language switcher.",
+        value: 'data-locale="th"'
       }
     ]);
+    expect(install.localeOptions[1]?.snippet).toContain('data-locale="en"');
+    expect(install.localeOptions[2]?.snippet).toContain('data-locale="th"');
     expect(install.readiness).toMatchObject({
       nextAction: "Widget configuration is ready for production installation.",
       status: "ready"
@@ -96,6 +103,13 @@ describe("widget install model", () => {
     expect(snippet).toContain('data-tenant="demo&lt;script&gt;"');
     expect(snippet).toContain('data-ai-name="Anna &quot;AI&quot;"');
     expect(snippet).toContain('data-welcome-message="Hi &lt;buyer&gt; &amp; family"');
+  });
+
+  it("builds locale-specific snippets", () => {
+    const install = buildWidgetInstallPackage(tenantFactory());
+    const snippet = buildWidgetSnippet(install.config, { locale: "ru" });
+
+    expect(snippet).toContain('data-locale="ru"');
   });
 
   it("keeps settings renderable for tenants loaded before widget fields exist", () => {

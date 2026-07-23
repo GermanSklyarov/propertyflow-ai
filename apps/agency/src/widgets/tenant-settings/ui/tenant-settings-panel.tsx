@@ -74,6 +74,7 @@ export function TenantSettingsPanel({
     tenantSlug: tenant.slug
   });
   const widgetInstallStepSummary = summarizeWidgetInstallSteps(widgetInstall.steps);
+  const localizedWidgetSnippets = widgetInstall.localeOptions.filter((option) => option.value !== 'data-locale="auto"');
 
   return (
     <>
@@ -228,15 +229,27 @@ export function TenantSettingsPanel({
                 <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
               </div>
               <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
-              <div className={styles.localeInstallList} aria-label="Widget locale integration options">
-                {widgetInstall.localeOptions.map((option) => (
-                  <div className={styles.localeInstallOption} key={option.label}>
-                    <span>{option.label}</span>
-                    <code>{option.value}</code>
-                    <small>{option.note}</small>
+              <details className={styles.widgetReadinessDetails}>
+                <summary>
+                  Localized page snippets
+                  <span>{localizedWidgetSnippets.length} variants</span>
+                </summary>
+                <div className={styles.localeInstallList} aria-label="Widget locale integration options">
+                  {localizedWidgetSnippets.map((option) => (
+                    <div className={styles.localeInstallOption} key={option.label}>
+                      <div>
+                        <span>{option.label}</span>
+                        <CopyWidgetSnippetButton label="Copy" snippet={option.snippet} />
+                      </div>
+                      <code>{option.value}</code>
+                      <small>{option.note}</small>
+                    </div>
+                  ))}
+                  <div className={styles.localeInstallHint}>
+                    Use these only when the agency site has separate localized pages. The default snippet already uses auto locale.
                   </div>
-                ))}
-              </div>
+                </div>
+              </details>
               <WidgetInstallCheckForm defaultUrl={tenant.customDomain ? `https://${tenant.customDomain}` : undefined} />
               <details className={styles.widgetReadinessDetails}>
                 <summary>

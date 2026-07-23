@@ -474,6 +474,14 @@
   padding: 10px;
 }
 
+.localeInstallOption > div {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+}
+
 .localeInstallOption span {
   color: var(--teal-dark);
   font-size: 0.72rem;
@@ -499,6 +507,14 @@
   font-size: 0.72rem;
   font-weight: 800;
   line-height: 1.35;
+}
+
+.localeInstallHint {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+  padding: 2px 1px 0;
 }
 
 .widgetHeader {

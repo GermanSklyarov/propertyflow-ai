@@ -25,6 +25,7 @@ export interface WidgetInstallStep {
 export interface WidgetLocaleIntegrationOption {
   label: string;
   note: string;
+  snippet: string;
   value: string;
 }
 
@@ -139,8 +140,10 @@ export function summarizeWidgetInstallSteps(steps: WidgetInstallStep[]): WidgetL
   };
 }
 
-export function buildWidgetSnippet(config: WidgetInstallConfig): string {
-  return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="auto" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
+export function buildWidgetSnippet(config: WidgetInstallConfig, options: { locale?: string } = {}): string {
+  const locale = options.locale ?? "auto";
+
+  return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="${escapeAttribute(locale)}" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
 }
 
 export function buildWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetCapabilities {
@@ -209,18 +212,21 @@ function buildWidgetLocaleOptions(config: WidgetInstallConfig): WidgetLocaleInte
   const enabledLanguages = config.languageCodes.length
     ? config.languageCodes.map((language) => language.toUpperCase()).join(", ")
     : "EN";
+  const languages = config.languageCodes.length ? config.languageCodes : [primaryLanguage];
 
   return [
     {
       label: "Auto locale",
       value: 'data-locale="auto"',
+      snippet: buildWidgetSnippet(config),
       note: `Reads the page language and uses ${primaryLanguage.toUpperCase()} as the fallback. Enabled: ${enabledLanguages}.`
     },
-    {
-      label: "Fixed locale",
-      value: `data-locale="${primaryLanguage}"`,
-      note: "Use this on a localized page, or update the attribute from the agency site language switcher."
-    }
+    ...languages.map((language) => ({
+      label: `${language.toUpperCase()} page`,
+      value: `data-locale="${language}"`,
+      snippet: buildWidgetSnippet(config, { locale: language }),
+      note: "Use this on a dedicated localized page, or set the same locale from the agency site language switcher."
+    }))
   ];
 }
 

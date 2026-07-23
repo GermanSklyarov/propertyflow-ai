@@ -6,7 +6,7 @@ import styles from "./tenant-settings-panel.module.css";
 
 type CopyState = "idle" | "copied" | "failed";
 
-export function CopyWidgetSnippetButton({ snippet }: { snippet: string }) {
+export function CopyWidgetSnippetButton({ label = "Copy code", snippet }: { label?: string; snippet: string }) {
   const [state, setState] = useState<CopyState>("idle");
   const [isPending, startTransition] = useTransition();
 
@@ -28,7 +28,7 @@ export function CopyWidgetSnippetButton({ snippet }: { snippet: string }) {
   return (
     <button className={styles.copySnippetButton} disabled={isPending} onClick={copySnippet} type="button">
       <Icon size={16} />
-      {state === "copied" ? "Copied" : state === "failed" ? "Select manually" : "Copy code"}
+      {state === "copied" ? "Copied" : state === "failed" ? "Select manually" : label}
     </button>
   );
 }
