@@ -173,6 +173,55 @@
   background: #fff7ed;
 }
 
+.nextSourceActions {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+
+.nextSourceAction {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #fff;
+  padding: 11px 12px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.nextSourceAction:hover,
+.nextSourceAction:focus-visible {
+  border-color: rgb(15 118 110 / 28%);
+  background: #edf8f4;
+}
+
+.nextSourceAction[data-priority="high"] {
+  border-color: rgb(15 118 110 / 24%);
+  background: #edf8f4;
+}
+
+.nextSourceAction strong,
+.nextSourceAction span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.nextSourceAction strong {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.nextSourceAction span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .requirementGrid {
   display: grid;
   min-width: 0;
@@ -874,6 +923,7 @@
   }
 
   .requirementGrid,
+  .nextSourceActions,
   .primaryLink {
     grid-column: 1 / -1;
   }

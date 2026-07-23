@@ -130,6 +130,17 @@ export function KnowledgeBasePage({
             <span>{starterReadiness.nextAction}</span>
           </div>
 
+          {starterReadiness.nextActions.length ? (
+            <div className={styles.nextSourceActions} aria-label="Recommended next knowledge actions">
+              {starterReadiness.nextActions.map((action) => (
+                <a className={styles.nextSourceAction} data-priority={action.priority} href={action.href} key={action.id}>
+                  <strong>{action.label}</strong>
+                  <span>{action.reason}</span>
+                </a>
+              ))}
+            </div>
+          ) : null}
+
           <div className={styles.requirementGrid} aria-label="Starter knowledge checklist">
             {starterReadiness.items.map((item) => {
               const Icon = item.done ? CheckCircle2 : CircleDashed;

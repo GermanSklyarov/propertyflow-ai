@@ -15,6 +15,22 @@ describe("buildKnowledgeStarterReadiness", () => {
     expect(readiness.launchReady).toBe(true);
     expect(readiness.missing).toBe(5);
     expect(readiness.nextAction).toBe("Install the widget and test a real buyer question.");
+    expect(readiness.nextActions).toEqual([
+      {
+        href: "#knowledge-chat",
+        id: "test-ai-answer",
+        label: "Test AI answer",
+        priority: "high",
+        reason: "Ask a buyer question before copying the widget."
+      },
+      {
+        href: "#retrieval-preview",
+        id: "check-retrieval",
+        label: "Check retrieval",
+        priority: "medium",
+        reason: "Confirm Concierge cites the expected private sources."
+      }
+    ]);
     expect(readiness.phase).toBe("launch-ready");
     expect(readiness.summary).toBe("Core documents are ready for Starter Concierge answers.");
     expect(readiness.items.find((item) => item.id === "faq")?.done).toBe(true);
@@ -30,6 +46,13 @@ describe("buildKnowledgeStarterReadiness", () => {
     expect(readiness.completed).toBe(0);
     expect(readiness.launchReady).toBe(false);
     expect(readiness.nextAction).toBe("Upload an FAQ or company information document first.");
+    expect(readiness.nextActions.map((action) => action.id)).toEqual(["add-faq", "add-company-information", "add-buying-guide"]);
+    expect(readiness.nextActions[0]).toMatchObject({
+      href: "#create-knowledge-document",
+      label: "Add FAQ",
+      priority: "high",
+      reason: "FAQ is the minimum Starter source for first answers."
+    });
     expect(readiness.phase).toBe("empty");
     expect(readiness.total).toBe(9);
     expect(readiness.items.every((item) => !item.done)).toBe(true);
@@ -46,6 +69,10 @@ describe("buildKnowledgeStarterReadiness", () => {
     });
     expect(readiness.completed).toBe(0);
     expect(readiness.nextAction).toBe("Add an AI-ready FAQ before installing the widget.");
+    expect(readiness.nextActions[0]).toMatchObject({
+      id: "add-faq",
+      reason: "1 draft source needs stronger AI readiness."
+    });
     expect(readiness.phase).toBe("review");
   });
 
@@ -61,6 +88,15 @@ describe("buildKnowledgeStarterReadiness", () => {
 
     expect(readiness.launchReady).toBe(false);
     expect(readiness.nextAction).toBe("Wait for indexing to finish, then run an AI answer check.");
+    expect(readiness.nextActions).toEqual([
+      {
+        href: "#knowledge-jobs",
+        id: "watch-indexing",
+        label: "Watch indexing",
+        priority: "high",
+        reason: "Wait until workers finish before testing answers."
+      }
+    ]);
     expect(readiness.phase).toBe("indexing");
   });
 });

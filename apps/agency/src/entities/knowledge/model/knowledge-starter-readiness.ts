@@ -19,10 +19,19 @@ export interface KnowledgeStarterReadiness {
   items: KnowledgeStarterReadinessItem[];
   launchReady: boolean;
   missing: number;
+  nextActions: KnowledgeStarterNextAction[];
   nextAction: string;
   phase: "empty" | "indexing" | "review" | "launch-ready";
   summary: string;
   total: number;
+}
+
+export interface KnowledgeStarterNextAction {
+  href: string;
+  id: string;
+  label: string;
+  priority: "high" | "medium" | "low";
+  reason: string;
 }
 
 export const knowledgeStarterRequirements: KnowledgeStarterRequirement[] = [
@@ -108,6 +117,7 @@ export function buildKnowledgeStarterReadiness(documents: KnowledgeDocumentSnaps
     items,
     launchReady: launchState.phase === "launch-ready",
     missing: items.length - completed,
+    nextActions: buildStarterNextActions(items, launchState.phase),
     nextAction: launchState.nextAction,
     phase: launchState.phase,
     summary: launchState.summary,
@@ -173,4 +183,72 @@ function matchesRequirement(document: KnowledgeDocumentSnapshot, requirement: Kn
 
 function normalizeSearchText(value: string) {
   return value.toLowerCase().replaceAll(/[^a-z0-9]+/g, " ").trim();
+}
+
+function buildStarterNextActions(items: KnowledgeStarterReadinessItem[], phase: KnowledgeStarterReadiness["phase"]): KnowledgeStarterNextAction[] {
+  if (phase === "launch-ready") {
+    return [
+      {
+        href: "#knowledge-chat",
+        id: "test-ai-answer",
+        label: "Test AI answer",
+        priority: "high",
+        reason: "Ask a buyer question before copying the widget."
+      },
+      {
+        href: "#retrieval-preview",
+        id: "check-retrieval",
+        label: "Check retrieval",
+        priority: "medium",
+        reason: "Confirm Concierge cites the expected private sources."
+      }
+    ];
+  }
+
+  if (phase === "indexing") {
+    return [
+      {
+        href: "#knowledge-jobs",
+        id: "watch-indexing",
+        label: "Watch indexing",
+        priority: "high",
+        reason: "Wait until workers finish before testing answers."
+      }
+    ];
+  }
+
+  const missing = items.filter((item) => !item.done);
+  const prioritizedIds = ["faq", "company-information", "buying-guide", "visa-guide", "tax-information", "condo-brochures"];
+  const sorted = [...missing].sort((left, right) => {
+    const leftIndex = prioritizedIds.indexOf(left.id);
+    const rightIndex = prioritizedIds.indexOf(right.id);
+
+    return (leftIndex === -1 ? Number.MAX_SAFE_INTEGER : leftIndex) - (rightIndex === -1 ? Number.MAX_SAFE_INTEGER : rightIndex);
+  });
+
+  return sorted.slice(0, 3).map((item, index) => ({
+    href: "#create-knowledge-document",
+    id: `add-${item.id}`,
+    label: `Add ${item.title}`,
+    priority: index === 0 ? "high" : "medium",
+    reason: item.matchedDocuments
+      ? `${item.matchedDocuments} draft source${item.matchedDocuments === 1 ? " needs" : "s need"} stronger AI readiness.`
+      : buildMissingSourceReason(item.id)
+  }));
+}
+
+function buildMissingSourceReason(id: string) {
+  const reasons: Record<string, string> = {
+    "buying-guide": "Foreign buyers ask this before they trust a viewing.",
+    "company-information": "Concierge needs brand, contacts, and handoff context.",
+    "condo-brochures": "Project facts improve listing and neighborhood answers.",
+    "developer-pdfs": "Construction and handover details reduce agent follow-up.",
+    faq: "FAQ is the minimum Starter source for first answers.",
+    "internal-instructions": "Guardrails keep Concierge handoffs consistent.",
+    "selling-guide": "Seller questions need approved process and commission answers.",
+    "tax-information": "Ownership cost answers need agency-approved assumptions.",
+    "visa-guide": "Relocation buyers often ask visa questions before property details."
+  };
+
+  return reasons[id] ?? "Add this source to improve Concierge coverage.";
 }
