@@ -11,6 +11,14 @@ describe("starter setup progress", () => {
     });
 
     expect(progress.launchReady).toBe(false);
+    expect(progress.steps[0]).toMatchObject({
+      id: "plan",
+      status: "complete",
+      title: "Plan confirmation",
+      value: "Starter"
+    });
+    expect(progress.completed).toBe(2);
+    expect(progress.total).toBe(5);
     expect(progress.nextAction).toMatchObject({
       actionHref: "/knowledge?create=source#create-knowledge-document",
       status: "action",

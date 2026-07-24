@@ -1,4 +1,5 @@
 import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, TenantSnapshot } from "@propertyflow/contracts";
+import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { countRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
@@ -42,6 +43,7 @@ export function buildStarterSetupProgress({
   const knowledgeReadiness = buildKnowledgeStarterReadiness(documents, activeKnowledgeJobs);
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
+  const plan = getTenantPlanDefinition(tenant.subscriptionPlan);
   const widgetLaunchReadiness = summarizeWidgetLaunchReadiness({
     hasActiveKnowledgeJobs: activeKnowledgeJobs > 0,
     hasLaunchReadyKnowledge: knowledgeReadiness.launchReady,
@@ -62,6 +64,15 @@ export function buildStarterSetupProgress({
   const originCheckReady = widgetInstall.readiness.checks.find((check) => check.key === "origin-policy")?.ready ?? false;
 
   const steps: StarterSetupStep[] = [
+    {
+      actionHref: "/settings#plan-upgrade",
+      actionLabel: "Review plan",
+      description: `${plan.name} selected: ${plan.positioning}`,
+      id: "plan",
+      status: "complete",
+      title: "Plan confirmation",
+      value: plan.name
+    },
     {
       actionHref: "/knowledge?create=source#create-knowledge-document",
       actionLabel: knowledgeReadiness.launchReady ? "Review sources" : "Add knowledge",

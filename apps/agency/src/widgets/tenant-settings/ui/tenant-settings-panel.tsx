@@ -468,7 +468,7 @@ function PlanMode({ label, note }: { label: string; note: string }) {
 
 function PlanUpgradePath({ path }: { path: ReturnType<typeof buildWidgetPlanUpgradePath> }) {
   return (
-    <article className={styles.planUpgradePath}>
+    <article className={styles.planUpgradePath} id="plan-upgrade">
       <div className={styles.planUpgradeHeader}>
         <div>
           <p className="section-kicker">Upgrade path</p>
