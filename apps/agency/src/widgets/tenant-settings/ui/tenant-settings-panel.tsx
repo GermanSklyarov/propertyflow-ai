@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { UpdateTenantSettingsForm } from "@features/tenant-settings-update/ui/update-tenant-settings-form";
-import { hasRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
+import { countRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import type {
   BackgroundJobMonitorItem,
@@ -55,8 +55,9 @@ export function TenantSettingsPanel({
 }) {
   const readinessItems = buildReadinessItems(tenant, usage);
   const completedReadiness = readinessItems.filter((item) => item.done).length;
-  const starterReadiness = buildKnowledgeStarterReadiness(knowledgeDocuments);
-  const activeKnowledgeJobs = hasRunningKnowledgeJobs(knowledgeJobs);
+  const activeKnowledgeJobCount = countRunningKnowledgeJobs(knowledgeJobs);
+  const activeKnowledgeJobs = activeKnowledgeJobCount > 0;
+  const starterReadiness = buildKnowledgeStarterReadiness(knowledgeDocuments, activeKnowledgeJobCount);
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
   const widgetLaunchReadiness = summarizeWidgetLaunchReadiness({

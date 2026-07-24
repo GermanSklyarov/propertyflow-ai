@@ -1,6 +1,6 @@
 import type { BackgroundJobMonitorItem } from "@propertyflow/contracts";
 import { describe, expect, it } from "vitest";
-import { hasRunningKnowledgeJobs, isRunningBackgroundJob } from "./background-jobs";
+import { countRunningKnowledgeJobs, hasRunningKnowledgeJobs, isRunningBackgroundJob } from "./background-jobs";
 
 describe("background job model", () => {
   it("treats queued and active worker states as running", () => {
@@ -18,6 +18,17 @@ describe("background job model", () => {
   it("detects running knowledge jobs only", () => {
     expect(hasRunningKnowledgeJobs([job({ name: "knowledge.documents.ingest", state: "waiting" })])).toBe(true);
     expect(hasRunningKnowledgeJobs([job({ name: "properties.import", state: "waiting" })])).toBe(false);
+  });
+
+  it("counts running knowledge jobs for Starter launch gates", () => {
+    expect(
+      countRunningKnowledgeJobs([
+        job({ id: "job-1", name: "knowledge.documents.ingest", state: "waiting" }),
+        job({ id: "job-2", name: "knowledge.chunks.embed", state: "active" }),
+        job({ id: "job-3", name: "knowledge.chunks.embed", state: "completed" }),
+        job({ id: "job-4", name: "properties.import", state: "active" })
+      ])
+    ).toBe(2);
   });
 });
 
