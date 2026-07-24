@@ -16,6 +16,7 @@ describe("starter setup progress", () => {
       status: "action",
       title: "Knowledge Sources"
     });
+    expect(progress.blockers.map((blocker) => blocker.id)).toEqual(["knowledge", "origins", "widget"]);
   });
 
   it("waits for indexing before marking knowledge complete", () => {
@@ -51,6 +52,7 @@ describe("starter setup progress", () => {
 
     expect(progress.launchReady).toBe(true);
     expect(progress.completed).toBe(progress.total);
+    expect(progress.blockers).toEqual([]);
   });
 });
 

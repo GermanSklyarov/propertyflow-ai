@@ -214,6 +214,82 @@
   text-decoration: none;
 }
 
+.blockerPanel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid rgb(180 83 9 / 22%);
+  background: #fff9ed;
+  padding: 18px;
+}
+
+.blockerPanel h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.45rem, 2vw, 2.2rem);
+  line-height: 1.05;
+}
+
+.blockerList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
+  gap: 10px;
+}
+
+.blockerItem {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgb(180 83 9 / 20%);
+  background: #fff;
+  padding: 12px;
+  color: var(--teal-dark);
+  text-decoration: none;
+}
+
+.blockerItem:hover,
+.blockerItem:focus-visible {
+  border-color: rgb(15 118 110 / 34%);
+  background: #edf8f4;
+}
+
+.blockerItem svg {
+  color: #9a5b0c;
+}
+
+.blockerItem span {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.blockerItem strong,
+.blockerItem small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.blockerItem strong {
+  white-space: nowrap;
+}
+
+.blockerItem small {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.blockerItem b {
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 8px 10px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
@@ -348,5 +424,14 @@
 
   .stepCard p {
     min-height: 0;
+  }
+
+  .blockerItem {
+    grid-template-columns: 22px minmax(0, 1fr);
+  }
+
+  .blockerItem b {
+    grid-column: 2;
+    justify-self: start;
   }
 }

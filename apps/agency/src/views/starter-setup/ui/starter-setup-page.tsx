@@ -57,6 +57,27 @@ export function StarterSetupPage({
           ))}
         </section>
 
+        {!progress.launchReady ? (
+          <section className={styles.blockerPanel} aria-label="Starter launch blockers">
+            <div>
+              <p className="section-kicker">Launch blockers</p>
+              <h2>Fix these before copying the widget to production</h2>
+            </div>
+            <div className={styles.blockerList}>
+              {progress.blockers.map((blocker) => (
+                <a className={styles.blockerItem} data-status={blocker.status} href={blocker.actionHref} key={blocker.id}>
+                  <CircleDot size={16} />
+                  <span>
+                    <strong>{blocker.title}</strong>
+                    <small>{blocker.description}</small>
+                  </span>
+                  <b>{blocker.actionLabel}</b>
+                </a>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className={styles.layout}>
           <article className={styles.panel}>
             <div className={styles.panelHeader}>

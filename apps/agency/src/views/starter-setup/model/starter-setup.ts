@@ -21,6 +21,7 @@ export interface StarterSetupStep {
 }
 
 export interface StarterSetupProgress {
+  blockers: StarterSetupStep[];
   completed: number;
   launchReady: boolean;
   nextAction: StarterSetupStep;
@@ -108,8 +109,10 @@ export function buildStarterSetupProgress({
     }
   ];
   const completed = steps.filter((step) => step.status === "complete").length;
+  const blockers = steps.filter((step) => step.status !== "complete").slice(0, 3);
 
   return {
+    blockers,
     completed,
     launchReady: completed === steps.length,
     nextAction: steps.find((step) => step.status !== "complete") ?? steps[steps.length - 1],
