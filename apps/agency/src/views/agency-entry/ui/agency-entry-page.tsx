@@ -109,7 +109,9 @@ export function AgencyEntryPage() {
         <div className={styles.planGrid}>
           {plans.map((plan) => (
             <article className={styles.planCard} data-featured={plan.featured} key={plan.id}>
-              {plan.featured ? <span className={styles.featuredBadge}>Best entry point</span> : null}
+              <span className={plan.featured ? styles.featuredBadge : styles.featuredBadgePlaceholder}>
+                {plan.featured ? "Best entry point" : "Plan option"}
+              </span>
               <h3>{plan.name}</h3>
               <p>{plan.primaryUseCase}</p>
               <span>{plan.description}</span>
