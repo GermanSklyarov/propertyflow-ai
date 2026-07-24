@@ -172,6 +172,42 @@ describe("knowledge sources model", () => {
     });
   });
 
+  it("blocks launch when a source ingestion job failed", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [backgroundJob({ name: "properties.import", state: "failed" })],
+      totalDocuments: 0
+    });
+    const summary = summarizeKnowledgeSourceReadiness(groups);
+
+    expect(summary.failed).toBe(1);
+    expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      nextAction: "Open failed ingestion jobs and retry or disable the broken source before installing the widget.",
+      status: "failed",
+      summary: "1 source need attention"
+    });
+  });
+
+  it("surfaces failed property imports as source coverage blockers", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [backgroundJob({ name: "properties.import", state: "failed" })],
+      totalDocuments: 0
+    });
+    const propertyFeed = groups.find((group) => group.type === "property_feed");
+    const coverage = buildKnowledgeSourceCoverage(groups);
+
+    expect(propertyFeed?.connectors[0]).toMatchObject({
+      runtimeNote: "Last import failed; review job details",
+      status: "failed"
+    });
+    expect(coverage.find((item) => item.type === "property_feed")).toMatchObject({
+      description: "1 failed, 0 still connected",
+      failed: 1,
+      status: "failed"
+    });
+  });
+
   it("marks launch gate ready once at least one source feeds AI", () => {
     const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
       documents: [knowledgeDocument({ tags: ["faq"] })],

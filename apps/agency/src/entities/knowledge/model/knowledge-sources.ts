@@ -3,7 +3,7 @@ import { isRunningBackgroundJob } from "@entities/jobs/model/background-jobs";
 import { assessKnowledgeDocumentReadiness } from "./knowledge-document-readiness";
 
 export type KnowledgeSourceMode = "crm_inventory" | "concierge_index_only" | "hybrid";
-export type KnowledgeSourceStatus = "connected" | "indexing" | "ready" | "planned";
+export type KnowledgeSourceStatus = "connected" | "disabled" | "draft" | "failed" | "indexing" | "ready" | "planned";
 export type KnowledgeSourceType = "document" | "property_feed" | "website" | "external";
 
 export interface KnowledgeSourceConnector {
@@ -36,6 +36,9 @@ export interface KnowledgeSourcePipelineStep {
 export interface KnowledgeSourceReadinessSummary {
   actionable: number;
   connected: number;
+  disabled: number;
+  draft: number;
+  failed: number;
   indexing: number;
   planned: number;
   ready: number;
@@ -44,7 +47,7 @@ export interface KnowledgeSourceReadinessSummary {
 
 export interface KnowledgeSourceLaunchGate {
   nextAction: string;
-  status: "blocked" | "indexing" | "ready";
+  status: "blocked" | "failed" | "indexing" | "ready";
   summary: string;
 }
 
@@ -58,11 +61,14 @@ export interface KnowledgeSourceCoverageItem {
   action?: KnowledgeSourceGroupAction;
   connected: number;
   description: string;
+  disabled: number;
+  draft: number;
+  failed: number;
   indexing: number;
   label: string;
   planned: number;
   ready: number;
-  status: "connected" | "indexing" | "ready" | "planned";
+  status: "connected" | "disabled" | "draft" | "failed" | "indexing" | "ready" | "planned";
   total: number;
   type: KnowledgeSourceType;
 }
@@ -189,6 +195,9 @@ export function summarizeKnowledgeSourceReadiness(groups: KnowledgeSourceGroup[]
     {
       actionable: 0,
       connected: 0,
+      disabled: 0,
+      draft: 0,
+      failed: 0,
       indexing: 0,
       planned: 0,
       ready: 0,
@@ -202,6 +211,14 @@ export function buildKnowledgeSourceLaunchGate(
   options: KnowledgeSourceLaunchGateOptions = {}
 ): KnowledgeSourceLaunchGate {
   const starterLaunchReady = options.starterLaunchReady ?? true;
+
+  if (summary.failed > 0) {
+    return {
+      nextAction: "Open failed ingestion jobs and retry or disable the broken source before installing the widget.",
+      status: "failed",
+      summary: `${summary.failed} source${summary.failed === 1 ? "" : "s"} need attention`
+    };
+  }
 
   if (summary.indexing > 0) {
     return {
@@ -257,6 +274,9 @@ export function buildKnowledgeSourceCoverage(groups: KnowledgeSourceGroup[]): Kn
       action: buildKnowledgeSourceGroupAction(group),
       connected: summary.connected,
       description: buildKnowledgeSourceCoverageDescription(summary),
+      disabled: summary.disabled,
+      draft: summary.draft,
+      failed: summary.failed,
       indexing: summary.indexing,
       label: group.title,
       planned: summary.planned,
@@ -280,6 +300,10 @@ export function buildRuntimeKnowledgeSourceGroups(
     (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && isRunningBackgroundJob(job)
   );
   const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && isRunningBackgroundJob(job));
+  const failedKnowledgeJobs = input.jobs.some(
+    (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && job.state === "failed"
+  );
+  const failedImportJobs = input.jobs.some((job) => job.name === "properties.import" && job.state === "failed");
   const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
   const readyGuideDocuments = countReadyDocumentsWithTags(input.documents, [
     "faq",
@@ -337,6 +361,7 @@ export function buildRuntimeKnowledgeSourceGroups(
           if (index === 0) {
             return buildRuntimeDocumentConnector({
               activeKnowledgeJobs,
+              failedKnowledgeJobs,
               connectedNote: "Available to AI Concierge",
               connector,
               emptyNote: "Upload PDFs or guides to start",
@@ -349,6 +374,7 @@ export function buildRuntimeKnowledgeSourceGroups(
           if (connector.label === "FAQ, buying, visa, tax guides") {
             return buildRuntimeDocumentConnector({
               activeKnowledgeJobs,
+              failedKnowledgeJobs,
               connectedNote: "Starter guides are ready for Concierge answers",
               connector,
               emptyNote: "Add FAQ, buying, visa, or tax guides",
@@ -361,6 +387,7 @@ export function buildRuntimeKnowledgeSourceGroups(
           if (connector.label === "Developer and condo brochures") {
             return buildRuntimeDocumentConnector({
               activeKnowledgeJobs,
+              failedKnowledgeJobs,
               connectedNote: "Project brochures are ready for property questions",
               connector,
               emptyNote: "Add developer PDFs or condo brochures",
@@ -388,12 +415,14 @@ export function buildRuntimeKnowledgeSourceGroups(
           return {
             ...connector,
             countLabel: `${totalListingKnowledge} listing docs`,
-            runtimeNote: activeImportJobs
-              ? "Import is indexing listing knowledge"
-              : totalListingKnowledge
-                ? "Feeds Concierge without forcing CRM"
-                : "Upload CSV, JSON, or feed data",
-            status: activeImportJobs ? "indexing" : totalListingKnowledge ? "connected" : connector.status
+            runtimeNote: failedImportJobs
+              ? "Last import failed; review job details"
+              : activeImportJobs
+                ? "Import is indexing listing knowledge"
+                : totalListingKnowledge
+                  ? "Feeds Concierge without forcing CRM"
+                  : "Upload CSV, JSON, or feed data",
+            status: failedImportJobs ? "failed" : activeImportJobs ? "indexing" : totalListingKnowledge ? "connected" : connector.status
           };
         })
       };
@@ -406,6 +435,7 @@ export function buildRuntimeKnowledgeSourceGroups(
           if (connector.label === "FAQ pages") {
             return buildRuntimeWebsiteConnector({
               activeKnowledgeJobs,
+              failedKnowledgeJobs,
               connectedNote: "FAQ pages ready for Concierge",
               connector,
               matchedCount: websiteFaqDocuments,
@@ -416,6 +446,7 @@ export function buildRuntimeKnowledgeSourceGroups(
           if (connector.label === "Blog article import") {
             return buildRuntimeWebsiteConnector({
               activeKnowledgeJobs,
+              failedKnowledgeJobs,
               connectedNote: "Website articles ready for Concierge",
               connector,
               matchedCount: websiteArticleDocuments,
@@ -437,6 +468,7 @@ function buildRuntimeDocumentConnector(input: {
   connectedNote: string;
   connector: KnowledgeSourceConnector;
   emptyNote: string;
+  failedKnowledgeJobs: boolean;
   matchedCount: number;
   readyCount: number;
   unit: string;
@@ -444,14 +476,16 @@ function buildRuntimeDocumentConnector(input: {
   return {
     ...input.connector,
     countLabel: `${input.readyCount}/${input.matchedCount} ready ${input.unit}`,
-    runtimeNote: input.activeKnowledgeJobs
-      ? "Indexing tenant uploads now"
-      : input.readyCount
-        ? input.connectedNote
-        : input.matchedCount
-          ? "Review document readiness before widget launch"
-          : input.emptyNote,
-    status: input.activeKnowledgeJobs ? "indexing" : input.readyCount ? "connected" : input.connector.status
+    runtimeNote: input.failedKnowledgeJobs
+      ? "Last ingestion failed; review job details"
+      : input.activeKnowledgeJobs
+        ? "Indexing tenant uploads now"
+        : input.readyCount
+          ? input.connectedNote
+          : input.matchedCount
+            ? "Review document readiness before widget launch"
+            : input.emptyNote,
+    status: input.failedKnowledgeJobs ? "failed" : input.activeKnowledgeJobs ? "indexing" : input.readyCount ? "connected" : input.connector.status
   };
 }
 
@@ -459,20 +493,23 @@ function buildRuntimeWebsiteConnector(input: {
   activeKnowledgeJobs: boolean;
   connectedNote: string;
   connector: KnowledgeSourceConnector;
+  failedKnowledgeJobs: boolean;
   matchedCount: number;
   readyCount: number;
 }): KnowledgeSourceConnector {
   return {
     ...input.connector,
     countLabel: `${input.readyCount}/${input.matchedCount} ready pages`,
-    runtimeNote: input.activeKnowledgeJobs
-      ? "Indexing website source content"
-      : input.readyCount
-        ? input.connectedNote
-        : input.matchedCount
-          ? "Review source text, tags, and URL before widget launch"
-          : "Paste page copy or upload HTML",
-    status: input.activeKnowledgeJobs ? "indexing" : input.readyCount ? "connected" : input.connector.status
+    runtimeNote: input.failedKnowledgeJobs
+      ? "Last website ingestion failed; review job details"
+      : input.activeKnowledgeJobs
+        ? "Indexing website source content"
+        : input.readyCount
+          ? input.connectedNote
+          : input.matchedCount
+            ? "Review source text, tags, and URL before widget launch"
+            : "Paste page copy or upload HTML",
+    status: input.failedKnowledgeJobs ? "failed" : input.activeKnowledgeJobs ? "indexing" : input.readyCount ? "connected" : input.connector.status
   };
 }
 
@@ -493,6 +530,10 @@ function buildKnowledgeSourceCoverageStatus(summary: KnowledgeSourceReadinessSum
     return "indexing";
   }
 
+  if (summary.failed > 0) {
+    return "failed";
+  }
+
   if (summary.connected > 0) {
     return "connected";
   }
@@ -501,10 +542,22 @@ function buildKnowledgeSourceCoverageStatus(summary: KnowledgeSourceReadinessSum
     return "ready";
   }
 
+  if (summary.draft > 0) {
+    return "draft";
+  }
+
+  if (summary.disabled > 0) {
+    return "disabled";
+  }
+
   return "planned";
 }
 
 function buildKnowledgeSourceCoverageDescription(summary: KnowledgeSourceReadinessSummary) {
+  if (summary.failed > 0) {
+    return `${summary.failed} failed, ${summary.connected} still connected`;
+  }
+
   if (summary.indexing > 0) {
     return `${summary.indexing} indexing, ${summary.connected} already connected`;
   }

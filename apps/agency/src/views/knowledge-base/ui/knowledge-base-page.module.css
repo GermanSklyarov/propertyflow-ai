@@ -547,6 +547,11 @@
   border-color: rgb(180 83 9 / 20%);
 }
 
+.sourceLaunchGate[data-status="failed"] {
+  background: #fff1f0;
+  border-color: rgb(180 55 45 / 24%);
+}
+
 .sourceLaunchGate[data-status="blocked"] {
   background: #fff7ed;
   border-color: rgb(180 83 9 / 20%);
@@ -640,6 +645,11 @@
 .sourceCoverageCard[data-status="indexing"] {
   border-color: rgb(180 83 9 / 20%);
   background: #fff9ed;
+}
+
+.sourceCoverageCard[data-status="failed"] {
+  border-color: rgb(180 55 45 / 22%);
+  background: #fff1f0;
 }
 
 .sourceCoverageCard[data-status="planned"] {
@@ -815,6 +825,18 @@
   border-color: rgb(180 83 9 / 18%);
   background: #fff7ed;
   color: #7c4a05;
+}
+
+.sourceConnector .failed {
+  border-color: rgb(180 55 45 / 22%);
+  background: #fff1f0;
+  color: #9b332c;
+}
+
+.sourceConnector .draft,
+.sourceConnector .disabled {
+  background: #f7fbfa;
+  color: var(--muted);
 }
 
 .pipelineStrip {

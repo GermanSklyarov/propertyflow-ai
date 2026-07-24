@@ -186,6 +186,7 @@ export function KnowledgeBasePage({
           <div className={styles.sourceReadinessStrip} aria-label="Knowledge source readiness">
             <SourceReadinessMetric label="Connected" note="feeding AI now" value={sourceReadiness.connected} />
             <SourceReadinessMetric label="Indexing" note="worker active" value={sourceReadiness.indexing} />
+            <SourceReadinessMetric label="Failed" note="needs retry" value={sourceReadiness.failed} />
             <SourceReadinessMetric label="Actionable" note="setup links ready" value={sourceReadiness.actionable} />
             <SourceReadinessMetric label="Planned" note="roadmap sources" value={sourceReadiness.planned} />
           </div>
@@ -355,7 +356,15 @@ function SourceCoverageCard({ item }: { item: KnowledgeSourceCoverageItem }) {
         <span>{item.description}</span>
       </div>
       <small>
-        {item.connected ? `${item.connected} live` : item.indexing ? `${item.indexing} indexing` : item.planned ? `${item.planned} planned` : "setup"}
+        {item.failed
+          ? `${item.failed} failed`
+          : item.connected
+            ? `${item.connected} live`
+            : item.indexing
+              ? `${item.indexing} indexing`
+              : item.planned
+                ? `${item.planned} planned`
+                : "setup"}
       </small>
       {item.action ? (
         <a href={item.action.href} title={item.action.label}>
