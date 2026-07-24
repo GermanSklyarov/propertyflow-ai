@@ -1,12 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  TenantPlanLimits,
   TenantSnapshot,
   TenantWidgetLanguage,
   TenantWidgetPersonaGender,
   TenantWidgetTone,
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
+import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
@@ -234,7 +236,7 @@ export class PgTenantRepository implements TenantRepository {
       customDomain: row.custom_domain ?? undefined,
       domainStatus: row.domain_status,
       subscriptionPlan: row.subscription_plan,
-      limits: row.limits,
+      limits: resolveTenantLimits(row.subscription_plan, row.limits),
       branding: {
         displayName: row.branding_display_name,
         primaryColor: row.branding_primary_color ?? undefined,
@@ -283,4 +285,25 @@ function filterSupportedLanguages(languages: string[] | null | undefined): Tenan
 
 function filterAllowedOrigins(origins: string[] | null | undefined): string[] {
   return (origins ?? []).map((origin) => origin.trim().toLowerCase()).filter(Boolean);
+}
+
+function resolveTenantLimits(
+  subscriptionPlan: TenantSnapshot["subscriptionPlan"],
+  storedLimits: Partial<TenantPlanLimits> | null | undefined
+): TenantPlanLimits {
+  const planLimits = getTenantPlanDefinition(subscriptionPlan).limits;
+
+  return {
+    agents: normalizeLimit(storedLimits?.agents, planLimits.agents),
+    aiCreditsMonthly: normalizeLimit(storedLimits?.aiCreditsMonthly, planLimits.aiCreditsMonthly),
+    properties: normalizeLimit(storedLimits?.properties, planLimits.properties),
+    publicApiRequestsMonthly: normalizeLimit(
+      storedLimits?.publicApiRequestsMonthly,
+      planLimits.publicApiRequestsMonthly
+    )
+  };
+}
+
+function normalizeLimit(value: number | null | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
 }

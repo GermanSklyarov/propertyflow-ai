@@ -9,7 +9,7 @@ create table if not exists tenants (
   custom_domain text,
   domain_status text not null default 'not-configured',
   subscription_plan text not null default 'starter',
-  limits jsonb not null default '{"properties":100,"agents":5,"aiCreditsMonthly":1000,"publicApiRequestsMonthly":10000}'::jsonb,
+  limits jsonb not null default '{"properties":1000,"agents":1,"aiCreditsMonthly":5000,"publicApiRequestsMonthly":10000}'::jsonb,
   branding_display_name text not null,
   branding_primary_color text,
   branding_logo_url text,
@@ -28,7 +28,12 @@ create table if not exists tenants (
 alter table tenants add column if not exists custom_domain text;
 alter table tenants add column if not exists domain_status text not null default 'not-configured';
 alter table tenants add column if not exists subscription_plan text not null default 'starter';
-alter table tenants add column if not exists limits jsonb not null default '{"properties":100,"agents":5,"aiCreditsMonthly":1000,"publicApiRequestsMonthly":10000}'::jsonb;
+alter table tenants add column if not exists limits jsonb not null default '{"properties":1000,"agents":1,"aiCreditsMonthly":5000,"publicApiRequestsMonthly":10000}'::jsonb;
+alter table tenants alter column limits set default '{"properties":1000,"agents":1,"aiCreditsMonthly":5000,"publicApiRequestsMonthly":10000}'::jsonb;
+update tenants
+set limits = '{"properties":1000,"agents":1,"aiCreditsMonthly":5000,"publicApiRequestsMonthly":10000}'::jsonb
+where subscription_plan = 'starter'
+  and limits = '{"properties":100,"agents":5,"aiCreditsMonthly":1000,"publicApiRequestsMonthly":10000}'::jsonb;
 alter table tenants add column if not exists widget_ai_name text not null default 'Anna';
 alter table tenants add column if not exists widget_ai_names jsonb not null default '{"en":"Anna","ru":"Анна","th":"มาลี","zh":"安娜"}'::jsonb;
 alter table tenants add column if not exists widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.';
