@@ -227,7 +227,7 @@ function buildStarterNextActions(items: KnowledgeStarterReadinessItem[], phase: 
   });
 
   return sorted.slice(0, 3).map((item, index) => ({
-    href: "#create-knowledge-document",
+    href: "?create=source#create-knowledge-document",
     id: `add-${item.id}`,
     label: `Add ${item.title}`,
     priority: index === 0 ? "high" : "medium",

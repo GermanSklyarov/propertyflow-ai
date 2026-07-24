@@ -17,6 +17,8 @@ export interface WidgetInstallConfig {
 }
 
 export interface WidgetInstallStep {
+  actionHref?: string;
+  actionLabel?: string;
   done: boolean;
   label: string;
   note: string;
@@ -109,11 +111,15 @@ export function summarizeWidgetLaunchReadiness(input: WidgetLaunchReadinessInput
 export function buildWidgetLaunchReadinessItems(input: WidgetLaunchReadinessItemsInput): WidgetInstallStep[] {
   return [
     ...input.runtimeReadiness.checks.map((check) => ({
+      actionHref: getRuntimeReadinessAction(check.key)?.actionHref,
+      actionLabel: getRuntimeReadinessAction(check.key)?.actionLabel,
       done: check.ready,
       label: check.label,
       note: check.note
     })),
     {
+      actionHref: "/knowledge?create=source#create-knowledge-document",
+      actionLabel: "Add knowledge",
       done: input.hasLaunchReadyKnowledge,
       label: "Knowledge available",
       note: input.hasLaunchReadyKnowledge
@@ -121,6 +127,8 @@ export function buildWidgetLaunchReadinessItems(input: WidgetLaunchReadinessItem
         : "Add enough AI-ready Starter sources before installing the widget."
     },
     {
+      actionHref: "/knowledge#knowledge-jobs",
+      actionLabel: "View jobs",
       done: input.hasLaunchReadyKnowledge && !input.hasActiveKnowledgeJobs,
       label: "Indexing settled",
       note: input.hasActiveKnowledgeJobs ? "Wait for active ingestion jobs to finish." : "No active knowledge jobs are blocking widget copy."
@@ -198,6 +206,8 @@ function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
       note: `${tenant.subscriptionPlan} mode controls whether conversations stay as AI answers or create CRM leads.`
     },
     {
+      actionHref: "#widget-origin-settings",
+      actionLabel: "Add origins",
       done: widget.allowedOrigins.length > 0,
       label: "Website origins",
       note: widget.allowedOrigins.length
@@ -205,6 +215,25 @@ function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
         : "Add production origins before sharing the snippet publicly."
     }
   ];
+}
+
+function getRuntimeReadinessAction(key: PublicWidgetReadinessCheck["key"]): Pick<WidgetInstallStep, "actionHref" | "actionLabel"> | undefined {
+  const actions: Record<string, Pick<WidgetInstallStep, "actionHref" | "actionLabel">> = {
+    languages: {
+      actionHref: "#concierge-personality-settings",
+      actionLabel: "Edit languages"
+    },
+    "localized-welcome": {
+      actionHref: "#concierge-personality-settings",
+      actionLabel: "Edit welcome"
+    },
+    "origin-policy": {
+      actionHref: "#widget-origin-settings",
+      actionLabel: "Add origins"
+    }
+  };
+
+  return actions[key];
 }
 
 function buildWidgetLocaleOptions(config: WidgetInstallConfig): WidgetLocaleIntegrationOption[] {

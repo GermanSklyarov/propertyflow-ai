@@ -78,7 +78,7 @@ export function UpdateTenantSettingsForm({
         </p>
       </section>
 
-      <section className={styles.section}>
+      <section className={styles.section} id="widget-origin-settings">
         <div className={styles.sectionTitle}>
           <ShieldCheck size={16} />
           Widget install origins

@@ -289,11 +289,94 @@ describe("widget install model", () => {
         starterSourceTypesReady: 3,
         tenantSlug: "demo-agency"
       })
-    ).toContainEqual({
-      done: false,
-      label: "Indexing settled",
-      note: "Wait for active ingestion jobs to finish."
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actionHref: "/knowledge#knowledge-jobs",
+          actionLabel: "View jobs",
+          done: false,
+          label: "Indexing settled",
+          note: "Wait for active ingestion jobs to finish."
+        }),
+        expect.objectContaining({
+          actionHref: "#widget-origin-settings",
+          actionLabel: "Add origins",
+          done: false,
+          label: "Origin policy"
+        })
+      ])
+    );
+  });
+
+  it("links missing starter knowledge to the knowledge source form", () => {
+    const install = buildWidgetInstallPackage(tenantFactory());
+
+    expect(
+      buildWidgetLaunchReadinessItems({
+        hasActiveKnowledgeJobs: false,
+        hasLaunchReadyKnowledge: false,
+        hasTenantSlug: true,
+        runtimeReadiness: install.readiness,
+        starterSourceTypesReady: 0,
+        tenantSlug: "demo-agency"
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actionHref: "/knowledge?create=source#create-knowledge-document",
+          actionLabel: "Add knowledge",
+          done: false,
+          label: "Knowledge available"
+        })
+      ])
+    );
+  });
+
+  it("links missing localized welcome checks to the personality editor", () => {
+    const readiness = buildWidgetRuntimeReadiness({
+      aiName: "Anna",
+      aiNames: {
+        en: "Anna"
+      },
+      allowedOrigins: ["https://demo.example.com"],
+      capabilities: {
+        knowledgeAnswers: true,
+        leadCapture: false,
+        propertySearch: true
+      },
+      languageCodes: ["en", "ru"],
+      mode: "starter",
+      personaGenders: {
+        en: "feminine",
+        ru: "feminine"
+      },
+      tenantSlug: "demo-agency",
+      tone: "friendly",
+      welcomeMessage: "Hi",
+      welcomeMessages: {
+        en: "Hi"
+      }
     });
+
+    expect(
+      buildWidgetLaunchReadinessItems({
+        hasActiveKnowledgeJobs: false,
+        hasLaunchReadyKnowledge: true,
+        hasTenantSlug: true,
+        runtimeReadiness: readiness,
+        starterSourceTypesReady: 3,
+        tenantSlug: "demo-agency"
+      })
+    ).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actionHref: "#concierge-personality-settings",
+          actionLabel: "Edit welcome",
+          done: false,
+          label: "Localized welcome"
+        })
+      ])
+    );
   });
 
   it("summarizes install prerequisites", () => {

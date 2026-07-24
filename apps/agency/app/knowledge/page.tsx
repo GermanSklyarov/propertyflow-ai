@@ -11,7 +11,17 @@ import { KnowledgeBasePage } from "@views/knowledge-base/ui/knowledge-base-page"
 export default async function AgencyKnowledgePage({
   searchParams
 }: {
-  searchParams: Promise<{ ask?: string; created?: string; document?: string; embed?: string; ingest?: string; kind?: string; locale?: string; q?: string }>;
+  searchParams: Promise<{
+    ask?: string;
+    create?: string;
+    created?: string;
+    document?: string;
+    embed?: string;
+    ingest?: string;
+    kind?: string;
+    locale?: string;
+    q?: string;
+  }>;
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
@@ -31,6 +41,7 @@ export default async function AgencyKnowledgePage({
       <KnowledgeBasePage
         chat={chat}
         chatRequest={chatRequest}
+        createSourceOpen={query.create === "source"}
         documents={documents.items}
         jobs={knowledgeJobs}
         notice={buildKnowledgePageNotice(query)}

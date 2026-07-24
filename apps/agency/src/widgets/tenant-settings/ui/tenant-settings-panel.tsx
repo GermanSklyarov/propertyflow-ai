@@ -419,6 +419,8 @@ export function TenantSettingsPanel({
 }
 
 interface ReadinessItem {
+  actionHref?: string;
+  actionLabel?: string;
   done: boolean;
   label: string;
   note: string;
@@ -463,6 +465,11 @@ function ReadinessCard({ item }: { item: ReadinessItem }) {
       <div>
         <strong>{item.label}</strong>
         <span>{item.note}</span>
+        {!item.done && item.actionHref && item.actionLabel ? (
+          <a className={styles.readinessLink} href={item.actionHref}>
+            {item.actionLabel}
+          </a>
+        ) : null}
       </div>
     </article>
   );

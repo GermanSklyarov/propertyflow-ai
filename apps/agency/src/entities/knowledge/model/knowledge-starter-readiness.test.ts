@@ -48,7 +48,7 @@ describe("buildKnowledgeStarterReadiness", () => {
     expect(readiness.nextAction).toBe("Upload an FAQ or company information document first.");
     expect(readiness.nextActions.map((action) => action.id)).toEqual(["add-faq", "add-company-information", "add-buying-guide"]);
     expect(readiness.nextActions[0]).toMatchObject({
-      href: "#create-knowledge-document",
+      href: "?create=source#create-knowledge-document",
       label: "Add FAQ",
       priority: "high",
       reason: "FAQ is the minimum Starter source for first answers."

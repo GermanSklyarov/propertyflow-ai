@@ -49,6 +49,7 @@ import styles from "./knowledge-base-page.module.css";
 export function KnowledgeBasePage({
   chat,
   chatRequest,
+  createSourceOpen = false,
   documents,
   jobs,
   notice,
@@ -59,6 +60,7 @@ export function KnowledgeBasePage({
 }: {
   chat?: AiChatResponse;
   chatRequest?: AiChatRequest;
+  createSourceOpen?: boolean;
   documents: KnowledgeDocumentSnapshot[];
   jobs: BackgroundJobMonitorItem[];
   notice?: { message: string; tone: "success" };
@@ -159,7 +161,7 @@ export function KnowledgeBasePage({
             })}
           </div>
 
-          <a className={styles.primaryLink} href="#create-knowledge-document">
+          <a className={styles.primaryLink} href="?create=source#create-knowledge-document">
             Add knowledge source
             <ArrowRight size={16} />
           </a>
@@ -256,7 +258,7 @@ export function KnowledgeBasePage({
         </section>
 
         <section className={styles.layout}>
-          <details className={`${styles.panel} ${styles.createSourcePanel}`} id="create-knowledge-document">
+          <details className={`${styles.panel} ${styles.createSourcePanel}`} id="create-knowledge-document" open={createSourceOpen}>
             <summary className={styles.createSourceSummary}>
               <div>
                 <p className="section-kicker">Add source</p>
