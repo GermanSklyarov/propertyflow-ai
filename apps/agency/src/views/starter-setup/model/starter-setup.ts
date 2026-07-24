@@ -1,4 +1,9 @@
-import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, TenantSnapshot } from "@propertyflow/contracts";
+import type {
+  BackgroundJobMonitorItem,
+  KnowledgeDocumentSnapshot,
+  TenantSnapshot,
+  TenantSubscriptionPlan
+} from "@propertyflow/contracts";
 import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { countRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
@@ -26,17 +31,22 @@ export interface StarterSetupProgress {
   completed: number;
   launchReady: boolean;
   nextAction: StarterSetupStep;
+  requestedPlanLabel: string;
+  selectedPlanMatchesWorkspace: boolean;
   steps: StarterSetupStep[];
   total: number;
+  workspacePlanLabel: string;
 }
 
 export function buildStarterSetupProgress({
   documents,
   jobs,
+  requestedPlan,
   tenant
 }: {
   documents: KnowledgeDocumentSnapshot[];
   jobs: BackgroundJobMonitorItem[];
+  requestedPlan?: TenantSubscriptionPlan;
   tenant: TenantSnapshot;
 }): StarterSetupProgress {
   const activeKnowledgeJobs = countRunningKnowledgeJobs(jobs);
@@ -44,6 +54,7 @@ export function buildStarterSetupProgress({
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
   const plan = getTenantPlanDefinition(tenant.subscriptionPlan);
+  const selectedPlan = getTenantPlanDefinition(requestedPlan ?? tenant.subscriptionPlan);
   const widgetLaunchReadiness = summarizeWidgetLaunchReadiness({
     hasActiveKnowledgeJobs: activeKnowledgeJobs > 0,
     hasLaunchReadyKnowledge: knowledgeReadiness.launchReady,
@@ -127,7 +138,10 @@ export function buildStarterSetupProgress({
     completed,
     launchReady: completed === steps.length,
     nextAction: steps.find((step) => step.status !== "complete") ?? steps[steps.length - 1],
+    requestedPlanLabel: selectedPlan.name,
+    selectedPlanMatchesWorkspace: selectedPlan.id === plan.id,
     steps,
-    total: steps.length
+    total: steps.length,
+    workspacePlanLabel: plan.name
   };
 }

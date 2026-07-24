@@ -1,5 +1,10 @@
 import { ArrowRight, BookOpenText, CheckCircle2, CircleDot, Code2, Globe2, Languages, Rocket } from "lucide-react";
-import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, TenantSnapshot } from "@propertyflow/contracts";
+import type {
+  BackgroundJobMonitorItem,
+  KnowledgeDocumentSnapshot,
+  TenantSnapshot,
+  TenantSubscriptionPlan
+} from "@propertyflow/contracts";
 import { countRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
@@ -11,13 +16,15 @@ import styles from "./starter-setup-page.module.css";
 export function StarterSetupPage({
   documents,
   jobs,
+  requestedPlan,
   tenant
 }: {
   documents: KnowledgeDocumentSnapshot[];
   jobs: BackgroundJobMonitorItem[];
+  requestedPlan?: TenantSubscriptionPlan;
   tenant: TenantSnapshot;
 }) {
-  const progress = buildStarterSetupProgress({ documents, jobs, tenant });
+  const progress = buildStarterSetupProgress({ documents, jobs, requestedPlan, tenant });
   const knowledgeReadiness = buildKnowledgeStarterReadiness(documents, countRunningKnowledgeJobs(jobs));
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
@@ -33,7 +40,13 @@ export function StarterSetupPage({
               Launch the website assistant first. Knowledge, personality, origins, and widget install come before CRM migration.
             </p>
           </div>
-          <span className={styles.statusBadge}>{progress.completed}/{progress.total} ready</span>
+          <div className={styles.headerBadges}>
+            <span className={styles.statusBadge}>{progress.completed}/{progress.total} ready</span>
+            <span className={styles.planBadge} data-matched={String(progress.selectedPlanMatchesWorkspace)}>
+              Selected {progress.requestedPlanLabel}
+              {!progress.selectedPlanMatchesWorkspace ? ` · workspace still ${progress.workspacePlanLabel}` : ""}
+            </span>
+          </div>
         </header>
 
         <section className={styles.heroPanel}>

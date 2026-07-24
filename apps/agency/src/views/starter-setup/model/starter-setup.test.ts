@@ -19,6 +19,8 @@ describe("starter setup progress", () => {
     });
     expect(progress.completed).toBe(2);
     expect(progress.total).toBe(5);
+    expect(progress.selectedPlanMatchesWorkspace).toBe(true);
+    expect(progress.requestedPlanLabel).toBe("Starter");
     expect(progress.nextAction).toMatchObject({
       actionHref: "/knowledge?create=source#create-knowledge-document",
       status: "action",
@@ -61,6 +63,19 @@ describe("starter setup progress", () => {
     expect(progress.launchReady).toBe(true);
     expect(progress.completed).toBe(progress.total);
     expect(progress.blockers).toEqual([]);
+  });
+
+  it("keeps the signup-selected plan visible before tenant provisioning updates the workspace", () => {
+    const progress = buildStarterSetupProgress({
+      documents: [],
+      jobs: [],
+      requestedPlan: "growth",
+      tenant: tenantFactory()
+    });
+
+    expect(progress.requestedPlanLabel).toBe("Growth");
+    expect(progress.workspacePlanLabel).toBe("Starter");
+    expect(progress.selectedPlanMatchesWorkspace).toBe(false);
   });
 });
 
