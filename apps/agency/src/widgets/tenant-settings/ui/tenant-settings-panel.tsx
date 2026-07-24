@@ -92,7 +92,13 @@ export function TenantSettingsPanel({
             <p className="section-kicker">AI Concierge Starter</p>
             <h2 className={styles.panelTitle}>Launch AI before CRM</h2>
           </div>
-          <span className={styles.statusBadge}>Knowledge first</span>
+          <div className={styles.headerActions}>
+            <a className={styles.inlineAction} href="/setup">
+              <Rocket size={15} />
+              Setup guide
+            </a>
+            <span className={styles.statusBadge}>Knowledge first</span>
+          </div>
         </div>
         <div className={styles.starterGrid}>
           <article className={styles.starterHero}>
@@ -131,7 +137,7 @@ export function TenantSettingsPanel({
 
         <div className={styles.starterDetailGrid}>
           <div className={styles.starterSetupColumn}>
-            <section className={styles.starterCard}>
+            <section className={styles.starterCard} id="widget-install">
               <p className="section-kicker">Documents</p>
               <h3>Upload your knowledge base</h3>
               <div className={styles.knowledgeCoverage}>
