@@ -8,10 +8,11 @@ import { TENANT_REPOSITORY } from "./domain/tenant.repository.js";
 import { PgTenantRepository } from "./infrastructure/postgres/pg-tenant.repository.js";
 import { CurrentTenantController } from "./presentation/rest/current-tenant.controller.js";
 import { PublicWidgetConfigController } from "./presentation/rest/public-widget-config.controller.js";
+import { TenantProvisioningController } from "./presentation/rest/tenant-provisioning.controller.js";
 
 @Module({
   imports: [forwardRef(() => AuditModule), AuthModule, DatabaseModule],
-  controllers: [CurrentTenantController, PublicWidgetConfigController],
+  controllers: [CurrentTenantController, PublicWidgetConfigController, TenantProvisioningController],
   providers: [
     TenantService,
     TenantGuard,

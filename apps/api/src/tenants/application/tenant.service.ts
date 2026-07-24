@@ -1,9 +1,12 @@
-import { ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type {
+  ProvisionTenantRequest,
+  ProvisionTenantResponse,
   PublicWidgetConfigResponse,
   PublicWidgetReadiness,
   PublicWidgetReadinessCheck,
   TenantSnapshot,
+  TenantSubscriptionPlan,
   TenantWidgetInstallCheckItem,
   TenantWidgetInstallCheckResponse,
   TenantWidgetLanguage,
@@ -18,6 +21,39 @@ import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repos
 @Injectable()
 export class TenantService {
   constructor(@Inject(TENANT_REPOSITORY) private readonly tenants: TenantRepository) {}
+
+  async provision(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
+    const agencyName = normalizeRequiredText(request.agencyName);
+    const emailDomain = request.workEmail?.split("@")[1] ?? "";
+    const slug = buildTenantSlug(agencyName) || buildTenantSlug(emailDomain);
+    const subscriptionPlan = normalizeSubscriptionPlan(request.subscriptionPlan);
+
+    if (!agencyName) {
+      throw new BadRequestException("Agency name is required");
+    }
+
+    if (!slug) {
+      throw new BadRequestException("Agency name or email domain must include Latin letters or numbers for the workspace slug");
+    }
+
+    const existing = await this.tenants.findBySlug(slug);
+
+    if (existing) {
+      throw new ConflictException("Agency workspace already exists");
+    }
+
+    const tenant = await this.tenants.provision({
+      name: agencyName,
+      slug,
+      subscriptionPlan,
+      website: normalizeOptionalWebsite(request.website)
+    });
+
+    return {
+      setupUrl: `/setup?plan=${tenant.subscriptionPlan}`,
+      tenant
+    };
+  }
 
   async findActiveTenant(tenantId: string): Promise<TenantSnapshot | null> {
     const tenant = await this.tenants.findById(tenantId);
@@ -377,6 +413,39 @@ function buildWidgetInstallChecks(input: {
 const supportedWidgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
 const supportedPersonaGenders = ["feminine", "masculine", "neutral"] as const;
 const supportedWidgetTones: TenantWidgetTone[] = ["friendly", "professional", "luxury", "concise"];
+const supportedSubscriptionPlans: TenantSubscriptionPlan[] = ["starter", "growth", "enterprise"];
+
+function normalizeRequiredText(value: string | undefined): string {
+  return value?.trim().replace(/\s+/g, " ") ?? "";
+}
+
+function buildTenantSlug(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 64);
+}
+
+function normalizeSubscriptionPlan(plan: TenantSubscriptionPlan | undefined): TenantSubscriptionPlan {
+  return plan && supportedSubscriptionPlans.includes(plan) ? plan : "starter";
+}
+
+function normalizeOptionalWebsite(value: string | undefined): string | undefined {
+  const website = value?.trim();
+
+  if (!website) {
+    return undefined;
+  }
+
+  try {
+    return new URL(website).origin.toLowerCase();
+  } catch (_error) {
+    return undefined;
+  }
+}
 
 function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsRequest): UpdateTenantSettingsRequest {
   const languages = request.widget?.languages

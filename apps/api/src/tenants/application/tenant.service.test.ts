@@ -1,4 +1,4 @@
-import { NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getTenantPlanDefinition, tenantPlanCatalog } from "@propertyflow/contracts";
 import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
@@ -167,6 +167,85 @@ describe("TenantService", () => {
       },
       conciergeMode: "enterprise"
     });
+  });
+
+  it("provisions a new agency workspace from signup intent", async () => {
+    let capturedInput: Parameters<TenantRepository["provision"]>[0] | undefined;
+    const service = new TenantService(
+      repository({
+        findBySlug: async () => null,
+        provision: async (input) => {
+          capturedInput = input;
+
+          return tenant({
+            branding: {
+              displayName: input.name
+            },
+            customDomain: undefined,
+            domainStatus: "not-configured",
+            id: input.slug,
+            name: input.name,
+            slug: input.slug,
+            subscriptionPlan: input.subscriptionPlan,
+            widget: {
+              ...tenant().widget,
+              allowedOrigins: input.website ? [input.website] : []
+            }
+          });
+        }
+      })
+    );
+
+    await expect(
+      service.provision({
+        agencyName: " Riviera Pattaya Realty ",
+        subscriptionPlan: "starter",
+        website: "HTTPS://Riviera.Example/listings",
+        workEmail: "owner@riviera.example"
+      })
+    ).resolves.toMatchObject({
+      setupUrl: "/setup?plan=starter",
+      tenant: {
+        branding: {
+          displayName: "Riviera Pattaya Realty"
+        },
+        slug: "riviera-pattaya-realty",
+        subscriptionPlan: "starter",
+        widget: {
+          allowedOrigins: ["https://riviera.example"]
+        }
+      }
+    });
+    expect(capturedInput).toEqual({
+      name: "Riviera Pattaya Realty",
+      slug: "riviera-pattaya-realty",
+      subscriptionPlan: "starter",
+      website: "https://riviera.example"
+    });
+  });
+
+  it("rejects duplicate provisioning slugs", async () => {
+    const service = new TenantService(repository({ findBySlug: async () => tenant({ slug: "demo-agency" }) }));
+
+    await expect(
+      service.provision({
+        agencyName: "Demo Agency",
+        subscriptionPlan: "starter",
+        workEmail: "owner@example.com"
+      })
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it("rejects provisioning names that cannot produce a workspace slug", async () => {
+    const service = new TenantService(repository());
+
+    await expect(
+      service.provision({
+        agencyName: " агентство ",
+        subscriptionPlan: "starter",
+        workEmail: ""
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it("hides missing or suspended tenants from public widget lookup", async () => {
@@ -388,6 +467,7 @@ function repository(overrides: Partial<TenantRepository> = {}): TenantRepository
       properties: 0,
       publicApiRequestsMonthly: 0
     }),
+    provision: async () => tenant(),
     recordUsage: async () => undefined,
     updateSettings: async () => null,
     ...overrides
@@ -434,8 +514,8 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
       welcomeMessages: {
         en: "Hi! I'm Anna, your AI property consultant.",
         ru: "Привет! Я Анна, ваш AI-консультант по недвижимости.",
-        th: "สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
-        zh: "你好！我是 Anna，你的 AI 房产顾问。"
+        th: "สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
+        zh: "你好！我是安娜，你的 AI 房产顾问。"
       }
     },
     ...overrides

@@ -138,6 +138,18 @@ export function getTenantPlanDefinition(plan: TenantSubscriptionPlan): TenantPla
   return tenantPlanCatalog[plan];
 }
 
+export interface ProvisionTenantRequest {
+  agencyName: string;
+  workEmail: string;
+  website?: string;
+  subscriptionPlan: TenantSubscriptionPlan;
+}
+
+export interface ProvisionTenantResponse {
+  setupUrl: string;
+  tenant: TenantSnapshot;
+}
+
 export const supportedTenantWidgetLanguages = ["en", "ru", "th", "zh"] as const;
 
 export type TenantWidgetLanguage = (typeof supportedTenantWidgetLanguages)[number];

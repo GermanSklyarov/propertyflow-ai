@@ -12,7 +12,12 @@ import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import type { Pool } from "pg";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { TenantRepository, TenantUsageEventType, TenantUsageRawMetrics } from "../../domain/tenant.repository.js";
+import type {
+  ProvisionTenantRepositoryInput,
+  TenantRepository,
+  TenantUsageEventType,
+  TenantUsageRawMetrics
+} from "../../domain/tenant.repository.js";
 
 interface TenantRow {
   id: string;
@@ -64,8 +69,8 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
   welcomeMessages: {
     en: "Hi! I'm Anna, your AI property consultant.",
     ru: "Привет! Я Анна, ваш AI-консультант по недвижимости.",
-    th: "สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
-    zh: "你好！我是 Anna，你的 AI 房产顾问。"
+    th: "สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
+    zh: "你好！我是安娜，你的 AI 房产顾问。"
   }
 };
 
@@ -171,6 +176,82 @@ export class PgTenantRepository implements TenantRepository {
       `,
       [randomUUID(), tenantId, eventType, JSON.stringify(metadata), new Date().toISOString()]
     );
+  }
+
+  async provision(input: ProvisionTenantRepositoryInput): Promise<TenantSnapshot> {
+    const now = new Date().toISOString();
+    const plan = getTenantPlanDefinition(input.subscriptionPlan);
+    const result = await this.pool.query<TenantRow>(
+      `
+        insert into tenants (
+          id,
+          name,
+          slug,
+          status,
+          primary_market,
+          custom_domain,
+          domain_status,
+          subscription_plan,
+          limits,
+          branding_display_name,
+          branding_primary_color,
+          branding_logo_url,
+          widget_ai_name,
+          widget_ai_names,
+          widget_welcome_message,
+          widget_welcome_messages,
+          widget_persona_genders,
+          widget_allowed_origins,
+          widget_tone,
+          widget_languages,
+          created_at,
+          updated_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          'active',
+          null,
+          null,
+          'not-configured',
+          $4,
+          $5,
+          $6,
+          null,
+          null,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11,
+          $12,
+          $13,
+          $14,
+          $15,
+          $15
+        )
+        returning *
+      `,
+      [
+        randomUUID(),
+        input.name,
+        input.slug,
+        input.subscriptionPlan,
+        plan.limits,
+        input.name,
+        defaultWidgetSettings.aiName,
+        defaultWidgetSettings.aiNames,
+        defaultWidgetSettings.welcomeMessage,
+        defaultWidgetSettings.welcomeMessages,
+        defaultWidgetSettings.personaGenders,
+        input.website ? [input.website] : defaultWidgetSettings.allowedOrigins,
+        defaultWidgetSettings.tone,
+        defaultWidgetSettings.languages,
+        now
+      ]
+    );
+
+    return this.toSnapshot(result.rows[0]);
   }
 
   async updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot | null> {
