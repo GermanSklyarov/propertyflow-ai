@@ -28,7 +28,7 @@ export default function NotFound() {
             <Building2 size={17} />
             Listings
           </Link>
-          <Link className={styles.secondaryLink} href="/">
+          <Link className={styles.secondaryLink} href="/dashboard">
             <LayoutDashboard size={17} />
             Dashboard
           </Link>

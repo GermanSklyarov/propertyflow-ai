@@ -1,24 +1,11 @@
-import { tenantDashboardQueryOptions } from "@entities/analytics/api/analytics-queries";
-import { getErrorMessage } from "@shared/lib/errors";
-import { createPropertyFlowQueryClient } from "@shared/query/query-client";
-import { PageLoadState } from "@shared/ui/page-load-state";
-import { AgencyDashboardPage } from "@views/agency-dashboard/ui/agency-dashboard-page";
+import type { Metadata } from "next";
+import { AgencyEntryPage } from "@views/agency-entry/ui/agency-entry-page";
 
-export default async function AgencyHomePage() {
-  const queryClient = createPropertyFlowQueryClient();
+export const metadata: Metadata = {
+  title: "PropertyFlow AI for Agencies",
+  description: "Launch an AI Concierge on a Thailand real estate agency website without migrating CRM first."
+};
 
-  try {
-    const metrics = await queryClient.ensureQueryData(tenantDashboardQueryOptions());
-
-    return <AgencyDashboardPage metrics={metrics} />;
-  } catch (error) {
-    return (
-      <PageLoadState
-        kicker="Agency command center"
-        message={getErrorMessage(error)}
-        title="Could not load dashboard"
-        variant="error"
-      />
-    );
-  }
+export default function AgencyHomePage() {
+  return <AgencyEntryPage />;
 }

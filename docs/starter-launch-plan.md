@@ -21,6 +21,7 @@ CRM remains optional in Starter. Growth and Enterprise unlock lead handoff, assi
 
 Starter is launch-ready only when all items below are true:
 
+- An agency entry page explains the AI Concierge offer, compares Starter/Growth/Enterprise, and routes agencies into signup.
 - A new agency can register or be provisioned without manual database edits.
 - A tenant has an explicit subscription plan, usage limits, and Starter feature flags.
 - The first screen explains the setup path: Knowledge Sources, AI Concierge personality, website widget, readiness.
@@ -36,6 +37,8 @@ Starter is launch-ready only when all items below are true:
 
 ### 1. Signup And Plan Entry
 
+- Add an agency Starter entry page with pricing, service positioning, and clear CTAs.
+- Add a signup entry route that preserves the selected plan before workspace provisioning.
 - Add a tenant provisioning flow for local and future hosted environments.
 - Define Starter, Growth, and Enterprise plan contracts in the domain/contracts package.
 - Store subscription plan, status, and limits on the tenant.
@@ -109,4 +112,3 @@ Starter is launch-ready only when all items below are true:
 5. Tighten Knowledge Sources ingestion states and remove fallback demo UI.
 6. Add widget demo page and install smoke-check flow.
 7. Add CRM upgrade path indicators without exposing CRM as the Starter core.
-

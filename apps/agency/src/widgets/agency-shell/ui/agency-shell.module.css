@@ -3,6 +3,11 @@
   background: #eef2ec;
 }
 
+.entryRoot {
+  min-height: 100vh;
+  background: #f5f7f3;
+}
+
 .layout {
   display: grid;
   min-height: 100vh;

@@ -25,7 +25,7 @@ const allPlans: readonly TenantSubscriptionPlan[] = ["starter", "growth", "enter
 const crmPlans: readonly TenantSubscriptionPlan[] = ["growth", "enterprise"];
 
 export const agencyNavigationItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard", plans: allPlans, status: "live" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", plans: allPlans, status: "live" },
   { href: "/setup", icon: Rocket, label: "Starter setup", plans: allPlans, status: "live" },
   { href: "/knowledge", icon: BookOpenText, label: "Knowledge", plans: allPlans, status: "live" },
   { href: "/listings", icon: Building2, label: "Listings", plans: allPlans, status: "live" },
@@ -57,5 +57,5 @@ export function getAgencyTopbarQuickLinks(plan: TenantSubscriptionPlan) {
 }
 
 export function isAgencyNavigationItemActive(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+  return pathname === href || pathname.startsWith(`${href}/`);
 }

@@ -89,7 +89,7 @@ npm run dev
 Use this path when preparing a local sales demo or validating the Starter plan entry point:
 
 1. Run `npm run infra:up`, `npm run migrate`, `npm run seed:demo`, and `npm run dev`.
-2. Open `http://localhost:3002/setup` and confirm the setup wizard shows plan confirmation, Knowledge Sources, AI personality, website origins, and widget install readiness.
+2. Open `http://localhost:3002/` to review the agency plan entry page, then continue to `http://localhost:3002/setup` and confirm the setup wizard shows plan confirmation, Knowledge Sources, AI personality, website origins, and widget install readiness.
 3. Open `http://localhost:3002/knowledge?create=source#create-knowledge-document` to add or review AI-ready knowledge sources.
 4. Open `http://localhost:3002/settings#concierge-personality-settings` to review localized Concierge names, tone, and welcome messages.
 5. Open `http://localhost:3002/settings#widget-origin-settings` and add the agency website origin before using the widget outside test mode.

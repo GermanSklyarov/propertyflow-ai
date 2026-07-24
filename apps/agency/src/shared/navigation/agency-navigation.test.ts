@@ -7,9 +7,10 @@ import {
 } from "./agency-navigation";
 
 describe("agency navigation", () => {
-  it("keeps the dashboard active only on the root route", () => {
-    expect(isAgencyNavigationItemActive("/", "/")).toBe(true);
-    expect(isAgencyNavigationItemActive("/leads", "/")).toBe(false);
+  it("keeps the dashboard active only on dashboard routes", () => {
+    expect(isAgencyNavigationItemActive("/dashboard", "/dashboard")).toBe(true);
+    expect(isAgencyNavigationItemActive("/", "/dashboard")).toBe(false);
+    expect(isAgencyNavigationItemActive("/leads", "/dashboard")).toBe(false);
   });
 
   it("matches section roots and nested routes", () => {
@@ -31,7 +32,7 @@ describe("agency navigation", () => {
     const starterItems = getAgencyNavigationItems("starter").map((item) => item.href);
     const starterQuickLinks = getAgencyTopbarQuickLinks("starter").map((item) => item.href);
 
-    expect(starterItems).toEqual(["/", "/setup", "/knowledge", "/listings", "/projects", "/settings"]);
+    expect(starterItems).toEqual(["/dashboard", "/setup", "/knowledge", "/listings", "/projects", "/settings"]);
     expect(starterQuickLinks).toEqual(["/setup", "/knowledge", "/listings", "/projects", "/settings"]);
     expect(starterItems).not.toContain("/leads");
     expect(starterItems).not.toContain("/analytics");

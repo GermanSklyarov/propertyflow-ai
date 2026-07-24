@@ -23,9 +23,14 @@ export function AgencyShell({
   subscriptionPlan?: TenantSubscriptionPlan;
 }) {
   const pathname = usePathname();
+  const isEntryRoute = pathname === "/" || pathname.startsWith("/signup");
   const navigationItems = getAgencyNavigationItems(subscriptionPlan);
   const quickLinks = getAgencyTopbarQuickLinks(subscriptionPlan);
   const planLabel = subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1);
+
+  if (isEntryRoute) {
+    return <div className={styles.entryRoot}>{children}</div>;
+  }
 
   return (
     <div className={styles.root}>
