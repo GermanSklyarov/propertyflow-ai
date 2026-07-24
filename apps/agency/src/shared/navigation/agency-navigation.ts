@@ -10,34 +10,48 @@ import {
   Users
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import type { TenantSubscriptionPlan } from "@propertyflow/contracts";
 
 export interface AgencyNavigationItem {
   href: string;
   icon: LucideIcon;
   label: string;
   status: "live" | "next";
+  plans: readonly TenantSubscriptionPlan[];
 }
 
+const allPlans: readonly TenantSubscriptionPlan[] = ["starter", "growth", "enterprise"];
+const crmPlans: readonly TenantSubscriptionPlan[] = ["growth", "enterprise"];
+
 export const agencyNavigationItems = [
-  { href: "/", icon: LayoutDashboard, label: "Dashboard", status: "live" },
-  { href: "/leads", icon: Users, label: "Leads", status: "live" },
-  { href: "/listings", icon: Building2, label: "Listings", status: "live" },
-  { href: "/projects", icon: MapPinned, label: "Projects", status: "live" },
-  { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", status: "live" },
-  { href: "/knowledge", icon: BookOpenText, label: "Knowledge", status: "live" },
-  { href: "/ai-tools", icon: Bot, label: "AI tools", status: "live" },
-  { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", status: "live" },
-  { href: "/settings", icon: Settings, label: "Settings", status: "live" }
+  { href: "/", icon: LayoutDashboard, label: "Dashboard", plans: allPlans, status: "live" },
+  { href: "/knowledge", icon: BookOpenText, label: "Knowledge", plans: allPlans, status: "live" },
+  { href: "/listings", icon: Building2, label: "Listings", plans: allPlans, status: "live" },
+  { href: "/projects", icon: MapPinned, label: "Projects", plans: allPlans, status: "live" },
+  { href: "/settings", icon: Settings, label: "Settings", plans: allPlans, status: "live" },
+  { href: "/leads", icon: Users, label: "Leads", plans: crmPlans, status: "live" },
+  { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", plans: crmPlans, status: "live" },
+  { href: "/ai-tools", icon: Bot, label: "AI tools", plans: crmPlans, status: "live" },
+  { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", plans: crmPlans, status: "live" }
 ] satisfies AgencyNavigationItem[];
 
-export const agencyTopbarQuickLinks = [
-  { href: "/leads", label: "Lead queue" },
-  { href: "/listings", label: "Inventory" },
-  { href: "/projects", label: "Projects" },
-  { href: "/saved-searches", label: "Saved demand" },
-  { href: "/knowledge", label: "Knowledge" },
-  { href: "/ai-tools", label: "AI tools" }
+const agencyTopbarQuickLinks = [
+  { href: "/knowledge", label: "Knowledge", plans: allPlans },
+  { href: "/listings", label: "Inventory", plans: allPlans },
+  { href: "/projects", label: "Projects", plans: allPlans },
+  { href: "/settings", label: "Widget setup", plans: allPlans },
+  { href: "/leads", label: "Lead queue", plans: crmPlans },
+  { href: "/saved-searches", label: "Saved demand", plans: crmPlans },
+  { href: "/ai-tools", label: "AI tools", plans: crmPlans }
 ] as const;
+
+export function getAgencyNavigationItems(plan: TenantSubscriptionPlan): AgencyNavigationItem[] {
+  return agencyNavigationItems.filter((item) => item.plans.includes(plan));
+}
+
+export function getAgencyTopbarQuickLinks(plan: TenantSubscriptionPlan) {
+  return agencyTopbarQuickLinks.filter((link) => link.plans.includes(plan));
+}
 
 export function isAgencyNavigationItemActive(pathname: string, href: string) {
   return href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
