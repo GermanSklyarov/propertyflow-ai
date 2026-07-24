@@ -79,7 +79,11 @@ export function KnowledgeBasePage({
   });
   const sourceModeSummary = summarizeKnowledgeSourceModes(runtimeSourceGroups);
   const sourceReadiness = summarizeKnowledgeSourceReadiness(runtimeSourceGroups);
-  const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness);
+  const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness, {
+    starterLaunchReady: starterReadiness.launchReady,
+    starterNextAction: starterReadiness.nextAction,
+    starterSummary: starterReadiness.summary
+  });
   const sourceCoverage = buildKnowledgeSourceCoverage(runtimeSourceGroups);
 
   return (

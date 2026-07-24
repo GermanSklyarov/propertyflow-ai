@@ -187,6 +187,27 @@ describe("knowledge sources model", () => {
     });
   });
 
+  it("keeps launch gate blocked when connected sources are below starter launch coverage", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [knowledgeDocument({ tags: ["faq"] })],
+      jobs: [],
+      totalDocuments: 1
+    });
+    const summary = summarizeKnowledgeSourceReadiness(groups);
+
+    expect(
+      buildKnowledgeSourceLaunchGate(summary, {
+        starterLaunchReady: false,
+        starterNextAction: "Add buying, company, or visa guidance to improve first answers.",
+        starterSummary: "Knowledge exists, but Starter Concierge still needs stronger coverage."
+      })
+    ).toEqual({
+      nextAction: "Add buying, company, or visa guidance to improve first answers.",
+      status: "blocked",
+      summary: "Knowledge exists, but Starter Concierge still needs stronger coverage."
+    });
+  });
+
   it("documents the unified ingestion pipeline", () => {
     expect(knowledgeSourcePipeline.map((step) => step.label)).toEqual([
       "Source",

@@ -48,6 +48,12 @@ export interface KnowledgeSourceLaunchGate {
   summary: string;
 }
 
+export interface KnowledgeSourceLaunchGateOptions {
+  starterLaunchReady?: boolean;
+  starterNextAction?: string;
+  starterSummary?: string;
+}
+
 export interface KnowledgeSourceCoverageItem {
   action?: KnowledgeSourceGroupAction;
   connected: number;
@@ -191,12 +197,25 @@ export function summarizeKnowledgeSourceReadiness(groups: KnowledgeSourceGroup[]
   );
 }
 
-export function buildKnowledgeSourceLaunchGate(summary: KnowledgeSourceReadinessSummary): KnowledgeSourceLaunchGate {
+export function buildKnowledgeSourceLaunchGate(
+  summary: KnowledgeSourceReadinessSummary,
+  options: KnowledgeSourceLaunchGateOptions = {}
+): KnowledgeSourceLaunchGate {
+  const starterLaunchReady = options.starterLaunchReady ?? true;
+
   if (summary.indexing > 0) {
     return {
       nextAction: "Wait for active ingestion jobs to finish before installing the widget.",
       status: "indexing",
       summary: `${summary.indexing} source${summary.indexing === 1 ? "" : "s"} indexing now`
+    };
+  }
+
+  if (summary.connected > 0 && !starterLaunchReady) {
+    return {
+      nextAction: options.starterNextAction ?? "Finish Starter knowledge coverage before installing the widget.",
+      status: "blocked",
+      summary: options.starterSummary ?? "Connected sources still need Starter launch coverage"
     };
   }
 
