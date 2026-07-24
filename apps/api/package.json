@@ -10,6 +10,7 @@
     "migrate": "tsx src/database/migrate.ts",
     "seed:demo": "tsx src/database/seed-demo-properties.ts",
     "seed:demo-leads": "tsx src/database/seed-demo-leads.ts",
+    "seed:demo-knowledge": "tsx src/database/seed-demo-knowledge.ts",
     "smoke:indexing": "tsx src/smoke/indexing-flow.ts",
     "test": "vitest run"
   },

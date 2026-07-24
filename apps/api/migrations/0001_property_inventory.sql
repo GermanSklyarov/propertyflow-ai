@@ -16,7 +16,7 @@ create table if not exists tenants (
   widget_ai_name text not null default 'Anna',
   widget_ai_names jsonb not null default '{"en":"Anna","ru":"Анна","th":"มาลี","zh":"安娜"}'::jsonb,
   widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.',
-  widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb,
+  widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是安娜，你的 AI 房产顾问。"}'::jsonb,
   widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
   widget_allowed_origins text[] not null default array[]::text[],
   widget_tone text not null default 'friendly',
@@ -37,7 +37,10 @@ where subscription_plan = 'starter'
 alter table tenants add column if not exists widget_ai_name text not null default 'Anna';
 alter table tenants add column if not exists widget_ai_names jsonb not null default '{"en":"Anna","ru":"Анна","th":"มาลี","zh":"安娜"}'::jsonb;
 alter table tenants add column if not exists widget_welcome_message text not null default 'Hi! I''m Anna, your AI property consultant.';
-alter table tenants add column if not exists widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb;
+alter table tenants add column if not exists widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是安娜，你的 AI 房产顾问。"}'::jsonb;
+update tenants
+set widget_welcome_messages = '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是安娜，你的 AI 房产顾问。"}'::jsonb
+where widget_welcome_messages = '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb;
 alter table tenants add column if not exists widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb;
 alter table tenants add column if not exists widget_allowed_origins text[] not null default array[]::text[];
 alter table tenants add column if not exists widget_tone text not null default 'friendly';
@@ -75,15 +78,15 @@ insert into tenants (
   'pattaya',
   null,
   'not-configured',
-  'growth',
-  '{"properties":500,"agents":25,"aiCreditsMonthly":10000,"publicApiRequestsMonthly":100000}'::jsonb,
+  'starter',
+  '{"properties":1000,"agents":1,"aiCreditsMonthly":5000,"publicApiRequestsMonthly":10000}'::jsonb,
   'Demo Agency',
   '#0f766e',
   null,
   'Anna',
   '{"en":"Anna","ru":"Анна","th":"มาลี","zh":"安娜"}'::jsonb,
   'Hi! I''m Anna, your AI property consultant.',
-  '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb,
+  '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是安娜，你的 AI 房产顾问。"}'::jsonb,
   '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
   array['http://localhost:3000','http://localhost:3002'],
   'friendly',
