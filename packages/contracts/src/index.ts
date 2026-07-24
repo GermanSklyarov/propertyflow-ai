@@ -17,7 +17,7 @@ export interface TenantSnapshot {
   primaryMarket?: ThailandMarket;
   customDomain?: string;
   domainStatus?: "not-configured" | "pending-verification" | "verified";
-  subscriptionPlan: "starter" | "growth" | "enterprise";
+  subscriptionPlan: TenantSubscriptionPlan;
   limits: {
     properties: number;
     agents: number;
@@ -32,6 +32,110 @@ export interface TenantSnapshot {
   widget: TenantWidgetSettings;
   createdAt: string;
   updatedAt: string;
+}
+
+export type TenantSubscriptionPlan = "starter" | "growth" | "enterprise";
+
+export type TenantPlanFeatureKey =
+  | "knowledgeBase"
+  | "publicWidget"
+  | "propertySearch"
+  | "propertyListingSources"
+  | "crmLeadCapture"
+  | "crmPipeline"
+  | "teamRoles"
+  | "automations"
+  | "analytics"
+  | "publicApi";
+
+export type TenantPlanLimits = TenantSnapshot["limits"];
+
+export interface TenantPlanDefinition {
+  id: TenantSubscriptionPlan;
+  name: string;
+  positioning: string;
+  upgradePrompt: string;
+  features: Record<TenantPlanFeatureKey, boolean>;
+  limits: TenantPlanLimits;
+}
+
+export const tenantPlanCatalog = {
+  starter: {
+    id: "starter",
+    name: "Starter",
+    positioning: "AI Concierge, knowledge sources, listing search, and website widget without CRM migration.",
+    upgradePrompt: "Upgrade to Growth when widget conversations should become assigned CRM leads.",
+    features: {
+      analytics: false,
+      automations: false,
+      crmLeadCapture: false,
+      crmPipeline: false,
+      knowledgeBase: true,
+      propertyListingSources: true,
+      propertySearch: true,
+      publicApi: false,
+      publicWidget: true,
+      teamRoles: false
+    },
+    limits: {
+      agents: 1,
+      aiCreditsMonthly: 5_000,
+      properties: 1_000,
+      publicApiRequestsMonthly: 10_000
+    }
+  },
+  growth: {
+    id: "growth",
+    name: "Growth",
+    positioning: "AI Concierge plus lead handoff, assignment, pipeline, and agency CRM workflows.",
+    upgradePrompt: "Upgrade to Enterprise for deeper roles, automation, analytics, and integration limits.",
+    features: {
+      analytics: true,
+      automations: false,
+      crmLeadCapture: true,
+      crmPipeline: true,
+      knowledgeBase: true,
+      propertyListingSources: true,
+      propertySearch: true,
+      publicApi: true,
+      publicWidget: true,
+      teamRoles: true
+    },
+    limits: {
+      agents: 15,
+      aiCreditsMonthly: 25_000,
+      properties: 5_000,
+      publicApiRequestsMonthly: 100_000
+    }
+  },
+  enterprise: {
+    id: "enterprise",
+    name: "Enterprise",
+    positioning: "Full multi-agent CRM, analytics, automation, roles, SLA, and integration layer.",
+    upgradePrompt: "Talk to PropertyFlowAI for custom tenant limits, domains, and integrations.",
+    features: {
+      analytics: true,
+      automations: true,
+      crmLeadCapture: true,
+      crmPipeline: true,
+      knowledgeBase: true,
+      propertyListingSources: true,
+      propertySearch: true,
+      publicApi: true,
+      publicWidget: true,
+      teamRoles: true
+    },
+    limits: {
+      agents: 100,
+      aiCreditsMonthly: 250_000,
+      properties: 50_000,
+      publicApiRequestsMonthly: 1_000_000
+    }
+  }
+} as const satisfies Record<TenantSubscriptionPlan, TenantPlanDefinition>;
+
+export function getTenantPlanDefinition(plan: TenantSubscriptionPlan): TenantPlanDefinition {
+  return tenantPlanCatalog[plan];
 }
 
 export const supportedTenantWidgetLanguages = ["en", "ru", "th", "zh"] as const;

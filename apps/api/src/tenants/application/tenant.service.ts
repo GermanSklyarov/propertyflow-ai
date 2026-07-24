@@ -12,6 +12,7 @@ import type {
   TenantUsageResponse,
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
+import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
 
 @Injectable()
@@ -276,10 +277,12 @@ function buildPublicWidgetReadiness(tenant: TenantSnapshot): PublicWidgetReadine
 }
 
 function buildPublicWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetConfigResponse["capabilities"] {
+  const plan = getTenantPlanDefinition(tenant.subscriptionPlan);
+
   return {
-    knowledgeAnswers: true,
-    leadCapture: tenant.subscriptionPlan === "growth" || tenant.subscriptionPlan === "enterprise",
-    propertySearch: true
+    knowledgeAnswers: plan.features.knowledgeBase,
+    leadCapture: plan.features.crmLeadCapture,
+    propertySearch: plan.features.propertySearch
   };
 }
 

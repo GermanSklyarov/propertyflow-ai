@@ -1,5 +1,6 @@
 import { NotFoundException } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { getTenantPlanDefinition, tenantPlanCatalog } from "@propertyflow/contracts";
 import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import type { TenantRepository } from "../domain/tenant.repository.js";
 import { TenantService } from "./tenant.service.js";
@@ -140,6 +141,31 @@ describe("TenantService", () => {
         nextAction: "Widget configuration is ready for production installation.",
         status: "ready"
       }
+    });
+  });
+
+  it("uses the shared plan catalog for public widget capabilities", async () => {
+    expect(getTenantPlanDefinition("starter").features.crmLeadCapture).toBe(false);
+    expect(tenantPlanCatalog.growth.features.crmLeadCapture).toBe(true);
+    expect(tenantPlanCatalog.enterprise.features.automations).toBe(true);
+
+    const service = new TenantService(
+      repository({
+        findBySlug: async (slug) => tenant({ slug, subscriptionPlan: slug === "starter-agency" ? "starter" : "enterprise" })
+      })
+    );
+
+    await expect(service.getPublicWidgetConfig("starter-agency")).resolves.toMatchObject({
+      capabilities: {
+        leadCapture: false
+      },
+      conciergeMode: "starter"
+    });
+    await expect(service.getPublicWidgetConfig("enterprise-agency")).resolves.toMatchObject({
+      capabilities: {
+        leadCapture: true
+      },
+      conciergeMode: "enterprise"
     });
   });
 
