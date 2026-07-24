@@ -1,4 +1,11 @@
-import type { PublicWidgetCapabilities, PublicWidgetReadiness, PublicWidgetReadinessCheck, TenantSnapshot } from "@propertyflow/contracts";
+import type {
+  PublicWidgetCapabilities,
+  PublicWidgetReadiness,
+  PublicWidgetReadinessCheck,
+  TenantSnapshot,
+  TenantSubscriptionPlan
+} from "@propertyflow/contracts";
+import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 
 export interface WidgetInstallConfig {
@@ -35,6 +42,22 @@ export interface WidgetCapabilityItem {
   enabled: boolean;
   label: string;
   note: string;
+}
+
+export interface WidgetPlanUpgradeFeature {
+  label: string;
+  note: string;
+}
+
+export interface WidgetPlanUpgradePath {
+  currentPlan: TenantSubscriptionPlan;
+  currentPlanName: string;
+  features: WidgetPlanUpgradeFeature[];
+  nextPlan?: TenantSubscriptionPlan;
+  nextPlanName?: string;
+  note: string;
+  title: string;
+  trigger: string;
 }
 
 export interface WidgetInstallPackage {
@@ -182,6 +205,88 @@ export function buildWidgetCapabilityItems(capabilities: PublicWidgetCapabilitie
         : "Starter keeps visitor conversations as AI answers until Growth is enabled."
     }
   ];
+}
+
+export function buildWidgetPlanUpgradePath(plan: TenantSubscriptionPlan): WidgetPlanUpgradePath {
+  const currentPlan = getTenantPlanDefinition(plan);
+
+  if (plan === "starter") {
+    const nextPlan = getTenantPlanDefinition("growth");
+
+    return {
+      currentPlan: plan,
+      currentPlanName: currentPlan.name,
+      features: [
+        {
+          label: "Lead handoff",
+          note: "Conversations become CRM leads only when visitors ask for viewings, callbacks, or follow-up."
+        },
+        {
+          label: "Agent assignment",
+          note: "Hot requests can be routed to agents without reimporting knowledge or listings."
+        },
+        {
+          label: "Pipeline follow-up",
+          note: "The same Concierge context moves into CRM once the agency is ready."
+        }
+      ],
+      nextPlan: "growth",
+      nextPlanName: nextPlan.name,
+      note: currentPlan.positioning,
+      title: "Starter keeps CRM optional",
+      trigger: currentPlan.upgradePrompt
+    };
+  }
+
+  if (plan === "growth") {
+    const nextPlan = getTenantPlanDefinition("enterprise");
+
+    return {
+      currentPlan: plan,
+      currentPlanName: currentPlan.name,
+      features: [
+        {
+          label: "Automations",
+          note: "Turn repeat follow-up, reminders, and publishing steps into managed workflows."
+        },
+        {
+          label: "Advanced controls",
+          note: "Add deeper roles, SLA governance, and operating rules for larger teams."
+        },
+        {
+          label: "Higher limits",
+          note: "Scale AI credits, listings, agents, API usage, domains, and integrations."
+        }
+      ],
+      nextPlan: "enterprise",
+      nextPlanName: nextPlan.name,
+      note: currentPlan.positioning,
+      title: "Growth can scale into Enterprise",
+      trigger: currentPlan.upgradePrompt
+    };
+  }
+
+  return {
+    currentPlan: plan,
+    currentPlanName: currentPlan.name,
+    features: [
+      {
+        label: "Automation layer",
+        note: "CRM workflows, analytics, roles, SLA, and integrations are available."
+      },
+      {
+        label: "Custom limits",
+        note: "Tenant capacity can be tuned for larger agencies and networks."
+      },
+      {
+        label: "Full AI infrastructure",
+        note: "Knowledge, properties, conversations, leads, and CRM run as one system."
+      }
+    ],
+    note: currentPlan.positioning,
+    title: "Enterprise mode enabled",
+    trigger: currentPlan.upgradePrompt
+  };
 }
 
 function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {

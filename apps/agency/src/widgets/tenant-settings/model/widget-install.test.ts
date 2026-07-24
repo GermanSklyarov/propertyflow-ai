@@ -3,6 +3,7 @@ import type { TenantSnapshot } from "@propertyflow/contracts";
 import {
   buildWidgetInstallPackage,
   buildWidgetLaunchReadinessItems,
+  buildWidgetPlanUpgradePath,
   buildWidgetRuntimeReadiness,
   buildWidgetSnippet,
   summarizeWidgetInstallSteps,
@@ -210,6 +211,29 @@ describe("widget install model", () => {
       label: "CRM lead capture",
       note: "Growth and Enterprise handoff can create CRM leads."
     });
+  });
+
+  it("describes the starter upgrade path as optional CRM handoff", () => {
+    const upgradePath = buildWidgetPlanUpgradePath("starter");
+
+    expect(upgradePath).toMatchObject({
+      currentPlan: "starter",
+      currentPlanName: "Starter",
+      nextPlan: "growth",
+      nextPlanName: "Growth",
+      title: "Starter keeps CRM optional",
+      trigger: "Upgrade to Growth when widget conversations should become assigned CRM leads."
+    });
+    expect(upgradePath.features.map((feature) => feature.label)).toEqual(["Lead handoff", "Agent assignment", "Pipeline follow-up"]);
+  });
+
+  it("marks enterprise as the terminal plan path", () => {
+    const upgradePath = buildWidgetPlanUpgradePath("enterprise");
+
+    expect(upgradePath.nextPlan).toBeUndefined();
+    expect(upgradePath.nextPlanName).toBeUndefined();
+    expect(upgradePath.title).toBe("Enterprise mode enabled");
+    expect(upgradePath.features.map((feature) => feature.label)).toContain("Full AI infrastructure");
   });
 
   it("summarizes widget launch readiness from runtime and starter gates", () => {

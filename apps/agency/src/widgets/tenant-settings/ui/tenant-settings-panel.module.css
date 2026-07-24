@@ -96,6 +96,7 @@
 .starterHero,
 .launchStep,
 .starterCard,
+.planUpgradePath,
 .planMode {
   min-width: 0;
   border: 1px solid rgb(15 118 110 / 14%);
@@ -886,6 +887,112 @@
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 850;
+}
+
+.planUpgradePath {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 14px;
+  background: #f8fbfa;
+}
+
+.planUpgradeHeader {
+  align-items: flex-start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.planUpgradeHeader > div:first-child {
+  display: grid;
+  gap: 5px;
+  min-width: min(100%, 280px);
+}
+
+.planUpgradeHeader h3 {
+  margin: 0;
+  color: var(--teal-dark);
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem);
+  line-height: 1.1;
+}
+
+.planUpgradeHeader span,
+.planUpgradeTrigger {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.45;
+}
+
+.planUpgradeBadge {
+  align-items: center;
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  min-height: 38px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  padding: 8px 10px;
+  color: var(--teal-dark);
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.planUpgradeBadge span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.planUpgradeTrigger {
+  border-left: 3px solid var(--teal);
+  padding-left: 10px;
+}
+
+.planUpgradeFeatures {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.planUpgradeFeatures span {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 4px 8px;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+}
+
+.planUpgradeFeatures svg {
+  color: #15803d;
+  grid-row: span 2;
+  margin-top: 1px;
+}
+
+.planUpgradeFeatures strong,
+.planUpgradeFeatures small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.planUpgradeFeatures strong {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.planUpgradeFeatures small {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .planMode {

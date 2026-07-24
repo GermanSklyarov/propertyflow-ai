@@ -33,6 +33,7 @@ import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters"
 import {
   buildWidgetInstallPackage,
   buildWidgetLaunchReadinessItems,
+  buildWidgetPlanUpgradePath,
   summarizeWidgetInstallSteps,
   summarizeWidgetLaunchReadiness
 } from "../model/widget-install";
@@ -59,6 +60,7 @@ export function TenantSettingsPanel({
   const activeKnowledgeJobs = activeKnowledgeJobCount > 0;
   const starterReadiness = buildKnowledgeStarterReadiness(knowledgeDocuments, activeKnowledgeJobCount);
   const widgetInstall = buildWidgetInstallPackage(tenant);
+  const widgetPlanUpgradePath = buildWidgetPlanUpgradePath(tenant.subscriptionPlan);
   const widgetSettings = getTenantWidgetSettings(tenant);
   const widgetLaunchReadiness = summarizeWidgetLaunchReadiness({
     hasActiveKnowledgeJobs: activeKnowledgeJobs,
@@ -291,6 +293,8 @@ export function TenantSettingsPanel({
           </div>
         </div>
 
+        <PlanUpgradePath path={widgetPlanUpgradePath} />
+
         <div className={styles.planModes}>
           <PlanMode label="Starter" note="Documents, Knowledge Base, AI answers, and website widget." />
           <PlanMode label="Growth" note="Conversations become leads when visitors ask for viewings, callbacks, or follow-up." />
@@ -458,6 +462,41 @@ function PlanMode({ label, note }: { label: string; note: string }) {
     <article className={styles.planMode}>
       <strong>{label}</strong>
       <span>{note}</span>
+    </article>
+  );
+}
+
+function PlanUpgradePath({ path }: { path: ReturnType<typeof buildWidgetPlanUpgradePath> }) {
+  return (
+    <article className={styles.planUpgradePath}>
+      <div className={styles.planUpgradeHeader}>
+        <div>
+          <p className="section-kicker">Upgrade path</p>
+          <h3>{path.title}</h3>
+          <span>{path.note}</span>
+        </div>
+        <div className={styles.planUpgradeBadge} aria-label="Plan transition">
+          <strong>{path.currentPlanName}</strong>
+          {path.nextPlanName ? (
+            <>
+              <span>to</span>
+              <strong>{path.nextPlanName}</strong>
+            </>
+          ) : (
+            <span>active</span>
+          )}
+        </div>
+      </div>
+      <div className={styles.planUpgradeTrigger}>{path.trigger}</div>
+      <div className={styles.planUpgradeFeatures}>
+        {path.features.map((feature) => (
+          <span key={feature.label}>
+            <CheckCircle2 size={15} />
+            <strong>{feature.label}</strong>
+            <small>{feature.note}</small>
+          </span>
+        ))}
+      </div>
     </article>
   );
 }
