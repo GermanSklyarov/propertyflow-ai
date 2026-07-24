@@ -47,7 +47,7 @@ export interface WidgetInstallPackage {
 
 export interface WidgetLaunchReadinessInput {
   hasActiveKnowledgeJobs: boolean;
-  hasKnowledge: boolean;
+  hasLaunchReadyKnowledge: boolean;
   hasTenantSlug: boolean;
   runtimeReadiness: PublicWidgetReadiness;
 }
@@ -98,7 +98,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
 }
 
 export function summarizeWidgetLaunchReadiness(input: WidgetLaunchReadinessInput): WidgetLaunchReadinessSummary {
-  const extraChecks = [input.hasKnowledge, input.hasKnowledge && !input.hasActiveKnowledgeJobs, input.hasTenantSlug];
+  const extraChecks = [input.hasLaunchReadyKnowledge, input.hasLaunchReadyKnowledge && !input.hasActiveKnowledgeJobs, input.hasTenantSlug];
 
   return {
     completed: input.runtimeReadiness.checks.filter((check) => check.ready).length + extraChecks.filter(Boolean).length,
@@ -114,14 +114,14 @@ export function buildWidgetLaunchReadinessItems(input: WidgetLaunchReadinessItem
       note: check.note
     })),
     {
-      done: input.hasKnowledge,
+      done: input.hasLaunchReadyKnowledge,
       label: "Knowledge available",
-      note: input.hasKnowledge
+      note: input.hasLaunchReadyKnowledge
         ? `${input.starterSourceTypesReady} starter source types have AI-ready documents.`
-        : "Add at least one AI-ready FAQ or company source before installing the widget."
+        : "Add enough AI-ready Starter sources before installing the widget."
     },
     {
-      done: input.hasKnowledge && !input.hasActiveKnowledgeJobs,
+      done: input.hasLaunchReadyKnowledge && !input.hasActiveKnowledgeJobs,
       label: "Indexing settled",
       note: input.hasActiveKnowledgeJobs ? "Wait for active ingestion jobs to finish." : "No active knowledge jobs are blocking widget copy."
     },

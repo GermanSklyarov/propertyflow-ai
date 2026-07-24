@@ -231,11 +231,37 @@ describe("widget install model", () => {
     expect(
       summarizeWidgetLaunchReadiness({
         hasActiveKnowledgeJobs: false,
-        hasKnowledge: true,
+        hasLaunchReadyKnowledge: true,
         hasTenantSlug: true,
         runtimeReadiness: install.readiness
       })
     ).toEqual({ completed: 6, total: 6 });
+  });
+
+  it("keeps launch readiness blocked until starter knowledge is launch-ready", () => {
+    const install = buildWidgetInstallPackage(
+      tenantFactory({
+        widget: {
+          ...tenantFactory().widget,
+          allowedOrigins: ["https://demo.example.com"],
+          welcomeMessages: {
+            en: "Hi",
+            ru: "Привет",
+            th: "สวัสดีค่ะ",
+            zh: "你好"
+          }
+        }
+      })
+    );
+
+    expect(
+      summarizeWidgetLaunchReadiness({
+        hasActiveKnowledgeJobs: false,
+        hasLaunchReadyKnowledge: false,
+        hasTenantSlug: true,
+        runtimeReadiness: install.readiness
+      })
+    ).toEqual({ completed: 4, total: 6 });
   });
 
   it("keeps the indexing gate open while knowledge jobs run", () => {
@@ -244,7 +270,7 @@ describe("widget install model", () => {
     expect(
       summarizeWidgetLaunchReadiness({
         hasActiveKnowledgeJobs: true,
-        hasKnowledge: true,
+        hasLaunchReadyKnowledge: true,
         hasTenantSlug: true,
         runtimeReadiness: install.readiness
       })
@@ -257,7 +283,7 @@ describe("widget install model", () => {
     expect(
       buildWidgetLaunchReadinessItems({
         hasActiveKnowledgeJobs: true,
-        hasKnowledge: true,
+        hasLaunchReadyKnowledge: true,
         hasTenantSlug: true,
         runtimeReadiness: install.readiness,
         starterSourceTypesReady: 3,

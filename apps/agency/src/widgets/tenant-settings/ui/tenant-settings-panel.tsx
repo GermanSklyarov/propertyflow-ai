@@ -61,13 +61,13 @@ export function TenantSettingsPanel({
   const widgetSettings = getTenantWidgetSettings(tenant);
   const widgetLaunchReadiness = summarizeWidgetLaunchReadiness({
     hasActiveKnowledgeJobs: activeKnowledgeJobs,
-    hasKnowledge: starterReadiness.completed > 0,
+    hasLaunchReadyKnowledge: starterReadiness.launchReady,
     hasTenantSlug: Boolean(tenant.slug),
     runtimeReadiness: widgetInstall.readiness
   });
   const widgetLaunchReadinessItems = buildWidgetLaunchReadinessItems({
     hasActiveKnowledgeJobs: activeKnowledgeJobs,
-    hasKnowledge: starterReadiness.completed > 0,
+    hasLaunchReadyKnowledge: starterReadiness.launchReady,
     hasTenantSlug: Boolean(tenant.slug),
     runtimeReadiness: widgetInstall.readiness,
     starterSourceTypesReady: starterReadiness.completed,
