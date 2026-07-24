@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { getTenantPlanDefinition } from "@propertyflow/contracts";
-import { resolveSignupPlan } from "@views/agency-entry/model/agency-entry";
+import { buildAgencySignupSummary, resolveSignupPlan } from "@views/agency-entry/model/agency-entry";
 import { SignupEntryPage } from "@views/agency-entry/ui/agency-entry-page";
 
 export const metadata: Metadata = {
@@ -10,7 +9,7 @@ export const metadata: Metadata = {
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ plan?: string | string[] }> }) {
   const { plan } = await searchParams;
-  const selectedPlan = getTenantPlanDefinition(resolveSignupPlan(plan));
+  const signup = buildAgencySignupSummary(resolveSignupPlan(plan));
 
-  return <SignupEntryPage planName={selectedPlan.name} />;
+  return <SignupEntryPage signup={signup} />;
 }

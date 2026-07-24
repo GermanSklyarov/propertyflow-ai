@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAgencyEntryPlanCards, resolveSignupPlan } from "./agency-entry";
+import { buildAgencyEntryPlanCards, buildAgencySignupSummary, resolveSignupPlan } from "./agency-entry";
 
 describe("agency entry", () => {
   it("builds plan cards that route to signup with the selected plan", () => {
@@ -17,5 +17,14 @@ describe("agency entry", () => {
     expect(resolveSignupPlan(undefined)).toBe("starter");
     expect(resolveSignupPlan("unknown")).toBe("starter");
     expect(resolveSignupPlan(["growth"])).toBe("growth");
+  });
+
+  it("summarizes the selected signup plan and next setup steps", () => {
+    expect(buildAgencySignupSummary("starter")).toMatchObject({
+      planId: "starter",
+      planName: "Starter",
+      nextSteps: ["Create workspace", "Upload knowledge sources", "Install the AI Concierge widget"]
+    });
+    expect(buildAgencySignupSummary("growth").nextSteps).toContain("Configure CRM handoff");
   });
 });

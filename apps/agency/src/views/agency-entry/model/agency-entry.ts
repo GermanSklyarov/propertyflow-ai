@@ -11,6 +11,13 @@ export interface AgencyEntryPlanCard {
   unlocks: string[];
 }
 
+export interface AgencySignupSummary {
+  planId: TenantSubscriptionPlan;
+  planName: string;
+  positioning: string;
+  nextSteps: string[];
+}
+
 const planUseCases: Record<TenantSubscriptionPlan, string> = {
   starter: "Launch an AI Concierge without replacing the agency CRM.",
   growth: "Turn qualified Concierge conversations into assigned lead work.",
@@ -44,4 +51,18 @@ export function resolveSignupPlan(plan: string | string[] | undefined): TenantSu
   const value = Array.isArray(plan) ? plan[0] : plan;
 
   return value === "growth" || value === "enterprise" ? value : "starter";
+}
+
+export function buildAgencySignupSummary(planId: TenantSubscriptionPlan): AgencySignupSummary {
+  const plan = tenantPlanCatalog[planId];
+
+  return {
+    planId: plan.id,
+    planName: plan.name,
+    positioning: plan.positioning,
+    nextSteps:
+      plan.id === "starter"
+        ? ["Create workspace", "Upload knowledge sources", "Install the AI Concierge widget"]
+        : ["Create workspace", "Confirm upgrade scope", "Configure CRM handoff"]
+  };
 }

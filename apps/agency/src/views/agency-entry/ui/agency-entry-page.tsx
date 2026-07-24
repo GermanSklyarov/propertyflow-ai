@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Bot, CheckCircle2, DatabaseZap, FileText, Globe2, KeyRound, Sparkles } from "lucide-react";
+import { submitAgencySignup } from "../api/signup-actions";
+import type { AgencySignupSummary } from "../model/agency-entry";
 import { buildAgencyEntryPlanCards } from "../model/agency-entry";
 import styles from "./agency-entry-page.module.css";
 
@@ -135,39 +137,49 @@ export function AgencyEntryPage() {
   );
 }
 
-export function SignupEntryPage({ planName }: { planName: string }) {
+export function SignupEntryPage({ signup }: { signup: AgencySignupSummary }) {
   return (
     <main className={styles.page}>
       <section className={styles.signupPanel}>
         <div className={styles.signupCopy}>
           <p className="section-kicker">Create workspace</p>
-          <h1>{planName} workspace setup</h1>
+          <h1>{signup.planName} workspace setup</h1>
           <p>
-            This is the production entry point we will connect to auth and tenant provisioning. For now it preserves the
-            selected plan and routes into the local setup flow.
+            Capture the agency basics, keep the selected plan attached, and continue into the first-run setup path.
           </p>
+          <div className={styles.signupPlanCard}>
+            <span>Selected plan</span>
+            <strong>{signup.planName}</strong>
+            <p>{signup.positioning}</p>
+            <ol>
+              {signup.nextSteps.map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
+          </div>
         </div>
-        <form className={styles.signupForm}>
+        <form action={submitAgencySignup} className={styles.signupForm}>
+          <input name="plan" type="hidden" value={signup.planId} />
           <label>
             Agency name
-            <input name="agencyName" placeholder="Demo Thailand Realty" />
+            <input name="agencyName" placeholder="Demo Thailand Realty" required />
           </label>
           <label>
             Work email
-            <input name="email" placeholder="owner@agency.co.th" type="email" />
+            <input name="email" placeholder="owner@agency.co.th" required type="email" />
           </label>
           <label>
             Website
-            <input name="website" placeholder="https://agency.co.th" />
+            <input name="website" placeholder="https://agency.co.th" required type="url" />
           </label>
           <div className={styles.signupActions}>
-            <Link href="/setup" className={styles.primaryAction}>
+            <button className={styles.primaryAction} type="submit">
               Continue to Starter setup
               <ArrowRight size={18} />
-            </Link>
+            </button>
             <span>
               <KeyRound size={16} />
-              Auth and billing will attach here.
+              Account verification and billing attach to this step next.
             </span>
           </div>
         </form>

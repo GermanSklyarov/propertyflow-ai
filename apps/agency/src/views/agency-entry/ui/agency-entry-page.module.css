@@ -58,7 +58,13 @@
     background 160ms ease,
     color 160ms ease,
     transform 160ms ease,
-    box-shadow 160ms ease;
+  box-shadow 160ms ease;
+}
+
+button.primaryAction,
+button.secondaryAction {
+  font: inherit;
+  border-radius: 0;
 }
 
 .navCta,
@@ -344,6 +350,42 @@
 
 .signupCopy p {
   color: var(--muted);
+}
+
+.signupPlanCard {
+  display: grid;
+  gap: 12px;
+  margin-top: 24px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #eef9f6;
+  padding: 20px;
+}
+
+.signupPlanCard > span {
+  color: var(--muted);
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.signupPlanCard strong {
+  color: var(--teal-dark);
+  font-size: clamp(1.5rem, 3vw, 2.2rem);
+  font-weight: 900;
+}
+
+.signupPlanCard p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.signupPlanCard ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--teal-dark);
+  font-weight: 850;
 }
 
 .signupForm {
