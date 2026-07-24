@@ -66,17 +66,35 @@ docs/
 
 ## Local Development
 
-Create `.env` from `.env.example`, then start the local infrastructure and apply the first database migration.
+Create `.env` from `.env.example`, then start the local infrastructure, apply migrations, seed the deterministic demo workspace, and run the full app stack.
 
 ```sh
 npm install
 npm run infra:up
 npm run migrate
 npm run seed:demo
-npm run dev --workspace @propertyflow/api
+npm run dev
 ```
 
-`npm run seed:demo` seeds projects, listings, price history, and CRM leads for the local `demo-agency` tenant. Use `npm run seed:demo-properties` or `npm run seed:demo-leads` when you only need to refresh one side of the demo dataset.
+`npm run dev` starts the API, worker, public web app, and agency app in one terminal:
+
+- API docs: `http://localhost:3001/docs`
+- Public web: `http://localhost:3000`
+- Agency app: `http://localhost:3002`
+
+`npm run seed:demo` seeds the local `demo-agency` tenant with Starter-ready tenant settings, knowledge documents, projects, listings, media, price history, and optional CRM examples for upgrade demos. Use `npm run seed:demo-properties`, `npm run seed:demo-leads`, or `npm run seed:demo-knowledge` when you only need to refresh one slice of the demo dataset.
+
+### Starter Launch Checklist
+
+Use this path when preparing a local sales demo or validating the Starter plan entry point:
+
+1. Run `npm run infra:up`, `npm run migrate`, `npm run seed:demo`, and `npm run dev`.
+2. Open `http://localhost:3002/setup` and confirm the setup wizard shows plan confirmation, Knowledge Sources, AI personality, website origins, and widget install readiness.
+3. Open `http://localhost:3002/knowledge?create=source#create-knowledge-document` to add or review AI-ready knowledge sources.
+4. Open `http://localhost:3002/settings#concierge-personality-settings` to review localized Concierge names, tone, and welcome messages.
+5. Open `http://localhost:3002/settings#widget-origin-settings` and add the agency website origin before using the widget outside test mode.
+6. Open `http://localhost:3002/settings#widget-install`, copy the widget snippet, and run the installed widget check against a test page.
+7. Keep CRM routes optional for Starter; Growth unlocks lead handoff, assignment, pipeline, SLA, and analytics.
 
 The API starts with a tenant-aware property inventory slice:
 
@@ -232,11 +250,7 @@ The knowledge ingestion job reads a tenant knowledge document, rebuilds `knowled
 
 `POST /knowledge-documents/chunks/embed` enqueues `knowledge.chunks.embed` for pending chunks. The current worker provider is `local-hash`, a deterministic vector prototype that updates `embedding`, `embedding_model`, and `embedding_status`; the API contract is shaped so OpenAI/Gemini/Anthropic embeddings can replace it later without changing admin workflows.
 
-Run the worker locally with:
-
-```sh
-npm run dev --workspace @propertyflow/worker
-```
+The worker is included in `npm run dev`. To run only the worker, use `npm run dev:worker`.
 
 With API and worker running, verify the full indexing path with:
 
