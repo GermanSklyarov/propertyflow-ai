@@ -46,6 +46,8 @@ export interface KnowledgeSourceReadinessSummary {
 }
 
 export interface KnowledgeSourceLaunchGate {
+  actionHref: string;
+  actionLabel: string;
   nextAction: string;
   status: "blocked" | "failed" | "indexing" | "ready";
   summary: string;
@@ -214,14 +216,18 @@ export function buildKnowledgeSourceLaunchGate(
 
   if (summary.failed > 0) {
     return {
+      actionHref: "#knowledge-jobs",
+      actionLabel: "View jobs",
       nextAction: "Open failed ingestion jobs and retry or disable the broken source before installing the widget.",
       status: "failed",
-      summary: `${summary.failed} source${summary.failed === 1 ? "" : "s"} need attention`
+      summary: `${summary.failed} source${summary.failed === 1 ? " needs" : "s need"} attention`
     };
   }
 
   if (summary.indexing > 0) {
     return {
+      actionHref: "#knowledge-jobs",
+      actionLabel: "View jobs",
       nextAction: "Wait for active ingestion jobs to finish before installing the widget.",
       status: "indexing",
       summary: `${summary.indexing} source${summary.indexing === 1 ? "" : "s"} indexing now`
@@ -230,6 +236,8 @@ export function buildKnowledgeSourceLaunchGate(
 
   if (summary.connected > 0 && !starterLaunchReady) {
     return {
+      actionHref: "?create=source#create-knowledge-document",
+      actionLabel: "Add source",
       nextAction: options.starterNextAction ?? "Finish Starter knowledge coverage before installing the widget.",
       status: "blocked",
       summary: options.starterSummary ?? "Connected sources still need Starter launch coverage"
@@ -238,6 +246,8 @@ export function buildKnowledgeSourceLaunchGate(
 
   if (summary.connected > 0) {
     return {
+      actionHref: "/settings#widget-install",
+      actionLabel: "Open widget",
       nextAction: "Copy the widget once origins and localized messages are configured.",
       status: "ready",
       summary: `${summary.connected} connected source${summary.connected === 1 ? "" : "s"} feeding AI`
@@ -245,6 +255,8 @@ export function buildKnowledgeSourceLaunchGate(
   }
 
   return {
+    actionHref: "?create=source#create-knowledge-document",
+    actionLabel: summary.actionable ? "Add source" : "Create connector",
     nextAction: summary.actionable
       ? "Add at least one document, website page, or listing feed before sharing the widget."
       : "Create a knowledge source connector before sharing the widget.",

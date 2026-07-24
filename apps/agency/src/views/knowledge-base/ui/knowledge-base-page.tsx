@@ -197,6 +197,7 @@ export function KnowledgeBasePage({
               <strong>{sourceLaunchGate.summary}</strong>
               <span>{sourceLaunchGate.nextAction}</span>
             </div>
+            <a href={sourceLaunchGate.actionHref}>{sourceLaunchGate.actionLabel}</a>
           </div>
 
           <div className={styles.sourceCoverageGrid} aria-label="AI source coverage">

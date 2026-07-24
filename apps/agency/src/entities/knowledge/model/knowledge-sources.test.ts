@@ -151,6 +151,8 @@ describe("knowledge sources model", () => {
     const summary = summarizeKnowledgeSourceReadiness(knowledgeSourceGroups);
 
     expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      actionHref: "?create=source#create-knowledge-document",
+      actionLabel: "Add source",
       nextAction: "Add at least one document, website page, or listing feed before sharing the widget.",
       status: "blocked",
       summary: "No connected AI sources yet"
@@ -166,6 +168,8 @@ describe("knowledge sources model", () => {
     const summary = summarizeKnowledgeSourceReadiness(groups);
 
     expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      actionHref: "#knowledge-jobs",
+      actionLabel: "View jobs",
       nextAction: "Wait for active ingestion jobs to finish before installing the widget.",
       status: "indexing",
       summary: "5 sources indexing now"
@@ -182,9 +186,11 @@ describe("knowledge sources model", () => {
 
     expect(summary.failed).toBe(1);
     expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      actionHref: "#knowledge-jobs",
+      actionLabel: "View jobs",
       nextAction: "Open failed ingestion jobs and retry or disable the broken source before installing the widget.",
       status: "failed",
-      summary: "1 source need attention"
+      summary: "1 source needs attention"
     });
   });
 
@@ -217,6 +223,8 @@ describe("knowledge sources model", () => {
     const summary = summarizeKnowledgeSourceReadiness(groups);
 
     expect(buildKnowledgeSourceLaunchGate(summary)).toEqual({
+      actionHref: "/settings#widget-install",
+      actionLabel: "Open widget",
       nextAction: "Copy the widget once origins and localized messages are configured.",
       status: "ready",
       summary: "2 connected sources feeding AI"
@@ -238,6 +246,8 @@ describe("knowledge sources model", () => {
         starterSummary: "Knowledge exists, but Starter Concierge still needs stronger coverage."
       })
     ).toEqual({
+      actionHref: "?create=source#create-knowledge-document",
+      actionLabel: "Add source",
       nextAction: "Add buying, company, or visa guidance to improve first answers.",
       status: "blocked",
       summary: "Knowledge exists, but Starter Concierge still needs stronger coverage."
