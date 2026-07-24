@@ -64,6 +64,7 @@
 
 ## Phase 7.5: AI Concierge Starter Onboarding
 
+- Track the production launch criteria in [Starter Launch Plan](./starter-launch-plan.md).
 - Reframe the first tenant experience around Knowledge -> AI -> Widget, with CRM hidden until leads are actually created.
 - Add a setup wizard for new agencies: upload FAQ, buying/selling guides, company information, condo brochures, developer PDFs, tax information, visa guides, and internal instructions.
 - Show knowledge indexing progress immediately after upload, using background jobs as the source of truth.
