@@ -1,0 +1,145 @@
+import { describe, expect, it } from "vitest";
+import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, TenantSnapshot } from "@propertyflow/contracts";
+import { buildStarterSetupProgress } from "./starter-setup";
+
+describe("starter setup progress", () => {
+  it("points a new tenant at knowledge first", () => {
+    const progress = buildStarterSetupProgress({
+      documents: [],
+      jobs: [],
+      tenant: tenantFactory()
+    });
+
+    expect(progress.launchReady).toBe(false);
+    expect(progress.nextAction).toMatchObject({
+      actionHref: "/knowledge?create=source#create-knowledge-document",
+      status: "action",
+      title: "Knowledge Sources"
+    });
+  });
+
+  it("waits for indexing before marking knowledge complete", () => {
+    const progress = buildStarterSetupProgress({
+      documents: readyStarterDocuments(),
+      jobs: [knowledgeJobFactory()],
+      tenant: tenantFactory()
+    });
+
+    expect(progress.steps.find((step) => step.id === "knowledge")).toMatchObject({
+      status: "waiting",
+      value: "9/9 ready"
+    });
+  });
+
+  it("marks the setup launch-ready when starter gates are complete", () => {
+    const progress = buildStarterSetupProgress({
+      documents: readyStarterDocuments(),
+      jobs: [],
+      tenant: tenantFactory({
+        widget: {
+          ...tenantFactory().widget,
+          allowedOrigins: ["https://demo.example.com"],
+          welcomeMessages: {
+            en: "Hi",
+            ru: "Привет",
+            th: "สวัสดีค่ะ",
+            zh: "你好"
+          }
+        }
+      })
+    });
+
+    expect(progress.launchReady).toBe(true);
+    expect(progress.completed).toBe(progress.total);
+  });
+});
+
+function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
+  return {
+    branding: {
+      displayName: "Demo Agency",
+      primaryColor: "#0f766e"
+    },
+    createdAt: "2026-07-20T00:00:00.000Z",
+    domainStatus: "not-configured",
+    id: "tenant-demo",
+    limits: {
+      agents: 1,
+      aiCreditsMonthly: 5000,
+      properties: 1000,
+      publicApiRequestsMonthly: 10000
+    },
+    name: "Demo Agency",
+    slug: "demo-agency",
+    status: "active",
+    subscriptionPlan: "starter",
+    updatedAt: "2026-07-20T00:00:00.000Z",
+    widget: {
+      aiName: "Anna",
+      aiNames: {
+        en: "Anna",
+        ru: "Анна",
+        th: "มาลี",
+        zh: "安娜"
+      },
+      allowedOrigins: [],
+      languages: ["en", "ru", "th", "zh"],
+      personaGenders: {
+        en: "feminine",
+        ru: "feminine",
+        th: "feminine",
+        zh: "neutral"
+      },
+      tone: "friendly",
+      welcomeMessage: "Hi! I'm Anna, your AI property consultant.",
+      welcomeMessages: {
+        en: "Hi! I'm Anna, your AI property consultant.",
+        ru: "Привет! Я Анна, ваш AI-консультант по недвижимости.",
+        th: "สวัสดีค่ะ ฉันชื่อมาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
+        zh: "你好！我是安娜，你的 AI 房产顾问。"
+      }
+    },
+    ...overrides
+  };
+}
+
+function readyStarterDocuments(): KnowledgeDocumentSnapshot[] {
+  return [
+    ["faq", "Demo FAQ questions answers"],
+    ["article", "Thailand buying guide foreign quota ownership"],
+    ["article", "Selling guide resale commission"],
+    ["article", "Company information team contact"],
+    ["neighborhood", "Condo brochures facilities project"],
+    ["neighborhood", "Developer PDFs construction handover"],
+    ["legal", "Tax information transfer fee duty"],
+    ["relocation", "Visa guide retirement elite work permit"],
+    ["faq", "Internal instructions handoff script"]
+  ].map(([kind, title], index) => ({
+    body: `${title} content for concierge answers. This source includes enough agency-approved context for a buyer, seller, or relocating visitor to ask follow-up questions and get grounded answers from the AI Concierge. Source reference: demo-starter-source-${index}.pdf`,
+    createdAt: "2026-07-20T00:00:00.000Z",
+    id: `doc-${index}`,
+    kind: kind as KnowledgeDocumentSnapshot["kind"],
+    locale: "en",
+    tags: title.toLowerCase().split(" "),
+    tenantId: "tenant-demo",
+    title,
+    updatedAt: "2026-07-20T00:00:00.000Z"
+  }));
+}
+
+function knowledgeJobFactory(): BackgroundJobMonitorItem {
+  return {
+    attemptsMade: 0,
+    id: "job-1",
+    name: "knowledge.documents.ingest",
+    payload: {
+      documentId: "doc-1",
+      reason: "created",
+      tenantId: "tenant-demo"
+    },
+    progress: 40,
+    queue: "propertyflow.jobs",
+    state: "active",
+    tenantId: "tenant-demo"
+  };
+}

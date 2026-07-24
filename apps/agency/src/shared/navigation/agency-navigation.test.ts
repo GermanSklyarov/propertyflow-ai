@@ -31,8 +31,8 @@ describe("agency navigation", () => {
     const starterItems = getAgencyNavigationItems("starter").map((item) => item.href);
     const starterQuickLinks = getAgencyTopbarQuickLinks("starter").map((item) => item.href);
 
-    expect(starterItems).toEqual(["/", "/knowledge", "/listings", "/projects", "/settings"]);
-    expect(starterQuickLinks).toEqual(["/knowledge", "/listings", "/projects", "/settings"]);
+    expect(starterItems).toEqual(["/", "/setup", "/knowledge", "/listings", "/projects", "/settings"]);
+    expect(starterQuickLinks).toEqual(["/setup", "/knowledge", "/listings", "/projects", "/settings"]);
     expect(starterItems).not.toContain("/leads");
     expect(starterItems).not.toContain("/analytics");
   });

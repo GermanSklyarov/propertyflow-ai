@@ -6,6 +6,7 @@ import {
   FolderSearch,
   LayoutDashboard,
   MapPinned,
+  Rocket,
   Settings,
   Users
 } from "lucide-react";
@@ -25,6 +26,7 @@ const crmPlans: readonly TenantSubscriptionPlan[] = ["growth", "enterprise"];
 
 export const agencyNavigationItems = [
   { href: "/", icon: LayoutDashboard, label: "Dashboard", plans: allPlans, status: "live" },
+  { href: "/setup", icon: Rocket, label: "Starter setup", plans: allPlans, status: "live" },
   { href: "/knowledge", icon: BookOpenText, label: "Knowledge", plans: allPlans, status: "live" },
   { href: "/listings", icon: Building2, label: "Listings", plans: allPlans, status: "live" },
   { href: "/projects", icon: MapPinned, label: "Projects", plans: allPlans, status: "live" },
@@ -36,6 +38,7 @@ export const agencyNavigationItems = [
 ] satisfies AgencyNavigationItem[];
 
 const agencyTopbarQuickLinks = [
+  { href: "/setup", label: "Starter setup", plans: allPlans },
   { href: "/knowledge", label: "Knowledge", plans: allPlans },
   { href: "/listings", label: "Inventory", plans: allPlans },
   { href: "/projects", label: "Projects", plans: allPlans },
