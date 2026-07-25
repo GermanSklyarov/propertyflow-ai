@@ -1,3 +1,4 @@
+import type { ProvisionTenantRequest } from "@propertyflow/contracts";
 import { tenantPlanCatalog, type TenantSubscriptionPlan } from "@propertyflow/contracts";
 
 export interface AgencyEntryPlanCard {
@@ -16,6 +17,15 @@ export interface AgencySignupSummary {
   planName: string;
   positioning: string;
   nextSteps: string[];
+}
+
+export type AgencySignupErrorCode = "workspace-exists" | "provision-failed";
+
+export interface AgencySignupFormValues {
+  agencyName: string;
+  plan: TenantSubscriptionPlan;
+  website?: string;
+  workEmail: string;
 }
 
 const planUseCases: Record<TenantSubscriptionPlan, string> = {
@@ -65,4 +75,52 @@ export function buildAgencySignupSummary(planId: TenantSubscriptionPlan): Agency
         ? ["Create workspace", "Upload knowledge sources", "Install the AI Concierge widget"]
         : ["Create workspace", "Confirm upgrade scope", "Configure CRM handoff"]
   };
+}
+
+export function parseAgencySignupForm(formData: FormData): AgencySignupFormValues {
+  return {
+    agencyName: readRequiredFormValue(formData, "agencyName"),
+    plan: resolveSignupPlan(readRequiredFormValue(formData, "plan")),
+    website: readOptionalFormValue(formData, "website"),
+    workEmail: readRequiredFormValue(formData, "email")
+  };
+}
+
+export function toProvisionTenantRequest(values: AgencySignupFormValues): ProvisionTenantRequest {
+  return {
+    agencyName: values.agencyName,
+    subscriptionPlan: values.plan,
+    website: values.website,
+    workEmail: values.workEmail
+  };
+}
+
+export function resolveAgencySignupError(error: string | string[] | undefined): string | null {
+  const value = Array.isArray(error) ? error[0] : error;
+
+  if (value === "workspace-exists") {
+    return "An agency workspace with this name already exists. Try signing in or use a different agency name.";
+  }
+
+  if (value === "provision-failed") {
+    return "We could not create the workspace. Check the details and try again.";
+  }
+
+  return null;
+}
+
+function readRequiredFormValue(formData: FormData, key: string) {
+  const value = formData.get(key);
+
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`Missing required signup field: ${key}`);
+  }
+
+  return value.trim();
+}
+
+function readOptionalFormValue(formData: FormData, key: string) {
+  const value = formData.get(key);
+
+  return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
 }

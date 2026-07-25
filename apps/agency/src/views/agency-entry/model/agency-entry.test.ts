@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { buildAgencyEntryPlanCards, buildAgencySignupSummary, resolveSignupPlan } from "./agency-entry";
+import {
+  buildAgencyEntryPlanCards,
+  buildAgencySignupSummary,
+  parseAgencySignupForm,
+  resolveAgencySignupError,
+  resolveSignupPlan,
+  toProvisionTenantRequest
+} from "./agency-entry";
 
 describe("agency entry", () => {
   it("builds plan cards that route to signup with the selected plan", () => {
@@ -26,5 +33,26 @@ describe("agency entry", () => {
       nextSteps: ["Create workspace", "Upload knowledge sources", "Install the AI Concierge widget"]
     });
     expect(buildAgencySignupSummary("growth").nextSteps).toContain("Configure CRM handoff");
+  });
+
+  it("maps signup form fields into the tenant provisioning contract", () => {
+    const form = new FormData();
+    form.set("agencyName", "  Jomtien Homes  ");
+    form.set("email", "owner@jomtien.test");
+    form.set("website", " https://jomtien.test ");
+    form.set("plan", "growth");
+
+    expect(toProvisionTenantRequest(parseAgencySignupForm(form))).toEqual({
+      agencyName: "Jomtien Homes",
+      subscriptionPlan: "growth",
+      website: "https://jomtien.test",
+      workEmail: "owner@jomtien.test"
+    });
+  });
+
+  it("renders friendly signup errors from query codes", () => {
+    expect(resolveAgencySignupError("workspace-exists")).toContain("already exists");
+    expect(resolveAgencySignupError("provision-failed")).toContain("could not create");
+    expect(resolveAgencySignupError("unknown")).toBeNull();
   });
 });

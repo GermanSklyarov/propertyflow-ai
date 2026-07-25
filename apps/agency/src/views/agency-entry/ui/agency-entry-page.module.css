@@ -393,6 +393,15 @@ button.secondaryAction {
   gap: 18px;
 }
 
+.signupError {
+  border: 1px solid #f5b4aa;
+  background: #fff4ef;
+  color: #9f3a2f;
+  padding: 16px 18px;
+  font-weight: 850;
+  line-height: 1.4;
+}
+
 .signupForm label {
   display: grid;
   gap: 8px;

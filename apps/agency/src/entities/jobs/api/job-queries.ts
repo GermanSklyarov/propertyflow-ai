@@ -6,10 +6,11 @@ import { queryKeys } from "@shared/query/query-keys";
 const defaultJobStates = ["active", "waiting", "completed", "failed"] satisfies BackgroundJobState[];
 
 export function backgroundJobsQueryOptions(
-  request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12, states: defaultJobStates }
+  request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12, states: defaultJobStates },
+  tenantId?: string
 ) {
   return queryOptions({
-    queryKey: queryKeys.jobs.list(request),
-    queryFn: () => listBackgroundJobs(request)
+    queryKey: queryKeys.jobs.list(request, tenantId),
+    queryFn: () => listBackgroundJobs(request, { tenantId })
   });
 }

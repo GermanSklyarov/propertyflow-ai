@@ -60,6 +60,8 @@ import type {
   PropertySearchResponse,
   PropertySocialPostPublicationListResponse,
   PropertySocialPostReviewListResponse,
+  ProvisionTenantRequest,
+  ProvisionTenantResponse,
   ReviewAiAssetRequest,
   RunListingAssistantRequest,
   RunListingAssistantResponse,
@@ -92,6 +94,33 @@ const demoHeaders = {
   "x-user-role": process.env.PROPERTYFLOW_USER_ROLE ?? "manager"
 };
 
+interface AgencyApiOptions {
+  tenantId?: string;
+}
+
+function tenantHeaders(options: AgencyApiOptions = {}) {
+  return {
+    ...demoHeaders,
+    ...(options.tenantId ? { "x-tenant-id": options.tenantId } : {})
+  };
+}
+
+export async function provisionTenant(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/provision`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to provision agency workspace: ${response.status}`);
+  }
+
+  return (await response.json()) as ProvisionTenantResponse;
+}
+
 export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetrics> {
   const response = await fetch(`${apiBaseUrl}/analytics/dashboard`, {
     headers: demoHeaders,
@@ -107,10 +136,10 @@ export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetric
 
 export async function listBackgroundJobs(
   request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12 },
-  options: { revalidateSeconds?: number | false } = {}
+  options: { revalidateSeconds?: number | false; tenantId?: string } = {}
 ): Promise<BackgroundJobMonitorResponse> {
   const response = await fetch(`${apiBaseUrl}/jobs${toQueryString(request)}`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     ...(options.revalidateSeconds === false
       ? { cache: "no-store" as const }
       : { next: { revalidate: options.revalidateSeconds ?? 5 } })
@@ -962,9 +991,12 @@ export async function getSavedSearchAlertAnalytics(): Promise<SavedSearchAlertAn
   return (await response.json()) as SavedSearchAlertAnalyticsResponse;
 }
 
-export async function listKnowledgeDocuments(request: { limit?: number } = { limit: 24 }): Promise<KnowledgeDocumentListResponse> {
+export async function listKnowledgeDocuments(
+  request: { limit?: number } = { limit: 24 },
+  options: AgencyApiOptions = {}
+): Promise<KnowledgeDocumentListResponse> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents${toQueryString(request)}`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     next: { revalidate: 20 }
   });
 
@@ -1116,9 +1148,9 @@ export async function createPropertyImportUploadUrl(
   return (await response.json()) as CreatePropertyImportUploadResponse;
 }
 
-export async function getCurrentTenant(): Promise<TenantSnapshot> {
+export async function getCurrentTenant(options: AgencyApiOptions = {}): Promise<TenantSnapshot> {
   const response = await fetch(`${apiBaseUrl}/tenants/current`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     next: { revalidate: 30 }
   });
 

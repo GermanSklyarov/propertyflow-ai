@@ -137,7 +137,7 @@ export function AgencyEntryPage() {
   );
 }
 
-export function SignupEntryPage({ signup }: { signup: AgencySignupSummary }) {
+export function SignupEntryPage({ errorMessage, signup }: { errorMessage?: string | null; signup: AgencySignupSummary }) {
   return (
     <main className={styles.page}>
       <section className={styles.signupPanel}>
@@ -159,6 +159,11 @@ export function SignupEntryPage({ signup }: { signup: AgencySignupSummary }) {
           </div>
         </div>
         <form action={submitAgencySignup} className={styles.signupForm}>
+          {errorMessage ? (
+            <div className={styles.signupError} role="alert">
+              {errorMessage}
+            </div>
+          ) : null}
           <input name="plan" type="hidden" value={signup.planId} />
           <label>
             Agency name
