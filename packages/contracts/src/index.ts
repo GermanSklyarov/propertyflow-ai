@@ -146,6 +146,7 @@ export interface ProvisionTenantRequest {
 }
 
 export interface ProvisionTenantResponse {
+  accessToken: string;
   setupUrl: string;
   tenant: TenantSnapshot;
 }

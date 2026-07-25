@@ -170,6 +170,7 @@ describe("TenantService", () => {
   });
 
   it("provisions a new agency workspace from signup intent", async () => {
+    vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
     let capturedInput: Parameters<TenantRepository["provision"]>[0] | undefined;
     const service = new TenantService(
       repository({
@@ -204,6 +205,7 @@ describe("TenantService", () => {
         workEmail: "owner@riviera.example"
       })
     ).resolves.toMatchObject({
+      accessToken: expect.any(String),
       setupUrl: "/setup?plan=starter",
       tenant: {
         branding: {

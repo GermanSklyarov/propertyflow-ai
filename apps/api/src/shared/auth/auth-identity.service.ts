@@ -13,6 +13,25 @@ interface HeaderAwareRequest {
 
 @Injectable()
 export class AuthIdentityService {
+  issueAccessToken(subject: string, expiresInSeconds = 60 * 60 * 8): string {
+    const secret = process.env.PROPERTYFLOW_ACCESS_TOKEN_SECRET;
+
+    if (!secret) {
+      throw new UnauthorizedException("Access token signing is not configured");
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+    const encodedHeader = this.encodeJson({ alg: "HS256", typ: "JWT" });
+    const encodedPayload = this.encodeJson({
+      exp: now + expiresInSeconds,
+      iat: now,
+      sub: subject
+    });
+    const signature = createHmac("sha256", secret).update(`${encodedHeader}.${encodedPayload}`).digest("base64url");
+
+    return `${encodedHeader}.${encodedPayload}.${signature}`;
+  }
+
   getRequestUserId(request: HeaderAwareRequest): string | undefined {
     const authorization = this.readHeader(request, "authorization");
 
@@ -89,6 +108,10 @@ export class AuthIdentityService {
 
   private decodeBase64Url(value: string): Buffer {
     return Buffer.from(value.replace(/-/g, "+").replace(/_/g, "/"), "base64");
+  }
+
+  private encodeJson(value: Record<string, unknown>): string {
+    return Buffer.from(JSON.stringify(value), "utf8").toString("base64url");
   }
 
   private readHeader(request: HeaderAwareRequest, header: string): string | undefined {

@@ -84,25 +84,26 @@ import type {
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
+import { getAgencyAccessToken } from "@shared/lib/tenant-session";
+import { buildAgencyApiHeaders } from "./agency-auth-headers";
 
 const apiBaseUrl =
   process.env.PROPERTYFLOW_API_URL ?? process.env.NEXT_PUBLIC_PROPERTYFLOW_API_URL ?? "http://127.0.0.1:3001";
 
-const demoHeaders = {
-  "x-tenant-id": process.env.PROPERTYFLOW_TENANT_ID ?? "demo-agency",
-  "x-user-id": process.env.PROPERTYFLOW_USER_ID ?? "manager-demo-1",
-  "x-user-role": process.env.PROPERTYFLOW_USER_ROLE ?? "manager"
-};
-
 interface AgencyApiOptions {
+  accessToken?: string;
   tenantId?: string;
 }
 
-function tenantHeaders(options: AgencyApiOptions = {}) {
-  return {
-    ...demoHeaders,
-    ...(options.tenantId ? { "x-tenant-id": options.tenantId } : {})
-  };
+async function agencyApiHeaders(options: AgencyApiOptions = {}) {
+  return buildAgencyApiHeaders({
+    ...options,
+    accessToken: options.accessToken ?? (await getAgencyAccessToken())
+  });
+}
+
+async function tenantHeaders(options: AgencyApiOptions = {}) {
+  return agencyApiHeaders(options);
 }
 
 export async function provisionTenant(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
@@ -123,7 +124,7 @@ export async function provisionTenant(request: ProvisionTenantRequest): Promise<
 
 export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetrics> {
   const response = await fetch(`${apiBaseUrl}/analytics/dashboard`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 30 }
   });
 
@@ -139,7 +140,7 @@ export async function listBackgroundJobs(
   options: { revalidateSeconds?: number | false; tenantId?: string } = {}
 ): Promise<BackgroundJobMonitorResponse> {
   const response = await fetch(`${apiBaseUrl}/jobs${toQueryString(request)}`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     ...(options.revalidateSeconds === false
       ? { cache: "no-store" as const }
       : { next: { revalidate: options.revalidateSeconds ?? 5 } })
@@ -157,7 +158,7 @@ export async function getBackgroundJob(
   options: { revalidateSeconds?: number | false; tenantId?: string } = {}
 ): Promise<BackgroundJobMonitorItem | null> {
   const response = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     ...(options.revalidateSeconds === false
       ? { cache: "no-store" as const }
       : { next: { revalidate: options.revalidateSeconds ?? 5 } })
@@ -179,7 +180,7 @@ export async function searchPropertyProjects(
   options: AgencyApiOptions & { revalidateSeconds?: number | false } = {}
 ): Promise<PropertyProjectSearchResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/projects${toQueryString(request)}`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     ...(options.revalidateSeconds === false
       ? { cache: "no-store" as const }
       : { next: { revalidate: options.revalidateSeconds ?? 10 } })
@@ -197,7 +198,7 @@ export async function getPropertyProject(
   options: AgencyApiOptions = {}
 ): Promise<PropertyProjectSuggestion | null> {
   const response = await fetch(`${apiBaseUrl}/properties/projects/${encodeURIComponent(projectId)}`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     cache: "no-store"
   });
 
@@ -217,7 +218,7 @@ export async function createPropertyProject(request: CreatePropertyProjectReques
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -237,7 +238,7 @@ export async function updatePropertyProjectRecord(
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -254,7 +255,7 @@ export async function searchAmenities(
   options: { revalidateSeconds?: number | false } = {}
 ): Promise<AmenitySuggestionResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/amenities${toQueryString(request)}`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     ...(options.revalidateSeconds === false
       ? { cache: "no-store" as const }
       : { next: { revalidate: options.revalidateSeconds ?? 10 } })
@@ -269,7 +270,7 @@ export async function searchAmenities(
 
 export async function listLeads(request: ListLeadsRequest = { limit: 24 }): Promise<LeadListResponse> {
   const response = await fetch(`${apiBaseUrl}/leads${toQueryString(request)}`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 20 }
   });
 
@@ -284,7 +285,7 @@ export async function getLeadQueueSummary(
   request: ListLeadsRequest = { limit: 24 }
 ): Promise<LeadQueueSummaryResponse> {
   const response = await fetch(`${apiBaseUrl}/leads/queue-summary${toQueryString(request)}`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 20 }
   });
 
@@ -297,7 +298,7 @@ export async function getLeadQueueSummary(
 
 export async function getLead(leadId: string): Promise<LeadSnapshot | null> {
   const response = await fetch(`${apiBaseUrl}/leads?limit=100`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 20 }
   });
 
@@ -312,7 +313,7 @@ export async function getLead(leadId: string): Promise<LeadSnapshot | null> {
 
 export async function getLeadTimeline(leadId: string): Promise<LeadTimelineResponse> {
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/timeline`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 20 }
   });
 
@@ -325,7 +326,7 @@ export async function getLeadTimeline(leadId: string): Promise<LeadTimelineRespo
 
 export async function getLeadNotes(leadId: string): Promise<LeadNotesResponse> {
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/notes`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 20 }
   });
 
@@ -338,7 +339,7 @@ export async function getLeadNotes(leadId: string): Promise<LeadNotesResponse> {
 
 export async function listLeadAgents(): Promise<TenantUserSnapshot[]> {
   const response = await fetch(`${apiBaseUrl}/leads/agents`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 60 }
   });
 
@@ -353,7 +354,7 @@ export async function addLeadNote(leadId: string, payload: CreateLeadNoteRequest
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/notes`, {
     method: "POST",
     headers: {
-      ...demoHeaders,
+      ...(await agencyApiHeaders()),
       "content-type": "application/json"
     },
     body: JSON.stringify(payload)
@@ -370,7 +371,7 @@ export async function updateLeadStatus(leadId: string, payload: UpdateLeadStatus
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/status`, {
     method: "PATCH",
     headers: {
-      ...demoHeaders,
+      ...(await agencyApiHeaders()),
       "content-type": "application/json"
     },
     body: JSON.stringify(payload)
@@ -387,7 +388,7 @@ export async function updateLeadFollowUp(leadId: string, payload: UpdateLeadFoll
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/follow-up`, {
     method: "PATCH",
     headers: {
-      ...demoHeaders,
+      ...(await agencyApiHeaders()),
       "content-type": "application/json"
     },
     body: JSON.stringify(payload)
@@ -404,7 +405,7 @@ export async function assignLead(leadId: string, payload: AssignLeadRequest): Pr
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/assign`, {
     method: "PATCH",
     headers: {
-      ...demoHeaders,
+      ...(await agencyApiHeaders()),
       "content-type": "application/json"
     },
     body: JSON.stringify(payload)
@@ -424,7 +425,7 @@ export async function updateLeadContact(
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/quality-actions/contact`, {
     method: "POST",
     headers: {
-      ...demoHeaders,
+      ...(await agencyApiHeaders()),
       "content-type": "application/json"
     },
     body: JSON.stringify(payload)
@@ -444,7 +445,7 @@ export async function linkLeadProperty(
   const response = await fetch(`${apiBaseUrl}/leads/${leadId}/quality-actions/link-property`, {
     method: "POST",
     headers: {
-      ...demoHeaders,
+      ...(await agencyApiHeaders()),
       "content-type": "application/json"
     },
     body: JSON.stringify(payload)
@@ -463,7 +464,7 @@ export async function listProperties(
 ): Promise<PropertySearchResponse> {
   try {
     const response = await fetch(`${apiBaseUrl}/properties${toQueryString(request)}`, {
-      headers: tenantHeaders(options),
+      headers: await tenantHeaders(options),
       cache: "no-store"
     });
 
@@ -482,7 +483,7 @@ export async function createProperty(request: CreatePropertyRequest): Promise<Pr
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -502,7 +503,7 @@ export async function updatePropertyProject(
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -522,7 +523,7 @@ export async function updatePropertyAmenities(
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -536,7 +537,7 @@ export async function updatePropertyAmenities(
 
 export async function getProperty(propertyId: string, options: AgencyApiOptions = {}): Promise<PropertySnapshot | null> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     next: { revalidate: 20 }
   });
 
@@ -552,7 +553,7 @@ export async function getPropertyImages(
   options: AgencyApiOptions = {}
 ): Promise<PropertyImageGalleryResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     next: { revalidate: 20 }
   });
 
@@ -565,7 +566,7 @@ export async function getPropertyImages(
 
 export async function getPropertyAiAssets(propertyId: string, options: AgencyApiOptions = {}): Promise<PropertyAiAssets> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     next: { revalidate: 20 }
   });
 
@@ -584,7 +585,7 @@ export async function addPropertyImage(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -604,7 +605,7 @@ export async function createPropertyImageUploadUrl(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -624,7 +625,7 @@ export async function confirmPropertyImageUpload(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -642,7 +643,7 @@ export async function previewPropertyImageDelete(
 ): Promise<PropertyImageDeletePreviewResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/${imageId}/delete-preview`, {
     method: "POST",
-    headers: demoHeaders
+    headers: await agencyApiHeaders()
   });
 
   if (!response.ok) {
@@ -661,7 +662,7 @@ export async function deletePropertyImage(
     method: "DELETE",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -676,7 +677,7 @@ export async function deletePropertyImage(
 export async function restorePropertyImage(propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/${imageId}/restore`, {
     method: "POST",
-    headers: demoHeaders
+    headers: await agencyApiHeaders()
   });
 
   if (!response.ok) {
@@ -689,7 +690,7 @@ export async function restorePropertyImage(propertyId: string, imageId: string):
 export async function makePropertyImageCover(propertyId: string, imageId: string): Promise<PropertyImageSnapshot> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images/${imageId}/cover`, {
     method: "PATCH",
-    headers: demoHeaders
+    headers: await agencyApiHeaders()
   });
 
   if (!response.ok) {
@@ -707,7 +708,7 @@ export async function reorderPropertyImages(
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -727,7 +728,7 @@ export async function generatePropertySocialPostDrafts(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -747,7 +748,7 @@ export async function recordPropertySocialPostPublication(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -767,7 +768,7 @@ export async function savePropertySocialPostDraft(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -783,7 +784,7 @@ export async function listPropertySocialPostPublications(
   propertyId: string
 ): Promise<PropertySocialPostPublicationListResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/publications`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 10 }
   });
 
@@ -802,7 +803,7 @@ export async function recordPropertySocialPostReview(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -818,7 +819,7 @@ export async function listPropertySocialPostReviews(
   propertyId: string
 ): Promise<PropertySocialPostReviewListResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/social-posts/reviews`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 10 }
   });
 
@@ -838,7 +839,7 @@ export async function reviewPropertyImageAnalysisAsset(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -859,7 +860,7 @@ export async function updatePropertyImageAnalysisAsset(
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -880,7 +881,7 @@ export async function reviewPropertyDescriptionAsset(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -901,7 +902,7 @@ export async function updatePropertyDescriptionAsset(
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -916,7 +917,7 @@ export async function updatePropertyDescriptionAsset(
 export async function applyPropertyDescriptionAsset(propertyId: string, assetId: string): Promise<PropertySnapshot> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/descriptions/${assetId}/apply`, {
     method: "POST",
-    headers: demoHeaders
+    headers: await agencyApiHeaders()
   });
 
   if (!response.ok) {
@@ -929,7 +930,7 @@ export async function applyPropertyDescriptionAsset(propertyId: string, assetId:
 export async function applyPropertyImageAnalysisAsset(propertyId: string, assetId: string): Promise<PropertySnapshot> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets/image-analysis/${assetId}/apply`, {
     method: "POST",
-    headers: demoHeaders
+    headers: await agencyApiHeaders()
   });
 
   if (!response.ok) {
@@ -947,7 +948,7 @@ export async function runListingAssistant(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });
@@ -961,7 +962,7 @@ export async function runListingAssistant(
 
 export async function listSavedPropertySearches(): Promise<SavedPropertySearchListResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/saved-searches`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 20 }
   });
 
@@ -974,7 +975,7 @@ export async function listSavedPropertySearches(): Promise<SavedPropertySearchLi
 
 export async function listSavedSearchOpportunities(): Promise<SavedSearchOpportunitiesResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/saved-searches/opportunities?limit=12&minScore=35`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 20 }
   });
 
@@ -987,7 +988,7 @@ export async function listSavedSearchOpportunities(): Promise<SavedSearchOpportu
 
 export async function getSavedSearchAlertAnalytics(): Promise<SavedSearchAlertAnalyticsResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/saved-searches/alerts/analytics`, {
-    headers: demoHeaders,
+    headers: await agencyApiHeaders(),
     next: { revalidate: 30 }
   });
 
@@ -1003,7 +1004,7 @@ export async function listKnowledgeDocuments(
   options: AgencyApiOptions = {}
 ): Promise<KnowledgeDocumentListResponse> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents${toQueryString(request)}`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     next: { revalidate: 20 }
   });
 
@@ -1019,7 +1020,7 @@ export async function searchKnowledgeChunks(
   options: AgencyApiOptions = {}
 ): Promise<KnowledgeChunkSearchResponse> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/search${toQueryString(request)}`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     next: { revalidate: 10 }
   });
 
@@ -1035,7 +1036,7 @@ export async function askAiChat(request: AiChatRequest, options: AgencyApiOption
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...tenantHeaders(options)
+      ...(await tenantHeaders(options))
     },
     body: JSON.stringify(request)
   });
@@ -1055,7 +1056,7 @@ export async function embedKnowledgeChunks(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...tenantHeaders(options)
+      ...(await tenantHeaders(options))
     },
     body: JSON.stringify(request)
   });
@@ -1075,7 +1076,7 @@ export async function createKnowledgeDocument(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...tenantHeaders(options)
+      ...(await tenantHeaders(options))
     },
     body: JSON.stringify(request)
   });
@@ -1095,7 +1096,7 @@ export async function createKnowledgeDocumentUploadUrl(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...tenantHeaders(options)
+      ...(await tenantHeaders(options))
     },
     body: JSON.stringify(request)
   });
@@ -1113,7 +1114,7 @@ export async function ingestKnowledgeDocument(
 ): Promise<BackgroundJobSnapshot> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/${documentId}/ingest`, {
     method: "POST",
-    headers: tenantHeaders(options)
+    headers: await tenantHeaders(options)
   });
 
   if (!response.ok) {
@@ -1131,7 +1132,7 @@ export async function enqueuePropertyImport(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...tenantHeaders(options)
+      ...(await tenantHeaders(options))
     },
     body: JSON.stringify({
       name: "properties.import",
@@ -1154,7 +1155,7 @@ export async function createPropertyImportUploadUrl(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...tenantHeaders(options)
+      ...(await tenantHeaders(options))
     },
     body: JSON.stringify(request)
   });
@@ -1168,7 +1169,7 @@ export async function createPropertyImportUploadUrl(
 
 export async function getCurrentTenant(options: AgencyApiOptions = {}): Promise<TenantSnapshot> {
   const response = await fetch(`${apiBaseUrl}/tenants/current`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     next: { revalidate: 30 }
   });
 
@@ -1181,7 +1182,7 @@ export async function getCurrentTenant(options: AgencyApiOptions = {}): Promise<
 
 export async function getTenantUsage(options: AgencyApiOptions = {}): Promise<TenantUsageResponse> {
   const response = await fetch(`${apiBaseUrl}/tenants/current/usage`, {
-    headers: tenantHeaders(options),
+    headers: await tenantHeaders(options),
     next: { revalidate: 30 }
   });
 
@@ -1200,7 +1201,7 @@ export async function updateTenantSettings(
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...tenantHeaders(options)
+      ...(await tenantHeaders(options))
     },
     body: JSON.stringify(request)
   });
@@ -1219,7 +1220,7 @@ export async function verifyWidgetInstall(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...(await agencyApiHeaders())
     },
     body: JSON.stringify(request)
   });

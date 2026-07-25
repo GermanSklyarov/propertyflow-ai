@@ -5,7 +5,11 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { buildPublicLeadCaptureUrl, composeSocialPostText } from "@entities/listing/lib/social-post-copy";
 import type { PropertySocialPostDraft, PropertySocialPostPublication, PropertySocialPostReview } from "@propertyflow/contracts";
-import { recordPropertySocialPostPublication, recordPropertySocialPostReview, savePropertySocialPostDraft } from "@shared/api/agency-client";
+import {
+  recordPropertySocialPostPublicationAction,
+  recordPropertySocialPostReviewAction,
+  savePropertySocialPostDraftAction
+} from "../api/social-post-draft-actions";
 import {
   formatPublicationStatus,
   formatShortDate,
@@ -91,7 +95,7 @@ export function SocialPostDraftCard({
     setPublicationStatus("saving");
 
     try {
-      await recordPropertySocialPostPublication(propertyId, {
+      await recordPropertySocialPostPublicationAction(propertyId, {
         channel: draft.channel,
         locale: draft.locale,
         publishedUrl: nextPublishedUrl.trim() || undefined,
@@ -113,7 +117,7 @@ export function SocialPostDraftCard({
     setReviewActionStatus("saving");
 
     try {
-      await recordPropertySocialPostReview(propertyId, {
+      await recordPropertySocialPostReviewAction(propertyId, {
         channel: draft.channel,
         locale: draft.locale,
         status: nextStage === "approved" ? "approved" : "review_requested",
@@ -131,7 +135,7 @@ export function SocialPostDraftCard({
     setSaveDraftStatus("saving");
 
     try {
-      await savePropertySocialPostDraft(propertyId, {
+      await savePropertySocialPostDraftAction(propertyId, {
         body,
         channel: draft.channel,
         cta,

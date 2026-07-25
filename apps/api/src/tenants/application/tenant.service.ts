@@ -1,4 +1,11 @@
-import { BadRequestException, ConflictException, ForbiddenException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Inject,
+  Injectable,
+  NotFoundException
+} from "@nestjs/common";
 import type {
   ProvisionTenantRequest,
   ProvisionTenantResponse,
@@ -16,11 +23,15 @@ import type {
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
 import { getTenantPlanDefinition } from "@propertyflow/contracts";
+import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
 
 @Injectable()
 export class TenantService {
-  constructor(@Inject(TENANT_REPOSITORY) private readonly tenants: TenantRepository) {}
+  constructor(
+    @Inject(TENANT_REPOSITORY) private readonly tenants: TenantRepository,
+    @Inject(AuthIdentityService) private readonly authIdentity: AuthIdentityService = new AuthIdentityService()
+  ) {}
 
   async provision(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
     const agencyName = normalizeRequiredText(request.agencyName);
@@ -42,17 +53,19 @@ export class TenantService {
       throw new ConflictException("Agency workspace already exists");
     }
 
+    const ownerUserId = process.env.PROPERTYFLOW_BOOTSTRAP_USER_ID ?? process.env.PROPERTYFLOW_USER_ID ?? "manager-demo-1";
     const tenant = await this.tenants.provision({
       name: agencyName,
       ownerEmail: normalizeRequiredText(request.workEmail).toLowerCase(),
       ownerName: "Workspace owner",
-      ownerUserId: process.env.PROPERTYFLOW_BOOTSTRAP_USER_ID ?? process.env.PROPERTYFLOW_USER_ID ?? "manager-demo-1",
+      ownerUserId,
       slug,
       subscriptionPlan,
       website: normalizeOptionalWebsite(request.website)
     });
 
     return {
+      accessToken: this.authIdentity.issueAccessToken(ownerUserId),
       setupUrl: `/setup?plan=${tenant.subscriptionPlan}`,
       tenant
     };

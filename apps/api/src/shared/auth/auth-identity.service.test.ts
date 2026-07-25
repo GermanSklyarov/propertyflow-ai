@@ -26,6 +26,22 @@ describe("AuthIdentityService", () => {
     ).toBe("user-auth-1");
   });
 
+  it("issues a bearer token that resolves to the owner user id", () => {
+    vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-25T09:00:00.000Z"));
+    const service = new AuthIdentityService();
+    const token = service.issueAccessToken("owner-user-1", 900);
+
+    expect(
+      service.getRequestUserId({
+        headers: {
+          authorization: `Bearer ${token}`
+        }
+      })
+    ).toBe("owner-user-1");
+  });
+
   it("rejects bearer tokens with an invalid signature", () => {
     vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
     const service = new AuthIdentityService();
