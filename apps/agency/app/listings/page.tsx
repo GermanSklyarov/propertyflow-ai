@@ -1,6 +1,7 @@
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import type { PropertySearchRequest, PropertySearchSort } from "@propertyflow/contracts";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { ListingsPage } from "@views/listings/ui/listings-page";
 
@@ -22,6 +23,7 @@ export default async function AgencyListingsPage({
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
+  const tenantId = await getSelectedTenantId();
   const page = Math.max(1, Number(query.page ?? 1) || 1);
   const sort = query.sort && listingSorts.includes(query.sort) ? query.sort : "created-desc";
   const projectLink =
@@ -38,9 +40,9 @@ export default async function AgencyListingsPage({
   };
   const coverageRequest: PropertySearchRequest = { limit: 200, sort: "created-desc" };
   const [jobsResult, inventoryResult, coverageResult] = await Promise.allSettled([
-    queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 })),
-    queryClient.ensureQueryData(listingsQueryOptions(inventoryRequest)),
-    queryClient.ensureQueryData(listingsQueryOptions(coverageRequest))
+    queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId)),
+    queryClient.ensureQueryData(listingsQueryOptions(inventoryRequest, tenantId)),
+    queryClient.ensureQueryData(listingsQueryOptions(coverageRequest, tenantId))
   ]);
   const importResult = query.importJob || query.importError ? { error: query.importError, jobId: query.importJob } : undefined;
   const jobs = jobsResult.status === "fulfilled" ? jobsResult.value : { items: [] };

@@ -1,6 +1,11 @@
 import { tenantDashboardQueryOptions } from "@entities/analytics/api/analytics-queries";
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
-import { listingAiAssetsQueryOptions, listingImagesQueryOptions, listingsQueryOptions } from "@entities/listing/api/listing-queries";
+import {
+  listingAiAssetsQueryOptions,
+  listingImagesQueryOptions,
+  listingsQueryOptions
+} from "@entities/listing/api/listing-queries";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { AiToolsPage } from "@views/ai-tools/ui/ai-tools-page";
 
@@ -11,16 +16,17 @@ export default async function AgencyAiToolsPage({
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
+  const tenantId = await getSelectedTenantId();
   const [listings, metrics] = await Promise.all([
-    queryClient.ensureQueryData(listingsQueryOptions()),
+    queryClient.ensureQueryData(listingsQueryOptions(undefined, tenantId)),
     queryClient.ensureQueryData(tenantDashboardQueryOptions())
   ]);
-  const jobs = await queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 8 }));
+  const jobs = await queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 8 }, tenantId));
   const galleries = await Promise.all(
-    listings.items.map((listing) => queryClient.ensureQueryData(listingImagesQueryOptions(listing.id)))
+    listings.items.map((listing) => queryClient.ensureQueryData(listingImagesQueryOptions(listing.id, tenantId)))
   );
   const aiAssets = await Promise.all(
-    listings.items.map((listing) => queryClient.ensureQueryData(listingAiAssetsQueryOptions(listing.id)))
+    listings.items.map((listing) => queryClient.ensureQueryData(listingAiAssetsQueryOptions(listing.id, tenantId)))
   );
 
   return (

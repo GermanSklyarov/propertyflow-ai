@@ -14,16 +14,17 @@ export const queryKeys = {
   },
   listings: {
     all: ["listings"] as const,
-    aiAssets: (propertyId: string) => [...queryKeys.listings.all, "ai-assets", propertyId] as const,
-    detail: (propertyId: string) => [...queryKeys.listings.all, "detail", propertyId] as const,
-    images: (propertyId: string) => [...queryKeys.listings.all, "images", propertyId] as const,
-    list: (filters: object) => [...queryKeys.listings.all, "list", filters] as const,
+    aiAssets: (propertyId: string, tenantId?: string) =>
+      [...queryKeys.listings.all, "ai-assets", propertyId, tenantId] as const,
+    detail: (propertyId: string, tenantId?: string) => [...queryKeys.listings.all, "detail", propertyId, tenantId] as const,
+    images: (propertyId: string, tenantId?: string) => [...queryKeys.listings.all, "images", propertyId, tenantId] as const,
+    list: (filters: object, tenantId?: string) => [...queryKeys.listings.all, "list", filters, tenantId] as const,
     socialPosts: (propertyId: string, filters: object) => [...queryKeys.listings.all, "social-posts", propertyId, filters] as const
   },
   projects: {
     all: ["projects"] as const,
-    detail: (projectId: string) => [...queryKeys.projects.all, "detail", projectId] as const,
-    list: (filters: object) => [...queryKeys.projects.all, "list", filters] as const
+    detail: (projectId: string, tenantId?: string) => [...queryKeys.projects.all, "detail", projectId, tenantId] as const,
+    list: (filters: object, tenantId?: string) => [...queryKeys.projects.all, "list", filters, tenantId] as const
   },
   jobs: {
     all: ["jobs"] as const,

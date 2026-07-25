@@ -13,31 +13,31 @@ import { queryKeys } from "@shared/query/query-keys";
 
 const defaultListingRequest = { limit: 30, sort: "created-desc" } satisfies PropertySearchRequest;
 
-export function listingsQueryOptions(request: PropertySearchRequest = defaultListingRequest) {
+export function listingsQueryOptions(request: PropertySearchRequest = defaultListingRequest, tenantId?: string) {
   return queryOptions({
-    queryKey: queryKeys.listings.list(request),
-    queryFn: () => listProperties(request)
+    queryKey: queryKeys.listings.list(request, tenantId),
+    queryFn: () => listProperties(request, { tenantId })
   });
 }
 
-export function listingDetailQueryOptions(propertyId: string) {
+export function listingDetailQueryOptions(propertyId: string, tenantId?: string) {
   return queryOptions({
-    queryKey: queryKeys.listings.detail(propertyId),
-    queryFn: () => getProperty(propertyId)
+    queryKey: queryKeys.listings.detail(propertyId, tenantId),
+    queryFn: () => getProperty(propertyId, { tenantId })
   });
 }
 
-export function listingImagesQueryOptions(propertyId: string) {
+export function listingImagesQueryOptions(propertyId: string, tenantId?: string) {
   return queryOptions({
-    queryKey: queryKeys.listings.images(propertyId),
-    queryFn: () => getPropertyImages(propertyId)
+    queryKey: queryKeys.listings.images(propertyId, tenantId),
+    queryFn: () => getPropertyImages(propertyId, { tenantId })
   });
 }
 
-export function listingAiAssetsQueryOptions(propertyId: string) {
+export function listingAiAssetsQueryOptions(propertyId: string, tenantId?: string) {
   return queryOptions({
-    queryKey: queryKeys.listings.aiAssets(propertyId),
-    queryFn: () => getPropertyAiAssets(propertyId)
+    queryKey: queryKeys.listings.aiAssets(propertyId, tenantId),
+    queryFn: () => getPropertyAiAssets(propertyId, { tenantId })
   });
 }
 

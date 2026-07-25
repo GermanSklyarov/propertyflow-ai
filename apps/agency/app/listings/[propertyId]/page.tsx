@@ -10,6 +10,7 @@ import {
 } from "@entities/listing/api/listing-queries";
 import { listLeads } from "@shared/api/agency-client";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { ListingDetailPage } from "@views/listing-detail/ui/listing-detail-page";
@@ -31,10 +32,11 @@ export default async function AgencyListingDetailPage({
   const { propertyId } = await params;
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
+  const tenantId = await getSelectedTenantId();
   const [listingResult, galleryResult, aiAssetsResult] = await Promise.allSettled([
-    queryClient.ensureQueryData(listingDetailQueryOptions(propertyId)),
-    queryClient.ensureQueryData(listingImagesQueryOptions(propertyId)),
-    queryClient.ensureQueryData(listingAiAssetsQueryOptions(propertyId))
+    queryClient.ensureQueryData(listingDetailQueryOptions(propertyId, tenantId)),
+    queryClient.ensureQueryData(listingImagesQueryOptions(propertyId, tenantId)),
+    queryClient.ensureQueryData(listingAiAssetsQueryOptions(propertyId, tenantId))
   ]);
 
   if (listingResult.status === "rejected") {

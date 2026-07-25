@@ -176,10 +176,10 @@ export async function getBackgroundJob(
 
 export async function searchPropertyProjects(
   request: PropertyProjectSearchRequest = { limit: 8 },
-  options: { revalidateSeconds?: number | false } = {}
+  options: AgencyApiOptions & { revalidateSeconds?: number | false } = {}
 ): Promise<PropertyProjectSearchResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/projects${toQueryString(request)}`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     ...(options.revalidateSeconds === false
       ? { cache: "no-store" as const }
       : { next: { revalidate: options.revalidateSeconds ?? 10 } })
@@ -192,9 +192,12 @@ export async function searchPropertyProjects(
   return (await response.json()) as PropertyProjectSearchResponse;
 }
 
-export async function getPropertyProject(projectId: string): Promise<PropertyProjectSuggestion | null> {
+export async function getPropertyProject(
+  projectId: string,
+  options: AgencyApiOptions = {}
+): Promise<PropertyProjectSuggestion | null> {
   const response = await fetch(`${apiBaseUrl}/properties/projects/${encodeURIComponent(projectId)}`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     cache: "no-store"
   });
 
@@ -455,11 +458,12 @@ export async function linkLeadProperty(
 }
 
 export async function listProperties(
-  request: PropertySearchRequest = { limit: 30, sort: "created-desc" }
+  request: PropertySearchRequest = { limit: 30, sort: "created-desc" },
+  options: AgencyApiOptions = {}
 ): Promise<PropertySearchResponse> {
   try {
     const response = await fetch(`${apiBaseUrl}/properties${toQueryString(request)}`, {
-      headers: demoHeaders,
+      headers: tenantHeaders(options),
       cache: "no-store"
     });
 
@@ -530,9 +534,9 @@ export async function updatePropertyAmenities(
   return (await response.json()) as PropertySnapshot;
 }
 
-export async function getProperty(propertyId: string): Promise<PropertySnapshot | null> {
+export async function getProperty(propertyId: string, options: AgencyApiOptions = {}): Promise<PropertySnapshot | null> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     next: { revalidate: 20 }
   });
 
@@ -543,9 +547,12 @@ export async function getProperty(propertyId: string): Promise<PropertySnapshot 
   return (await response.json()) as PropertySnapshot;
 }
 
-export async function getPropertyImages(propertyId: string): Promise<PropertyImageGalleryResponse> {
+export async function getPropertyImages(
+  propertyId: string,
+  options: AgencyApiOptions = {}
+): Promise<PropertyImageGalleryResponse> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/images`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     next: { revalidate: 20 }
   });
 
@@ -556,9 +563,9 @@ export async function getPropertyImages(propertyId: string): Promise<PropertyIma
   return (await response.json()) as PropertyImageGalleryResponse;
 }
 
-export async function getPropertyAiAssets(propertyId: string): Promise<PropertyAiAssets> {
+export async function getPropertyAiAssets(propertyId: string, options: AgencyApiOptions = {}): Promise<PropertyAiAssets> {
   const response = await fetch(`${apiBaseUrl}/properties/${propertyId}/ai-assets`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     next: { revalidate: 20 }
   });
 

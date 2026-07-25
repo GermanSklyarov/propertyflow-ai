@@ -5,6 +5,7 @@ import {
   parseLeadPropertyCandidateRequest,
   type LeadPropertyLinkSearchParams
 } from "@features/lead-property-link/model/lead-property-link";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { LeadDetailPage } from "@views/lead-detail/ui/lead-detail-page";
@@ -20,6 +21,7 @@ export default async function AgencyLeadDetailRoute({
   const query = (await searchParams) ?? {};
   const listingCandidateRequest = parseLeadPropertyCandidateRequest(query);
   const queryClient = createPropertyFlowQueryClient();
+  const tenantId = await getSelectedTenantId();
   const [leadResult, timelineResult, notesResult, agentsResult] = await Promise.allSettled([
     queryClient.ensureQueryData(leadDetailQueryOptions(leadId)),
     queryClient.ensureQueryData(leadTimelineQueryOptions(leadId)),
@@ -45,14 +47,14 @@ export default async function AgencyLeadDetailRoute({
   }
 
   const linkedListingResult = lead.propertyId
-    ? await Promise.resolve(queryClient.ensureQueryData(listingDetailQueryOptions(lead.propertyId))).then(
+    ? await Promise.resolve(queryClient.ensureQueryData(listingDetailQueryOptions(lead.propertyId, tenantId))).then(
         (value) => ({ status: "fulfilled" as const, value }),
         (reason) => ({ reason, status: "rejected" as const })
       )
     : null;
   const listingCandidatesResult = lead.propertyId
     ? null
-    : await Promise.resolve(queryClient.ensureQueryData(listingsQueryOptions(listingCandidateRequest))).then(
+    : await Promise.resolve(queryClient.ensureQueryData(listingsQueryOptions(listingCandidateRequest, tenantId))).then(
         (value) => ({ status: "fulfilled" as const, value }),
         (reason) => ({ reason, status: "rejected" as const })
       );
