@@ -19,5 +19,10 @@ export class UserService {
 
     return user;
   }
-}
 
+  async getActiveTenantMember(tenantId: string, userId: string): Promise<TenantUserSnapshot | null> {
+    const user = await this.users.findById(tenantId, userId);
+
+    return user?.status === "active" ? user : null;
+  }
+}

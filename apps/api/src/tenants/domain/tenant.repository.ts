@@ -15,6 +15,9 @@ export type TenantUsageEventType = "public-api.request" | "public-widget.ask";
 
 export interface ProvisionTenantRepositoryInput {
   name: string;
+  ownerEmail: string;
+  ownerName: string;
+  ownerUserId: string;
   slug: string;
   subscriptionPlan: TenantSubscriptionPlan;
   website?: string;

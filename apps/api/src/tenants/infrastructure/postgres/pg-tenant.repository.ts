@@ -181,77 +181,114 @@ export class PgTenantRepository implements TenantRepository {
   async provision(input: ProvisionTenantRepositoryInput): Promise<TenantSnapshot> {
     const now = new Date().toISOString();
     const plan = getTenantPlanDefinition(input.subscriptionPlan);
-    const result = await this.pool.query<TenantRow>(
-      `
-        insert into tenants (
-          id,
-          name,
-          slug,
-          status,
-          primary_market,
-          custom_domain,
-          domain_status,
-          subscription_plan,
-          limits,
-          branding_display_name,
-          branding_primary_color,
-          branding_logo_url,
-          widget_ai_name,
-          widget_ai_names,
-          widget_welcome_message,
-          widget_welcome_messages,
-          widget_persona_genders,
-          widget_allowed_origins,
-          widget_tone,
-          widget_languages,
-          created_at,
-          updated_at
-        ) values (
-          $1,
-          $2,
-          $3,
-          'active',
-          null,
-          null,
-          'not-configured',
-          $4,
-          $5,
-          $6,
-          null,
-          null,
-          $7,
-          $8,
-          $9,
-          $10,
-          $11,
-          $12,
-          $13,
-          $14,
-          $15,
-          $15
-        )
-        returning *
-      `,
-      [
-        randomUUID(),
-        input.name,
-        input.slug,
-        input.subscriptionPlan,
-        plan.limits,
-        input.name,
-        defaultWidgetSettings.aiName,
-        defaultWidgetSettings.aiNames,
-        defaultWidgetSettings.welcomeMessage,
-        defaultWidgetSettings.welcomeMessages,
-        defaultWidgetSettings.personaGenders,
-        input.website ? [input.website] : defaultWidgetSettings.allowedOrigins,
-        defaultWidgetSettings.tone,
-        defaultWidgetSettings.languages,
-        now
-      ]
-    );
+    const tenantId = randomUUID();
+    const client = await this.pool.connect();
 
-    return this.toSnapshot(result.rows[0]);
+    try {
+      await client.query("begin");
+      const result = await client.query<TenantRow>(
+        `
+          insert into tenants (
+            id,
+            name,
+            slug,
+            status,
+            primary_market,
+            custom_domain,
+            domain_status,
+            subscription_plan,
+            limits,
+            branding_display_name,
+            branding_primary_color,
+            branding_logo_url,
+            widget_ai_name,
+            widget_ai_names,
+            widget_welcome_message,
+            widget_welcome_messages,
+            widget_persona_genders,
+            widget_allowed_origins,
+            widget_tone,
+            widget_languages,
+            created_at,
+            updated_at
+          ) values (
+            $1,
+            $2,
+            $3,
+            'active',
+            null,
+            null,
+            'not-configured',
+            $4,
+            $5,
+            $6,
+            null,
+            null,
+            $7,
+            $8,
+            $9,
+            $10,
+            $11,
+            $12,
+            $13,
+            $14,
+            $15,
+            $15
+          )
+          returning *
+        `,
+        [
+          tenantId,
+          input.name,
+          input.slug,
+          input.subscriptionPlan,
+          plan.limits,
+          input.name,
+          defaultWidgetSettings.aiName,
+          defaultWidgetSettings.aiNames,
+          defaultWidgetSettings.welcomeMessage,
+          defaultWidgetSettings.welcomeMessages,
+          defaultWidgetSettings.personaGenders,
+          input.website ? [input.website] : defaultWidgetSettings.allowedOrigins,
+          defaultWidgetSettings.tone,
+          defaultWidgetSettings.languages,
+          now
+        ]
+      );
+
+      await client.query(
+        `
+          insert into tenant_users (
+            id,
+            tenant_id,
+            name,
+            email,
+            role,
+            status,
+            created_at
+          ) values (
+            $1,
+            $2,
+            $3,
+            $4,
+            'manager',
+            'active',
+            $5
+          )
+          on conflict (tenant_id, id) do nothing
+        `,
+        [input.ownerUserId, tenantId, input.ownerName, input.ownerEmail, now]
+      );
+
+      await client.query("commit");
+
+      return this.toSnapshot(result.rows[0]);
+    } catch (error) {
+      await client.query("rollback");
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot | null> {

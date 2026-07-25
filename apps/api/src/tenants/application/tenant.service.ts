@@ -44,6 +44,9 @@ export class TenantService {
 
     const tenant = await this.tenants.provision({
       name: agencyName,
+      ownerEmail: normalizeRequiredText(request.workEmail).toLowerCase(),
+      ownerName: "Workspace owner",
+      ownerUserId: process.env.PROPERTYFLOW_BOOTSTRAP_USER_ID ?? process.env.PROPERTYFLOW_USER_ID ?? "manager-demo-1",
       slug,
       subscriptionPlan,
       website: normalizeOptionalWebsite(request.website)

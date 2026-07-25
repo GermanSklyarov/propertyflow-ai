@@ -218,6 +218,9 @@ describe("TenantService", () => {
     });
     expect(capturedInput).toEqual({
       name: "Riviera Pattaya Realty",
+      ownerEmail: "owner@riviera.example",
+      ownerName: "Workspace owner",
+      ownerUserId: "manager-demo-1",
       slug: "riviera-pattaya-realty",
       subscriptionPlan: "starter",
       website: "https://riviera.example"
