@@ -18,6 +18,21 @@ interface TenantUserRow {
 export class PgUserRepository implements UserRepository {
   constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
 
+  async findByEmail(tenantId: string, email: string): Promise<TenantUserSnapshot | null> {
+    const result = await this.pool.query<TenantUserRow>(
+      `
+        select *
+        from tenant_users
+        where tenant_id = $1
+          and lower(email) = lower($2)
+        limit 1
+      `,
+      [tenantId, email]
+    );
+
+    return result.rows[0] ? this.toSnapshot(result.rows[0]) : null;
+  }
+
   async findById(tenantId: string, userId: string): Promise<TenantUserSnapshot | null> {
     const result = await this.pool.query<TenantUserRow>(
       `
@@ -60,4 +75,3 @@ export class PgUserRepository implements UserRepository {
     };
   }
 }
-

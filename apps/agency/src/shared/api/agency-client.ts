@@ -24,6 +24,8 @@ import type {
   CreateKnowledgeDocumentUploadRequest,
   CreateKnowledgeDocumentUploadResponse,
   CreateKnowledgeDocumentRequest,
+  CreateAgencySessionRequest,
+  CreateAgencySessionResponse,
   CreateLeadNoteRequest,
   CreatePropertyImportUploadRequest,
   CreatePropertyImportUploadResponse,
@@ -120,6 +122,24 @@ export async function provisionTenant(request: ProvisionTenantRequest): Promise<
   }
 
   return (await response.json()) as ProvisionTenantResponse;
+}
+
+export async function createAgencySession(
+  request: CreateAgencySessionRequest
+): Promise<CreateAgencySessionResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/session`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create agency session: ${response.status}`);
+  }
+
+  return (await response.json()) as CreateAgencySessionResponse;
 }
 
 export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetrics> {

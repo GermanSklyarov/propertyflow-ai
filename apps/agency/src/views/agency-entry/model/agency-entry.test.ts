@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   buildAgencyEntryPlanCards,
   buildAgencySignupSummary,
+  parseAgencySigninForm,
   parseAgencySignupForm,
+  resolveAgencySigninError,
   resolveAgencySignupError,
   resolveSignupPlan,
+  toCreateAgencySessionRequest,
   toProvisionTenantRequest
 } from "./agency-entry";
 
@@ -54,5 +57,24 @@ describe("agency entry", () => {
     expect(resolveAgencySignupError("workspace-exists")).toContain("already exists");
     expect(resolveAgencySignupError("provision-failed")).toContain("could not create");
     expect(resolveAgencySignupError("unknown")).toBeNull();
+  });
+
+  it("maps signin form fields into the agency session contract", () => {
+    const form = new FormData();
+    form.set("bootstrapCode", " secret ");
+    form.set("email", " OWNER@Jomtien.Test ");
+    form.set("tenantSlug", " jomtien-homes ");
+
+    expect(toCreateAgencySessionRequest(parseAgencySigninForm(form))).toEqual({
+      bootstrapCode: "secret",
+      tenantSlug: "jomtien-homes",
+      workEmail: "OWNER@Jomtien.Test"
+    });
+  });
+
+  it("renders friendly signin errors from query codes", () => {
+    expect(resolveAgencySigninError("session-forbidden")).toContain("bootstrap code");
+    expect(resolveAgencySigninError("session-failed")).toContain("could not create");
+    expect(resolveAgencySigninError("unknown")).toBeNull();
   });
 });

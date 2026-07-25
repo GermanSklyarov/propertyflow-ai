@@ -1,12 +1,15 @@
-import { BadRequestException, ConflictException, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getTenantPlanDefinition, tenantPlanCatalog } from "@propertyflow/contracts";
-import type { TenantSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import type { TenantSnapshot, TenantUserSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
+import type { UserService } from "../../users/application/user.service.js";
 import type { TenantRepository } from "../domain/tenant.repository.js";
 import { TenantService } from "./tenant.service.js";
 
 describe("TenantService", () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.unstubAllGlobals();
   });
 
@@ -227,6 +230,54 @@ describe("TenantService", () => {
       subscriptionPlan: "starter",
       website: "https://riviera.example"
     });
+  });
+
+  it("creates an agency session for an active workspace member", async () => {
+    vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
+    const member = tenantUser({ email: "owner@demo.example", id: "owner-user-1", tenantId: "tenant-demo" });
+    const service = new TenantService(
+      repository({
+        findBySlug: async () => tenant({ id: "tenant-demo", slug: "demo-agency", subscriptionPlan: "starter" })
+      }),
+      new AuthIdentityService(),
+      userService({
+        getActiveTenantMemberByEmail: async (tenantId, email) => {
+          expect(tenantId).toBe("tenant-demo");
+          expect(email).toBe("owner@demo.example");
+
+          return member;
+        }
+      })
+    );
+
+    await expect(
+      service.createAgencySession({
+        tenantSlug: "demo-agency",
+        workEmail: " OWNER@Demo.Example "
+      })
+    ).resolves.toMatchObject({
+      accessToken: expect.any(String),
+      setupUrl: "/setup?plan=starter",
+      tenant: {
+        id: "tenant-demo"
+      },
+      user: {
+        id: "owner-user-1"
+      }
+    });
+  });
+
+  it("requires the bootstrap code before issuing production agency sessions", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("PROPERTYFLOW_BOOTSTRAP_LOGIN_CODE", "expected-code");
+    const service = new TenantService(repository(), new AuthIdentityService(), userService());
+
+    await expect(
+      service.createAgencySession({
+        tenantSlug: "demo-agency",
+        workEmail: "owner@demo.example"
+      })
+    ).rejects.toBeInstanceOf(ForbiddenException);
   });
 
   it("rejects duplicate provisioning slugs", async () => {
@@ -475,6 +526,29 @@ function repository(overrides: Partial<TenantRepository> = {}): TenantRepository
     provision: async () => tenant(),
     recordUsage: async () => undefined,
     updateSettings: async () => null,
+    ...overrides
+  };
+}
+
+function userService(overrides: Partial<UserService> = {}): UserService {
+  return {
+    getActiveAssignableUser: async () => tenantUser(),
+    getActiveTenantMember: async () => tenantUser(),
+    getActiveTenantMemberByEmail: async () => null,
+    listAgents: async () => [],
+    ...overrides
+  } as UserService;
+}
+
+function tenantUser(overrides: Partial<TenantUserSnapshot> = {}): TenantUserSnapshot {
+  return {
+    createdAt: "2026-07-20T00:00:00.000Z",
+    email: "agent@demo.example",
+    id: "agent-demo-1",
+    name: "Demo Agent",
+    role: "admin",
+    status: "active",
+    tenantId: "demo-agency",
     ...overrides
   };
 }

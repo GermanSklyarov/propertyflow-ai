@@ -151,6 +151,19 @@ export interface ProvisionTenantResponse {
   tenant: TenantSnapshot;
 }
 
+export interface CreateAgencySessionRequest {
+  bootstrapCode?: string;
+  tenantSlug: string;
+  workEmail: string;
+}
+
+export interface CreateAgencySessionResponse {
+  accessToken: string;
+  setupUrl: string;
+  tenant: TenantSnapshot;
+  user: TenantUserSnapshot;
+}
+
 export const supportedTenantWidgetLanguages = ["en", "ru", "th", "zh"] as const;
 
 export type TenantWidgetLanguage = (typeof supportedTenantWidgetLanguages)[number];

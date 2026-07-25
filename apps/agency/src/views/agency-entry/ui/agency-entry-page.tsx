@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Bot, CheckCircle2, DatabaseZap, FileText, Globe2, KeyRound, Sparkles } from "lucide-react";
-import { submitAgencySignup } from "../api/signup-actions";
+import { submitAgencySignin, submitAgencySignup } from "../api/signup-actions";
 import type { AgencySignupSummary } from "../model/agency-entry";
 import { buildAgencyEntryPlanCards } from "../model/agency-entry";
 import styles from "./agency-entry-page.module.css";
@@ -40,6 +40,7 @@ export function AgencyEntryPage() {
           </Link>
           <div>
             <Link href="#pricing">Pricing</Link>
+            <Link href="/signin">Sign in</Link>
             <Link href="/signup?plan=starter" className={styles.navCta}>
               Start Starter
             </Link>
@@ -147,6 +148,9 @@ export function SignupEntryPage({ errorMessage, signup }: { errorMessage?: strin
           <p>
             Capture the agency basics, keep the selected plan attached, and continue into the first-run setup path.
           </p>
+          <p>
+            Already have a workspace? <Link href="/signin">Create a secure agency session</Link>.
+          </p>
           <div className={styles.signupPlanCard}>
             <span>Selected plan</span>
             <strong>{signup.planName}</strong>
@@ -185,6 +189,61 @@ export function SignupEntryPage({ errorMessage, signup }: { errorMessage?: strin
             <span>
               <KeyRound size={16} />
               Account verification and billing attach to this step next.
+            </span>
+          </div>
+        </form>
+      </section>
+    </main>
+  );
+}
+
+export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null }) {
+  return (
+    <main className={styles.page}>
+      <section className={styles.signinPanel}>
+        <div className={styles.signinCopy}>
+          <p className="section-kicker">Agency session</p>
+          <h1>Return to your workspace</h1>
+          <p>
+            Use the workspace slug and agency email to create a secure browser session for the agency dashboard.
+          </p>
+          <div className={styles.signinSecurityCard}>
+            <span>Security model</span>
+            <strong>Bearer access token</strong>
+            <p>Requests use a signed session token instead of trusting tenantId from the browser.</p>
+            <ol>
+              <li>Find the active tenant by slug</li>
+              <li>Match an active agency member by email</li>
+              <li>Issue a short-lived workspace token</li>
+            </ol>
+          </div>
+        </div>
+        <form action={submitAgencySignin} className={styles.signinForm}>
+          {errorMessage ? (
+            <div className={styles.signupError} role="alert">
+              {errorMessage}
+            </div>
+          ) : null}
+          <label>
+            Workspace slug
+            <input name="tenantSlug" placeholder="demo-agency" required />
+          </label>
+          <label>
+            Work email
+            <input name="email" placeholder="owner@agency.co.th" required type="email" />
+          </label>
+          <label>
+            Bootstrap code
+            <input name="bootstrapCode" placeholder="Required in production bootstrap mode" />
+          </label>
+          <div className={styles.signinActions}>
+            <button className={styles.primaryAction} type="submit">
+              Create agency session
+              <ArrowRight size={18} />
+            </button>
+            <span>
+              <KeyRound size={16} />
+              Local development can omit the bootstrap code unless configured.
             </span>
           </div>
         </form>

@@ -1,7 +1,8 @@
 import { Body, Controller, Inject, Post } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { ProvisionTenantResponse } from "@propertyflow/contracts";
+import type { CreateAgencySessionResponse, ProvisionTenantResponse } from "@propertyflow/contracts";
 import { TenantService } from "../../application/tenant.service.js";
+import { CreateAgencySessionDto } from "./create-agency-session.dto.js";
 import { ProvisionTenantDto } from "./provision-tenant.dto.js";
 
 @Controller("tenants")
@@ -14,5 +15,12 @@ export class TenantProvisioningController {
   @ApiCreatedResponse({ description: "Agency tenant workspace was created" })
   provision(@Body() payload: ProvisionTenantDto): Promise<ProvisionTenantResponse> {
     return this.tenants.provision(payload);
+  }
+
+  @Post("session")
+  @ApiOperation({ summary: "Create an agency workspace session after signup or bootstrap login" })
+  @ApiCreatedResponse({ description: "Agency session was created" })
+  createSession(@Body() payload: CreateAgencySessionDto): Promise<CreateAgencySessionResponse> {
+    return this.tenants.createAgencySession(payload);
   }
 }

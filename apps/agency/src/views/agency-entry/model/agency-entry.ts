@@ -1,4 +1,4 @@
-import type { ProvisionTenantRequest } from "@propertyflow/contracts";
+import type { CreateAgencySessionRequest, ProvisionTenantRequest } from "@propertyflow/contracts";
 import { tenantPlanCatalog, type TenantSubscriptionPlan } from "@propertyflow/contracts";
 
 export interface AgencyEntryPlanCard {
@@ -21,10 +21,18 @@ export interface AgencySignupSummary {
 
 export type AgencySignupErrorCode = "workspace-exists" | "provision-failed";
 
+export type AgencySigninErrorCode = "session-forbidden" | "session-failed";
+
 export interface AgencySignupFormValues {
   agencyName: string;
   plan: TenantSubscriptionPlan;
   website?: string;
+  workEmail: string;
+}
+
+export interface AgencySigninFormValues {
+  bootstrapCode?: string;
+  tenantSlug: string;
   workEmail: string;
 }
 
@@ -95,6 +103,22 @@ export function toProvisionTenantRequest(values: AgencySignupFormValues): Provis
   };
 }
 
+export function parseAgencySigninForm(formData: FormData): AgencySigninFormValues {
+  return {
+    bootstrapCode: readOptionalFormValue(formData, "bootstrapCode"),
+    tenantSlug: readRequiredFormValue(formData, "tenantSlug"),
+    workEmail: readRequiredFormValue(formData, "email")
+  };
+}
+
+export function toCreateAgencySessionRequest(values: AgencySigninFormValues): CreateAgencySessionRequest {
+  return {
+    bootstrapCode: values.bootstrapCode,
+    tenantSlug: values.tenantSlug,
+    workEmail: values.workEmail
+  };
+}
+
 export function resolveAgencySignupError(error: string | string[] | undefined): string | null {
   const value = Array.isArray(error) ? error[0] : error;
 
@@ -104,6 +128,20 @@ export function resolveAgencySignupError(error: string | string[] | undefined): 
 
   if (value === "provision-failed") {
     return "We could not create the workspace. Check the details and try again.";
+  }
+
+  return null;
+}
+
+export function resolveAgencySigninError(error: string | string[] | undefined): string | null {
+  const value = Array.isArray(error) ? error[0] : error;
+
+  if (value === "session-forbidden") {
+    return "This workspace requires a bootstrap code before creating an agency session.";
+  }
+
+  if (value === "session-failed") {
+    return "We could not create an agency session. Check the workspace slug, email, and bootstrap code.";
   }
 
   return null;

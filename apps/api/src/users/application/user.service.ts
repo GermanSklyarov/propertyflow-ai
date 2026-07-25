@@ -25,4 +25,10 @@ export class UserService {
 
     return user?.status === "active" ? user : null;
   }
+
+  async getActiveTenantMemberByEmail(tenantId: string, email: string): Promise<TenantUserSnapshot | null> {
+    const user = await this.users.findByEmail(tenantId, email.trim().toLowerCase());
+
+    return user?.status === "active" ? user : null;
+  }
 }

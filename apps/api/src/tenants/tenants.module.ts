@@ -3,6 +3,7 @@ import { AuditModule } from "../audit/audit.module.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantGuard } from "../shared/presentation/tenant.guard.js";
+import { UsersModule } from "../users/users.module.js";
 import { TenantService } from "./application/tenant.service.js";
 import { TENANT_REPOSITORY } from "./domain/tenant.repository.js";
 import { PgTenantRepository } from "./infrastructure/postgres/pg-tenant.repository.js";
@@ -11,7 +12,7 @@ import { PublicWidgetConfigController } from "./presentation/rest/public-widget-
 import { TenantProvisioningController } from "./presentation/rest/tenant-provisioning.controller.js";
 
 @Module({
-  imports: [forwardRef(() => AuditModule), AuthModule, DatabaseModule],
+  imports: [forwardRef(() => AuditModule), AuthModule, DatabaseModule, UsersModule],
   controllers: [CurrentTenantController, PublicWidgetConfigController, TenantProvisioningController],
   providers: [
     TenantService,

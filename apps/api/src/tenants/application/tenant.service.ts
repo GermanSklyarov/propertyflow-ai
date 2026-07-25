@@ -4,9 +4,12 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
-  NotFoundException
+  NotFoundException,
+  Optional
 } from "@nestjs/common";
 import type {
+  CreateAgencySessionRequest,
+  CreateAgencySessionResponse,
   ProvisionTenantRequest,
   ProvisionTenantResponse,
   PublicWidgetConfigResponse,
@@ -24,13 +27,15 @@ import type {
 } from "@propertyflow/contracts";
 import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
+import { UserService } from "../../users/application/user.service.js";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
 
 @Injectable()
 export class TenantService {
   constructor(
     @Inject(TENANT_REPOSITORY) private readonly tenants: TenantRepository,
-    @Inject(AuthIdentityService) private readonly authIdentity: AuthIdentityService = new AuthIdentityService()
+    @Inject(AuthIdentityService) private readonly authIdentity: AuthIdentityService = new AuthIdentityService(),
+    @Optional() @Inject(UserService) private readonly users?: UserService
   ) {}
 
   async provision(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
@@ -68,6 +73,27 @@ export class TenantService {
       accessToken: this.authIdentity.issueAccessToken(ownerUserId),
       setupUrl: `/setup?plan=${tenant.subscriptionPlan}`,
       tenant
+    };
+  }
+
+  async createAgencySession(request: CreateAgencySessionRequest): Promise<CreateAgencySessionResponse> {
+    this.assertBootstrapSessionAllowed(request.bootstrapCode);
+
+    const tenant = await this.getActiveTenantBySlugOrThrow(request.tenantSlug, "Agency workspace not found");
+    const user = await this.users?.getActiveTenantMemberByEmail(
+      tenant.id,
+      normalizeRequiredText(request.workEmail).toLowerCase()
+    );
+
+    if (!user) {
+      throw new NotFoundException("Agency user was not found for this workspace");
+    }
+
+    return {
+      accessToken: this.authIdentity.issueAccessToken(user.id),
+      setupUrl: `/setup?plan=${tenant.subscriptionPlan}`,
+      tenant,
+      user
     };
   }
 
@@ -266,6 +292,20 @@ export class TenantService {
       remaining: Math.max(limit - used, 0),
       utilizationRate: limit > 0 ? Math.round((used / limit) * 10_000) / 100 : 0
     };
+  }
+
+  private assertBootstrapSessionAllowed(bootstrapCode?: string): void {
+    const expectedCode = process.env.PROPERTYFLOW_BOOTSTRAP_LOGIN_CODE;
+
+    if (expectedCode && bootstrapCode === expectedCode) {
+      return;
+    }
+
+    if (!expectedCode && process.env.NODE_ENV !== "production") {
+      return;
+    }
+
+    throw new ForbiddenException("Agency session exchange is not configured");
   }
 }
 

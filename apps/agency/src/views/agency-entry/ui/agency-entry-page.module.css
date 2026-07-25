@@ -423,10 +423,132 @@ button.secondaryAction {
   text-transform: none;
 }
 
+.signinPanel {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.86fr) minmax(360px, 1fr);
+  gap: clamp(24px, 4vw, 56px);
+  align-items: start;
+  max-width: 1180px;
+  margin: 32px auto;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--entry-shadow);
+  padding: clamp(24px, 4vw, 48px);
+}
+
+.signinCopy {
+  min-width: 0;
+}
+
+.signinCopy h1 {
+  margin: 14px 0;
+  max-width: 620px;
+  font-size: clamp(2.7rem, 5vw, 4.9rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.signinCopy p:not(.section-kicker) {
+  max-width: 520px;
+  color: var(--muted);
+  font-size: clamp(1rem, 1.4vw, 1.2rem);
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.signinSecurityCard {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #eef9f6;
+  padding: 18px;
+}
+
+.signinSecurityCard > span {
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.signinSecurityCard strong {
+  color: var(--teal-dark);
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.signinSecurityCard p {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.signinSecurityCard ol {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 22px;
+  color: var(--teal-dark);
+  font-weight: 850;
+}
+
+.signinForm {
+  display: grid;
+  gap: 16px;
+  align-self: start;
+}
+
+.signinForm label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.signinForm input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 16px 18px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  text-transform: none;
+}
+
+.signinActions {
+  display: grid;
+  gap: 12px;
+}
+
+.signinActions span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.signinActions svg {
+  color: var(--teal);
+  flex: 0 0 auto;
+}
+
 @media (max-width: 980px) {
   .heroGrid,
   .planGrid,
-  .signupPanel {
+  .signupPanel,
+  .signinPanel {
     grid-template-columns: 1fr;
   }
 
@@ -462,5 +584,14 @@ button.secondaryAction {
   .pricing,
   .signupPanel {
     margin: 16px;
+  }
+
+  .signinPanel {
+    margin: 16px;
+    padding: 20px 16px;
+  }
+
+  .signinCopy h1 {
+    font-size: 2.8rem;
   }
 }
