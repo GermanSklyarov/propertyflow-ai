@@ -23,6 +23,7 @@ import {
   updatePropertyImageAnalysisAsset,
   updatePropertyProject
 } from "@shared/api/agency-client";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
 import type { PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
 
@@ -192,6 +193,7 @@ export async function updatePropertyAmenitiesAction(propertyId: string, formData
 }
 
 export async function importPropertiesCsvAction(formData: FormData) {
+  const tenantId = await getSelectedTenantId();
   const csvFile = formData.get("listingsCsv");
   const pastedCsv = getOptionalString(formData, "csvText");
   const hasCsvFile = csvFile instanceof File && csvFile.size > 0;
@@ -200,14 +202,16 @@ export async function importPropertiesCsvAction(formData: FormData) {
     redirect("/listings?importError=empty#import-listings");
   }
 
-  const objectUrl = hasCsvFile ? await uploadImportCsv(csvFile) : `data:text/csv;charset=utf-8,${encodeURIComponent(pastedCsv!)}`;
+  const objectUrl = hasCsvFile
+    ? await uploadImportCsv(csvFile, { tenantId })
+    : `data:text/csv;charset=utf-8,${encodeURIComponent(pastedCsv!)}`;
   const job = await enqueuePropertyImport({
     columnMapping: getColumnMapping(formData),
     dryRun: formData.get("dryRun") === "on",
     importMode: getImportMode(formData),
     objectUrl,
     source: "csv"
-  });
+  }, { tenantId });
 
   revalidatePath("/listings");
 
@@ -251,12 +255,12 @@ function isStringRecord(value: unknown): value is Record<string, string> {
   );
 }
 
-async function uploadImportCsv(file: File) {
+async function uploadImportCsv(file: File, options: { tenantId?: string } = {}) {
   const upload = await createPropertyImportUploadUrl({
     filename: file.name,
     mimeType: file.type || "text/csv",
     sizeBytes: file.size
-  });
+  }, options);
 
   const uploadResponse = await fetch(upload.uploadUrl, {
     method: upload.method,

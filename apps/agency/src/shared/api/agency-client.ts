@@ -154,10 +154,10 @@ export async function listBackgroundJobs(
 
 export async function getBackgroundJob(
   jobId: string,
-  options: { revalidateSeconds?: number | false } = {}
+  options: { revalidateSeconds?: number | false; tenantId?: string } = {}
 ): Promise<BackgroundJobMonitorItem | null> {
   const response = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     ...(options.revalidateSeconds === false
       ? { cache: "no-store" as const }
       : { next: { revalidate: options.revalidateSeconds ?? 5 } })
@@ -1117,13 +1117,14 @@ export async function ingestKnowledgeDocument(
 }
 
 export async function enqueuePropertyImport(
-  request: Omit<PropertyImportJobPayload, "tenantId" | "requestedByUserId">
+  request: Omit<PropertyImportJobPayload, "tenantId" | "requestedByUserId">,
+  options: AgencyApiOptions = {}
 ): Promise<BackgroundJobSnapshot> {
   const response = await fetch(`${apiBaseUrl}/jobs`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...tenantHeaders(options)
     },
     body: JSON.stringify({
       name: "properties.import",
@@ -1139,13 +1140,14 @@ export async function enqueuePropertyImport(
 }
 
 export async function createPropertyImportUploadUrl(
-  request: CreatePropertyImportUploadRequest
+  request: CreatePropertyImportUploadRequest,
+  options: AgencyApiOptions = {}
 ): Promise<CreatePropertyImportUploadResponse> {
   const response = await fetch(`${apiBaseUrl}/jobs/imports/upload-url`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...tenantHeaders(options)
     },
     body: JSON.stringify(request)
   });
