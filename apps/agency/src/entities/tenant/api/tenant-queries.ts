@@ -9,9 +9,9 @@ export function currentTenantQueryOptions(tenantId?: string) {
   });
 }
 
-export function tenantUsageQueryOptions() {
+export function tenantUsageQueryOptions(tenantId?: string) {
   return queryOptions({
-    queryKey: queryKeys.tenant.usage(),
-    queryFn: () => getTenantUsage()
+    queryKey: queryKeys.tenant.usage(tenantId),
+    queryFn: () => getTenantUsage({ tenantId })
   });
 }

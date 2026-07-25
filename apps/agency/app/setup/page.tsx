@@ -2,6 +2,7 @@ import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
 import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
 import { getErrorMessage } from "@shared/lib/errors";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { resolveSignupPlan } from "@views/agency-entry/model/agency-entry";
@@ -14,7 +15,7 @@ export default async function AgencyStarterSetupPage({
 }) {
   const { plan, tenant } = await searchParams;
   const requestedPlan = resolveSignupPlan(plan);
-  const tenantId = Array.isArray(tenant) ? tenant[0] : tenant;
+  const tenantId = (Array.isArray(tenant) ? tenant[0] : tenant) ?? (await getSelectedTenantId());
   const queryClient = createPropertyFlowQueryClient();
 
   try {

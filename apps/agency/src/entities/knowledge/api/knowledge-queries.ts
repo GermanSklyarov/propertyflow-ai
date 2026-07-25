@@ -10,9 +10,9 @@ export function knowledgeDocumentsQueryOptions(request: { limit?: number } = { l
   });
 }
 
-export function knowledgeChunkSearchQueryOptions(request: KnowledgeChunkSearchRequest) {
+export function knowledgeChunkSearchQueryOptions(request: KnowledgeChunkSearchRequest, tenantId?: string) {
   return queryOptions({
-    queryKey: queryKeys.knowledge.chunks(request),
-    queryFn: () => searchKnowledgeChunks(request)
+    queryKey: queryKeys.knowledge.chunks(request, tenantId),
+    queryFn: () => searchKnowledgeChunks(request, { tenantId })
   });
 }

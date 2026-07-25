@@ -4,6 +4,7 @@ import { buildKnowledgePageNotice } from "@entities/knowledge/model/knowledge-pa
 import type { AiChatRequest, KnowledgeChunkSearchRequest } from "@propertyflow/contracts";
 import { askAiChat } from "@shared/api/agency-client";
 import { getErrorMessage } from "@shared/lib/errors";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { KnowledgeBasePage } from "@views/knowledge-base/ui/knowledge-base-page";
@@ -25,16 +26,17 @@ export default async function AgencyKnowledgePage({
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
+  const tenantId = await getSelectedTenantId();
   const retrievalRequest = buildRetrievalRequest(query);
   const chatRequest = buildChatRequest(query);
 
   try {
     const [documents, jobs, retrieval] = await Promise.all([
-      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 24 })),
-      queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 })),
-      queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest))
+      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 24 }, tenantId)),
+      queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId)),
+      queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest, tenantId))
     ]);
-    const chat = chatRequest ? await askAiChat(chatRequest) : undefined;
+    const chat = chatRequest ? await askAiChat(chatRequest, { tenantId }) : undefined;
     const knowledgeJobs = jobs.items.filter((job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed");
 
     return (

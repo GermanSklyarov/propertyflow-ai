@@ -1008,10 +1008,11 @@ export async function listKnowledgeDocuments(
 }
 
 export async function searchKnowledgeChunks(
-  request: KnowledgeChunkSearchRequest
+  request: KnowledgeChunkSearchRequest,
+  options: AgencyApiOptions = {}
 ): Promise<KnowledgeChunkSearchResponse> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/search${toQueryString(request)}`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     next: { revalidate: 10 }
   });
 
@@ -1022,12 +1023,12 @@ export async function searchKnowledgeChunks(
   return (await response.json()) as KnowledgeChunkSearchResponse;
 }
 
-export async function askAiChat(request: AiChatRequest): Promise<AiChatResponse> {
+export async function askAiChat(request: AiChatRequest, options: AgencyApiOptions = {}): Promise<AiChatResponse> {
   const response = await fetch(`${apiBaseUrl}/chat`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...tenantHeaders(options)
     },
     body: JSON.stringify(request)
   });
@@ -1040,13 +1041,14 @@ export async function askAiChat(request: AiChatRequest): Promise<AiChatResponse>
 }
 
 export async function embedKnowledgeChunks(
-  request: Omit<KnowledgeChunkEmbeddingJobPayload, "tenantId" | "requestedByUserId">
+  request: Omit<KnowledgeChunkEmbeddingJobPayload, "tenantId" | "requestedByUserId">,
+  options: AgencyApiOptions = {}
 ): Promise<BackgroundJobSnapshot> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/embed`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...tenantHeaders(options)
     },
     body: JSON.stringify(request)
   });
@@ -1058,12 +1060,15 @@ export async function embedKnowledgeChunks(
   return (await response.json()) as BackgroundJobSnapshot;
 }
 
-export async function createKnowledgeDocument(request: CreateKnowledgeDocumentRequest): Promise<KnowledgeDocumentSnapshot> {
+export async function createKnowledgeDocument(
+  request: CreateKnowledgeDocumentRequest,
+  options: AgencyApiOptions = {}
+): Promise<KnowledgeDocumentSnapshot> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...tenantHeaders(options)
     },
     body: JSON.stringify(request)
   });
@@ -1076,13 +1081,14 @@ export async function createKnowledgeDocument(request: CreateKnowledgeDocumentRe
 }
 
 export async function createKnowledgeDocumentUploadUrl(
-  request: CreateKnowledgeDocumentUploadRequest
+  request: CreateKnowledgeDocumentUploadRequest,
+  options: AgencyApiOptions = {}
 ): Promise<CreateKnowledgeDocumentUploadResponse> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/upload-url`, {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...tenantHeaders(options)
     },
     body: JSON.stringify(request)
   });
@@ -1094,10 +1100,13 @@ export async function createKnowledgeDocumentUploadUrl(
   return (await response.json()) as CreateKnowledgeDocumentUploadResponse;
 }
 
-export async function ingestKnowledgeDocument(documentId: string): Promise<BackgroundJobSnapshot> {
+export async function ingestKnowledgeDocument(
+  documentId: string,
+  options: AgencyApiOptions = {}
+): Promise<BackgroundJobSnapshot> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/${documentId}/ingest`, {
     method: "POST",
-    headers: demoHeaders
+    headers: tenantHeaders(options)
   });
 
   if (!response.ok) {
@@ -1161,9 +1170,9 @@ export async function getCurrentTenant(options: AgencyApiOptions = {}): Promise<
   return (await response.json()) as TenantSnapshot;
 }
 
-export async function getTenantUsage(): Promise<TenantUsageResponse> {
+export async function getTenantUsage(options: AgencyApiOptions = {}): Promise<TenantUsageResponse> {
   const response = await fetch(`${apiBaseUrl}/tenants/current/usage`, {
-    headers: demoHeaders,
+    headers: tenantHeaders(options),
     next: { revalidate: 30 }
   });
 
@@ -1174,12 +1183,15 @@ export async function getTenantUsage(): Promise<TenantUsageResponse> {
   return (await response.json()) as TenantUsageResponse;
 }
 
-export async function updateTenantSettings(request: UpdateTenantSettingsRequest): Promise<TenantSnapshot> {
+export async function updateTenantSettings(
+  request: UpdateTenantSettingsRequest,
+  options: AgencyApiOptions = {}
+): Promise<TenantSnapshot> {
   const response = await fetch(`${apiBaseUrl}/tenants/current/settings`, {
     method: "PATCH",
     headers: {
       "content-type": "application/json",
-      ...demoHeaders
+      ...tenantHeaders(options)
     },
     body: JSON.stringify(request)
   });

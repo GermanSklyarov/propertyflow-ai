@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { provisionTenant } from "@shared/api/agency-client";
+import { setSelectedTenantId } from "@shared/lib/tenant-session";
 import { parseAgencySignupForm, toProvisionTenantRequest } from "../model/agency-entry";
 
 export async function submitAgencySignup(formData: FormData) {
@@ -13,5 +14,7 @@ export async function submitAgencySignup(formData: FormData) {
     redirect(`/signup?plan=${values.plan}&error=${code}`);
   });
 
-  redirect(`/setup?plan=${provisioned.tenant.subscriptionPlan}&tenant=${provisioned.tenant.id}`);
+  await setSelectedTenantId(provisioned.tenant.id);
+
+  redirect(`/setup?plan=${provisioned.tenant.subscriptionPlan}`);
 }

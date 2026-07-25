@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { TenantWidgetLanguage, TenantWidgetTone } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { updateTenantSettings } from "@shared/api/agency-client";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const widgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
@@ -26,25 +27,28 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const welcomeMessages = getWelcomeMessages(formData);
   const welcomeMessage = welcomeMessages.en;
 
-  await updateTenantSettings({
-    ...(primaryMarket ? { primaryMarket } : {}),
-    ...(customDomain ? { customDomain } : {}),
-    branding: {
-      ...(displayName ? { displayName } : {}),
-      ...(primaryColor ? { primaryColor } : {}),
-      ...(logoUrl ? { logoUrl } : {})
+  await updateTenantSettings(
+    {
+      ...(primaryMarket ? { primaryMarket } : {}),
+      ...(customDomain ? { customDomain } : {}),
+      branding: {
+        ...(displayName ? { displayName } : {}),
+        ...(primaryColor ? { primaryColor } : {}),
+        ...(logoUrl ? { logoUrl } : {})
+      },
+      widget: {
+        ...(aiName ? { aiName } : {}),
+        ...(Object.keys(aiNames).length ? { aiNames } : {}),
+        ...(allowedOrigins ? { allowedOrigins } : {}),
+        ...(languages.length ? { languages } : {}),
+        ...(Object.keys(personaGenders).length ? { personaGenders } : {}),
+        ...(tone ? { tone } : {}),
+        ...(welcomeMessage ? { welcomeMessage } : {}),
+        ...(Object.keys(welcomeMessages).length ? { welcomeMessages } : {})
+      }
     },
-    widget: {
-      ...(aiName ? { aiName } : {}),
-      ...(Object.keys(aiNames).length ? { aiNames } : {}),
-      ...(allowedOrigins ? { allowedOrigins } : {}),
-      ...(languages.length ? { languages } : {}),
-      ...(Object.keys(personaGenders).length ? { personaGenders } : {}),
-      ...(tone ? { tone } : {}),
-      ...(welcomeMessage ? { welcomeMessage } : {}),
-      ...(Object.keys(welcomeMessages).length ? { welcomeMessages } : {})
-    }
-  });
+    { tenantId: await getSelectedTenantId() }
+  );
 
   revalidatePath("/settings");
   redirect("/settings?updated=tenant-settings#tenant-settings-form");

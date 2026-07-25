@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentTenant } from "@shared/api/agency-client";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { AgencyShell } from "@widgets/agency-shell/ui/agency-shell";
 import "@shared/styles/globals.css";
 
@@ -9,7 +10,8 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const tenant = await getCurrentTenant().catch(() => null);
+  const tenantId = await getSelectedTenantId();
+  const tenant = await getCurrentTenant({ tenantId }).catch(() => null);
 
   return (
     <html lang="en">

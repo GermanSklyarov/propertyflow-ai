@@ -31,7 +31,7 @@ export const queryKeys = {
   },
   knowledge: {
     all: ["knowledge"] as const,
-    chunks: (filters: object) => [...queryKeys.knowledge.all, "chunks", filters] as const,
+    chunks: (filters: object, tenantId?: string) => [...queryKeys.knowledge.all, "chunks", filters, tenantId] as const,
     list: (filters: object, tenantId?: string) => [...queryKeys.knowledge.all, "list", filters, tenantId] as const
   },
   savedSearches: {
@@ -43,6 +43,6 @@ export const queryKeys = {
   tenant: {
     all: ["tenant"] as const,
     current: (tenantId?: string) => [...queryKeys.tenant.all, "current", tenantId] as const,
-    usage: () => [...queryKeys.tenant.all, "usage"] as const
+    usage: (tenantId?: string) => [...queryKeys.tenant.all, "usage", tenantId] as const
   }
 };

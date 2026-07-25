@@ -9,15 +9,17 @@ import {
   embedKnowledgeChunks,
   ingestKnowledgeDocument
 } from "@shared/api/agency-client";
+import { getSelectedTenantId } from "@shared/lib/tenant-session";
 import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
 import { buildKnowledgeSourceTags, resolveKnowledgeSourceKind } from "../model/knowledge-source-presets";
 
 export async function createKnowledgeDocumentAction(formData: FormData) {
+  const tenantId = await getSelectedTenantId();
   const title = String(formData.get("title") ?? "").trim();
   const typedBody = String(formData.get("body") ?? "").trim();
   const sourceUrl = String(formData.get("sourceUrl") ?? "").trim();
   const sourceFile = getSourceFile(formData.get("sourceFile"));
-  const sourceUpload = sourceFile ? await uploadKnowledgeSourceFile(sourceFile) : undefined;
+  const sourceUpload = sourceFile ? await uploadKnowledgeSourceFile(sourceFile, { tenantId }) : undefined;
   const body = await resolveKnowledgeDocumentBody(typedBody, sourceFile, { sourceUpload, sourceUrl });
   const locale = String(formData.get("locale") ?? "en") as CreateKnowledgeDocumentRequest["locale"];
   const fallbackKind = String(formData.get("kind") ?? "article") as CreateKnowledgeDocumentRequest["kind"];
@@ -41,8 +43,8 @@ export async function createKnowledgeDocumentAction(formData: FormData) {
     locale,
     tags,
     title
-  });
-  await ingestKnowledgeDocument(document.id);
+  }, { tenantId });
+  await ingestKnowledgeDocument(document.id, { tenantId });
 
   revalidatePath("/knowledge");
 
@@ -59,12 +61,12 @@ function getSourceFile(value: FormDataEntryValue | null): File | null {
   return typeof File !== "undefined" && value instanceof File && value.size > 0 ? value : null;
 }
 
-async function uploadKnowledgeSourceFile(file: File) {
+async function uploadKnowledgeSourceFile(file: File, options: { tenantId?: string } = {}) {
   const upload = await createKnowledgeDocumentUploadUrl({
     filename: file.name,
     mimeType: file.type || "application/octet-stream",
     sizeBytes: file.size
-  });
+  }, options);
 
   const uploadResponse = await fetch(upload.uploadUrl, {
     method: upload.method,
@@ -83,7 +85,9 @@ async function uploadKnowledgeSourceFile(file: File) {
 }
 
 export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumentSnapshot["id"], title: string) {
-  await ingestKnowledgeDocument(documentId);
+  const tenantId = await getSelectedTenantId();
+
+  await ingestKnowledgeDocument(documentId, { tenantId });
 
   revalidatePath("/knowledge");
 
@@ -91,6 +95,7 @@ export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumen
 }
 
 export async function embedKnowledgeChunksAction(formData: FormData) {
+  const tenantId = await getSelectedTenantId();
   const query = String(formData.get("q") ?? "").trim();
   const locale = String(formData.get("locale") ?? "").trim();
   const kind = String(formData.get("kind") ?? "").trim();
@@ -100,7 +105,7 @@ export async function embedKnowledgeChunksAction(formData: FormData) {
     limit: 100,
     model: "local-hash-16",
     provider: "local-hash"
-  });
+  }, { tenantId });
 
   revalidatePath("/knowledge");
 
