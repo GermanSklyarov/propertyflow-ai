@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   agencyAccessTokenCookie,
   agencyRefreshTokenCookie,
+  isAgencyAuthEntryPath,
   isAgencyApiPath,
   isAccessTokenFresh,
   isAgencyEntryPath,
@@ -16,13 +17,31 @@ const apiBaseUrl =
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (shouldSkipAgencySessionMiddleware(pathname) || isAgencyEntryPath(pathname)) {
+  if (shouldSkipAgencySessionMiddleware(pathname)) {
     return NextResponse.next();
   }
 
   const accessToken = request.cookies.get(agencyAccessTokenCookie)?.value;
   const refreshToken = request.cookies.get(agencyRefreshTokenCookie)?.value;
   const tenantId = request.cookies.get(selectedTenantCookie)?.value;
+
+  if (isAgencyAuthEntryPath(pathname)) {
+    if (isAccessTokenFresh(accessToken)) {
+      return NextResponse.redirect(new URL("/setup", request.url));
+    }
+
+    if (!refreshToken || !tenantId) {
+      return NextResponse.next();
+    }
+
+    const refreshed = await refreshAgencySession(refreshToken, tenantId).catch(() => null);
+
+    return refreshed ? applyRefreshedSession(request, refreshed, NextResponse.redirect(new URL("/setup", request.url))) : NextResponse.next();
+  }
+
+  if (isAgencyEntryPath(pathname)) {
+    return NextResponse.next();
+  }
 
   if (!refreshToken || !tenantId) {
     return rejectAgencySession(request, "session-required");
@@ -38,22 +57,28 @@ export async function middleware(request: NextRequest) {
     return rejectAgencySession(request, "session-expired");
   }
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(
-    "cookie",
-    mergeCookieHeader(request.headers.get("cookie"), {
-      [agencyAccessTokenCookie]: refreshed.accessToken,
-      [agencyRefreshTokenCookie]: refreshed.refreshToken,
-      [selectedTenantCookie]: refreshed.tenant.id
-    })
-  );
+  return applyRefreshedSession(request, refreshed);
+}
 
-  const response = NextResponse.next({
-    request: {
-      headers: requestHeaders
-    }
-  });
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
+};
 
+interface RefreshAgencySessionPayload {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
+  tenant: {
+    id: string;
+  };
+}
+
+function applyRefreshedSession(
+  request: NextRequest,
+  refreshed: RefreshAgencySessionPayload,
+  response = createNextResponseWithRefreshedRequest(request, refreshed)
+) {
   response.cookies.set(agencyAccessTokenCookie, refreshed.accessToken, {
     expires: new Date(refreshed.accessTokenExpiresAt),
     httpOnly: true,
@@ -79,18 +104,22 @@ export async function middleware(request: NextRequest) {
   return response;
 }
 
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"]
-};
+function createNextResponseWithRefreshedRequest(request: NextRequest, refreshed: RefreshAgencySessionPayload) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(
+    "cookie",
+    mergeCookieHeader(request.headers.get("cookie"), {
+      [agencyAccessTokenCookie]: refreshed.accessToken,
+      [agencyRefreshTokenCookie]: refreshed.refreshToken,
+      [selectedTenantCookie]: refreshed.tenant.id
+    })
+  );
 
-interface RefreshAgencySessionPayload {
-  accessToken: string;
-  accessTokenExpiresAt: string;
-  refreshToken: string;
-  refreshTokenExpiresAt: string;
-  tenant: {
-    id: string;
-  };
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders
+    }
+  });
 }
 
 async function refreshAgencySession(refreshToken: string, tenantId: string): Promise<RefreshAgencySessionPayload> {

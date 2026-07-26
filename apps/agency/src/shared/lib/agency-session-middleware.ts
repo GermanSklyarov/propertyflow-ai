@@ -8,6 +8,10 @@ export function isAgencyEntryPath(pathname: string): boolean {
   return pathname === "/" || pathname.startsWith("/signin") || pathname.startsWith("/signup");
 }
 
+export function isAgencyAuthEntryPath(pathname: string): boolean {
+  return pathname.startsWith("/signin") || pathname.startsWith("/signup");
+}
+
 export function isAgencyApiPath(pathname: string): boolean {
   return pathname.startsWith("/api/");
 }

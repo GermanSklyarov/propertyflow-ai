@@ -3,6 +3,7 @@ import {
   agencyAccessTokenCookie,
   agencyRefreshTokenCookie,
   isAgencyApiPath,
+  isAgencyAuthEntryPath,
   isAccessTokenFresh,
   isAgencyEntryPath,
   mergeCookieHeader,
@@ -16,6 +17,9 @@ describe("agency session middleware helpers", () => {
     expect(isAgencyEntryPath("/signin")).toBe(true);
     expect(isAgencyEntryPath("/signup?plan=starter")).toBe(true);
     expect(isAgencyEntryPath("/settings")).toBe(false);
+    expect(isAgencyAuthEntryPath("/")).toBe(false);
+    expect(isAgencyAuthEntryPath("/signin")).toBe(true);
+    expect(isAgencyAuthEntryPath("/signup?plan=starter")).toBe(true);
     expect(isAgencyApiPath("/api/property-projects")).toBe(true);
     expect(isAgencyApiPath("/settings")).toBe(false);
     expect(shouldSkipAgencySessionMiddleware("/_next/static/app.js")).toBe(true);
