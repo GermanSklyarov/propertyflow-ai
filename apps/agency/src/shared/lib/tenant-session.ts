@@ -1,9 +1,10 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-
-const selectedTenantCookie = "propertyflow-agency-tenant";
-const agencyAccessTokenCookie = "propertyflow-agency-access-token";
-const agencyRefreshTokenCookie = "propertyflow-agency-refresh-token";
+import {
+  agencyAccessTokenCookie,
+  agencyRefreshTokenCookie,
+  selectedTenantCookie
+} from "./agency-session-middleware";
 
 export interface AgencySession {
   accessToken: string;

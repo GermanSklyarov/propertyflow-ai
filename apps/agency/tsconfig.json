@@ -52,6 +52,7 @@
   },
   "include": [
     "next-env.d.ts",
+    "middleware.ts",
     "next.config.mjs",
     "app/**/*.ts",
     "app/**/*.tsx",
