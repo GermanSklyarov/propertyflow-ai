@@ -28,6 +28,8 @@ import type {
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
+import { TenantPlans } from "../../../shared/auth/tenant-plan.decorator.js";
+import { TenantPlanGuard } from "../../../shared/auth/tenant-plan.guard.js";
 import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
@@ -50,7 +52,8 @@ import { UpdateLeadStatusDto } from "./update-lead-status.dto.js";
 @ApiHeader({ name: "x-user-id", required: true })
 @ApiHeader({ name: "x-user-role", required: true })
 @Controller("leads")
-@UseGuards(TenantGuard, UserContextGuard, RolesGuard)
+@TenantPlans("growth", "enterprise")
+@UseGuards(TenantGuard, UserContextGuard, TenantPlanGuard, RolesGuard)
 export class LeadsController {
   constructor(
     @Inject(LeadService) private readonly leads: LeadService,

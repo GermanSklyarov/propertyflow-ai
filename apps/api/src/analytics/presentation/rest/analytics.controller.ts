@@ -5,6 +5,8 @@ import { RealtimePublisherService } from "../../../realtime/application/realtime
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
+import { TenantPlans } from "../../../shared/auth/tenant-plan.decorator.js";
+import { TenantPlanGuard } from "../../../shared/auth/tenant-plan.guard.js";
 import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
@@ -26,7 +28,8 @@ const countByBucketItemSchema = {
 @ApiHeader({ name: "x-user-id", required: true })
 @ApiHeader({ name: "x-user-role", required: true })
 @Controller("analytics")
-@UseGuards(TenantGuard, UserContextGuard, RolesGuard)
+@TenantPlans("growth", "enterprise")
+@UseGuards(TenantGuard, UserContextGuard, TenantPlanGuard, RolesGuard)
 export class AnalyticsController {
   constructor(
     @Inject(AnalyticsService) private readonly analytics: AnalyticsService,
