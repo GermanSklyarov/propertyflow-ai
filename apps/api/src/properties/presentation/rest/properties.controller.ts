@@ -61,6 +61,8 @@ import { SearchObservabilityService } from "../../../search-observability/applic
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
 import { RolesGuard } from "../../../shared/auth/roles.guard.js";
+import { TenantPlans } from "../../../shared/auth/tenant-plan.decorator.js";
+import { TenantPlanGuard } from "../../../shared/auth/tenant-plan.guard.js";
 import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
@@ -125,7 +127,7 @@ import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/prope
 @ApiHeader({ name: "x-tenant-id", required: true })
 @ApiHeader({ name: "x-user-id", required: false })
 @ApiHeader({ name: "x-user-role", required: false })
-@UseGuards(TenantGuard, UserContextGuard, RolesGuard)
+@UseGuards(TenantGuard, UserContextGuard, TenantPlanGuard, RolesGuard)
 export class PropertiesController {
   constructor(
     @Inject(CommandBus)
@@ -364,6 +366,7 @@ export class PropertiesController {
   }
 
   @Post("saved-searches")
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async createSavedSearch(
     @TenantId() tenantId: string,
@@ -391,6 +394,7 @@ export class PropertiesController {
   }
 
   @Get("saved-searches")
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   listSavedSearches(
     @TenantId() tenantId: string,
@@ -434,6 +438,7 @@ export class PropertiesController {
       ]
     }
   })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchLeadFunnel(
     @TenantId() tenantId: string,
@@ -497,6 +502,7 @@ export class PropertiesController {
       required: ["items", "total", "summary", "generatedAt"]
     }
   })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async listSavedSearchOpportunities(
     @TenantId() tenantId: string,
@@ -525,6 +531,7 @@ export class PropertiesController {
 
   @Get("saved-searches/alerts")
   @ApiOperation({ summary: "Return enabled saved-search alerts with current recommendations" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async listSavedSearchAlerts(
     @TenantId() tenantId: string,
@@ -548,6 +555,7 @@ export class PropertiesController {
 
   @Get("saved-searches/alerts/analytics")
   @ApiOperation({ summary: "Return saved-search alert dashboard analytics" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchAlertAnalytics(
     @TenantId() tenantId: string,
@@ -572,6 +580,7 @@ export class PropertiesController {
 
   @Get("saved-searches/alerts/runs")
   @ApiOperation({ summary: "List saved-search alert digest runs" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async listSavedSearchAlertRuns(
     @TenantId() tenantId: string,
@@ -596,6 +605,7 @@ export class PropertiesController {
 
   @Get("saved-searches/alerts/runs/:runId")
   @ApiOperation({ summary: "Get one saved-search alert digest run" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchAlertRun(
     @TenantId() tenantId: string,
@@ -622,6 +632,7 @@ export class PropertiesController {
 
   @Post("saved-searches/alerts/digest-job")
   @ApiOperation({ summary: "Enqueue a saved-search alert digest job for the current user" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async createSavedSearchAlertDigestJob(
     @TenantId() tenantId: string,
@@ -655,6 +666,7 @@ export class PropertiesController {
   }
 
   @Get("saved-searches/:searchId")
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearch(
     @TenantId() tenantId: string,
@@ -680,6 +692,7 @@ export class PropertiesController {
 
   @Get("saved-searches/:searchId/matches")
   @ApiOperation({ summary: "Return current property matches for a saved search" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchMatches(
     @TenantId() tenantId: string,
@@ -716,6 +729,7 @@ export class PropertiesController {
 
   @Get("saved-searches/:searchId/recommendations")
   @ApiOperation({ summary: "Rank saved search matches with reasons and tradeoffs" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchRecommendations(
     @TenantId() tenantId: string,
@@ -752,6 +766,7 @@ export class PropertiesController {
 
   @Patch("saved-searches/:searchId/notifications")
   @ApiOperation({ summary: "Enable or disable notifications for a saved search" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async updateSavedSearchNotifications(
     @TenantId() tenantId: string,
@@ -783,6 +798,7 @@ export class PropertiesController {
 
   @Post("saved-searches/:searchId/lead")
   @ApiOperation({ summary: "Create a CRM lead from a saved search" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async createLeadFromSavedSearch(
     @TenantId() tenantId: string,
@@ -834,6 +850,7 @@ export class PropertiesController {
 
   @Get("saved-searches/:searchId/leads/analytics")
   @ApiOperation({ summary: "Return lead conversion analytics for a saved search" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchLeadAnalytics(
     @TenantId() tenantId: string,
@@ -860,6 +877,7 @@ export class PropertiesController {
 
   @Get("saved-searches/:searchId/leads")
   @ApiOperation({ summary: "List CRM leads attributed to a saved search" })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async listSavedSearchLeads(
     @TenantId() tenantId: string,
@@ -942,6 +960,7 @@ export class PropertiesController {
       ]
     }
   })
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async getSavedSearchLeadCoverage(
     @TenantId() tenantId: string,
@@ -975,6 +994,7 @@ export class PropertiesController {
   }
 
   @Delete("saved-searches/:searchId")
+  @TenantPlans("growth", "enterprise")
   @Roles("agent", "broker", "manager", "admin")
   async deleteSavedSearch(
     @TenantId() tenantId: string,
