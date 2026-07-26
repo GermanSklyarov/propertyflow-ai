@@ -61,6 +61,20 @@ export async function setAgencySession(session: SetAgencySessionInput) {
   await setSelectedTenantId(session.tenantId);
 }
 
+export async function clearAgencySession() {
+  const cookieStore = await cookies();
+  const options = {
+    httpOnly: true,
+    sameSite: "lax" as const,
+    path: "/",
+    secure: process.env.NODE_ENV === "production"
+  };
+
+  cookieStore.set(agencyAccessTokenCookie, "", { ...options, maxAge: 0 });
+  cookieStore.set(agencyRefreshTokenCookie, "", { ...options, maxAge: 0 });
+  cookieStore.set(selectedTenantCookie, "", { ...options, maxAge: 0 });
+}
+
 export async function setSelectedTenantId(tenantId: string) {
   (await cookies()).set(selectedTenantCookie, tenantId, {
     httpOnly: true,

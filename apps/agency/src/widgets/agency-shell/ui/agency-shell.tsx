@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Bell,
   DatabaseZap,
+  LogOut,
   Search,
 } from "lucide-react";
 import type { TenantSubscriptionPlan } from "@propertyflow/contracts";
@@ -13,17 +14,20 @@ import {
   getAgencyTopbarQuickLinks,
   isAgencyNavigationItemActive
 } from "@shared/navigation/agency-navigation";
+import { submitAgencyLogout } from "../api/session-actions";
 import styles from "./agency-shell.module.css";
 
 export function AgencyShell({
   children,
+  isAuthenticated = false,
   subscriptionPlan = "starter"
 }: {
   children: React.ReactNode;
+  isAuthenticated?: boolean;
   subscriptionPlan?: TenantSubscriptionPlan;
 }) {
   const pathname = usePathname();
-  const isEntryRoute = pathname === "/" || pathname.startsWith("/signup");
+  const isEntryRoute = pathname === "/" || pathname.startsWith("/signup") || pathname.startsWith("/signin");
   const navigationItems = getAgencyNavigationItems(subscriptionPlan);
   const quickLinks = getAgencyTopbarQuickLinks(subscriptionPlan);
   const planLabel = subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1);
@@ -109,6 +113,13 @@ export function AgencyShell({
                   <Bell size={16} />7 follow-ups
                 </span>
               )}
+              {isAuthenticated ? (
+                <form action={submitAgencyLogout}>
+                  <button aria-label="Logout" className={styles.logoutButton} title="Logout" type="submit">
+                    <LogOut size={16} />
+                  </button>
+                </form>
+              ) : null}
             </div>
           </header>
           {children}

@@ -19,7 +19,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return (
     <html className="notranslate" lang="en" translate="no">
       <body suppressHydrationWarning translate="no">
-        <AgencyShell subscriptionPlan={tenant?.subscriptionPlan}>{children}</AgencyShell>
+        <AgencyShell isAuthenticated={Boolean(session)} subscriptionPlan={tenant?.subscriptionPlan}>
+          {children}
+        </AgencyShell>
       </body>
     </html>
   );
