@@ -10,7 +10,7 @@ export function PageLoadState({
   kicker: string;
   message: string;
   title: string;
-  variant?: "error" | "loading";
+  variant?: "error" | "loading" | "notice";
 }) {
   return (
     <main className={styles.page}>

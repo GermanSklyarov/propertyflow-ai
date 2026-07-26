@@ -1,4 +1,4 @@
-import { AlertTriangle, LoaderCircle } from "lucide-react";
+import { AlertTriangle, Info, LoaderCircle } from "lucide-react";
 import type { ReactNode } from "react";
 import styles from "./load-state.module.css";
 
@@ -13,11 +13,18 @@ export function LoadState({
   kicker: string;
   message: string;
   title: string;
-  variant?: "error" | "loading";
+  variant?: "error" | "loading" | "notice";
 }) {
   return (
     <div className={`${styles.state} ${styles[variant]}`}>
-      {icon ?? (variant === "loading" ? <LoaderCircle size={20} /> : <AlertTriangle size={20} />)}
+      {icon ??
+        (variant === "loading" ? (
+          <LoaderCircle size={20} />
+        ) : variant === "notice" ? (
+          <Info size={20} />
+        ) : (
+          <AlertTriangle size={20} />
+        ))}
       <div className={styles.body}>
         <p className="section-kicker">{kicker}</p>
         <h2>{title}</h2>

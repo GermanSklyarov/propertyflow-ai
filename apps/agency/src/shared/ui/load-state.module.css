@@ -23,6 +23,11 @@
   background: #edf8f4;
 }
 
+.notice {
+  border-color: rgb(15 118 110 / 22%);
+  background: #f2faf7;
+}
+
 .body {
   display: grid;
   min-width: 0;

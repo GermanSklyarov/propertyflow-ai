@@ -5,8 +5,11 @@ import {
   listingImagesQueryOptions,
   listingsQueryOptions
 } from "@entities/listing/api/listing-queries";
+import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
+import { buildPlanAccessMessage, canAccessTenantPlan, crmTenantPlans } from "@shared/lib/tenant-plan-access";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
+import { PageLoadState } from "@shared/ui/page-load-state";
 import { AiToolsPage } from "@views/ai-tools/ui/ai-tools-page";
 
 export default async function AgencyAiToolsPage({
@@ -17,6 +20,19 @@ export default async function AgencyAiToolsPage({
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
   const { tenantId } = await requireAgencySession();
+  const tenant = await queryClient.ensureQueryData(currentTenantQueryOptions(tenantId));
+
+  if (!canAccessTenantPlan(tenant.subscriptionPlan, crmTenantPlans)) {
+    return (
+      <PageLoadState
+        kicker="Growth feature"
+        message={buildPlanAccessMessage("AI tools")}
+        title="Upgrade to unlock CRM automation"
+        variant="notice"
+      />
+    );
+  }
+
   const [listings, metrics] = await Promise.all([
     queryClient.ensureQueryData(listingsQueryOptions(undefined, tenantId)),
     queryClient.ensureQueryData(tenantDashboardQueryOptions())
