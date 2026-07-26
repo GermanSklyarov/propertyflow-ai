@@ -64,6 +64,20 @@ export class PgAgencyRefreshTokenRepository implements AgencyRefreshTokenReposit
     return result.rows[0] ? toRecord(result.rows[0]) : null;
   }
 
+  async revoke(currentTokenId: string, revokedAt: Date): Promise<boolean> {
+    const result = await this.pool.query(
+      `
+        update agency_refresh_tokens
+        set revoked_at = $1
+        where id = $2
+          and revoked_at is null
+      `,
+      [revokedAt, currentTokenId]
+    );
+
+    return Boolean(result.rowCount);
+  }
+
   async rotate(currentTokenId: string, input: CreateAgencyRefreshTokenInput): Promise<AgencyRefreshTokenRecord | null> {
     const client = await this.pool.connect();
 

@@ -184,6 +184,15 @@ export interface RefreshAgencySessionResponse {
   user: TenantUserSnapshot;
 }
 
+export interface LogoutAgencySessionRequest {
+  refreshToken: string;
+  tenantId: string;
+}
+
+export interface LogoutAgencySessionResponse {
+  revoked: boolean;
+}
+
 export const supportedTenantWidgetLanguages = ["en", "ru", "th", "zh"] as const;
 
 export type TenantWidgetLanguage = (typeof supportedTenantWidgetLanguages)[number];

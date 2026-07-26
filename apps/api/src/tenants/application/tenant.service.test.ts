@@ -329,6 +329,38 @@ describe("TenantService", () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it("revokes agency refresh tokens on logout", async () => {
+    vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
+    const member = tenantUser({ email: "owner@demo.example", id: "owner-user-1", tenantId: "tenant-demo" });
+    const service = new TenantService(
+      repository({
+        findById: async () => tenant({ id: "tenant-demo", slug: "demo-agency", subscriptionPlan: "starter" }),
+        findBySlug: async () => tenant({ id: "tenant-demo", slug: "demo-agency", subscriptionPlan: "starter" })
+      }),
+      new AuthIdentityService(),
+      userService({
+        getActiveTenantMemberByEmail: async () => member
+      })
+    );
+    const session = await service.createAgencySession({
+      tenantSlug: "demo-agency",
+      workEmail: "owner@demo.example"
+    });
+
+    await expect(
+      service.logoutAgencySession({
+        refreshToken: session.refreshToken,
+        tenantId: "tenant-demo"
+      })
+    ).resolves.toEqual({ revoked: true });
+    await expect(
+      service.refreshAgencySession({
+        refreshToken: session.refreshToken,
+        tenantId: "tenant-demo"
+      })
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it("requires the bootstrap code before issuing production agency sessions", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("PROPERTYFLOW_BOOTSTRAP_LOGIN_CODE", "expected-code");

@@ -12,6 +12,8 @@ import {
 import type {
   CreateAgencySessionRequest,
   CreateAgencySessionResponse,
+  LogoutAgencySessionRequest,
+  LogoutAgencySessionResponse,
   ProvisionTenantRequest,
   ProvisionTenantResponse,
   PublicWidgetConfigResponse,
@@ -164,6 +166,30 @@ export class TenantService {
       tenant,
       user
     };
+  }
+
+  async logoutAgencySession(request: LogoutAgencySessionRequest): Promise<LogoutAgencySessionResponse> {
+    const refreshToken = normalizeRequiredText(request.refreshToken);
+    const tenantId = normalizeRequiredText(request.tenantId);
+
+    if (!refreshToken || !tenantId) {
+      throw new UnauthorizedException("Refresh token and tenant are required");
+    }
+
+    const now = new Date();
+    const current = await this.refreshTokens.findActiveByHash(hashRefreshToken(refreshToken), now);
+
+    if (!current || current.tenantId !== tenantId) {
+      throw new UnauthorizedException("Agency refresh session is not valid");
+    }
+
+    const revoked = await this.refreshTokens.revoke(current.id, now);
+
+    if (!revoked) {
+      throw new UnauthorizedException("Agency refresh session was already revoked");
+    }
+
+    return { revoked: true };
   }
 
   async findActiveTenant(tenantId: string): Promise<TenantSnapshot | null> {
@@ -616,6 +642,18 @@ class InMemoryAgencyRefreshTokenRepository implements AgencyRefreshTokenReposito
     this.records.set(next.id, next);
 
     return next;
+  }
+
+  async revoke(currentTokenId: string, revokedAt: Date) {
+    const current = this.records.get(currentTokenId);
+
+    if (!current || current.revokedAt) {
+      return false;
+    }
+
+    current.revokedAt = revokedAt;
+
+    return true;
   }
 }
 

@@ -14,6 +14,8 @@ import type {
   RecordPropertySocialPostPublicationResponse,
   RecordPropertySocialPostReviewRequest,
   RecordPropertySocialPostReviewResponse,
+  LogoutAgencySessionRequest,
+  LogoutAgencySessionResponse,
   RefreshAgencySessionRequest,
   RefreshAgencySessionResponse,
   ReorderPropertyImagesRequest,
@@ -163,6 +165,24 @@ export async function refreshAgencySession(
   }
 
   return (await response.json()) as RefreshAgencySessionResponse;
+}
+
+export async function logoutAgencySession(
+  request: LogoutAgencySessionRequest
+): Promise<LogoutAgencySessionResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/session/logout`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to logout agency session: ${response.status}`);
+  }
+
+  return (await response.json()) as LogoutAgencySessionResponse;
 }
 
 export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetrics> {

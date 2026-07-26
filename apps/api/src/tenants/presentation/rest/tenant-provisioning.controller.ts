@@ -2,11 +2,13 @@ import { Body, Controller, Inject, Post } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import type {
   CreateAgencySessionResponse,
+  LogoutAgencySessionResponse,
   ProvisionTenantResponse,
   RefreshAgencySessionResponse
 } from "@propertyflow/contracts";
 import { TenantService } from "../../application/tenant.service.js";
 import { CreateAgencySessionDto } from "./create-agency-session.dto.js";
+import { LogoutAgencySessionDto } from "./logout-agency-session.dto.js";
 import { ProvisionTenantDto } from "./provision-tenant.dto.js";
 import { RefreshAgencySessionDto } from "./refresh-agency-session.dto.js";
 
@@ -34,5 +36,12 @@ export class TenantProvisioningController {
   @ApiCreatedResponse({ description: "Agency session was refreshed" })
   refreshSession(@Body() payload: RefreshAgencySessionDto): Promise<RefreshAgencySessionResponse> {
     return this.tenants.refreshAgencySession(payload);
+  }
+
+  @Post("session/logout")
+  @ApiOperation({ summary: "Revoke an agency refresh token and end the browser session" })
+  @ApiCreatedResponse({ description: "Agency session was revoked" })
+  logoutSession(@Body() payload: LogoutAgencySessionDto): Promise<LogoutAgencySessionResponse> {
+    return this.tenants.logoutAgencySession(payload);
   }
 }

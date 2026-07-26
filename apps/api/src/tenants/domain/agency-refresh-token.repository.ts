@@ -23,6 +23,7 @@ export interface CreateAgencyRefreshTokenInput {
 export interface AgencyRefreshTokenRepository {
   create(input: CreateAgencyRefreshTokenInput): Promise<AgencyRefreshTokenRecord>;
   findActiveByHash(tokenHash: string, now: Date): Promise<AgencyRefreshTokenRecord | null>;
+  revoke(currentTokenId: string, revokedAt: Date): Promise<boolean>;
   rotate(
     currentTokenId: string,
     input: CreateAgencyRefreshTokenInput
