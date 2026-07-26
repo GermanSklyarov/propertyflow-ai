@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import {
   agencyAccessTokenCookie,
   agencyRefreshTokenCookie,
+  isAgencyApiPath,
   isAccessTokenFresh,
   isAgencyEntryPath,
   mergeCookieHeader,
@@ -23,22 +24,18 @@ export async function middleware(request: NextRequest) {
   const refreshToken = request.cookies.get(agencyRefreshTokenCookie)?.value;
   const tenantId = request.cookies.get(selectedTenantCookie)?.value;
 
-  if (isAccessTokenFresh(accessToken)) {
-    return NextResponse.next();
+  if (!refreshToken || !tenantId) {
+    return rejectAgencySession(request, "session-required");
   }
 
-  if (!refreshToken || !tenantId) {
+  if (isAccessTokenFresh(accessToken)) {
     return NextResponse.next();
   }
 
   const refreshed = await refreshAgencySession(refreshToken, tenantId).catch(() => null);
 
   if (!refreshed) {
-    const response = NextResponse.redirect(new URL("/signin?error=session-expired", request.url));
-
-    clearSessionCookies(response);
-
-    return response;
+    return rejectAgencySession(request, "session-expired");
   }
 
   const requestHeaders = new Headers(request.headers);
@@ -110,6 +107,16 @@ async function refreshAgencySession(refreshToken: string, tenantId: string): Pro
   }
 
   return (await response.json()) as RefreshAgencySessionPayload;
+}
+
+function rejectAgencySession(request: NextRequest, reason: "session-expired" | "session-required") {
+  const response = isAgencyApiPath(request.nextUrl.pathname)
+    ? NextResponse.json({ error: reason }, { status: 401 })
+    : NextResponse.redirect(new URL(`/signin?error=${reason}`, request.url));
+
+  clearSessionCookies(response);
+
+  return response;
 }
 
 function clearSessionCookies(response: NextResponse) {

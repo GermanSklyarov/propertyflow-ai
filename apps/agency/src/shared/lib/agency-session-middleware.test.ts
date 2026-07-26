@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   agencyAccessTokenCookie,
   agencyRefreshTokenCookie,
+  isAgencyApiPath,
   isAccessTokenFresh,
   isAgencyEntryPath,
   mergeCookieHeader,
@@ -15,6 +16,8 @@ describe("agency session middleware helpers", () => {
     expect(isAgencyEntryPath("/signin")).toBe(true);
     expect(isAgencyEntryPath("/signup?plan=starter")).toBe(true);
     expect(isAgencyEntryPath("/settings")).toBe(false);
+    expect(isAgencyApiPath("/api/property-projects")).toBe(true);
+    expect(isAgencyApiPath("/settings")).toBe(false);
     expect(shouldSkipAgencySessionMiddleware("/_next/static/app.js")).toBe(true);
     expect(shouldSkipAgencySessionMiddleware("/images/logo.svg")).toBe(true);
     expect(shouldSkipAgencySessionMiddleware("/settings")).toBe(false);

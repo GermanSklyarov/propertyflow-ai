@@ -21,7 +21,7 @@ export interface AgencySignupSummary {
 
 export type AgencySignupErrorCode = "workspace-exists" | "provision-failed";
 
-export type AgencySigninErrorCode = "session-forbidden" | "session-failed" | "session-required";
+export type AgencySigninErrorCode = "session-expired" | "session-forbidden" | "session-failed" | "session-required";
 
 export interface AgencySignupFormValues {
   agencyName: string;
@@ -146,6 +146,10 @@ export function resolveAgencySigninError(error: string | string[] | undefined): 
 
   if (value === "session-required") {
     return "Sign in to continue into the agency workspace.";
+  }
+
+  if (value === "session-expired") {
+    return "Your agency session expired. Sign in again to continue.";
   }
 
   return null;
