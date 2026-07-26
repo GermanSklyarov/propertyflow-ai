@@ -1,14 +1,14 @@
 import { notFound } from "next/navigation";
 import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import { projectDetailQueryOptions } from "@entities/project/api/project-queries";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { ProjectDetailPage } from "@views/project-detail/ui/project-detail-page";
 
 export default async function AgencyProjectDetailPage({ params }: { params: Promise<{ projectId: string }> }) {
   const { projectId } = await params;
   const queryClient = createPropertyFlowQueryClient();
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const project = await queryClient.ensureQueryData(projectDetailQueryOptions(projectId, tenantId));
 
   if (!project) {

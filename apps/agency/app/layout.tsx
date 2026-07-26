@@ -1,21 +1,24 @@
 import type { Metadata } from "next";
 import { getCurrentTenant } from "@shared/api/agency-client";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { getAgencySession } from "@shared/lib/tenant-session";
 import { AgencyShell } from "@widgets/agency-shell/ui/agency-shell";
 import "@shared/styles/globals.css";
 
 export const metadata: Metadata = {
   title: "PropertyFlow Agency",
-  description: "Agency operations dashboard for PropertyFlow AI"
+  description: "Agency operations dashboard for PropertyFlow AI",
+  other: {
+    google: "notranslate"
+  }
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const tenantId = await getSelectedTenantId();
-  const tenant = await getCurrentTenant({ tenantId }).catch(() => null);
+  const session = await getAgencySession();
+  const tenant = session ? await getCurrentTenant({ tenantId: session.tenantId }).catch(() => null) : null;
 
   return (
-    <html lang="en">
-      <body suppressHydrationWarning>
+    <html className="notranslate" lang="en" translate="no">
+      <body suppressHydrationWarning translate="no">
         <AgencyShell subscriptionPlan={tenant?.subscriptionPlan}>{children}</AgencyShell>
       </body>
     </html>

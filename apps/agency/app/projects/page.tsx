@@ -1,6 +1,6 @@
 import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import { projectsQueryOptions } from "@entities/project/api/project-queries";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { ProjectsPage } from "@views/projects/ui/projects-page";
 import type { PropertyProjectSearchRequest } from "@propertyflow/contracts";
@@ -20,7 +20,7 @@ export default async function AgencyProjectsPage({
 }) {
   const params = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const market = params.market && markets.includes(params.market as ThailandMarket) ? (params.market as ThailandMarket) : undefined;
   const projectRequest: PropertyProjectSearchRequest = {

@@ -4,7 +4,7 @@ import { buildKnowledgePageNotice } from "@entities/knowledge/model/knowledge-pa
 import type { AiChatRequest, KnowledgeChunkSearchRequest } from "@propertyflow/contracts";
 import { askAiChat } from "@shared/api/agency-client";
 import { getErrorMessage } from "@shared/lib/errors";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { KnowledgeBasePage } from "@views/knowledge-base/ui/knowledge-base-page";
@@ -26,7 +26,7 @@ export default async function AgencyKnowledgePage({
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const retrievalRequest = buildRetrievalRequest(query);
   const chatRequest = buildChatRequest(query);
 

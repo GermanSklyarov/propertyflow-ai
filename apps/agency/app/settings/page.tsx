@@ -2,7 +2,7 @@ import { currentTenantQueryOptions, tenantUsageQueryOptions } from "@entities/te
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
 import { getErrorMessage } from "@shared/lib/errors";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { SettingsPage } from "@views/settings/ui/settings-page";
@@ -13,7 +13,7 @@ export default async function AgencySettingsPage({
   searchParams: Promise<{ updated?: string }>;
 }) {
   const query = await searchParams;
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const queryClient = createPropertyFlowQueryClient();
 
   try {

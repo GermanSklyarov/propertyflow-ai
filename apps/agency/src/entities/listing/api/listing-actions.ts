@@ -23,7 +23,7 @@ import {
   updatePropertyImageAnalysisAsset,
   updatePropertyProject
 } from "@shared/api/agency-client";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import type { CreatePropertyRequest } from "@propertyflow/contracts";
 import type { PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
 
@@ -193,7 +193,7 @@ export async function updatePropertyAmenitiesAction(propertyId: string, formData
 }
 
 export async function importPropertiesCsvAction(formData: FormData) {
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const csvFile = formData.get("listingsCsv");
   const pastedCsv = getOptionalString(formData, "csvText");
   const hasCsvFile = csvFile instanceof File && csvFile.size > 0;

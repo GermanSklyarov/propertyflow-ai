@@ -1,10 +1,12 @@
 import { tenantDashboardQueryOptions } from "@entities/analytics/api/analytics-queries";
 import { getErrorMessage } from "@shared/lib/errors";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { AgencyDashboardPage } from "@views/agency-dashboard/ui/agency-dashboard-page";
 
 export default async function AgencyDashboardRoute() {
+  await requireAgencySession();
   const queryClient = createPropertyFlowQueryClient();
 
   try {

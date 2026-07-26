@@ -5,7 +5,7 @@ import {
   parseLeadPropertyCandidateRequest,
   type LeadPropertyLinkSearchParams
 } from "@features/lead-property-link/model/lead-property-link";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { LeadDetailPage } from "@views/lead-detail/ui/lead-detail-page";
@@ -21,7 +21,7 @@ export default async function AgencyLeadDetailRoute({
   const query = (await searchParams) ?? {};
   const listingCandidateRequest = parseLeadPropertyCandidateRequest(query);
   const queryClient = createPropertyFlowQueryClient();
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const [leadResult, timelineResult, notesResult, agentsResult] = await Promise.allSettled([
     queryClient.ensureQueryData(leadDetailQueryOptions(leadId)),
     queryClient.ensureQueryData(leadTimelineQueryOptions(leadId)),

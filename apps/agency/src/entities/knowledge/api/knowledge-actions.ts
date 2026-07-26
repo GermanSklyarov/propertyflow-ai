@@ -9,12 +9,12 @@ import {
   embedKnowledgeChunks,
   ingestKnowledgeDocument
 } from "@shared/api/agency-client";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
 import { buildKnowledgeSourceTags, resolveKnowledgeSourceKind } from "../model/knowledge-source-presets";
 
 export async function createKnowledgeDocumentAction(formData: FormData) {
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const title = String(formData.get("title") ?? "").trim();
   const typedBody = String(formData.get("body") ?? "").trim();
   const sourceUrl = String(formData.get("sourceUrl") ?? "").trim();
@@ -85,7 +85,7 @@ async function uploadKnowledgeSourceFile(file: File, options: { tenantId?: strin
 }
 
 export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumentSnapshot["id"], title: string) {
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
 
   await ingestKnowledgeDocument(documentId, { tenantId });
 
@@ -95,7 +95,7 @@ export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumen
 }
 
 export async function embedKnowledgeChunksAction(formData: FormData) {
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const query = String(formData.get("q") ?? "").trim();
   const locale = String(formData.get("locale") ?? "").trim();
   const kind = String(formData.get("kind") ?? "").trim();

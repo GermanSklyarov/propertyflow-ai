@@ -2,7 +2,7 @@ import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
 import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
 import { getErrorMessage } from "@shared/lib/errors";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { resolveSignupPlan } from "@views/agency-entry/model/agency-entry";
@@ -11,11 +11,12 @@ import { StarterSetupPage } from "@views/starter-setup/ui/starter-setup-page";
 export default async function AgencyStarterSetupPage({
   searchParams
 }: {
-  searchParams: Promise<{ plan?: string | string[]; tenant?: string | string[] }>;
+  searchParams: Promise<{ plan?: string | string[] }>;
 }) {
-  const { plan, tenant } = await searchParams;
+  const { plan } = await searchParams;
   const requestedPlan = resolveSignupPlan(plan);
-  const tenantId = (Array.isArray(tenant) ? tenant[0] : tenant) ?? (await getSelectedTenantId());
+  const session = await requireAgencySession();
+  const tenantId = session.tenantId;
   const queryClient = createPropertyFlowQueryClient();
 
   try {

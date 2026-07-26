@@ -1,7 +1,7 @@
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import type { PropertySearchRequest, PropertySearchSort } from "@propertyflow/contracts";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { ListingsPage } from "@views/listings/ui/listings-page";
 
@@ -23,7 +23,7 @@ export default async function AgencyListingsPage({
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const page = Math.max(1, Number(query.page ?? 1) || 1);
   const sort = query.sort && listingSorts.includes(query.sort) ? query.sort : "created-desc";
   const projectLink =

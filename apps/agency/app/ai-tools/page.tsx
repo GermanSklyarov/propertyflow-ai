@@ -5,7 +5,7 @@ import {
   listingImagesQueryOptions,
   listingsQueryOptions
 } from "@entities/listing/api/listing-queries";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { AiToolsPage } from "@views/ai-tools/ui/ai-tools-page";
 
@@ -16,7 +16,7 @@ export default async function AgencyAiToolsPage({
 }) {
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
-  const tenantId = await getSelectedTenantId();
+  const { tenantId } = await requireAgencySession();
   const [listings, metrics] = await Promise.all([
     queryClient.ensureQueryData(listingsQueryOptions(undefined, tenantId)),
     queryClient.ensureQueryData(tenantDashboardQueryOptions())

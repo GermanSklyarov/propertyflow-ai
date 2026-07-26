@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBackgroundJob, listBackgroundJobs } from "@shared/api/agency-client";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { getAgencySession } from "@shared/lib/tenant-session";
 
 export async function GET(request: NextRequest) {
-  const tenantId = await getSelectedTenantId();
+  const session = await getAgencySession();
+
+  if (!session) {
+    return NextResponse.json({ message: "Agency session is required" }, { status: 401 });
+  }
+
+  const { tenantId } = session;
   const jobId = request.nextUrl.searchParams.get("jobId");
   const jobs = await listBackgroundJobs(
     { limit: 100, states: ["active", "waiting", "completed", "failed"] },

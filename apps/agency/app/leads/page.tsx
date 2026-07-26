@@ -1,5 +1,6 @@
 import { leadQueueSummaryQueryOptions, leadsListQueryOptions } from "@entities/lead/api/lead-queries";
 import { buildActiveLeadFilterLabel, parseLeadQueueRequest, type LeadQueueSearchParams } from "@entities/lead/model/lead-filters";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { LeadsPage } from "@views/leads/ui/leads-page";
 
@@ -10,6 +11,7 @@ export default async function AgencyLeadsPage({
 }) {
   const query = await searchParams;
   const request = parseLeadQueueRequest(query);
+  await requireAgencySession();
   const queryClient = createPropertyFlowQueryClient();
   const [leadListResult, queueSummaryResult] = await Promise.allSettled([
     queryClient.ensureQueryData(leadsListQueryOptions(request)),

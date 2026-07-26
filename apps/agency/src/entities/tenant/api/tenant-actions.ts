@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import type { TenantWidgetLanguage, TenantWidgetTone } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { updateTenantSettings } from "@shared/api/agency-client";
-import { getSelectedTenantId } from "@shared/lib/tenant-session";
+import { requireAgencySession } from "@shared/lib/tenant-session";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const widgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"];
@@ -13,6 +13,7 @@ const widgetPersonaGenders = ["feminine", "masculine", "neutral"] as const;
 const widgetTones: TenantWidgetTone[] = ["friendly", "professional", "luxury", "concise"];
 
 export async function updateTenantSettingsAction(formData: FormData) {
+  const { tenantId } = await requireAgencySession();
   const displayName = getOptionalString(formData, "displayName");
   const primaryColor = getOptionalString(formData, "primaryColor");
   const logoUrl = getOptionalString(formData, "logoUrl");
@@ -47,7 +48,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
         ...(Object.keys(welcomeMessages).length ? { welcomeMessages } : {})
       }
     },
-    { tenantId: await getSelectedTenantId() }
+    { tenantId }
   );
 
   revalidatePath("/settings");
