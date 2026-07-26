@@ -1,3 +1,4 @@
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import {
   BadRequestException,
   ConflictException,
@@ -5,7 +6,8 @@ import {
   Inject,
   Injectable,
   NotFoundException,
-  Optional
+  Optional,
+  UnauthorizedException
 } from "@nestjs/common";
 import type {
   CreateAgencySessionRequest,
@@ -15,6 +17,8 @@ import type {
   PublicWidgetConfigResponse,
   PublicWidgetReadiness,
   PublicWidgetReadinessCheck,
+  RefreshAgencySessionRequest,
+  RefreshAgencySessionResponse,
   TenantSnapshot,
   TenantSubscriptionPlan,
   TenantWidgetInstallCheckItem,
@@ -28,14 +32,26 @@ import type {
 import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
 import { UserService } from "../../users/application/user.service.js";
+import {
+  AGENCY_REFRESH_TOKEN_REPOSITORY,
+  type AgencyRefreshTokenRecord,
+  type AgencyRefreshTokenRepository,
+  type CreateAgencyRefreshTokenInput
+} from "../domain/agency-refresh-token.repository.js";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
+
+const agencyAccessTokenTtlSeconds = 15 * 60;
+const agencyRefreshTokenTtlDays = 30;
 
 @Injectable()
 export class TenantService {
   constructor(
     @Inject(TENANT_REPOSITORY) private readonly tenants: TenantRepository,
     @Inject(AuthIdentityService) private readonly authIdentity: AuthIdentityService = new AuthIdentityService(),
-    @Optional() @Inject(UserService) private readonly users?: UserService
+    @Optional() @Inject(UserService) private readonly users?: UserService,
+    @Optional()
+    @Inject(AGENCY_REFRESH_TOKEN_REPOSITORY)
+    private readonly refreshTokens: AgencyRefreshTokenRepository = new InMemoryAgencyRefreshTokenRepository()
   ) {}
 
   async provision(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
@@ -69,8 +85,10 @@ export class TenantService {
       website: normalizeOptionalWebsite(request.website)
     });
 
+    const session = await this.issueAgencySession(tenant, ownerUserId);
+
     return {
-      accessToken: this.authIdentity.issueAccessToken(ownerUserId),
+      ...session,
       setupUrl: `/setup?plan=${tenant.subscriptionPlan}`,
       tenant
     };
@@ -89,9 +107,60 @@ export class TenantService {
       throw new NotFoundException("Agency user was not found for this workspace");
     }
 
+    const session = await this.issueAgencySession(tenant, user.id);
+
     return {
-      accessToken: this.authIdentity.issueAccessToken(user.id),
+      ...session,
       setupUrl: `/setup?plan=${tenant.subscriptionPlan}`,
+      tenant,
+      user
+    };
+  }
+
+  async refreshAgencySession(request: RefreshAgencySessionRequest): Promise<RefreshAgencySessionResponse> {
+    const refreshToken = normalizeRequiredText(request.refreshToken);
+    const tenantId = normalizeRequiredText(request.tenantId);
+
+    if (!refreshToken || !tenantId) {
+      throw new UnauthorizedException("Refresh token and tenant are required");
+    }
+
+    const now = new Date();
+    const current = await this.refreshTokens.findActiveByHash(hashRefreshToken(refreshToken), now);
+
+    if (!current || current.tenantId !== tenantId) {
+      throw new UnauthorizedException("Agency refresh session is not valid");
+    }
+
+    const tenant = await this.getActiveTenantOrThrow(current.tenantId);
+    const user = await this.users?.getActiveTenantMember(current.tenantId, current.userId);
+
+    if (!user) {
+      throw new UnauthorizedException("Agency user is no longer active");
+    }
+
+    const nextRefreshToken = createRefreshTokenValue();
+    const refreshTokenExpiresAt = addDays(now, agencyRefreshTokenTtlDays);
+    const rotated = await this.refreshTokens.rotate(current.id, {
+      createdAt: now,
+      expiresAt: refreshTokenExpiresAt,
+      id: randomUUID(),
+      tenantId: current.tenantId,
+      tokenHash: hashRefreshToken(nextRefreshToken),
+      userId: current.userId
+    });
+
+    if (!rotated) {
+      throw new UnauthorizedException("Agency refresh session was already used");
+    }
+
+    const accessTokenExpiresAt = addSeconds(now, agencyAccessTokenTtlSeconds);
+
+    return {
+      accessToken: this.authIdentity.issueAccessToken(current.userId, agencyAccessTokenTtlSeconds),
+      accessTokenExpiresAt: accessTokenExpiresAt.toISOString(),
+      refreshToken: nextRefreshToken,
+      refreshTokenExpiresAt: refreshTokenExpiresAt.toISOString(),
       tenant,
       user
     };
@@ -105,6 +174,29 @@ export class TenantService {
     }
 
     return tenant;
+  }
+
+  private async issueAgencySession(tenant: TenantSnapshot, userId: string) {
+    const now = new Date();
+    const refreshToken = createRefreshTokenValue();
+    const accessTokenExpiresAt = addSeconds(now, agencyAccessTokenTtlSeconds);
+    const refreshTokenExpiresAt = addDays(now, agencyRefreshTokenTtlDays);
+
+    await this.refreshTokens.create({
+      createdAt: now,
+      expiresAt: refreshTokenExpiresAt,
+      id: randomUUID(),
+      tenantId: tenant.id,
+      tokenHash: hashRefreshToken(refreshToken),
+      userId
+    });
+
+    return {
+      accessToken: this.authIdentity.issueAccessToken(userId, agencyAccessTokenTtlSeconds),
+      accessTokenExpiresAt: accessTokenExpiresAt.toISOString(),
+      refreshToken,
+      refreshTokenExpiresAt: refreshTokenExpiresAt.toISOString()
+    };
   }
 
   async getActiveTenantOrThrow(tenantId: string): Promise<TenantSnapshot> {
@@ -473,6 +565,71 @@ const supportedSubscriptionPlans: TenantSubscriptionPlan[] = ["starter", "growth
 
 function normalizeRequiredText(value: string | undefined): string {
   return value?.trim().replace(/\s+/g, " ") ?? "";
+}
+
+function createRefreshTokenValue(): string {
+  return randomBytes(32).toString("base64url");
+}
+
+function hashRefreshToken(token: string): string {
+  return createHash("sha256").update(token).digest("base64url");
+}
+
+function addSeconds(date: Date, seconds: number): Date {
+  return new Date(date.getTime() + seconds * 1000);
+}
+
+function addDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
+}
+
+class InMemoryAgencyRefreshTokenRepository implements AgencyRefreshTokenRepository {
+  private readonly records = new Map<string, AgencyRefreshTokenRecord>();
+
+  async create(input: CreateAgencyRefreshTokenInput) {
+    const record = toRefreshRecord(input);
+
+    this.records.set(record.id, record);
+
+    return record;
+  }
+
+  async findActiveByHash(tokenHash: string, now: Date) {
+    return (
+      Array.from(this.records.values()).find(
+        (record) => record.tokenHash === tokenHash && !record.revokedAt && record.expiresAt > now
+      ) ?? null
+    );
+  }
+
+  async rotate(currentTokenId: string, input: CreateAgencyRefreshTokenInput) {
+    const current = this.records.get(currentTokenId);
+
+    if (!current || current.revokedAt) {
+      return null;
+    }
+
+    const next = toRefreshRecord(input);
+
+    current.revokedAt = input.createdAt;
+    current.replacedByTokenId = next.id;
+    this.records.set(next.id, next);
+
+    return next;
+  }
+}
+
+function toRefreshRecord(input: CreateAgencyRefreshTokenInput): AgencyRefreshTokenRecord {
+  return {
+    createdAt: input.createdAt,
+    expiresAt: input.expiresAt,
+    id: input.id,
+    replacedByTokenId: null,
+    revokedAt: null,
+    tenantId: input.tenantId,
+    tokenHash: input.tokenHash,
+    userId: input.userId
+  };
 }
 
 function buildTenantSlug(value: string): string {

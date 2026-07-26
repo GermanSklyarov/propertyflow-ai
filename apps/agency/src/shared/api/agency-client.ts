@@ -14,6 +14,8 @@ import type {
   RecordPropertySocialPostPublicationResponse,
   RecordPropertySocialPostReviewRequest,
   RecordPropertySocialPostReviewResponse,
+  RefreshAgencySessionRequest,
+  RefreshAgencySessionResponse,
   ReorderPropertyImagesRequest,
   SavePropertySocialPostDraftRequest,
   SavePropertySocialPostDraftResponse,
@@ -143,6 +145,24 @@ export async function createAgencySession(
   }
 
   return (await response.json()) as CreateAgencySessionResponse;
+}
+
+export async function refreshAgencySession(
+  request: RefreshAgencySessionRequest
+): Promise<RefreshAgencySessionResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/session/refresh`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to refresh agency session: ${response.status}`);
+  }
+
+  return (await response.json()) as RefreshAgencySessionResponse;
 }
 
 export async function getTenantDashboardMetrics(): Promise<TenantDashboardMetrics> {

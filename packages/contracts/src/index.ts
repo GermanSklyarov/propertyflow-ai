@@ -147,6 +147,9 @@ export interface ProvisionTenantRequest {
 
 export interface ProvisionTenantResponse {
   accessToken: string;
+  accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
   setupUrl: string;
   tenant: TenantSnapshot;
 }
@@ -159,7 +162,24 @@ export interface CreateAgencySessionRequest {
 
 export interface CreateAgencySessionResponse {
   accessToken: string;
+  accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
   setupUrl: string;
+  tenant: TenantSnapshot;
+  user: TenantUserSnapshot;
+}
+
+export interface RefreshAgencySessionRequest {
+  refreshToken: string;
+  tenantId: string;
+}
+
+export interface RefreshAgencySessionResponse {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+  refreshToken: string;
+  refreshTokenExpiresAt: string;
   tenant: TenantSnapshot;
   user: TenantUserSnapshot;
 }

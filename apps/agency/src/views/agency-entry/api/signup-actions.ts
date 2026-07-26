@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createAgencySession, provisionTenant } from "@shared/api/agency-client";
-import { setAgencyAccessToken, setSelectedTenantId } from "@shared/lib/tenant-session";
+import { setAgencySession } from "@shared/lib/tenant-session";
 import {
   parseAgencySigninForm,
   parseAgencySignupForm,
@@ -19,8 +19,13 @@ export async function submitAgencySignup(formData: FormData) {
     redirect(`/signup?plan=${values.plan}&error=${code}`);
   });
 
-  await setAgencyAccessToken(provisioned.accessToken);
-  await setSelectedTenantId(provisioned.tenant.id);
+  await setAgencySession({
+    accessToken: provisioned.accessToken,
+    accessTokenExpiresAt: provisioned.accessTokenExpiresAt,
+    refreshToken: provisioned.refreshToken,
+    refreshTokenExpiresAt: provisioned.refreshTokenExpiresAt,
+    tenantId: provisioned.tenant.id
+  });
 
   redirect(`/setup?plan=${provisioned.tenant.subscriptionPlan}`);
 }
@@ -34,8 +39,13 @@ export async function submitAgencySignin(formData: FormData) {
     redirect(`/signin?error=${code}`);
   });
 
-  await setAgencyAccessToken(session.accessToken);
-  await setSelectedTenantId(session.tenant.id);
+  await setAgencySession({
+    accessToken: session.accessToken,
+    accessTokenExpiresAt: session.accessTokenExpiresAt,
+    refreshToken: session.refreshToken,
+    refreshTokenExpiresAt: session.refreshTokenExpiresAt,
+    tenantId: session.tenant.id
+  });
 
   redirect(session.setupUrl);
 }

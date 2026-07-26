@@ -1,9 +1,14 @@
 import { Body, Controller, Inject, Post } from "@nestjs/common";
 import { ApiCreatedResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
-import type { CreateAgencySessionResponse, ProvisionTenantResponse } from "@propertyflow/contracts";
+import type {
+  CreateAgencySessionResponse,
+  ProvisionTenantResponse,
+  RefreshAgencySessionResponse
+} from "@propertyflow/contracts";
 import { TenantService } from "../../application/tenant.service.js";
 import { CreateAgencySessionDto } from "./create-agency-session.dto.js";
 import { ProvisionTenantDto } from "./provision-tenant.dto.js";
+import { RefreshAgencySessionDto } from "./refresh-agency-session.dto.js";
 
 @Controller("tenants")
 @ApiTags("tenants")
@@ -22,5 +27,12 @@ export class TenantProvisioningController {
   @ApiCreatedResponse({ description: "Agency session was created" })
   createSession(@Body() payload: CreateAgencySessionDto): Promise<CreateAgencySessionResponse> {
     return this.tenants.createAgencySession(payload);
+  }
+
+  @Post("session/refresh")
+  @ApiOperation({ summary: "Rotate an agency refresh token and issue a fresh access token" })
+  @ApiCreatedResponse({ description: "Agency session was refreshed" })
+  refreshSession(@Body() payload: RefreshAgencySessionDto): Promise<RefreshAgencySessionResponse> {
+    return this.tenants.refreshAgencySession(payload);
   }
 }

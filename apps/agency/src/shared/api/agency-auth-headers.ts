@@ -5,7 +5,7 @@ export interface AgencyApiAuthOptions {
 
 export function buildAgencyApiHeaders(options: AgencyApiAuthOptions = {}): Record<string, string> {
   const tenantId = (options.tenantId ?? process.env.PROPERTYFLOW_TENANT_ID)?.trim();
-  const accessToken = (options.accessToken ?? process.env.PROPERTYFLOW_AGENCY_ACCESS_TOKEN)?.trim();
+  const accessToken = options.accessToken?.trim();
 
   if (accessToken) {
     if (!tenantId) {

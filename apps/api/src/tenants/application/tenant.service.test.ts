@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  UnauthorizedException
+} from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { getTenantPlanDefinition, tenantPlanCatalog } from "@propertyflow/contracts";
 import type { TenantSnapshot, TenantUserSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
@@ -209,6 +215,9 @@ describe("TenantService", () => {
       })
     ).resolves.toMatchObject({
       accessToken: expect.any(String),
+      accessTokenExpiresAt: expect.any(String),
+      refreshToken: expect.any(String),
+      refreshTokenExpiresAt: expect.any(String),
       setupUrl: "/setup?plan=starter",
       tenant: {
         branding: {
@@ -257,6 +266,9 @@ describe("TenantService", () => {
       })
     ).resolves.toMatchObject({
       accessToken: expect.any(String),
+      accessTokenExpiresAt: expect.any(String),
+      refreshToken: expect.any(String),
+      refreshTokenExpiresAt: expect.any(String),
       setupUrl: "/setup?plan=starter",
       tenant: {
         id: "tenant-demo"
@@ -265,6 +277,56 @@ describe("TenantService", () => {
         id: "owner-user-1"
       }
     });
+  });
+
+  it("rotates agency refresh tokens and keeps the session scoped to the tenant", async () => {
+    vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
+    const member = tenantUser({ email: "owner@demo.example", id: "owner-user-1", tenantId: "tenant-demo" });
+    const service = new TenantService(
+      repository({
+        findById: async () => tenant({ id: "tenant-demo", slug: "demo-agency", subscriptionPlan: "starter" }),
+        findBySlug: async () => tenant({ id: "tenant-demo", slug: "demo-agency", subscriptionPlan: "starter" })
+      }),
+      new AuthIdentityService(),
+      userService({
+        getActiveTenantMember: async (tenantId, userId) => {
+          expect(tenantId).toBe("tenant-demo");
+          expect(userId).toBe("owner-user-1");
+
+          return member;
+        },
+        getActiveTenantMemberByEmail: async () => member
+      })
+    );
+    const session = await service.createAgencySession({
+      tenantSlug: "demo-agency",
+      workEmail: "owner@demo.example"
+    });
+
+    const refreshed = await service.refreshAgencySession({
+      refreshToken: session.refreshToken,
+      tenantId: "tenant-demo"
+    });
+
+    expect(refreshed).toMatchObject({
+      accessToken: expect.any(String),
+      accessTokenExpiresAt: expect.any(String),
+      refreshToken: expect.any(String),
+      refreshTokenExpiresAt: expect.any(String),
+      tenant: {
+        id: "tenant-demo"
+      },
+      user: {
+        id: "owner-user-1"
+      }
+    });
+    expect(refreshed.refreshToken).not.toBe(session.refreshToken);
+    await expect(
+      service.refreshAgencySession({
+        refreshToken: session.refreshToken,
+        tenantId: "tenant-demo"
+      })
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it("requires the bootstrap code before issuing production agency sessions", async () => {
