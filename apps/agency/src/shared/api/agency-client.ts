@@ -86,7 +86,7 @@ import type {
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
-import { getAgencyAccessToken } from "@shared/lib/tenant-session";
+import { getAgencySession } from "@shared/lib/tenant-session";
 import { buildAgencyApiHeaders } from "./agency-auth-headers";
 
 const apiBaseUrl =
@@ -98,9 +98,12 @@ interface AgencyApiOptions {
 }
 
 async function agencyApiHeaders(options: AgencyApiOptions = {}) {
+  const session = await getAgencySession();
+
   return buildAgencyApiHeaders({
     ...options,
-    accessToken: options.accessToken ?? (await getAgencyAccessToken())
+    accessToken: options.accessToken ?? session?.accessToken,
+    tenantId: options.tenantId ?? session?.tenantId
   });
 }
 

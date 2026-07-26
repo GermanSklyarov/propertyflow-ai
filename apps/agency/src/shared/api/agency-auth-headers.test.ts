@@ -29,8 +29,19 @@ describe("buildAgencyApiHeaders", () => {
     });
   });
 
-  it("keeps development identity headers when no access token is configured", () => {
+  it("rejects implicit development identity headers without an explicit opt-in", () => {
     delete process.env.PROPERTYFLOW_AGENCY_ACCESS_TOKEN;
+    delete process.env.PROPERTYFLOW_ALLOW_DEV_AUTH_HEADERS;
+    process.env.PROPERTYFLOW_TENANT_ID = "demo-agency";
+    process.env.PROPERTYFLOW_USER_ID = "manager-demo-1";
+    process.env.PROPERTYFLOW_USER_ROLE = "manager";
+
+    expect(() => buildAgencyApiHeaders()).toThrow("Agency API access token is required");
+  });
+
+  it("keeps development identity headers only when explicitly enabled", () => {
+    delete process.env.PROPERTYFLOW_AGENCY_ACCESS_TOKEN;
+    process.env.PROPERTYFLOW_ALLOW_DEV_AUTH_HEADERS = "true";
     process.env.PROPERTYFLOW_TENANT_ID = "demo-agency";
     process.env.PROPERTYFLOW_USER_ID = "manager-demo-1";
     process.env.PROPERTYFLOW_USER_ROLE = "manager";
@@ -40,5 +51,12 @@ describe("buildAgencyApiHeaders", () => {
       "x-user-id": "manager-demo-1",
       "x-user-role": "manager"
     });
+  });
+
+  it("requires tenant context for bearer-authenticated agency calls", () => {
+    delete process.env.PROPERTYFLOW_TENANT_ID;
+    process.env.PROPERTYFLOW_AGENCY_ACCESS_TOKEN = "tenant-token";
+
+    expect(() => buildAgencyApiHeaders()).toThrow("Tenant id is required");
   });
 });

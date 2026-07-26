@@ -9,14 +9,6 @@ export interface AgencySession {
   tenantId: string;
 }
 
-export async function getAgencyAccessToken() {
-  return (await cookies()).get(agencyAccessTokenCookie)?.value;
-}
-
-export async function getSelectedTenantId() {
-  return (await cookies()).get(selectedTenantCookie)?.value;
-}
-
 export async function getAgencySession(): Promise<AgencySession | null> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(agencyAccessTokenCookie)?.value?.trim();

@@ -1,22 +1,25 @@
+import { getAgencySession } from "@shared/lib/tenant-session";
+import { buildAgencyApiHeaders } from "@shared/api/agency-auth-headers";
+
 const apiBaseUrl =
   process.env.PROPERTYFLOW_API_URL ?? process.env.NEXT_PUBLIC_PROPERTYFLOW_API_URL ?? "http://127.0.0.1:3001";
-
-const demoHeaders = {
-  "x-tenant-id": process.env.PROPERTYFLOW_TENANT_ID ?? "demo-agency",
-  "x-user-id": process.env.PROPERTYFLOW_USER_ID ?? "manager-demo-1",
-  "x-user-role": process.env.PROPERTYFLOW_USER_ROLE ?? "manager"
-};
 
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ propertyId: string; imageId: string }> }
 ) {
+  const session = await getAgencySession();
+
+  if (!session) {
+    return new Response("Agency session is required", { status: 401 });
+  }
+
   const { imageId, propertyId } = await params;
   const response = await fetch(
     `${apiBaseUrl}/properties/${encodeURIComponent(propertyId)}/images/${encodeURIComponent(imageId)}/content`,
     {
       cache: "no-store",
-      headers: demoHeaders,
+      headers: buildAgencyApiHeaders(session),
       redirect: "follow"
     }
   );
