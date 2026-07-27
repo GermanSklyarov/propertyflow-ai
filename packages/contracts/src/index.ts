@@ -1014,6 +1014,12 @@ export interface AiChatResponse {
   matchedPropertyIds: string[];
   citations: AiChatCitation[];
   suggestedActions: string[];
+  generation?: {
+    mode: "llm" | "deterministic-fallback";
+    provider?: "openai" | "anthropic" | "gemini" | "openrouter";
+    model?: string;
+    reason?: string;
+  };
   createdAt: string;
 }
 

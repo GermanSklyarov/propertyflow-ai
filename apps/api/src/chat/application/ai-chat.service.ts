@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type {
   AiChatCitation,
   AiChatRequest,
@@ -11,6 +11,7 @@ import { AiPropertyAdvisorService } from "../../properties/application/services/
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
+import { AI_TEXT_GENERATOR, type AiTextGenerator } from "./ai-text-generator.js";
 
 @Injectable()
 export class AiChatService {
@@ -21,7 +22,8 @@ export class AiChatService {
     private readonly naturalLanguageSearch: NaturalLanguagePropertySearchService,
     @Inject(NeighborhoodIntelligenceService)
     private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService,
-    @Inject(KnowledgeDocumentService) private readonly knowledge: KnowledgeDocumentService
+    @Inject(KnowledgeDocumentService) private readonly knowledge: KnowledgeDocumentService,
+    @Inject(AI_TEXT_GENERATOR) private readonly textGenerator: AiTextGenerator
   ) {}
 
   async ask(tenantId: string, request: AiChatRequest): Promise<AiChatResponse> {
@@ -75,11 +77,14 @@ export class AiChatService {
       answerParts.push(`Relevant knowledge: ${knowledge.map((chunk) => this.knowledgeLine(chunk)).join(" ")}`);
     }
 
-    return this.buildResponse(request, answerParts.join(" "), [property.id], citations, [
-      "compare-similar-properties",
-      "open-investment-calculator",
-      "create-lead"
-    ]);
+    return this.buildResponse(
+      request,
+      answerParts.join(" "),
+      [property.id],
+      citations,
+      ["compare-similar-properties", "open-investment-calculator", "create-lead"],
+      this.buildContext(answerParts, citations)
+    );
   }
 
   private async answerWithSearch(tenantId: string, request: AiChatRequest): Promise<AiChatResponse> {
@@ -113,7 +118,16 @@ export class AiChatService {
           { source: "search", label: search.rankingExplanation },
           ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
         ],
-        ["relax-filters", "ask-agent-for-off-market-options"]
+        ["relax-filters", "ask-agent-for-off-market-options"],
+        this.buildContext(
+          knowledge.length
+            ? ["No matching listings were found.", ...knowledge.map((chunk) => this.knowledgeLine(chunk))]
+            : ["No matching listings or knowledge chunks were found."],
+          [
+            { source: "search", label: search.rankingExplanation },
+            ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
+          ]
+        )
       );
     }
 
@@ -137,7 +151,12 @@ export class AiChatService {
         ...matches.map((property) => this.propertyCitation(property)),
         ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
       ],
-      ["compare-results", "open-map", "save-search"]
+      ["compare-results", "open-map", "save-search"],
+      this.buildContext(answer, [
+        { source: "search", label: search.interpretedIntent },
+        ...matches.map((property) => this.propertyCitation(property)),
+        ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
+      ])
     );
   }
 
@@ -151,13 +170,24 @@ export class AiChatService {
     return result.items;
   }
 
-  private buildResponse(
+  private async buildResponse(
     request: AiChatRequest,
     answer: string,
     matchedPropertyIds: string[],
     citations: AiChatCitation[],
-    suggestedActions: string[]
-  ): AiChatResponse {
+    suggestedActions: string[],
+    context: string
+  ): Promise<AiChatResponse> {
+    if (this.textGenerator.isConfigured()) {
+      return this.buildGeneratedResponse(request, answer, matchedPropertyIds, citations, suggestedActions, context);
+    }
+
+    if (!this.allowDeterministicFallback()) {
+      throw new ServiceUnavailableException(
+        "AI provider is not configured. Set OPENAI_API_KEY and AI_CHAT_MODEL, or explicitly enable AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK for local demos."
+      );
+    }
+
     return {
       id: crypto.randomUUID(),
       message: request.message,
@@ -165,8 +195,58 @@ export class AiChatService {
       matchedPropertyIds,
       citations,
       suggestedActions,
+      generation: {
+        mode: "deterministic-fallback",
+        reason: "AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK is enabled"
+      },
       createdAt: new Date().toISOString()
     };
+  }
+
+  private async buildGeneratedResponse(
+    request: AiChatRequest,
+    deterministicDraft: string,
+    matchedPropertyIds: string[],
+    citations: AiChatCitation[],
+    suggestedActions: string[],
+    context: string
+  ): Promise<AiChatResponse> {
+    const generated = await this.textGenerator.generate({
+      locale: request.locale,
+      message: request.message,
+      context: [context, "", "Deterministic retrieval draft:", deterministicDraft].join("\n"),
+      citations
+    });
+
+    return {
+      id: crypto.randomUUID(),
+      message: request.message,
+      answer: generated.answer,
+      matchedPropertyIds,
+      citations,
+      suggestedActions,
+      generation: {
+        mode: "llm",
+        provider: generated.provider,
+        model: generated.model
+      },
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  private buildContext(lines: string[] | string, citations: AiChatCitation[]): string {
+    const contextLines = Array.isArray(lines) ? lines : [lines];
+
+    return [
+      ...contextLines,
+      "",
+      "Citations:",
+      ...citations.map((citation, index) => `${index + 1}. ${citation.label}`)
+    ].join("\n");
+  }
+
+  private allowDeterministicFallback(): boolean {
+    return process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true";
   }
 
   private propertyCitation(property: PropertySnapshot): AiChatCitation {
