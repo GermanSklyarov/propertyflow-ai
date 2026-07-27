@@ -58,7 +58,7 @@
     background 160ms ease,
     color 160ms ease,
     transform 160ms ease,
-  box-shadow 160ms ease;
+    box-shadow 160ms ease;
 }
 
 button.primaryAction,
@@ -111,8 +111,7 @@ button.secondaryAction {
 }
 
 .heroCopy h1,
-.sectionHeader h2,
-.signupCopy h1 {
+.sectionHeader h2 {
   margin: 18px 0;
   max-width: 940px;
   font-size: clamp(3rem, 7vw, 7.2rem);
@@ -343,13 +342,52 @@ button.secondaryAction {
 
 .signupPanel {
   display: grid;
-  grid-template-columns: minmax(0, 0.75fr) minmax(320px, 1fr);
+  grid-template-columns: minmax(280px, 0.78fr) minmax(360px, 1fr);
   gap: clamp(24px, 5vw, 64px);
+  align-items: start;
+  max-width: 1240px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--entry-shadow);
   padding: clamp(24px, 5vw, 56px);
+}
+
+.signupCopy {
+  min-width: 0;
+}
+
+.signupCopy h1 {
+  margin: 14px 0;
+  max-width: 580px;
+  font-size: clamp(2.8rem, 5vw, 5rem);
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0;
 }
 
 .signupCopy p {
   color: var(--muted);
+  font-size: clamp(1rem, 1.5vw, 1.25rem);
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.signupFootnote {
+  margin: 4px 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 750;
+  line-height: 1.45;
+}
+
+.signupFootnote a {
+  color: var(--teal-dark);
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 .signupPlanCard {
@@ -390,7 +428,11 @@ button.secondaryAction {
 
 .signupForm {
   display: grid;
-  gap: 18px;
+  gap: 16px;
+  align-self: start;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: clamp(18px, 3vw, 28px);
 }
 
 .signupError {
@@ -412,15 +454,21 @@ button.secondaryAction {
 }
 
 .signupForm input {
+  box-sizing: border-box;
+  width: 100%;
   min-width: 0;
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
-  padding: 18px;
+  padding: 14px 16px;
   font: inherit;
-  font-size: 1.2rem;
+  font-size: 1rem;
   font-weight: 800;
   text-transform: none;
+}
+
+.signupForm input::placeholder {
+  color: rgb(97 112 106 / 68%);
 }
 
 .signinPanel {
@@ -498,7 +546,13 @@ button.secondaryAction {
 }
 
 .signinFootnote {
-  margin: 16px 0 0;
+  margin: 4px 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  font-weight: 750;
+  line-height: 1.45;
 }
 
 .signinFootnote a {

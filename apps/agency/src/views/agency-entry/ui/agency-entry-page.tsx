@@ -154,9 +154,6 @@ export function SignupEntryPage({ errorMessage, signup }: { errorMessage?: strin
           <p>
             Capture the agency basics, keep the selected plan attached, and continue into the first-run setup path.
           </p>
-          <p>
-            Already have a workspace? <Link href="/signin">Create a secure agency session</Link>.
-          </p>
           <div className={styles.signupPlanCard}>
             <span>Selected plan</span>
             <strong>{signup.planName}</strong>
@@ -177,11 +174,11 @@ export function SignupEntryPage({ errorMessage, signup }: { errorMessage?: strin
           <input name="plan" type="hidden" value={signup.planId} />
           <label>
             Agency name
-            <input name="agencyName" placeholder="Demo Thailand Realty" required />
+            <input name="agencyName" placeholder="Thailand Realty Co." required />
           </label>
           <label>
             Work email
-            <input name="email" placeholder="owner@agency.co.th" required type="email" />
+            <input name="email" placeholder="you@agency.com" required type="email" />
           </label>
           <label>
             Website
@@ -197,6 +194,9 @@ export function SignupEntryPage({ errorMessage, signup }: { errorMessage?: strin
               Account verification and billing attach to this step next.
             </span>
           </div>
+          <p className={styles.signupFootnote}>
+            Already have a workspace? <Link href="/signin">Sign in</Link>.
+          </p>
         </form>
       </section>
     </main>
@@ -225,9 +225,6 @@ export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null
               ))}
             </ul>
           </div>
-          <p className={styles.signinFootnote}>
-            New to PropertyFlow AI? <Link href="/signup?plan=starter">Create a Starter workspace</Link>.
-          </p>
         </div>
         <form action={submitAgencySignin} className={styles.signinForm}>
           {errorMessage ? (
@@ -257,6 +254,9 @@ export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null
               Access codes are used for protected workspace invitations.
             </span>
           </div>
+          <p className={styles.signinFootnote}>
+            New to PropertyFlow AI? <Link href="/signup?plan=starter">Create a Starter workspace</Link>.
+          </p>
         </form>
       </section>
     </main>
