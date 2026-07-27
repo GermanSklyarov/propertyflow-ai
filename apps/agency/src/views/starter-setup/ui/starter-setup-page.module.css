@@ -129,6 +129,60 @@
   color: #fff;
 }
 
+.upgradePreview {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr) auto;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #0f1f1c;
+  padding: 18px;
+  color: #fff;
+}
+
+.upgradePreviewCopy {
+  min-width: 0;
+}
+
+.upgradePreviewCopy h2 {
+  margin: 4px 0 0;
+  font-size: clamp(1.55rem, 2.4vw, 2.8rem);
+  line-height: 1.02;
+}
+
+.upgradePreviewCopy p:last-child {
+  max-width: 780px;
+  margin: 8px 0 0;
+  color: rgb(255 255 255 / 72%);
+  font-weight: 820;
+  line-height: 1.4;
+}
+
+.upgradeFeatureList {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.upgradeFeatureList span {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  background: rgb(255 255 255 / 7%);
+  padding: 10px;
+  color: rgb(255 255 255 / 82%);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.upgradeFeatureList svg {
+  flex: 0 0 auto;
+  color: #ffb199;
+}
+
 .stepGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
@@ -423,16 +477,29 @@
   .layout {
     grid-template-columns: 1fr;
   }
+
+  .upgradePreview {
+    grid-template-columns: 1fr;
+  }
+
+  .upgradePreview .primaryAction {
+    justify-self: start;
+  }
 }
 
 @media (max-width: 720px) {
   .header,
-  .heroPanel {
+  .heroPanel,
+  .upgradePreview {
     padding: 16px;
   }
 
   .heroPanel,
   .stepGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .upgradeFeatureList {
     grid-template-columns: 1fr;
   }
 

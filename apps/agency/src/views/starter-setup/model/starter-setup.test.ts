@@ -76,6 +76,11 @@ describe("starter setup progress", () => {
     expect(progress.requestedPlanLabel).toBe("Growth");
     expect(progress.workspacePlanLabel).toBe("Starter");
     expect(progress.selectedPlanMatchesWorkspace).toBe(false);
+    expect(progress.upgradePreview).toMatchObject({
+      actionHref: "/settings#plan-upgrade",
+      actionLabel: "Review Growth controls",
+      title: "Growth is the next step after Starter"
+    });
   });
 });
 

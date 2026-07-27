@@ -64,6 +64,28 @@ export function StarterSetupPage({
           </a>
         </section>
 
+        {progress.upgradePreview ? (
+          <section className={styles.upgradePreview} aria-label="Growth upgrade preview">
+            <div className={styles.upgradePreviewCopy}>
+              <p className="section-kicker">Upgrade preview</p>
+              <h2>{progress.upgradePreview.title}</h2>
+              <p>{progress.upgradePreview.description}</p>
+            </div>
+            <div className={styles.upgradeFeatureList}>
+              {progress.upgradePreview.features.map((feature) => (
+                <span key={feature}>
+                  <CheckCircle2 size={15} />
+                  {feature}
+                </span>
+              ))}
+            </div>
+            <a className={styles.primaryAction} href={progress.upgradePreview.actionHref}>
+              {progress.upgradePreview.actionLabel}
+              <ArrowRight size={18} />
+            </a>
+          </section>
+        ) : null}
+
         <section className={styles.stepGrid} aria-label="Starter setup checklist">
           {progress.steps.map((step, index) => (
             <SetupStepCard index={index + 1} key={step.id} step={step} />

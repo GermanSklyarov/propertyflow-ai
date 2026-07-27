@@ -35,7 +35,16 @@ export interface StarterSetupProgress {
   selectedPlanMatchesWorkspace: boolean;
   steps: StarterSetupStep[];
   total: number;
+  upgradePreview: StarterSetupUpgradePreview | null;
   workspacePlanLabel: string;
+}
+
+export interface StarterSetupUpgradePreview {
+  actionHref: string;
+  actionLabel: string;
+  description: string;
+  features: string[];
+  title: string;
 }
 
 export function buildStarterSetupProgress({
@@ -142,6 +151,25 @@ export function buildStarterSetupProgress({
     selectedPlanMatchesWorkspace: selectedPlan.id === plan.id,
     steps,
     total: steps.length,
+    upgradePreview: buildStarterSetupUpgradePreview(requestedPlan, tenant.subscriptionPlan),
     workspacePlanLabel: plan.name
+  };
+}
+
+function buildStarterSetupUpgradePreview(
+  requestedPlan: TenantSubscriptionPlan | undefined,
+  workspacePlan: TenantSubscriptionPlan
+): StarterSetupUpgradePreview | null {
+  if (requestedPlan !== "growth" || workspacePlan !== "starter") {
+    return null;
+  }
+
+  return {
+    actionHref: "/settings#plan-upgrade",
+    actionLabel: "Review Growth controls",
+    description:
+      "Keep Starter running the Concierge now, then unlock CRM lead creation when conversations become viewing or callback requests.",
+    features: ["Conversation to lead handoff", "Agent assignment", "Pipeline follow-up", "Saved demand and analytics"],
+    title: "Growth is the next step after Starter"
   };
 }
