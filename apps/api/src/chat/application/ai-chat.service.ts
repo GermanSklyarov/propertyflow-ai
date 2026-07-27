@@ -1,6 +1,8 @@
 import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
 import type {
+  AiAdvisorSummary,
   AiChatCitation,
+  AiChatInsight,
   AiChatRequest,
   AiChatResponse,
   KnowledgeDocumentChunkSnapshot
@@ -15,6 +17,11 @@ import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from
 
 export interface AiChatAskOptions {
   persona?: AiConciergePersona;
+}
+
+interface DueDiligencePayload {
+  contextLines: string[];
+  insights: AiChatInsight[];
 }
 
 @Injectable()
@@ -53,7 +60,7 @@ export class AiChatService {
     const citations: AiChatCitation[] = [this.propertyCitation(property)];
     const answerParts = [this.describeProperty(property)];
     const knowledge = await this.retrieveKnowledge(tenantId, request);
-    const dueDiligenceContext = await this.buildDueDiligenceContext(tenantId, [property]);
+    const dueDiligence = await this.buildDueDiligencePayload(tenantId, [property]);
 
     if (this.isNeighborhoodQuestion(normalized)) {
       const neighborhood = await this.neighborhoodIntelligence.analyze(tenantId, property.id);
@@ -91,8 +98,9 @@ export class AiChatService {
       answerParts.join(" "),
       [property.id],
       citations,
+      dueDiligence.insights,
       ["compare-similar-properties", "open-investment-calculator", "create-lead"],
-      this.buildContext([...answerParts, ...dueDiligenceContext], citations),
+      this.buildContext([...answerParts, ...dueDiligence.contextLines], citations),
       options
     );
   }
@@ -120,9 +128,27 @@ export class AiChatService {
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
     const knowledge = await this.retrieveKnowledge(tenantId, request);
-    const dueDiligenceContext = await this.buildDueDiligenceContext(tenantId, matches);
+    const dueDiligence = await this.buildDueDiligencePayload(tenantId, matches);
 
     if (!matches.length) {
+      const noMatchInsights: AiChatInsight[] = [
+        {
+          kind: "handoff",
+          title: "No exact listing match",
+          detail: "Offer to broaden filters or hand the request to an agent for off-market options.",
+          severity: "warning"
+        }
+      ];
+
+      if (knowledge.length) {
+        noMatchInsights.push({
+          kind: "knowledge",
+          title: "Knowledge context available",
+          detail: "Use the cited knowledge sources to answer the client while listing inventory is missing.",
+          severity: "info"
+        });
+      }
+
       return this.buildResponse(
         request,
         knowledge.length
@@ -133,6 +159,7 @@ export class AiChatService {
           { source: "search", label: search.rankingExplanation },
           ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
         ],
+        noMatchInsights,
         ["relax-filters", "ask-agent-for-off-market-options"],
         this.buildContext(
           knowledge.length
@@ -167,9 +194,10 @@ export class AiChatService {
         ...matches.map((property) => this.propertyCitation(property)),
         ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
       ],
+      dueDiligence.insights,
       ["compare-results", "open-map", "save-search"],
       this.buildContext(
-        [answer, ...dueDiligenceContext],
+        [answer, ...dueDiligence.contextLines],
         [
           { source: "search", label: search.interpretedIntent },
           ...matches.map((property) => this.propertyCitation(property)),
@@ -195,12 +223,22 @@ export class AiChatService {
     answer: string,
     matchedPropertyIds: string[],
     citations: AiChatCitation[],
+    insights: AiChatInsight[],
     suggestedActions: string[],
     context: string,
     options: AiChatAskOptions = {}
   ): Promise<AiChatResponse> {
     if (this.textGenerator.isConfigured()) {
-      return this.buildGeneratedResponse(request, answer, matchedPropertyIds, citations, suggestedActions, context, options);
+      return this.buildGeneratedResponse(
+        request,
+        answer,
+        matchedPropertyIds,
+        citations,
+        insights,
+        suggestedActions,
+        context,
+        options
+      );
     }
 
     if (!this.allowDeterministicFallback()) {
@@ -215,6 +253,7 @@ export class AiChatService {
       answer,
       matchedPropertyIds,
       citations,
+      insights,
       suggestedActions,
       generation: {
         mode: "deterministic-fallback",
@@ -229,6 +268,7 @@ export class AiChatService {
     deterministicDraft: string,
     matchedPropertyIds: string[],
     citations: AiChatCitation[],
+    insights: AiChatInsight[],
     suggestedActions: string[],
     context: string,
     options: AiChatAskOptions
@@ -247,6 +287,7 @@ export class AiChatService {
       answer: generated.answer,
       matchedPropertyIds,
       citations,
+      insights,
       suggestedActions,
       generation: {
         mode: "llm",
@@ -268,9 +309,9 @@ export class AiChatService {
     ].join("\n");
   }
 
-  private async buildDueDiligenceContext(tenantId: string, properties: PropertySnapshot[]): Promise<string[]> {
+  private async buildDueDiligencePayload(tenantId: string, properties: PropertySnapshot[]): Promise<DueDiligencePayload> {
     if (!properties.length) {
-      return [];
+      return { contextLines: [], insights: [] };
     }
 
     const summaries = await Promise.all(
@@ -280,20 +321,59 @@ export class AiChatService {
       }))
     );
 
-    return [
-      "Structured due diligence context for risks and watch-outs. Treat these as tenant-data-backed signals or checks to verify, not as legal advice or confirmed defects:",
-      ...summaries.map(({ property, summary }) => {
-        const signals = [
-          summary.cons.length ? `watch-outs: ${summary.cons.join(" ")}` : undefined,
-          summary.risks.length ? `data gaps/risks: ${summary.risks.join(" ")}` : undefined,
-          summary.questionsToAskAgent.length
-            ? `verification questions: ${summary.questionsToAskAgent.join(" ")}`
-            : undefined
-        ].filter(Boolean);
+    return {
+      contextLines: [
+        "Structured due diligence context for risks and watch-outs. Treat these as tenant-data-backed signals or checks to verify, not as legal advice or confirmed defects:",
+        ...summaries.map(({ property, summary }) => {
+          const signals = [
+            summary.cons.length ? `watch-outs: ${summary.cons.join(" ")}` : undefined,
+            summary.risks.length ? `data gaps/risks: ${summary.risks.join(" ")}` : undefined,
+            summary.questionsToAskAgent.length
+              ? `verification questions: ${summary.questionsToAskAgent.join(" ")}`
+              : undefined
+          ].filter(Boolean);
 
-        return `${property.title}: ${signals.length ? signals.join(" ") : "no material watch-outs were detected from structured fields."}`;
-      })
-    ];
+          return `${property.title}: ${signals.length ? signals.join(" ") : "no material watch-outs were detected from structured fields."}`;
+        })
+      ],
+      insights: summaries.flatMap(({ property, summary }) => this.buildPropertyInsights(property, summary))
+    };
+  }
+
+  private buildPropertyInsights(property: PropertySnapshot, summary: AiAdvisorSummary): AiChatInsight[] {
+    const insights: AiChatInsight[] = [];
+
+    if (summary.bestFor.length) {
+      insights.push({
+        kind: "fit",
+        title: `${property.title} fit`,
+        detail: `Best suited for ${summary.bestFor.join(", ")} based on current listing signals.`,
+        propertyId: property.id,
+        severity: "info"
+      });
+    }
+
+    for (const risk of summary.risks.slice(0, 2)) {
+      insights.push({
+        kind: "risk",
+        title: `${property.title} risk check`,
+        detail: risk,
+        propertyId: property.id,
+        severity: "warning"
+      });
+    }
+
+    for (const question of summary.questionsToAskAgent.slice(0, 2)) {
+      insights.push({
+        kind: "due_diligence",
+        title: "Ask before recommending",
+        detail: question,
+        propertyId: property.id,
+        severity: "info"
+      });
+    }
+
+    return insights;
   }
 
   private allowDeterministicFallback(): boolean {

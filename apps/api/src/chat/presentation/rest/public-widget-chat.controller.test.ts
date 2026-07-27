@@ -240,6 +240,7 @@ function chatResponse(overrides: Partial<AiChatResponse> = {}): AiChatResponse {
     citations: [],
     createdAt: "2026-07-21T00:00:00.000Z",
     id: "chat-1",
+    insights: [],
     matchedPropertyIds: [],
     message: "Question",
     suggestedActions: [],

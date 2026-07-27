@@ -54,6 +54,21 @@ describe("AiChatService", () => {
       provider: "openai",
       model: "configured-model"
     });
+    expect(response.insights).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          detail: "Missing maintenance fee makes ownership cost incomplete.",
+          kind: "risk",
+          propertyId: "property-1",
+          severity: "warning"
+        }),
+        expect.objectContaining({
+          detail: "What is the exact foreign quota status for this unit?",
+          kind: "due_diligence",
+          propertyId: "property-1"
+        })
+      ])
+    );
     expect(textGenerator.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         locale: "en",
@@ -122,6 +137,14 @@ describe("AiChatService", () => {
     });
 
     expect(response.answer).toContain("I found 1 matching listing.");
+    expect(response.insights).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: "risk",
+          title: "Wongamat Sea View Residence risk check"
+        })
+      ])
+    );
     expect(response.generation).toMatchObject({
       mode: "deterministic-fallback"
     });

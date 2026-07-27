@@ -1007,12 +1007,21 @@ export interface AiChatCitation {
   label: string;
 }
 
+export interface AiChatInsight {
+  kind: "fit" | "risk" | "due_diligence" | "handoff" | "knowledge";
+  title: string;
+  detail: string;
+  propertyId?: string;
+  severity?: "info" | "warning" | "critical";
+}
+
 export interface AiChatResponse {
   id: string;
   message: string;
   answer: string;
   matchedPropertyIds: string[];
   citations: AiChatCitation[];
+  insights: AiChatInsight[];
   suggestedActions: string[];
   generation?: {
     mode: "llm" | "deterministic-fallback";

@@ -33,6 +33,15 @@ export class PublicWidgetChatController {
         citations: [{ label: "Wongamat Sea View Residence, pattaya, 3500000 THB", source: "property" }],
         conciergeMode: "starter",
         createdAt: "2026-07-21T00:00:00.000Z",
+        insights: [
+          {
+            detail: "Ask whether the sea view is protected from future construction before recommending.",
+            kind: "due_diligence",
+            propertyId: "10000000-0000-4000-8000-000000000001",
+            severity: "info",
+            title: "Ask before recommending"
+          }
+        ],
         locale: "en",
         matchedPropertyIds: ["10000000-0000-4000-8000-000000000001"],
         message: "condo in pattaya under 5M with sea view",
