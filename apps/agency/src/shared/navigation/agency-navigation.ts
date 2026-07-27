@@ -21,6 +21,13 @@ export interface AgencyNavigationItem {
   plans: readonly TenantSubscriptionPlan[];
 }
 
+export interface AgencyUpgradeCta {
+  description: string;
+  href: string;
+  label: string;
+  title: string;
+}
+
 const allPlans: readonly TenantSubscriptionPlan[] = ["starter", "growth", "enterprise"];
 const crmPlans: readonly TenantSubscriptionPlan[] = ["growth", "enterprise"];
 
@@ -54,6 +61,19 @@ export function getAgencyNavigationItems(plan: TenantSubscriptionPlan): AgencyNa
 
 export function getAgencyTopbarQuickLinks(plan: TenantSubscriptionPlan) {
   return agencyTopbarQuickLinks.filter((link) => link.plans.includes(plan));
+}
+
+export function getAgencyUpgradeCta(plan: TenantSubscriptionPlan): AgencyUpgradeCta | null {
+  if (plan !== "starter") {
+    return null;
+  }
+
+  return {
+    description: "Growth unlocks lead handoff, assignment, and pipeline work.",
+    href: "/setup?plan=growth",
+    label: "Start Growth",
+    title: "Turn Concierge conversations into CRM leads"
+  };
 }
 
 export function isAgencyNavigationItemActive(pathname: string, href: string) {

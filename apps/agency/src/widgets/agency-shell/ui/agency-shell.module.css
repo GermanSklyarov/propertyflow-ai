@@ -123,6 +123,55 @@
   text-transform: uppercase;
 }
 
+.upgradeCard {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgb(255 177 153 / 28%);
+  background: linear-gradient(135deg, rgb(255 128 103 / 14%), rgb(255 255 255 / 7%));
+  padding: 13px;
+  color: rgb(255 255 255 / 78%);
+  text-decoration: none;
+}
+
+.upgradeCard:hover,
+.upgradeCard:focus-visible {
+  border-color: rgb(255 177 153 / 52%);
+  background: linear-gradient(135deg, rgb(255 128 103 / 22%), rgb(255 255 255 / 10%));
+  color: #fff;
+  outline: none;
+}
+
+.upgradeEyebrow {
+  color: #ffb199;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.upgradeCard strong {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 950;
+  line-height: 1.2;
+}
+
+.upgradeCard span {
+  font-size: 0.76rem;
+  font-weight: 820;
+  line-height: 1.35;
+}
+
+.upgradeLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffb199;
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
 .main {
   min-width: 0;
 }

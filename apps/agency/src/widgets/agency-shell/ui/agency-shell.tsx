@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  ArrowRight,
   Bell,
   DatabaseZap,
   LogOut,
@@ -12,6 +13,7 @@ import type { TenantSubscriptionPlan } from "@propertyflow/contracts";
 import {
   getAgencyNavigationItems,
   getAgencyTopbarQuickLinks,
+  getAgencyUpgradeCta,
   isAgencyNavigationItemActive
 } from "@shared/navigation/agency-navigation";
 import { submitAgencyLogout } from "../api/session-actions";
@@ -30,6 +32,7 @@ export function AgencyShell({
   const isEntryRoute = pathname === "/" || pathname.startsWith("/signup") || pathname.startsWith("/signin");
   const navigationItems = getAgencyNavigationItems(subscriptionPlan);
   const quickLinks = getAgencyTopbarQuickLinks(subscriptionPlan);
+  const upgradeCta = getAgencyUpgradeCta(subscriptionPlan);
   const planLabel = subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1);
 
   if (isEntryRoute) {
@@ -83,6 +86,18 @@ export function AgencyShell({
               );
             })}
           </nav>
+
+          {upgradeCta ? (
+            <Link className={styles.upgradeCard} href={upgradeCta.href}>
+              <span className={styles.upgradeEyebrow}>Upgrade path</span>
+              <strong>{upgradeCta.title}</strong>
+              <span>{upgradeCta.description}</span>
+              <span className={styles.upgradeLink}>
+                {upgradeCta.label}
+                <ArrowRight size={15} />
+              </span>
+            </Link>
+          ) : null}
         </aside>
 
         <div className={styles.main}>

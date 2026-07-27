@@ -3,6 +3,7 @@ import {
   agencyNavigationItems,
   getAgencyNavigationItems,
   getAgencyTopbarQuickLinks,
+  getAgencyUpgradeCta,
   isAgencyNavigationItemActive
 } from "./agency-navigation";
 
@@ -45,5 +46,16 @@ describe("agency navigation", () => {
     expect(getAgencyNavigationItems("enterprise").map((item) => item.href)).toEqual(
       expect.arrayContaining(["/leads", "/saved-searches", "/ai-tools", "/analytics"])
     );
+  });
+
+  it("surfaces Growth upgrade copy only for Starter workspaces", () => {
+    expect(getAgencyUpgradeCta("starter")).toEqual(
+      expect.objectContaining({
+        href: "/setup?plan=growth",
+        label: "Start Growth"
+      })
+    );
+    expect(getAgencyUpgradeCta("growth")).toBeNull();
+    expect(getAgencyUpgradeCta("enterprise")).toBeNull();
   });
 });
