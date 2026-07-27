@@ -28,6 +28,12 @@ const onboardingSteps = [
   }
 ];
 
+const signinAssurances = [
+  "Open the agency workspace for the selected company.",
+  "Keep setup, knowledge sources, and widget controls in one dashboard.",
+  "Continue where the Starter onboarding left off."
+];
+
 export function AgencyEntryPage() {
   const plans = buildAgencyEntryPlanCards();
 
@@ -202,21 +208,26 @@ export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null
     <main className={styles.page}>
       <section className={styles.signinPanel}>
         <div className={styles.signinCopy}>
-          <p className="section-kicker">Agency session</p>
+          <p className="section-kicker">Agency login</p>
           <h1>Return to your workspace</h1>
           <p>
-            Use the workspace slug and agency email to create a secure browser session for the agency dashboard.
+            Sign in with your agency workspace and work email to manage the AI Concierge, knowledge sources, and widget
+            launch settings.
           </p>
-          <div className={styles.signinSecurityCard}>
-            <span>Security model</span>
-            <strong>Bearer access token</strong>
-            <p>Requests use a signed session token instead of trusting tenantId from the browser.</p>
-            <ol>
-              <li>Find the active tenant by slug</li>
-              <li>Match an active agency member by email</li>
-              <li>Issue a short-lived workspace token</li>
-            </ol>
+          <div className={styles.signinValueCard}>
+            <span>Workspace access</span>
+            <ul>
+              {signinAssurances.map((item) => (
+                <li key={item}>
+                  <CheckCircle2 size={17} />
+                  {item}
+                </li>
+              ))}
+            </ul>
           </div>
+          <p className={styles.signinFootnote}>
+            New to PropertyFlow AI? <Link href="/signup?plan=starter">Create a Starter workspace</Link>.
+          </p>
         </div>
         <form action={submitAgencySignin} className={styles.signinForm}>
           {errorMessage ? (
@@ -226,24 +237,24 @@ export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null
           ) : null}
           <label>
             Workspace slug
-            <input name="tenantSlug" placeholder="demo-agency" required />
+            <input name="tenantSlug" placeholder="your-agency" required />
           </label>
           <label>
             Work email
-            <input name="email" placeholder="owner@agency.co.th" required type="email" />
+            <input name="email" placeholder="you@agency.com" required type="email" />
           </label>
           <label>
-            Bootstrap code
-            <input name="bootstrapCode" placeholder="Required in production bootstrap mode" />
+            Access code
+            <input name="bootstrapCode" placeholder="From your invitation email" />
           </label>
           <div className={styles.signinActions}>
             <button className={styles.primaryAction} type="submit">
-              Create agency session
+              Sign in
               <ArrowRight size={18} />
             </button>
             <span>
               <KeyRound size={16} />
-              Local development can omit the bootstrap code unless configured.
+              Access codes are used for protected workspace invitations.
             </span>
           </div>
         </form>

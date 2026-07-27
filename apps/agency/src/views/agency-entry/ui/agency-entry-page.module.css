@@ -457,43 +457,56 @@ button.secondaryAction {
   line-height: 1.5;
 }
 
-.signinSecurityCard {
+.signinValueCard {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   margin-top: 22px;
   border: 1px solid rgb(15 118 110 / 18%);
   background: #eef9f6;
   padding: 18px;
 }
 
-.signinSecurityCard > span {
-  color: var(--muted);
-  font-size: 0.85rem;
+.signinValueCard > span {
+  color: var(--coral);
+  font-size: 0.82rem;
   font-weight: 900;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.signinSecurityCard strong {
-  color: var(--teal-dark);
-  font-size: 1.35rem;
-  font-weight: 900;
-}
-
-.signinSecurityCard p {
-  margin: 0;
-  color: var(--muted);
-  font-weight: 750;
-  line-height: 1.45;
-}
-
-.signinSecurityCard ol {
+.signinValueCard ul {
   display: grid;
-  gap: 8px;
+  gap: 12px;
   margin: 0;
-  padding-left: 22px;
+  padding: 0;
+  list-style: none;
+}
+
+.signinValueCard li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
   color: var(--teal-dark);
   font-weight: 850;
+  line-height: 1.35;
+}
+
+.signinValueCard svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--teal);
+}
+
+.signinFootnote {
+  margin: 16px 0 0;
+}
+
+.signinFootnote a {
+  color: var(--teal-dark);
+  font-weight: 900;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
 .signinForm {
@@ -594,4 +607,5 @@ button.secondaryAction {
   .signinCopy h1 {
     font-size: 2.8rem;
   }
+
 }
