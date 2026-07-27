@@ -53,6 +53,7 @@ export class AiChatService {
     const citations: AiChatCitation[] = [this.propertyCitation(property)];
     const answerParts = [this.describeProperty(property)];
     const knowledge = await this.retrieveKnowledge(tenantId, request);
+    const dueDiligenceContext = await this.buildDueDiligenceContext(tenantId, [property]);
 
     if (this.isNeighborhoodQuestion(normalized)) {
       const neighborhood = await this.neighborhoodIntelligence.analyze(tenantId, property.id);
@@ -91,7 +92,7 @@ export class AiChatService {
       [property.id],
       citations,
       ["compare-similar-properties", "open-investment-calculator", "create-lead"],
-      this.buildContext(answerParts, citations),
+      this.buildContext([...answerParts, ...dueDiligenceContext], citations),
       options
     );
   }
@@ -119,6 +120,7 @@ export class AiChatService {
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
     const knowledge = await this.retrieveKnowledge(tenantId, request);
+    const dueDiligenceContext = await this.buildDueDiligenceContext(tenantId, matches);
 
     if (!matches.length) {
       return this.buildResponse(
@@ -166,11 +168,14 @@ export class AiChatService {
         ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
       ],
       ["compare-results", "open-map", "save-search"],
-      this.buildContext(answer, [
-        { source: "search", label: search.interpretedIntent },
-        ...matches.map((property) => this.propertyCitation(property)),
-        ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
-      ]),
+      this.buildContext(
+        [answer, ...dueDiligenceContext],
+        [
+          { source: "search", label: search.interpretedIntent },
+          ...matches.map((property) => this.propertyCitation(property)),
+          ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
+        ]
+      ),
       options
     );
   }
@@ -261,6 +266,34 @@ export class AiChatService {
       "Source labels available through the separate citations API field:",
       ...citations.map((citation) => `- ${citation.label}`)
     ].join("\n");
+  }
+
+  private async buildDueDiligenceContext(tenantId: string, properties: PropertySnapshot[]): Promise<string[]> {
+    if (!properties.length) {
+      return [];
+    }
+
+    const summaries = await Promise.all(
+      properties.map(async (property) => ({
+        property,
+        summary: await this.advisor.summarize(tenantId, property.id)
+      }))
+    );
+
+    return [
+      "Structured due diligence context for risks and watch-outs. Treat these as tenant-data-backed signals or checks to verify, not as legal advice or confirmed defects:",
+      ...summaries.map(({ property, summary }) => {
+        const signals = [
+          summary.cons.length ? `watch-outs: ${summary.cons.join(" ")}` : undefined,
+          summary.risks.length ? `data gaps/risks: ${summary.risks.join(" ")}` : undefined,
+          summary.questionsToAskAgent.length
+            ? `verification questions: ${summary.questionsToAskAgent.join(" ")}`
+            : undefined
+        ].filter(Boolean);
+
+        return `${property.title}: ${signals.length ? signals.join(" ") : "no material watch-outs were detected from structured fields."}`;
+      })
+    ];
   }
 
   private allowDeterministicFallback(): boolean {

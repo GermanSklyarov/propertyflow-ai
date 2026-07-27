@@ -74,6 +74,16 @@ describe("AiChatService", () => {
     );
     expect(textGenerator.generate).toHaveBeenCalledWith(
       expect.objectContaining({
+        context: expect.stringContaining("Structured due diligence context")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("Missing maintenance fee makes ownership cost incomplete.")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
         context: expect.not.stringContaining("1. Wongamat Sea View Residence")
       })
     );
@@ -183,7 +193,32 @@ function serviceFactory(overrides: {
     search: vi.fn().mockResolvedValue(overrides.searchItems ?? [])
   };
   const advisor = {
-    summarize: vi.fn()
+    summarize: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+      Promise.resolve({
+        bestFor: ["living"],
+        confidence: "medium",
+        cons: [],
+        generatedFrom: [
+          "property-price",
+          "property-location",
+          "property-size",
+          "amenities",
+          "rent-estimate",
+          "maintenance-fee"
+        ],
+        propertyId,
+        pros: ["Sea view can support stronger resale and rental positioning."],
+        questionsToAskAgent: [
+          "What is the exact foreign quota status for this unit?",
+          "What are the current common area fees and sinking fund terms?",
+          "Are short-term rentals allowed by the building rules?"
+        ],
+        risks: [
+          "Missing rent estimate makes investment yield uncertain.",
+          "Missing maintenance fee makes ownership cost incomplete."
+        ]
+      })
+    )
   };
   const naturalLanguageSearch = {
     interpret: vi.fn().mockReturnValue({
