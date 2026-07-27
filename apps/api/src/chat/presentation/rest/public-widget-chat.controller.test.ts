@@ -45,11 +45,22 @@ describe("PublicWidgetChatController", () => {
       tenantSlug: "demo-agency"
     });
 
-    expect(chat.ask).toHaveBeenCalledWith("tenant-rag", {
-      locale: "ru",
-      market: "pattaya",
-      message: "Квартира в Паттайе до 5 млн"
-    });
+    expect(chat.ask).toHaveBeenCalledWith(
+      "tenant-rag",
+      {
+        locale: "ru",
+        market: "pattaya",
+        message: "Квартира в Паттайе до 5 млн"
+      },
+      {
+        persona: {
+          gender: "feminine",
+          name: "Анна",
+          tone: "friendly",
+          welcomeMessage: "Привет! Я Анна, ваш AI-консультант по недвижимости."
+        }
+      }
+    );
     expect(tenants.assertPublicWidgetOriginAllowed).toHaveBeenCalledWith(tenant, "https://agency.example.com", undefined);
     expect(tenants.recordPublicWidgetAsk).toHaveBeenCalledWith(tenant, {
       locale: "ru",
@@ -85,10 +96,21 @@ describe("PublicWidgetChatController", () => {
     });
 
     expect(response.locale).toBe("ru");
-    expect(chat.ask).toHaveBeenCalledWith("tenant-1", {
-      locale: "ru",
-      message: "海景公寓"
-    });
+    expect(chat.ask).toHaveBeenCalledWith(
+      "tenant-1",
+      {
+        locale: "ru",
+        message: "海景公寓"
+      },
+      {
+        persona: {
+          gender: "feminine",
+          name: "Анна",
+          tone: "friendly",
+          welcomeMessage: "Привет! Я Анна, ваш AI-консультант по недвижимости."
+        }
+      }
+    );
   });
 
   it("creates a tenant-scoped lead from public widget handoff", async () => {

@@ -1,13 +1,21 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
-import type { AiChatCitation } from "@propertyflow/contracts";
+import type { AiChatCitation, TenantWidgetPersonaGender, TenantWidgetTone } from "@propertyflow/contracts";
 
 export const AI_TEXT_GENERATOR = Symbol("AI_TEXT_GENERATOR");
+
+export interface AiConciergePersona {
+  name?: string;
+  tone?: TenantWidgetTone;
+  gender?: TenantWidgetPersonaGender;
+  welcomeMessage?: string;
+}
 
 export interface AiTextGenerationRequest {
   locale: "en" | "ru" | "th" | "zh";
   message: string;
   context: string;
   citations: AiChatCitation[];
+  persona?: AiConciergePersona;
 }
 
 export interface AiTextGenerationResult {
@@ -73,12 +81,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
         messages: [
           {
             role: "system",
-            content: [
-              "You are a production AI property concierge for a Thailand real-estate agency.",
-              "Answer only from the supplied tenant context. If the context is insufficient, say what is missing.",
-              "Be concise, practical, and cite property or knowledge names naturally.",
-              `Respond in locale ${request.locale}.`
-            ].join(" ")
+            content: this.buildSystemPrompt(request)
           },
           {
             role: "user",
@@ -138,10 +141,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
               parts: [
                 {
                   text: [
-                    "You are a production AI property concierge for a Thailand real-estate agency.",
-                    "Answer only from the supplied tenant context. If the context is insufficient, say what is missing.",
-                    "Be concise, practical, and cite property or knowledge names naturally.",
-                    `Respond in locale ${request.locale}.`,
+                    this.buildSystemPrompt(request),
                     "",
                     `Visitor question: ${request.message}`,
                     "",
@@ -174,6 +174,39 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       provider: "gemini",
       model
     };
+  }
+
+  private buildSystemPrompt(request: AiTextGenerationRequest): string {
+    const persona = request.persona;
+    const personaLines = [
+      persona?.name ? `Your public concierge name is "${persona.name}".` : undefined,
+      persona?.tone ? `Use a ${persona.tone} tone.` : undefined,
+      persona?.gender ? this.genderInstruction(persona.gender) : undefined,
+      persona?.welcomeMessage ? `Tenant-configured welcome message for this locale: "${persona.welcomeMessage}".` : undefined
+    ].filter(Boolean);
+
+    return [
+      "You are a production AI property concierge for a Thailand real-estate agency.",
+      "Answer only from the supplied tenant context. If the context is insufficient, say what is missing.",
+      "Be concise, practical, and cite property or knowledge names naturally in prose.",
+      "Do not print bracketed citation markers like [1], [2], or numbered source references; the API returns citations separately.",
+      "Do not invent facts, prices, risks, yields, fees, availability, or legal details that are not present in the supplied context.",
+      "If total matches and top matches differ, clearly say that only the top matches are being shown.",
+      `Respond in locale ${request.locale}.`,
+      ...personaLines
+    ].join(" ");
+  }
+
+  private genderInstruction(gender: TenantWidgetPersonaGender): string {
+    const instructions: Record<TenantWidgetPersonaGender, string> = {
+      feminine:
+        "Use feminine first-person wording where the response language has grammatical gender, including Russian and Thai polite particles.",
+      masculine:
+        "Use masculine first-person wording where the response language has grammatical gender, including Russian and Thai polite particles.",
+      neutral: "Use neutral wording and avoid gendered first-person phrasing where possible."
+    };
+
+    return instructions[gender];
   }
 
   private provider(): string {

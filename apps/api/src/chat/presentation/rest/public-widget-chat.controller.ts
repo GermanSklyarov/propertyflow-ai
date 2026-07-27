@@ -1,8 +1,14 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Headers, Inject, Param, Post } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
-import type { PublicWidgetAskResponse, PublicWidgetLeadResponse, TenantWidgetLanguage } from "@propertyflow/contracts";
+import type {
+  PublicWidgetAskResponse,
+  PublicWidgetLeadResponse,
+  TenantSnapshot,
+  TenantWidgetLanguage
+} from "@propertyflow/contracts";
 import { LeadService } from "../../../leads/application/lead.service.js";
 import { TenantService } from "../../../tenants/application/tenant.service.js";
+import type { AiConciergePersona } from "../../application/ai-text-generator.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
 import { PublicWidgetAskDto, PublicWidgetLeadDto } from "./public-widget-chat.dto.js";
 
@@ -45,10 +51,16 @@ export class PublicWidgetChatController {
     this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
 
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
-    const response = await this.chat.ask(tenant.id, {
-      ...payload,
-      locale
-    });
+    const response = await this.chat.ask(
+      tenant.id,
+      {
+        ...payload,
+        locale
+      },
+      {
+        persona: resolveWidgetPersona(tenant, locale)
+      }
+    );
     await this.tenants.recordPublicWidgetAsk(tenant, {
       locale,
       origin: origin ?? null,
@@ -126,6 +138,15 @@ function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requested
   }
 
   return enabledLanguages[0] ?? "en";
+}
+
+function resolveWidgetPersona(tenant: TenantSnapshot, locale: TenantWidgetLanguage): AiConciergePersona {
+  return {
+    gender: tenant.widget.personaGenders[locale] ?? "neutral",
+    name: tenant.widget.aiNames[locale] ?? tenant.widget.aiName,
+    tone: tenant.widget.tone,
+    welcomeMessage: tenant.widget.welcomeMessages[locale] ?? tenant.widget.welcomeMessage
+  };
 }
 
 function normalizeOptional(value?: string): string | undefined {

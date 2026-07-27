@@ -32,10 +32,21 @@ describe("AiChatService", () => {
       knowledgeItems: [chunk]
     });
 
-    const response = await service.ask("tenant-1", {
-      locale: "en",
-      message: "I need a sea-view condo under 5M in Pattaya"
-    });
+    const response = await service.ask(
+      "tenant-1",
+      {
+        locale: "en",
+        message: "I need a sea-view condo under 5M in Pattaya"
+      },
+      {
+        persona: {
+          gender: "feminine",
+          name: "Anna",
+          tone: "friendly",
+          welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+        }
+      }
+    );
 
     expect(response.answer).toBe("A real model answer grounded in Wongamat Sea View Residence and the buying guide.");
     expect(response.generation).toEqual({
@@ -47,12 +58,23 @@ describe("AiChatService", () => {
       expect.objectContaining({
         locale: "en",
         message: "I need a sea-view condo under 5M in Pattaya",
-        context: expect.stringContaining("Wongamat Sea View Residence")
+        context: expect.stringContaining("Wongamat Sea View Residence"),
+        persona: {
+          gender: "feminine",
+          name: "Anna",
+          tone: "friendly",
+          welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+        }
       })
     );
     expect(textGenerator.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         context: expect.stringContaining("Foreign ownership process")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.not.stringContaining("1. Wongamat Sea View Residence")
       })
     );
   });
@@ -119,7 +141,13 @@ describe("AiChatService", () => {
       citations: [{ label: "Wongamat Sea View Residence", propertyId: "property-1", source: "property" }],
       context: "Property: Wongamat Sea View Residence",
       locale: "en",
-      message: "Do you have sea-view condos?"
+      message: "Do you have sea-view condos?",
+      persona: {
+        gender: "feminine",
+        name: "Anna",
+        tone: "friendly",
+        welcomeMessage: "Hi! I'm Anna, your AI property consultant."
+      }
     });
 
     expect(result).toEqual({
@@ -133,6 +161,15 @@ describe("AiChatService", () => {
         method: "POST"
       })
     );
+    const [, requestInit] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(String(requestInit?.body)) as {
+      contents: Array<{ parts: Array<{ text: string }> }>;
+    };
+    const prompt = body.contents[0]?.parts[0]?.text ?? "";
+    expect(prompt).toContain('Your public concierge name is "Anna".');
+    expect(prompt).toContain("Use a friendly tone.");
+    expect(prompt).toContain("Use feminine first-person wording");
+    expect(prompt).toContain("Do not print bracketed citation markers like [1], [2]");
   });
 });
 

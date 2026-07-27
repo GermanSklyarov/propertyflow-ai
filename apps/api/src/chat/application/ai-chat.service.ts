@@ -11,7 +11,11 @@ import { AiPropertyAdvisorService } from "../../properties/application/services/
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
-import { AI_TEXT_GENERATOR, type AiTextGenerator } from "./ai-text-generator.js";
+import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
+
+export interface AiChatAskOptions {
+  persona?: AiConciergePersona;
+}
 
 @Injectable()
 export class AiChatService {
@@ -26,15 +30,19 @@ export class AiChatService {
     @Inject(AI_TEXT_GENERATOR) private readonly textGenerator: AiTextGenerator
   ) {}
 
-  async ask(tenantId: string, request: AiChatRequest): Promise<AiChatResponse> {
+  async ask(tenantId: string, request: AiChatRequest, options: AiChatAskOptions = {}): Promise<AiChatResponse> {
     if (request.propertyId) {
-      return this.answerAboutProperty(tenantId, request);
+      return this.answerAboutProperty(tenantId, request, options);
     }
 
-    return this.answerWithSearch(tenantId, request);
+    return this.answerWithSearch(tenantId, request, options);
   }
 
-  private async answerAboutProperty(tenantId: string, request: AiChatRequest): Promise<AiChatResponse> {
+  private async answerAboutProperty(
+    tenantId: string,
+    request: AiChatRequest,
+    options: AiChatAskOptions
+  ): Promise<AiChatResponse> {
     const property = await this.properties.findById(tenantId, request.propertyId!);
 
     if (!property) {
@@ -83,11 +91,16 @@ export class AiChatService {
       [property.id],
       citations,
       ["compare-similar-properties", "open-investment-calculator", "create-lead"],
-      this.buildContext(answerParts, citations)
+      this.buildContext(answerParts, citations),
+      options
     );
   }
 
-  private async answerWithSearch(tenantId: string, request: AiChatRequest): Promise<AiChatResponse> {
+  private async answerWithSearch(
+    tenantId: string,
+    request: AiChatRequest,
+    options: AiChatAskOptions
+  ): Promise<AiChatResponse> {
     const search = await this.naturalLanguageSearch.search(tenantId, {
       locale: request.locale,
       query: request.message,
@@ -127,7 +140,8 @@ export class AiChatService {
             { source: "search", label: search.rankingExplanation },
             ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
           ]
-        )
+        ),
+        options
       );
     }
 
@@ -156,7 +170,8 @@ export class AiChatService {
         { source: "search", label: search.interpretedIntent },
         ...matches.map((property) => this.propertyCitation(property)),
         ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
-      ])
+      ]),
+      options
     );
   }
 
@@ -176,10 +191,11 @@ export class AiChatService {
     matchedPropertyIds: string[],
     citations: AiChatCitation[],
     suggestedActions: string[],
-    context: string
+    context: string,
+    options: AiChatAskOptions = {}
   ): Promise<AiChatResponse> {
     if (this.textGenerator.isConfigured()) {
-      return this.buildGeneratedResponse(request, answer, matchedPropertyIds, citations, suggestedActions, context);
+      return this.buildGeneratedResponse(request, answer, matchedPropertyIds, citations, suggestedActions, context, options);
     }
 
     if (!this.allowDeterministicFallback()) {
@@ -209,13 +225,15 @@ export class AiChatService {
     matchedPropertyIds: string[],
     citations: AiChatCitation[],
     suggestedActions: string[],
-    context: string
+    context: string,
+    options: AiChatAskOptions
   ): Promise<AiChatResponse> {
     const generated = await this.textGenerator.generate({
       locale: request.locale,
       message: request.message,
       context: [context, "", "Deterministic retrieval draft:", deterministicDraft].join("\n"),
-      citations
+      citations,
+      persona: options.persona
     });
 
     return {
@@ -240,8 +258,8 @@ export class AiChatService {
     return [
       ...contextLines,
       "",
-      "Citations:",
-      ...citations.map((citation, index) => `${index + 1}. ${citation.label}`)
+      "Source labels available through the separate citations API field:",
+      ...citations.map((citation) => `- ${citation.label}`)
     ].join("\n");
   }
 
