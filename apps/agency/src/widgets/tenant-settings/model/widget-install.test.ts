@@ -6,6 +6,7 @@ import {
   buildWidgetPlanUpgradePath,
   buildWidgetRuntimeReadiness,
   buildWidgetSnippet,
+  propertyFlowUpgradeRequestEmail,
   summarizeWidgetInstallSteps,
   summarizeWidgetLaunchReadiness
 } from "./widget-install";
@@ -221,9 +222,12 @@ describe("widget install model", () => {
       currentPlanName: "Starter",
       nextPlan: "growth",
       nextPlanName: "Growth",
+      actionLabel: "Request Growth",
       title: "Starter keeps CRM optional",
       trigger: "Upgrade to Growth when widget conversations should become assigned CRM leads."
     });
+    expect(upgradePath.actionHref).toContain(`mailto:${propertyFlowUpgradeRequestEmail}`);
+    expect(upgradePath.actionHref).toContain("Plan%20target%3A%20growth");
     expect(upgradePath.features.map((feature) => feature.label)).toEqual(["Lead handoff", "Agent assignment", "Pipeline follow-up"]);
   });
 
@@ -232,6 +236,8 @@ describe("widget install model", () => {
 
     expect(upgradePath.nextPlan).toBeUndefined();
     expect(upgradePath.nextPlanName).toBeUndefined();
+    expect(upgradePath.actionHref).toBeUndefined();
+    expect(upgradePath.actionLabel).toBeUndefined();
     expect(upgradePath.title).toBe("Enterprise mode enabled");
     expect(upgradePath.features.map((feature) => feature.label)).toContain("Full AI infrastructure");
   });

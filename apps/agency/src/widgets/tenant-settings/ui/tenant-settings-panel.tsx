@@ -1,4 +1,5 @@
 import {
+  ArrowRight,
   BadgeCheck,
   Building2,
   CheckCircle2,
@@ -497,6 +498,12 @@ function PlanUpgradePath({ path }: { path: ReturnType<typeof buildWidgetPlanUpgr
           </span>
         ))}
       </div>
+      {path.actionHref && path.actionLabel ? (
+        <a className={styles.planUpgradeAction} href={path.actionHref}>
+          {path.actionLabel}
+          <ArrowRight size={16} />
+        </a>
+      ) : null}
     </article>
   );
 }

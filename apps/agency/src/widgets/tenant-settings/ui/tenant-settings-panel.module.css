@@ -953,6 +953,30 @@
   padding-left: 10px;
 }
 
+.planUpgradeAction {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: var(--teal);
+  padding: 0 14px;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.planUpgradeAction:hover,
+.planUpgradeAction:focus-visible {
+  border-color: rgb(15 118 110 / 34%);
+  background: var(--teal-dark);
+  outline: none;
+}
+
 .planUpgradeFeatures {
   display: grid;
   gap: 8px;

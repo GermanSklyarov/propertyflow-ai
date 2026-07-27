@@ -8,6 +8,8 @@ import type {
 import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 
+export const propertyFlowUpgradeRequestEmail = "sales@propertyflow.ai";
+
 export interface WidgetInstallConfig {
   apiBaseUrl?: string;
   aiName: string;
@@ -50,6 +52,8 @@ export interface WidgetPlanUpgradeFeature {
 }
 
 export interface WidgetPlanUpgradePath {
+  actionHref?: string;
+  actionLabel?: string;
   currentPlan: TenantSubscriptionPlan;
   currentPlanName: string;
   features: WidgetPlanUpgradeFeature[];
@@ -214,6 +218,8 @@ export function buildWidgetPlanUpgradePath(plan: TenantSubscriptionPlan): Widget
     const nextPlan = getTenantPlanDefinition("growth");
 
     return {
+      actionHref: buildUpgradeRequestHref("growth"),
+      actionLabel: "Request Growth",
       currentPlan: plan,
       currentPlanName: currentPlan.name,
       features: [
@@ -242,6 +248,8 @@ export function buildWidgetPlanUpgradePath(plan: TenantSubscriptionPlan): Widget
     const nextPlan = getTenantPlanDefinition("enterprise");
 
     return {
+      actionHref: buildUpgradeRequestHref("enterprise"),
+      actionLabel: "Request Enterprise",
       currentPlan: plan,
       currentPlanName: currentPlan.name,
       features: [
@@ -287,6 +295,16 @@ export function buildWidgetPlanUpgradePath(plan: TenantSubscriptionPlan): Widget
     title: "Enterprise mode enabled",
     trigger: currentPlan.upgradePrompt
   };
+}
+
+function buildUpgradeRequestHref(plan: Exclude<TenantSubscriptionPlan, "starter">) {
+  const planDefinition = getTenantPlanDefinition(plan);
+  const subject = encodeURIComponent(`PropertyFlow AI ${planDefinition.name} upgrade request`);
+  const body = encodeURIComponent(
+    `Hi PropertyFlow AI team,\n\nWe would like to discuss upgrading this workspace to ${planDefinition.name}.\n\nWorkspace slug: \nPlan target: ${plan}\n\n`
+  );
+
+  return `mailto:${propertyFlowUpgradeRequestEmail}?subject=${subject}&body=${body}`;
 }
 
 function buildWidgetInstallSteps(tenant: TenantSnapshot): WidgetInstallStep[] {
