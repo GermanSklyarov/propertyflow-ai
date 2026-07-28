@@ -16,7 +16,30 @@ describe("AiChatService", () => {
   });
 
   it("uses a configured LLM provider to generate the final tenant-scoped answer", async () => {
-    const property = propertyFactory();
+    const property = propertyFactory({
+      description:
+        "High-floor condo near Wongamat beach with sea view, fiber internet, pool, gym, and strong winter rental appeal.",
+      floor: 8,
+      maintenanceFeeMonthly: {
+        amount: 2800,
+        currency: "THB"
+      },
+      monthlyRentEstimate: {
+        amount: 28000,
+        currency: "THB"
+      },
+      project: {
+        amenities: ["pool", "gym", "security"],
+        createdAt: "2026-07-21T00:00:00.000Z",
+        developer: "Riviera Group",
+        id: "project-1",
+        market: "pattaya",
+        name: "The Riviera Wongamat",
+        status: "completed",
+        tenantId: "tenant-1",
+        updatedAt: "2026-07-21T00:00:00.000Z"
+      }
+    });
     const chunk = knowledgeChunkFactory();
     const textGenerator: AiTextGenerator = {
       isConfigured: vi.fn().mockReturnValue(true),
@@ -90,6 +113,36 @@ describe("AiChatService", () => {
     expect(textGenerator.generate).toHaveBeenCalledWith(
       expect.objectContaining({
         context: expect.stringContaining("Structured due diligence context")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("Structured listing evidence")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("amenities=sea-view, pool, fast-internet")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("project=The Riviera Wongamat")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("maintenanceFee=2800 THB/mo")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("beachDistance=240m")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("description=High-floor condo near Wongamat beach with sea view")
       })
     );
     expect(textGenerator.generate).toHaveBeenCalledWith(

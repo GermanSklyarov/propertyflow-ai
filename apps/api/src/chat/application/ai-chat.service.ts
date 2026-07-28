@@ -100,7 +100,7 @@ export class AiChatService {
       citations,
       dueDiligence.insights,
       ["compare-similar-properties", "open-investment-calculator", "create-lead"],
-      this.buildContext([...answerParts, ...dueDiligence.contextLines], citations),
+      this.buildContext([...answerParts, ...this.buildListingEvidence([property]), ...dueDiligence.contextLines], citations),
       options
     );
   }
@@ -197,7 +197,7 @@ export class AiChatService {
       dueDiligence.insights,
       ["compare-results", "open-map", "save-search"],
       this.buildContext(
-        [answer, ...dueDiligence.contextLines],
+        [answer, ...this.buildListingEvidence(matches), ...dueDiligence.contextLines],
         [
           { source: "search", label: search.interpretedIntent },
           ...matches.map((property) => this.propertyCitation(property)),
@@ -307,6 +307,67 @@ export class AiChatService {
       "Source labels available through the separate citations API field:",
       ...citations.map((citation) => `- ${citation.label}`)
     ].join("\n");
+  }
+
+  private buildListingEvidence(properties: PropertySnapshot[]): string[] {
+    if (!properties.length) {
+      return [];
+    }
+
+    return [
+      "Structured listing evidence for the property recommendation. Treat these as authoritative tenant listing facts:",
+      ...properties.map((property) => this.propertyEvidenceLine(property))
+    ];
+  }
+
+  private propertyEvidenceLine(property: PropertySnapshot): string {
+    const fields = [
+      `id=${property.id}`,
+      `title=${property.title}`,
+      `market=${property.market}`,
+      `kind=${property.kind}`,
+      `listingType=${property.listingType}`,
+      `status=${property.status}`,
+      `salePrice=${this.formatMoney(property.price)}`,
+      property.rentalPriceMonthly ? `rentalAsk=${this.formatMoney(property.rentalPriceMonthly)}/mo` : undefined,
+      property.monthlyRentEstimate ? `rentEstimate=${this.formatMoney(property.monthlyRentEstimate)}/mo` : undefined,
+      property.maintenanceFeeMonthly ? `maintenanceFee=${this.formatMoney(property.maintenanceFeeMonthly)}/mo` : undefined,
+      `area=${property.areaSqm}sqm`,
+      `bedrooms=${property.bedrooms}`,
+      `bathrooms=${property.bathrooms}`,
+      property.floor !== undefined ? `floor=${property.floor}` : undefined,
+      property.beachDistanceMeters !== undefined ? `beachDistance=${property.beachDistanceMeters}m` : undefined,
+      property.address ? `address=${property.address}` : undefined,
+      property.amenities.length ? `amenities=${property.amenities.join(", ")}` : "amenities=not specified",
+      property.project ? this.projectEvidence(property) : undefined,
+      property.description ? `description=${this.truncate(property.description, 260)}` : undefined
+    ].filter(Boolean);
+
+    return `- ${fields.join("; ")}`;
+  }
+
+  private projectEvidence(property: PropertySnapshot): string {
+    const project = property.project!;
+    const fields = [
+      `project=${project.name}`,
+      `projectStatus=${project.status}`,
+      project.developer ? `developer=${project.developer}` : undefined,
+      project.completionYear ? `completionYear=${project.completionYear}` : undefined,
+      project.address ? `projectAddress=${project.address}` : undefined,
+      project.amenities.length ? `projectAmenities=${project.amenities.join(", ")}` : undefined
+    ].filter(Boolean);
+
+    return fields.join("; ");
+  }
+
+  private formatMoney(money: PropertySnapshot["price"]): string {
+    return `${money.amount} ${money.currency}`;
+  }
+
+  private truncate(value: string, maxLength: number): string {
+    const normalized = value.replace(/\s+/g, " ").trim();
+
+    return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized;
   }
 
   private async buildDueDiligencePayload(tenantId: string, properties: PropertySnapshot[]): Promise<DueDiligencePayload> {

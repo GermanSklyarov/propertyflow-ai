@@ -196,11 +196,11 @@ export class NaturalLanguagePropertySearchService {
 
   private detectAmenities(query: string): string[] {
     const amenities: Array<[string, RegExp]> = [
-      ["pool", /\b(pool|swimming pool|бассейн|бассейном)\b/],
-      ["gym", /\b(gym|fitness|фитнес|зал|спортзал)\b/],
-      ["sea-view", /\b(sea view|ocean view|вид на море|с видом на море)\b/],
-      ["fast-internet", /\b(fast internet|good internet|быстрый интернет|хороший интернет)\b/],
-      ["coworking", /\b(coworking|коворкинг|коворкинги)\b/]
+      ["pool", /(?:\b(?:pool|swimming pool)\b|бассейн|бассейном)/],
+      ["gym", /(?:\b(?:gym|fitness)\b|фитнес|спортзал|тренажерный зал)/],
+      ["sea-view", /(?:\b(?:sea view|ocean view)\b|вид на море|с видом на море|панорам[а-я ]+мор)/],
+      ["fast-internet", /(?:\b(?:fast internet|good internet)\b|быстрый интернет|хороший интернет)/],
+      ["coworking", /(?:\bcoworking\b|коворкинг|коворкинги)/]
     ];
 
     return amenities.filter(([, pattern]) => pattern.test(query)).map(([amenity]) => amenity);
