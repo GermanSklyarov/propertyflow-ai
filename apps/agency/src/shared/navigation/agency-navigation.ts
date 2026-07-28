@@ -6,6 +6,7 @@ import {
   FolderSearch,
   LayoutDashboard,
   MapPinned,
+  MessageCircle,
   Rocket,
   Settings,
   Users
@@ -37,6 +38,7 @@ export const agencyNavigationItems = [
   { href: "/knowledge", icon: BookOpenText, label: "Knowledge", plans: allPlans, status: "live" },
   { href: "/listings", icon: Building2, label: "Listings", plans: allPlans, status: "live" },
   { href: "/projects", icon: MapPinned, label: "Projects", plans: allPlans, status: "live" },
+  { href: "/widget-demo", icon: MessageCircle, label: "Widget demo", plans: allPlans, status: "live" },
   { href: "/settings", icon: Settings, label: "Settings", plans: allPlans, status: "live" },
   { href: "/leads", icon: Users, label: "Leads", plans: crmPlans, status: "live" },
   { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", plans: crmPlans, status: "live" },
@@ -49,6 +51,7 @@ const agencyTopbarQuickLinks = [
   { href: "/knowledge", label: "Knowledge", plans: allPlans },
   { href: "/listings", label: "Inventory", plans: allPlans },
   { href: "/projects", label: "Projects", plans: allPlans },
+  { href: "/widget-demo", label: "Preview widget", plans: allPlans },
   { href: "/settings", label: "Widget setup", plans: allPlans },
   { href: "/leads", label: "Lead queue", plans: crmPlans },
   { href: "/saved-searches", label: "Saved demand", plans: crmPlans },

@@ -155,6 +155,10 @@ export function StarterSetupPage({
             <pre className={styles.snippet}>{widgetInstall.snippet}</pre>
             <div className={styles.widgetActions}>
               <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
+              <a className={styles.secondaryAction} href="/widget-demo">
+                Preview widget
+                <ArrowRight size={16} />
+              </a>
               <a className={styles.secondaryAction} href="/settings#widget-install">
                 Open widget settings
                 <ArrowRight size={16} />

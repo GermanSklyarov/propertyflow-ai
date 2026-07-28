@@ -29,12 +29,12 @@ describe("agency navigation", () => {
     expect(isAgencyNavigationItemActive("/projects/the-riviera-wongamat", "/projects")).toBe(true);
   });
 
-  it("keeps Starter navigation focused on knowledge, listings, projects, and widget setup", () => {
+  it("keeps Starter navigation focused on knowledge, listings, projects, widget demo, and widget setup", () => {
     const starterItems = getAgencyNavigationItems("starter").map((item) => item.href);
     const starterQuickLinks = getAgencyTopbarQuickLinks("starter").map((item) => item.href);
 
-    expect(starterItems).toEqual(["/dashboard", "/setup", "/knowledge", "/listings", "/projects", "/settings"]);
-    expect(starterQuickLinks).toEqual(["/setup", "/knowledge", "/listings", "/projects", "/settings"]);
+    expect(starterItems).toEqual(["/dashboard", "/setup", "/knowledge", "/listings", "/projects", "/widget-demo", "/settings"]);
+    expect(starterQuickLinks).toEqual(["/setup", "/knowledge", "/listings", "/projects", "/widget-demo", "/settings"]);
     expect(starterItems).not.toContain("/leads");
     expect(starterItems).not.toContain("/analytics");
   });

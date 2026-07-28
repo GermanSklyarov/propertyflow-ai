@@ -238,7 +238,13 @@ export function TenantSettingsPanel({
               <p className="section-kicker">Widget</p>
               <div className={styles.widgetHeader}>
                 <h3>Copy this code</h3>
-                <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
+                <div className={styles.widgetHeaderActions}>
+                  <CopyWidgetSnippetButton snippet={widgetInstall.snippet} />
+                  <a className={styles.inlineAction} href="/widget-demo">
+                    Preview
+                    <ArrowRight size={14} />
+                  </a>
+                </div>
               </div>
               <pre className={styles.widgetSnippet}>{widgetInstall.snippet}</pre>
               <details className={styles.widgetReadinessDetails}>
