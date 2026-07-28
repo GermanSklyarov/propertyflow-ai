@@ -29,6 +29,7 @@ Starter is launch-ready only when all items below are true:
 - Imported listings can feed Concierge search without forcing CRM inventory adoption.
 - Widget install readiness has actionable blockers and no dead links.
 - Public widget config and chat endpoints are tenant-scoped, origin-aware, localized, and covered by tests.
+- A Concierge smoke test proves the public widget path returns real LLM generation with listing and knowledge citations.
 - Local demo data looks production-like: tenant settings, knowledge sources, listings, projects, media, and optional CRM examples.
 - UI empty/error states replace fallback demo cards when backend data is missing.
 - README has one command path for running infra, migrations, seed data, API, worker, web, and agency app.
@@ -81,6 +82,7 @@ Starter is launch-ready only when all items below are true:
 - Support `data-locale="auto"` plus fixed locale for localized agency pages.
 - Add origin allowlist checks and clear test/live mode labels.
 - Add a public widget smoke-check flow that validates script presence and tenant slug.
+- Add an AI Concierge smoke-check flow that validates LLM generation, tenant knowledge citations, and matched listings.
 - Add a demo host page for the widget so sales demos do not depend on a real agency site.
 
 ### 6. Local Demo Dataset
@@ -110,5 +112,5 @@ Starter is launch-ready only when all items below are true:
 3. Seed production-like Starter data for `demo-agency`.
 4. Build the first-run setup shell using existing Knowledge/Settings widgets.
 5. Tighten Knowledge Sources ingestion states and remove fallback demo UI.
-6. Add widget demo page and install smoke-check flow.
+6. Add widget demo page plus install and Concierge smoke-check flows.
 7. Add CRM upgrade path indicators without exposing CRM as the Starter core.

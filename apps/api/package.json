@@ -12,6 +12,7 @@
     "seed:demo-leads": "tsx src/database/seed-demo-leads.ts",
     "seed:demo-knowledge": "tsx src/database/seed-demo-knowledge.ts",
     "seed:demo-embeddings": "tsx src/database/seed-demo-embeddings.ts",
+    "smoke:concierge": "tsx src/smoke/concierge-rag.ts",
     "smoke:indexing": "tsx src/smoke/indexing-flow.ts",
     "test": "vitest run"
   },
