@@ -88,6 +88,81 @@
   text-transform: uppercase;
 }
 
+.insightGrid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+}
+
+.insightCard {
+  display: grid;
+  align-items: start;
+  gap: 10px;
+  grid-template-columns: 34px minmax(0, 1fr);
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f8fbfa;
+  padding: 12px;
+}
+
+.insightCard[data-tone="warning"] {
+  border-color: rgb(180 83 9 / 24%);
+  background: #fff8ed;
+}
+
+.insightCard[data-tone="critical"] {
+  border-color: rgb(180 54 45 / 28%);
+  background: #fff5f2;
+}
+
+.insightIcon {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+}
+
+.insightCard[data-tone="warning"] .insightIcon {
+  border-color: rgb(180 83 9 / 28%);
+  background: #fff3dc;
+  color: #8a5408;
+}
+
+.insightCard[data-tone="critical"] .insightIcon {
+  border-color: rgb(180 54 45 / 32%);
+  background: #ffe9e4;
+  color: #9b3a30;
+}
+
+.insightCard div:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.insightCard span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.insightCard strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--teal-dark);
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.insightCard p {
+  color: #475955;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
 .answer h3 {
   margin: 0;
   font-size: 1.12rem;
