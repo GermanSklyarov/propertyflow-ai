@@ -323,8 +323,29 @@ export class PropertyflowWorker {
   }
 
   private async embedKnowledgeChunks(job: KnowledgeChunkEmbeddingJob): Promise<Record<string, unknown>> {
-    const clauses = ["tenant_id = $1", "embedding_status in ('pending', 'failed')"];
+    const embeddingProvider = job.data.provider === "anthropic" ? "local-hash" : job.data.provider;
+    const embeddings = new KnowledgeEmbeddingGenerator({
+      provider: embeddingProvider,
+      model: job.data.provider === "anthropic" ? "local-hash-16" : job.data.model,
+      dimensions: job.data.provider === "anthropic" ? 16 : job.data.dimensions,
+      apiKey:
+        job.data.provider === "gemini"
+          ? process.env.GEMINI_API_KEY?.trim()
+          : job.data.provider === "openai"
+            ? process.env.OPENAI_API_KEY?.trim()
+            : undefined
+    });
+    const targetModelKey = embeddings.modelKey();
+    const clauses = [
+      "tenant_id = $1",
+      job.data.refreshExisting
+        ? "(embedding_status in ('pending', 'failed') or embedding_model is distinct from $2)"
+        : "embedding_status in ('pending', 'failed')"
+    ];
     const values: unknown[] = [job.data.tenantId];
+    if (job.data.refreshExisting) {
+      values.push(targetModelKey);
+    }
     const addValue = (value: unknown): string => {
       values.push(value);
       return `$${values.length}`;
@@ -354,18 +375,6 @@ export class PropertyflowWorker {
     let embedded = 0;
     let failed = 0;
     const now = new Date().toISOString();
-    const embeddingProvider = job.data.provider === "anthropic" ? "local-hash" : job.data.provider;
-    const embeddings = new KnowledgeEmbeddingGenerator({
-      provider: embeddingProvider,
-      model: job.data.provider === "anthropic" ? "local-hash-16" : job.data.model,
-      dimensions: job.data.provider === "anthropic" ? 16 : job.data.dimensions,
-      apiKey:
-        job.data.provider === "gemini"
-          ? process.env.GEMINI_API_KEY?.trim()
-          : job.data.provider === "openai"
-            ? process.env.OPENAI_API_KEY?.trim()
-            : undefined
-    });
 
     for (const chunk of chunks.rows) {
       try {
@@ -403,6 +412,8 @@ export class PropertyflowWorker {
       provider: job.data.provider,
       model: job.data.model,
       dimensions: job.data.dimensions,
+      refreshExisting: job.data.refreshExisting ?? false,
+      targetModelKey,
       scanned: chunks.rowCount,
       embedded,
       failed

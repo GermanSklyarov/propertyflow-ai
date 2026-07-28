@@ -131,7 +131,8 @@ export class KnowledgeDocumentsController {
       provider: embeddingConfig.provider,
       model: embeddingConfig.model,
       dimensions: embeddingConfig.dimensions,
-      limit: payload.limit
+      limit: payload.limit,
+      refreshExisting: payload.refreshExisting
     });
 
     await this.audit.record({
@@ -145,7 +146,8 @@ export class KnowledgeDocumentsController {
         provider: embeddingConfig.provider,
         model: embeddingConfig.model,
         dimensions: embeddingConfig.dimensions,
-        limit: payload.limit
+        limit: payload.limit,
+        refreshExisting: payload.refreshExisting
       }
     });
 

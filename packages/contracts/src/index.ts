@@ -2468,6 +2468,7 @@ export interface KnowledgeChunkEmbeddingJobPayload extends BackgroundJobBasePayl
   model: string;
   dimensions: number;
   limit?: number;
+  refreshExisting?: boolean;
 }
 
 export interface PropertyAiDescriptionJobPayload extends BackgroundJobBasePayload {

@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
 import type { KnowledgeChunkEmbeddingJobPayload } from "@propertyflow/contracts";
 
 export class EmbedKnowledgeChunksDto
@@ -36,4 +36,14 @@ export class EmbedKnowledgeChunksDto
   @Min(1)
   @Max(500)
   limit?: number;
+
+  @ApiProperty({
+    required: false,
+    default: false,
+    description: "Refresh chunks already embedded with a stale embedding model."
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  refreshExisting?: boolean;
 }

@@ -51,10 +51,10 @@ export function KnowledgeRetrievalPreview({
         <input name="q" type="hidden" value={retrievalRequest.query} />
         <input name="locale" type="hidden" value={retrievalRequest.locale ?? ""} />
         <input name="kind" type="hidden" value={retrievalRequest.kind ?? ""} />
-        <span>Queue local-hash embeddings for pending chunks, then retest retrieval quality.</span>
+        <span>Refresh search vectors with the active embedding provider, including stale chunks from older models.</span>
         <button type="submit">
           <DatabaseZap size={16} />
-          Queue embeddings
+          Refresh vectors
         </button>
       </form>
 

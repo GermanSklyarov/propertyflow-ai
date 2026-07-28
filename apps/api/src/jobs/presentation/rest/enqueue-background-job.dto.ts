@@ -92,6 +92,11 @@ export class KnowledgeChunkEmbeddingPayloadDto implements KnowledgeChunkEmbeddin
   @Min(1)
   @Max(500)
   limit?: number;
+
+  @ApiProperty({ required: false, type: Boolean, default: false })
+  @IsOptional()
+  @IsBoolean()
+  refreshExisting?: boolean;
 }
 
 export class KnowledgeDocumentIngestPayloadDto implements KnowledgeDocumentIngestJobPayload {

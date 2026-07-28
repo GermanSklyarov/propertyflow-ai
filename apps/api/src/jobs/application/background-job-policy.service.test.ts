@@ -10,6 +10,26 @@ describe("BackgroundJobPolicyService", () => {
     role: "broker",
     tenantId: "demo-agency"
   };
+  const manager: RequestUser = {
+    id: "manager-1",
+    role: "manager",
+    tenantId: "demo-agency"
+  };
+
+  it("allows managers to refresh stale knowledge embeddings", () => {
+    expect(() =>
+      service.authorize(manager, {
+        name: "knowledge.chunks.embed",
+        payload: {
+          dimensions: 768,
+          model: "text-embedding-004",
+          provider: "gemini",
+          refreshExisting: true,
+          tenantId: "demo-agency"
+        }
+      } satisfies EnqueueBackgroundJobRequest)
+    ).not.toThrow();
+  });
 
   it("allows property imports that only feed AI Concierge", () => {
     expect(() =>

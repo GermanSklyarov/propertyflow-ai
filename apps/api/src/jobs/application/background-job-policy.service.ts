@@ -55,6 +55,7 @@ export class BackgroundJobPolicyService {
         this.requireInteger(payload, "dimensions", 1, 4096);
         this.optionalInteger(payload, "limit", 1, 500);
         this.optionalString(payload, "documentId");
+        this.optionalBoolean(payload, "refreshExisting");
         return;
       case "knowledge.documents.ingest":
         this.requireString(payload, "documentId");
