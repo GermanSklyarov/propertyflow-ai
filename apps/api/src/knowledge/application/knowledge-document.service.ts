@@ -9,6 +9,7 @@ import type {
   KnowledgeDocumentSearchRequest,
   KnowledgeDocumentSnapshot
 } from "@propertyflow/contracts";
+import { KnowledgeEmbeddingGenerator } from "@propertyflow/domain";
 import { ObjectStorageService } from "../../storage/object-storage.service.js";
 import {
   KNOWLEDGE_DOCUMENT_REPOSITORY,
@@ -19,7 +20,8 @@ import {
 export class KnowledgeDocumentService {
   constructor(
     @Inject(KNOWLEDGE_DOCUMENT_REPOSITORY) private readonly documents: KnowledgeDocumentRepository,
-    @Inject(ObjectStorageService) private readonly storage: ObjectStorageService
+    @Inject(ObjectStorageService) private readonly storage: ObjectStorageService,
+    @Inject(KnowledgeEmbeddingGenerator) private readonly embeddings: KnowledgeEmbeddingGenerator
   ) {}
 
   create(tenantId: string, request: CreateKnowledgeDocumentRequest): Promise<KnowledgeDocumentSnapshot> {
@@ -39,7 +41,8 @@ export class KnowledgeDocumentService {
   }
 
   async searchChunks(tenantId: string, request: KnowledgeChunkSearchRequest): Promise<KnowledgeChunkSearchResponse> {
-    const items = await this.documents.searchChunks(tenantId, request);
+    const queryEmbedding = await this.embedQueryWithFallback(request.query);
+    const items = await this.documents.searchChunks(tenantId, request, queryEmbedding);
 
     return {
       items,
@@ -87,5 +90,13 @@ export class KnowledgeDocumentService {
     const normalized = filename.trim().replace(/[^a-zA-Z0-9._-]/g, "-");
 
     return normalized || "knowledge-source";
+  }
+
+  private async embedQueryWithFallback(query: string) {
+    try {
+      return await this.embeddings.embed(query, "query");
+    } catch {
+      return this.embeddings.localFallback(query);
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { KnowledgeEmbeddingGenerator } from "@propertyflow/domain";
 import { AuditModule } from "../audit/audit.module.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { JobsModule } from "../jobs/jobs.module.js";
@@ -15,6 +16,10 @@ import { KnowledgeDocumentsController } from "./presentation/rest/knowledge-docu
   controllers: [KnowledgeDocumentsController],
   providers: [
     KnowledgeDocumentService,
+    {
+      provide: KnowledgeEmbeddingGenerator,
+      useFactory: () => new KnowledgeEmbeddingGenerator()
+    },
     {
       provide: KNOWLEDGE_DOCUMENT_REPOSITORY,
       useClass: PgKnowledgeDocumentRepository

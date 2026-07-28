@@ -1,7 +1,13 @@
 import type { Job } from "bullmq";
 import type { Pool, PoolClient } from "pg";
 import type { PropertyImportJobPayload } from "@propertyflow/contracts";
-import type { PropertyKind, PropertyListingType, PropertyProjectStatus, ThailandMarket } from "@propertyflow/domain";
+import {
+  KnowledgeEmbeddingGenerator,
+  type PropertyKind,
+  type PropertyListingType,
+  type PropertyProjectStatus,
+  type ThailandMarket
+} from "@propertyflow/domain";
 
 type PropertyImportJob = Job<PropertyImportJobPayload, unknown, "properties.import">;
 type PropertyImportMode = NonNullable<PropertyImportJobPayload["importMode"]>;
@@ -70,7 +76,11 @@ export interface PropertyImportResult {
 }
 
 export class PropertyImporter {
-  constructor(private readonly pool: Pool) {}
+  private readonly embeddings: KnowledgeEmbeddingGenerator;
+
+  constructor(private readonly pool: Pool) {
+    this.embeddings = new KnowledgeEmbeddingGenerator();
+  }
 
   async import(job: PropertyImportJob): Promise<PropertyImportResult | Record<string, unknown>> {
     if (job.data.source === "partner-api") {
@@ -423,8 +433,27 @@ export class PropertyImporter {
     const tags = buildListingKnowledgeTags(draft, source, importMode);
     const externalTag = draft.externalId ? externalIdTag(draft.externalId) : undefined;
     const chunks = this.chunkKnowledgeDocument(draft.title, body);
-    const embeddingModel = "local-hash-16";
-    const embeddingDimensions = 16;
+    const embeddedChunks = await Promise.all(
+      chunks.map(async (chunk) => {
+        const searchText = this.buildKnowledgeSearchText(draft.title, chunk, tags);
+
+        try {
+          return {
+            chunk,
+            searchText,
+            embedding: await this.embeddings.embed(searchText, "document"),
+            status: "embedded"
+          };
+        } catch {
+          return {
+            chunk,
+            searchText,
+            embedding: undefined,
+            status: "failed"
+          };
+        }
+      })
+    );
     const client = await this.pool.connect();
 
     try {
@@ -461,9 +490,7 @@ export class PropertyImporter {
         [documentId, tenantId, draft.title, body, tags, now, now]
       );
 
-      for (const [index, chunk] of chunks.entries()) {
-        const searchText = this.buildKnowledgeSearchText(draft.title, chunk, tags);
-
+      for (const [index, embeddedChunk] of embeddedChunks.entries()) {
         await client.query(
           `
             insert into knowledge_document_chunks (
@@ -497,9 +524,9 @@ export class PropertyImporter {
               $9,
               $10,
               $11,
-              'embedded',
               $12,
-              $13
+              $13,
+              $14
             )
           `,
           [
@@ -508,12 +535,13 @@ export class PropertyImporter {
             documentId,
             index,
             draft.title,
-            chunk,
+            embeddedChunk.chunk,
             tags,
-            this.estimateTokens(chunk),
-            searchText,
-            this.embedText(searchText, embeddingDimensions),
-            embeddingModel,
+            this.estimateTokens(embeddedChunk.chunk),
+            embeddedChunk.searchText,
+            embeddedChunk.embedding?.vector ?? null,
+            embeddedChunk.embedding?.modelKey ?? null,
+            embeddedChunk.status,
             now,
             now
           ]
@@ -606,34 +634,6 @@ export class PropertyImporter {
     return [title, chunk, tags.join(" ")].join(" ").toLowerCase().replaceAll("ё", "е");
   }
 
-  private embedText(text: string, dimensions: number): number[] {
-    const vector = Array.from({ length: dimensions }, () => 0);
-    const tokens = text
-      .toLowerCase()
-      .replaceAll("ё", "е")
-      .split(/[^a-zа-я0-9-]+/i)
-      .map((token) => token.trim())
-      .filter(Boolean);
-
-    for (const token of tokens.length ? tokens : [text]) {
-      const hash = this.hashToken(token);
-      const index = Math.abs(hash) % dimensions;
-      vector[index] += hash < 0 ? -1 : 1;
-    }
-
-    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
-    return vector.map((value) => Number((value / magnitude).toFixed(6)));
-  }
-
-  private hashToken(token: string): number {
-    let hash = 0;
-
-    for (let index = 0; index < token.length; index += 1) {
-      hash = (hash * 31 + token.charCodeAt(index)) | 0;
-    }
-
-    return hash;
-  }
 }
 
 function parseJsonRows(content: string): ImportRow[] {

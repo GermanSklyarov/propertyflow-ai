@@ -85,3 +85,14 @@ export function calculateNetYield(input: InvestmentSnapshot): number {
   const annualRent = input.monthlyRent.amount * 12 * input.occupancyRate;
   return (annualRent - input.annualCosts.amount) / input.purchasePrice.amount;
 }
+
+export {
+  KnowledgeEmbeddingGenerator,
+  defaultKnowledgeEmbeddingConfig,
+  knowledgeEmbeddingModelKey,
+  localHashEmbedding,
+  type KnowledgeEmbeddingConfig,
+  type KnowledgeEmbeddingProviderName,
+  type KnowledgeEmbeddingResult,
+  type KnowledgeEmbeddingTaskType
+} from "./knowledge-embedding.js";

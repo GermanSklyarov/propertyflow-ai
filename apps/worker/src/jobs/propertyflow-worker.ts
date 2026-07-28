@@ -1,6 +1,7 @@
 import { Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import { Client } from "@opensearch-project/opensearch";
+import { KnowledgeEmbeddingGenerator } from "@propertyflow/domain";
 import { Pool } from "pg";
 import {
   type BackgroundJobName,
@@ -54,6 +55,7 @@ interface SavedSearchAlertRow {
 export class PropertyflowWorker {
   private readonly pool: Pool;
   private readonly aiOutputWriter: PropertyAiOutputWriter;
+  private readonly embeddings: KnowledgeEmbeddingGenerator;
   private readonly propertyImporter: PropertyImporter;
   private readonly searchIndexer: PropertySearchIndexer;
   private readonly connection: Redis;
@@ -67,6 +69,7 @@ export class PropertyflowWorker {
       max: 5
     });
 
+    this.embeddings = new KnowledgeEmbeddingGenerator();
     this.aiOutputWriter = new PropertyAiOutputWriter(this.pool);
     this.propertyImporter = new PropertyImporter(this.pool);
 
@@ -201,9 +204,29 @@ export class PropertyflowWorker {
 
     const now = new Date().toISOString();
     const chunks = this.chunkKnowledgeDocument(document.title, document.body);
-    const embeddingProvider = "local-hash";
-    const embeddingModel = "local-hash-16";
-    const embeddingDimensions = 16;
+    const embeddedChunks = await Promise.all(
+      chunks.map(async (chunk) => {
+        const searchText = this.buildKnowledgeSearchText(document.title, chunk, document.tags);
+
+        try {
+          const embedding = await this.embeddings.embed(searchText, "document");
+
+          return {
+            chunk,
+            embedding,
+            searchText,
+            status: "embedded" as const
+          };
+        } catch {
+          return {
+            chunk,
+            embedding: undefined,
+            searchText,
+            status: "failed" as const
+          };
+        }
+      })
+    );
     const client = await this.pool.connect();
 
     try {
@@ -216,9 +239,7 @@ export class PropertyflowWorker {
         [job.data.tenantId, job.data.documentId]
       );
 
-      for (const [index, chunk] of chunks.entries()) {
-        const searchText = this.buildKnowledgeSearchText(document.title, chunk, document.tags);
-
+      for (const [index, embeddedChunk] of embeddedChunks.entries()) {
         await client.query(
           `
             insert into knowledge_document_chunks (
@@ -263,15 +284,15 @@ export class PropertyflowWorker {
             job.data.documentId,
             index,
             document.title,
-            chunk,
+            embeddedChunk.chunk,
             document.locale,
             document.kind,
             document.tags,
-            this.estimateTokens(chunk),
-            searchText,
-            this.embedText(searchText, embeddingDimensions),
-            `${embeddingProvider}:${embeddingModel}`,
-            "embedded",
+            this.estimateTokens(embeddedChunk.chunk),
+            embeddedChunk.searchText,
+            embeddedChunk.embedding?.vector ?? null,
+            embeddedChunk.embedding?.modelKey ?? null,
+            embeddedChunk.status,
             now,
             now
           ]
@@ -292,11 +313,12 @@ export class PropertyflowWorker {
       reason: job.data.reason,
       ingested: true,
       chunks: chunks.length,
-      embedded: chunks.length,
-      embeddingProvider,
-      embeddingModel,
-      embeddingDimensions,
-      embeddingStatus: "embedded"
+      embedded: embeddedChunks.filter((chunk) => chunk.status === "embedded").length,
+      failed: embeddedChunks.filter((chunk) => chunk.status === "failed").length,
+      embeddingProvider: this.embeddings.provider(),
+      embeddingModel: this.embeddings.model(),
+      embeddingDimensions: this.embeddings.dimensions(),
+      embeddingStatus: embeddedChunks.some((chunk) => chunk.status === "failed") ? "partial" : "embedded"
     };
   }
 
@@ -332,13 +354,22 @@ export class PropertyflowWorker {
     let embedded = 0;
     let failed = 0;
     const now = new Date().toISOString();
+    const embeddingProvider = job.data.provider === "anthropic" ? "local-hash" : job.data.provider;
+    const embeddings = new KnowledgeEmbeddingGenerator({
+      provider: embeddingProvider,
+      model: job.data.provider === "anthropic" ? "local-hash-16" : job.data.model,
+      dimensions: job.data.provider === "anthropic" ? 16 : job.data.dimensions,
+      apiKey:
+        job.data.provider === "gemini"
+          ? process.env.GEMINI_API_KEY?.trim()
+          : job.data.provider === "openai"
+            ? process.env.OPENAI_API_KEY?.trim()
+            : undefined
+    });
 
     for (const chunk of chunks.rows) {
       try {
-        const vector = this.embedText(
-          [chunk.title, chunk.content, chunk.tags.join(" ")].join(" "),
-          job.data.dimensions
-        );
+        const embedding = await embeddings.embed([chunk.title, chunk.content, chunk.tags.join(" ")].join(" "), "document");
 
         await this.pool.query(
           `
@@ -350,7 +381,7 @@ export class PropertyflowWorker {
               updated_at = $3
             where tenant_id = $4 and id = $5
           `,
-          [vector, `${job.data.provider}:${job.data.model}`, now, job.data.tenantId, chunk.id]
+          [embedding.vector, embedding.modelKey, now, job.data.tenantId, chunk.id]
         );
         embedded += 1;
       } catch {
@@ -714,35 +745,6 @@ export class PropertyflowWorker {
 
   private buildKnowledgeSearchText(title: string, chunk: string, tags: string[]): string {
     return [title, chunk, tags.join(" ")].join(" ").toLowerCase().replaceAll("ё", "е");
-  }
-
-  private embedText(text: string, dimensions: number): number[] {
-    const vector = Array.from({ length: dimensions }, () => 0);
-    const tokens = text
-      .toLowerCase()
-      .replaceAll("ё", "е")
-      .split(/[^a-zа-я0-9-]+/i)
-      .map((token) => token.trim())
-      .filter(Boolean);
-
-    for (const token of tokens.length ? tokens : [text]) {
-      const hash = this.hashToken(token);
-      const index = Math.abs(hash) % dimensions;
-      vector[index] += hash < 0 ? -1 : 1;
-    }
-
-    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
-    return vector.map((value) => Number((value / magnitude).toFixed(6)));
-  }
-
-  private hashToken(token: string): number {
-    let hash = 0;
-
-    for (let index = 0; index < token.length; index += 1) {
-      hash = (hash * 31 + token.charCodeAt(index)) | 0;
-    }
-
-    return hash;
   }
 }
 

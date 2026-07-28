@@ -7,6 +7,7 @@ import type {
   KnowledgeDocumentSearchRequest,
   KnowledgeDocumentSnapshot
 } from "@propertyflow/contracts";
+import type { KnowledgeEmbeddingResult } from "@propertyflow/domain";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type { KnowledgeDocumentRepository } from "../../domain/knowledge-document.repository.js";
@@ -132,12 +133,12 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
 
   async searchChunks(
     tenantId: string,
-    request: KnowledgeChunkSearchRequest
+    request: KnowledgeChunkSearchRequest,
+    queryEmbedding?: KnowledgeEmbeddingResult
   ): Promise<KnowledgeDocumentChunkSnapshot[]> {
     const clauses = ["tenant_id = $1"];
     const values: unknown[] = [tenantId];
     const limit = Math.min(Math.max(request.limit ?? 5, 1), 20);
-    const queryEmbedding = this.embedText(request.query, 16);
 
     const addValue = (value: unknown): string => {
       values.push(value);
@@ -167,23 +168,9 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     }
 
     const lexicalScoreExpression = scoreParts.length ? scoreParts.join(" + ") : "1";
-    const embeddingParameter = addValue(queryEmbedding);
-    const vectorScoreExpression = `
-      case
-        when embedding_status = 'embedded' and embedding is not null then coalesce((
-          select
-            sum(chunk_value * query_value) /
-            nullif(
-              sqrt(sum(chunk_value * chunk_value)) * sqrt(sum(query_value * query_value)),
-              0
-            )
-          from unnest(embedding) with ordinality as chunk_embedding(chunk_value, ordinality)
-          join unnest(${embeddingParameter}::double precision[]) with ordinality as query_embedding(query_value, ordinality)
-            using (ordinality)
-        ), 0)
-        else 0
-      end
-    `;
+    const vectorScoreExpression = queryEmbedding
+      ? this.vectorScoreExpression(queryEmbedding, addValue)
+      : "0";
     const scoreExpression = `((${lexicalScoreExpression}) + (${vectorScoreExpression}) * 10)`;
     const result = await this.pool.query<KnowledgeDocumentChunkRow>(
       `
@@ -244,32 +231,29 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     };
   }
 
-  private embedText(text: string, dimensions: number): number[] {
-    const vector = Array.from({ length: dimensions }, () => 0);
-    const tokens = text
-      .toLowerCase()
-      .replaceAll("ё", "е")
-      .split(/[^a-zа-я0-9-]+/i)
-      .map((token) => token.trim())
-      .filter(Boolean);
+  private vectorScoreExpression(
+    queryEmbedding: KnowledgeEmbeddingResult,
+    addValue: (value: unknown) => string
+  ): string {
+    const embeddingParameter = addValue(queryEmbedding.vector);
+    const modelParameter = addValue(queryEmbedding.modelKey);
 
-    for (const token of tokens.length ? tokens : [text]) {
-      const hash = this.hashToken(token);
-      const index = Math.abs(hash) % dimensions;
-      vector[index] += hash < 0 ? -1 : 1;
-    }
-
-    const magnitude = Math.sqrt(vector.reduce((sum, value) => sum + value * value, 0)) || 1;
-    return vector.map((value) => Number((value / magnitude).toFixed(6)));
-  }
-
-  private hashToken(token: string): number {
-    let hash = 0;
-
-    for (let index = 0; index < token.length; index += 1) {
-      hash = (hash * 31 + token.charCodeAt(index)) | 0;
-    }
-
-    return hash;
+    return `
+      case
+        when embedding_status = 'embedded' and embedding_model = ${modelParameter} and embedding is not null
+          then coalesce((
+            select
+              sum(chunk_value * query_value) /
+              nullif(
+                sqrt(sum(chunk_value * chunk_value)) * sqrt(sum(query_value * query_value)),
+                0
+              )
+            from unnest(embedding) with ordinality as chunk_embedding(chunk_value, ordinality)
+            join unnest(${embeddingParameter}::double precision[]) with ordinality as query_embedding(query_value, ordinality)
+              using (ordinality)
+          ), 0)
+        else 0
+      end
+    `;
   }
 }

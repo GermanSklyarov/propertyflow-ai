@@ -8,6 +8,7 @@ import type {
   KnowledgeDocumentSnapshot,
   RequestUser
 } from "@propertyflow/contracts";
+import { defaultKnowledgeEmbeddingConfig } from "@propertyflow/domain";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { JobQueueService } from "../../../jobs/application/job-queue.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
@@ -122,13 +123,14 @@ export class KnowledgeDocumentsController {
     @CurrentUser() user: RequestUser,
     @Body() payload: EmbedKnowledgeChunksDto
   ): Promise<BackgroundJobSnapshot> {
+    const embeddingConfig = this.resolveEmbeddingJobConfig(payload);
     const job = await this.jobs.enqueue("knowledge.chunks.embed", {
       tenantId,
       requestedByUserId: user.id,
       documentId: payload.documentId,
-      provider: payload.provider,
-      model: payload.model,
-      dimensions: payload.dimensions,
+      provider: embeddingConfig.provider,
+      model: embeddingConfig.model,
+      dimensions: embeddingConfig.dimensions,
       limit: payload.limit
     });
 
@@ -140,14 +142,26 @@ export class KnowledgeDocumentsController {
       resourceId: payload.documentId,
       metadata: {
         jobId: job.id,
-        provider: payload.provider,
-        model: payload.model,
-        dimensions: payload.dimensions,
+        provider: embeddingConfig.provider,
+        model: embeddingConfig.model,
+        dimensions: embeddingConfig.dimensions,
         limit: payload.limit
       }
     });
 
     return job;
+  }
+
+  private resolveEmbeddingJobConfig(payload: EmbedKnowledgeChunksDto) {
+    if (payload.provider === "local-hash" && payload.model === "local-hash-16" && payload.dimensions === 16) {
+      return defaultKnowledgeEmbeddingConfig();
+    }
+
+    return {
+      provider: payload.provider,
+      model: payload.model,
+      dimensions: payload.dimensions
+    };
   }
 
   private enqueueIngestion(
