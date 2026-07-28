@@ -26,6 +26,7 @@
     "seed:demo-properties": "npm run seed:demo --workspace @propertyflow/api",
     "seed:demo-leads": "npm run seed:demo-leads --workspace @propertyflow/api",
     "seed:demo-knowledge": "npm run seed:demo-knowledge --workspace @propertyflow/api",
+    "seed:demo-embeddings": "npm run seed:demo-embeddings --workspace @propertyflow/api",
     "format": "prettier --write .",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"

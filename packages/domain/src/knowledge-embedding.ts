@@ -54,11 +54,13 @@ export class KnowledgeEmbeddingGenerator {
   }
 
   async embed(text: string, taskType: KnowledgeEmbeddingTaskType): Promise<KnowledgeEmbeddingResult> {
-    if (this.config.provider === "gemini" && this.config.apiKey) {
+    if (this.config.provider === "gemini") {
+      this.assertRemoteApiKey("Gemini");
       return this.embedWithGemini(text, taskType);
     }
 
-    if (this.config.provider === "openai" && this.config.apiKey) {
+    if (this.config.provider === "openai") {
+      this.assertRemoteApiKey("OpenAI");
       return this.embedWithOpenAi(text);
     }
 
@@ -133,6 +135,12 @@ export class KnowledgeEmbeddingGenerator {
 
   private embedWithLocalHash(text: string): KnowledgeEmbeddingResult {
     return this.toResult(localHashEmbedding(text, this.config.dimensions), false);
+  }
+
+  private assertRemoteApiKey(providerLabel: string): asserts this is KnowledgeEmbeddingGenerator {
+    if (!this.config.apiKey) {
+      throw new Error(`${providerLabel} embedding provider requires an API key`);
+    }
   }
 
   private toResult(vector: number[], isRemote: boolean): KnowledgeEmbeddingResult {

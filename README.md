@@ -82,19 +82,21 @@ npm run dev
 - Public web: `http://localhost:3000`
 - Agency app: `http://localhost:3002`
 
-`npm run seed:demo` seeds the local `demo-agency` tenant with Starter-ready tenant settings, knowledge documents, projects, listings, media, price history, and optional CRM examples for upgrade demos. Use `npm run seed:demo-properties`, `npm run seed:demo-leads`, or `npm run seed:demo-knowledge` when you only need to refresh one slice of the demo dataset.
+`npm run seed:demo` seeds the local `demo-agency` tenant with Starter-ready tenant settings, knowledge documents, projects, listings, media, price history, and optional CRM examples for upgrade demos. Use `npm run seed:demo-properties`, `npm run seed:demo-leads`, or `npm run seed:demo-knowledge` when you only need to refresh one slice of the demo dataset. Use `npm run seed:demo-embeddings` after the worker is running to refresh knowledge chunks with the currently configured embedding provider.
 
 ### Starter Launch Checklist
 
 Use this path when preparing a local sales demo or validating the Starter plan entry point:
 
-1. Run `npm run infra:up`, `npm run migrate`, `npm run seed:demo`, and `npm run dev`.
-2. Open `http://localhost:3002/` to review the agency plan entry page, then continue to `http://localhost:3002/setup` and confirm the setup wizard shows plan confirmation, Knowledge Sources, AI personality, website origins, and widget install readiness.
-3. Open `http://localhost:3002/knowledge?create=source#create-knowledge-document` to add or review AI-ready knowledge sources.
-4. Open `http://localhost:3002/settings#concierge-personality-settings` to review localized Concierge names, tone, and welcome messages.
-5. Open `http://localhost:3002/settings#widget-origin-settings` and add the agency website origin before using the widget outside test mode.
-6. Open `http://localhost:3002/settings#widget-install`, copy the widget snippet, and run the installed widget check against a test page.
-7. Keep CRM routes optional for Starter; Growth unlocks lead handoff, assignment, pipeline, SLA, and analytics.
+1. Configure AI for the demo. For Gemini, set `AI_DEFAULT_PROVIDER=gemini`, `GEMINI_API_KEY`, `GEMINI_CHAT_MODEL=gemini-2.5-flash`, and leave `AI_EMBEDDING_PROVIDER` blank or set it to `gemini`.
+2. Run `npm run infra:up`, `npm run migrate`, `npm run seed:demo`, and `npm run dev`.
+3. In another terminal, run `npm run seed:demo-embeddings` so the Starter knowledge base is refreshed with the active embedding model. If no remote embedding key is configured, the script uses the deterministic `local-hash` dev fallback.
+4. Open `http://localhost:3002/` to review the agency plan entry page, then continue to `http://localhost:3002/setup` and confirm the setup wizard shows plan confirmation, Knowledge Sources, AI personality, website origins, and widget install readiness.
+5. Open `http://localhost:3002/knowledge?create=source#create-knowledge-document` to add or review AI-ready knowledge sources.
+6. Open `http://localhost:3002/settings#concierge-personality-settings` to review localized Concierge names, tone, and welcome messages.
+7. Open `http://localhost:3002/settings#widget-origin-settings` and add the agency website origin before using the widget outside test mode.
+8. Open `http://localhost:3002/settings#widget-install`, copy the widget snippet, and run the installed widget check against a test page.
+9. Keep CRM routes optional for Starter; Growth unlocks lead handoff, assignment, pipeline, SLA, and analytics.
 
 The API starts with a tenant-aware property inventory slice:
 
@@ -244,11 +246,11 @@ Supported job names:
 
 The search indexing job reads the property from PostgreSQL and writes an OpenSearch document to `propertyflow-properties-v1`. The index stores tenant, market, status, pricing, amenities, `geo_point` location, and a combined `searchableText` field for the next AI/search slice.
 
-The knowledge ingestion job reads a tenant knowledge document, rebuilds `knowledge_document_chunks`, stores lexical search text, token estimates, tags, locale/kind metadata, and marks embeddings as `pending`. This keeps the Chat/RAG contract ready for a later embedding provider without changing the admin workflow.
+The knowledge ingestion job reads a tenant knowledge document, rebuilds `knowledge_document_chunks`, stores lexical search text, token estimates, tags, locale/kind metadata, and marks embeddings as `pending`. Embeddings can be refreshed through the worker with Gemini, OpenAI, or the deterministic `local-hash` development fallback.
 
 `GET /knowledge-documents/chunks/search` returns scored tenant-isolated knowledge chunks from `knowledge_document_chunks`. Retrieval is `hybrid-chunks-v1`: lexical relevance plus cosine similarity for embedded chunks, with lexical fallback for chunks still marked `pending`. `POST /chat` uses the same retrieval path, so grounded answers cite the exact document chunk selected for context instead of scanning full raw documents.
 
-`POST /knowledge-documents/chunks/embed` enqueues `knowledge.chunks.embed` for pending chunks. The current worker provider is `local-hash`, a deterministic vector prototype that updates `embedding`, `embedding_model`, and `embedding_status`; the API contract is shaped so OpenAI/Gemini/Anthropic embeddings can replace it later without changing admin workflows.
+`POST /knowledge-documents/chunks/embed` enqueues `knowledge.chunks.embed` for pending or stale chunks. The worker uses the requested provider/model from the job, writes `embedding`, `embedding_model`, and `embedding_status`, and fails fast when a remote provider is selected without its API key. Leave `AI_EMBEDDING_PROVIDER` blank for automatic selection: Gemini when `GEMINI_API_KEY` is set, OpenAI when `OPENAI_API_KEY` is set, otherwise `local-hash` for offline development.
 
 The worker is included in `npm run dev`. To run only the worker, use `npm run dev:worker`.
 
