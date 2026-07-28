@@ -226,8 +226,8 @@ describe("AiChatService", () => {
     const result = await generator.generate({
       citations: [{ label: "Wongamat Sea View Residence", propertyId: "property-1", source: "property" }],
       context: "Property: Wongamat Sea View Residence",
-      locale: "en",
-      message: "Do you have sea-view condos?",
+      locale: "ru",
+      message: "Подбери кондо с видом на море",
       persona: {
         gender: "feminine",
         name: "Anna",
@@ -255,6 +255,8 @@ describe("AiChatService", () => {
     expect(prompt).toContain('Your public concierge name is "Anna".');
     expect(prompt).toContain("Use a friendly tone.");
     expect(prompt).toContain("Use feminine first-person wording");
+    expect(prompt).toContain('use first-person feminine forms such as "я нашла", "я подобрала", "я проверила"');
+    expect(prompt).toContain('never use masculine forms such as "я нашел" or "я подобрал"');
     expect(prompt).toContain("Do not print bracketed citation markers like [1], [2]");
   });
 });

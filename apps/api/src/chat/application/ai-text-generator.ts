@@ -181,7 +181,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
     const personaLines = [
       persona?.name ? `Your public concierge name is "${persona.name}".` : undefined,
       persona?.tone ? `Use a ${persona.tone} tone.` : undefined,
-      persona?.gender ? this.genderInstruction(persona.gender) : undefined,
+      persona?.gender ? this.genderInstruction(persona.gender, request.locale) : undefined,
       persona?.welcomeMessage ? `Tenant-configured welcome message for this locale: "${persona.welcomeMessage}".` : undefined
     ].filter(Boolean);
 
@@ -197,7 +197,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
     ].join(" ");
   }
 
-  private genderInstruction(gender: TenantWidgetPersonaGender): string {
+  private genderInstruction(gender: TenantWidgetPersonaGender, locale: AiTextGenerationRequest["locale"]): string {
     const instructions: Record<TenantWidgetPersonaGender, string> = {
       feminine:
         "Use feminine first-person wording where the response language has grammatical gender, including Russian and Thai polite particles.",
@@ -206,7 +206,22 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       neutral: "Use neutral wording and avoid gendered first-person phrasing where possible."
     };
 
-    return instructions[gender];
+    const localeInstructions: Partial<Record<AiTextGenerationRequest["locale"], Partial<Record<TenantWidgetPersonaGender, string>>>> = {
+      ru: {
+        feminine:
+          'In Russian, the concierge speaks as a woman: use first-person feminine forms such as "я нашла", "я подобрала", "я проверила"; never use masculine forms such as "я нашел" or "я подобрал".',
+        masculine:
+          'In Russian, the concierge speaks as a man: use first-person masculine forms such as "я нашел", "я подобрал", "я проверил".',
+        neutral: 'In Russian, avoid gendered first-person past-tense forms when possible; prefer neutral wording such as "подходящие варианты найдены".'
+      },
+      th: {
+        feminine: 'In Thai, use feminine polite particles such as "ค่ะ" when speaking as the concierge.',
+        masculine: 'In Thai, use masculine polite particles such as "ครับ" when speaking as the concierge.',
+        neutral: "In Thai, use neutral polite wording and avoid gender-specific particles when possible."
+      }
+    };
+
+    return [instructions[gender], localeInstructions[locale]?.[gender]].filter(Boolean).join(" ");
   }
 
   private provider(): string {

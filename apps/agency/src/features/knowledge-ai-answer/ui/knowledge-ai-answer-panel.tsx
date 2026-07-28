@@ -18,7 +18,7 @@ export function KnowledgeAiAnswerPanel({
 
   return (
     <>
-      <form className={styles.form}>
+      <form action="/knowledge#knowledge-chat" className={styles.form} method="get">
         <label className={styles.query}>
           Question
           <input
