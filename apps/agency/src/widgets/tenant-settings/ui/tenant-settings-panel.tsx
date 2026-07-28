@@ -38,6 +38,7 @@ import {
   summarizeWidgetInstallSteps,
   summarizeWidgetLaunchReadiness
 } from "../model/widget-install";
+import { ConciergeAnswerCheckForm } from "./concierge-answer-check-form";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
 import { WidgetInstallCheckForm } from "./widget-install-check-form";
@@ -79,6 +80,7 @@ export function TenantSettingsPanel({
   });
   const widgetInstallStepSummary = summarizeWidgetInstallSteps(widgetInstall.steps);
   const localizedWidgetSnippets = widgetInstall.localeOptions.filter((option) => option.value !== 'data-locale="auto"');
+  const conciergeCheckLocale = widgetSettings.languages[0] ?? "en";
 
   return (
     <>
@@ -275,6 +277,7 @@ export function TenantSettingsPanel({
                 </div>
               </details>
               <WidgetInstallCheckForm defaultUrl={tenant.customDomain ? `https://${tenant.customDomain}` : undefined} />
+              <ConciergeAnswerCheckForm locale={conciergeCheckLocale} tenantSlug={tenant.slug} />
               <details className={styles.widgetReadinessDetails}>
                 <summary>
                   Install prerequisites

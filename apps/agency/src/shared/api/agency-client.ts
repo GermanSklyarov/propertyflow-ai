@@ -67,6 +67,8 @@ import type {
   PropertySearchResponse,
   PropertySocialPostPublicationListResponse,
   PropertySocialPostReviewListResponse,
+  PublicWidgetAskRequest,
+  PublicWidgetAskResponse,
   ProvisionTenantRequest,
   ProvisionTenantResponse,
   ReviewAiAssetRequest,
@@ -1125,6 +1127,25 @@ export async function askAiChat(request: AiChatRequest, options: AgencyApiOption
   }
 
   return (await response.json()) as AiChatResponse;
+}
+
+export async function askPublicWidget(
+  tenantSlug: string,
+  request: PublicWidgetAskRequest
+): Promise<PublicWidgetAskResponse> {
+  const response = await fetch(`${apiBaseUrl}/public/v1/widget/ask/${encodeURIComponent(tenantSlug)}`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to ask public widget: ${response.status}`);
+  }
+
+  return (await response.json()) as PublicWidgetAskResponse;
 }
 
 export async function embedKnowledgeChunks(
