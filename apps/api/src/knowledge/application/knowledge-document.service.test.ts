@@ -8,7 +8,8 @@ function createService() {
   const documents = {
     save: vi.fn(),
     search: vi.fn(),
-    searchChunks: vi.fn()
+    searchChunks: vi.fn(),
+    summarizeChunkEmbeddingHealth: vi.fn()
   } as unknown as KnowledgeDocumentRepository;
   const storage = {
     createPresignedGetUrl: vi.fn().mockResolvedValue({
@@ -44,7 +45,11 @@ function createService() {
   };
   const embeddings = {
     embed: vi.fn().mockResolvedValue(queryEmbedding),
-    localFallback: vi.fn().mockReturnValue(fallbackEmbedding)
+    localFallback: vi.fn().mockReturnValue(fallbackEmbedding),
+    dimensions: vi.fn().mockReturnValue(queryEmbedding.dimensions),
+    model: vi.fn().mockReturnValue(queryEmbedding.model),
+    modelKey: vi.fn().mockReturnValue(queryEmbedding.modelKey),
+    provider: vi.fn().mockReturnValue(queryEmbedding.provider)
   } as unknown as KnowledgeEmbeddingGenerator;
 
   return {
@@ -116,5 +121,34 @@ describe("KnowledgeDocumentService", () => {
 
     expect(embeddings.localFallback).toHaveBeenCalledWith("thai visa guide");
     expect(documents.searchChunks).toHaveBeenCalledWith("tenant-1", { query: "thai visa guide" }, fallbackEmbedding);
+  });
+
+  it("reports chunk embedding health for the active model", async () => {
+    const { documents, service } = createService();
+    vi.mocked(documents.summarizeChunkEmbeddingHealth).mockResolvedValue({
+      totalChunks: 12,
+      currentChunks: 8,
+      staleChunks: 2,
+      pendingChunks: 1,
+      failedChunks: 1
+    });
+
+    await expect(service.embeddingHealth("tenant-1")).resolves.toEqual({
+      currentChunks: 8,
+      failedChunks: 1,
+      generatedAt: expect.any(String),
+      pendingChunks: 1,
+      ready: false,
+      retrieval: "hybrid-chunks-v1",
+      staleChunks: 2,
+      targetDimensions: 2,
+      targetModel: "text-embedding-004",
+      targetModelKey: "gemini:text-embedding-004",
+      targetProvider: "gemini",
+      tenantId: "tenant-1",
+      totalChunks: 12,
+      unembeddedChunks: 4
+    });
+    expect(documents.summarizeChunkEmbeddingHealth).toHaveBeenCalledWith("tenant-1", "gemini:text-embedding-004");
   });
 });

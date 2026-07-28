@@ -40,7 +40,8 @@ import type {
   BackgroundJobMonitorItem,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
-  KnowledgeDocumentSnapshot
+  KnowledgeDocumentSnapshot,
+  KnowledgeEmbeddingHealthSnapshot
 } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import { KnowledgeJobsPanel } from "@widgets/knowledge-jobs/ui/knowledge-jobs-panel";
@@ -51,6 +52,7 @@ export function KnowledgeBasePage({
   chatRequest,
   createSourceOpen = false,
   documents,
+  embeddingHealth,
   jobs,
   notice,
   retrieval,
@@ -62,6 +64,7 @@ export function KnowledgeBasePage({
   chatRequest?: AiChatRequest;
   createSourceOpen?: boolean;
   documents: KnowledgeDocumentSnapshot[];
+  embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
   notice?: { message: string; tone: "success" };
   retrieval: KnowledgeChunkSearchResponse;
@@ -232,7 +235,11 @@ export function KnowledgeBasePage({
             <span className={styles.statusBadge}>{formatBucket(retrieval.retrieval)}</span>
           </div>
 
-          <KnowledgeRetrievalPreview retrieval={retrieval} retrievalRequest={retrievalRequest} />
+          <KnowledgeRetrievalPreview
+            embeddingHealth={embeddingHealth}
+            retrieval={retrieval}
+            retrievalRequest={retrievalRequest}
+          />
         </section>
 
         <section className={styles.panel} id="knowledge-chat">

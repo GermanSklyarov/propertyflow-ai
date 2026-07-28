@@ -1,5 +1,9 @@
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
-import { knowledgeChunkSearchQueryOptions, knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
+import {
+  knowledgeChunkSearchQueryOptions,
+  knowledgeDocumentsQueryOptions,
+  knowledgeEmbeddingHealthQueryOptions
+} from "@entities/knowledge/api/knowledge-queries";
 import { buildKnowledgePageNotice } from "@entities/knowledge/model/knowledge-page-notice";
 import type { AiChatRequest, KnowledgeChunkSearchRequest } from "@propertyflow/contracts";
 import { askAiChat } from "@shared/api/agency-client";
@@ -31,10 +35,11 @@ export default async function AgencyKnowledgePage({
   const chatRequest = buildChatRequest(query);
 
   try {
-    const [documents, jobs, retrieval] = await Promise.all([
+    const [documents, jobs, retrieval, embeddingHealth] = await Promise.all([
       queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 24 }, tenantId)),
       queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId)),
-      queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest, tenantId))
+      queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest, tenantId)),
+      queryClient.ensureQueryData(knowledgeEmbeddingHealthQueryOptions(tenantId))
     ]);
     const chat = chatRequest ? await askAiChat(chatRequest, { tenantId }) : undefined;
     const knowledgeJobs = jobs.items.filter((job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed");
@@ -46,6 +51,7 @@ export default async function AgencyKnowledgePage({
         createSourceOpen={query.create === "source"}
         documents={documents.items}
         jobs={knowledgeJobs}
+        embeddingHealth={embeddingHealth}
         notice={buildKnowledgePageNotice(query)}
         retrieval={retrieval}
         retrievalRequest={retrievalRequest}

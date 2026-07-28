@@ -40,6 +40,7 @@ import type {
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
   KnowledgeDocumentSnapshot,
+  KnowledgeEmbeddingHealthSnapshot,
   LeadListResponse,
   LeadNoteSnapshot,
   LeadNotesResponse,
@@ -1092,6 +1093,21 @@ export async function searchKnowledgeChunks(
   }
 
   return (await response.json()) as KnowledgeChunkSearchResponse;
+}
+
+export async function getKnowledgeEmbeddingHealth(
+  options: AgencyApiOptions = {}
+): Promise<KnowledgeEmbeddingHealthSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/embedding-health`, {
+    headers: await tenantHeaders(options),
+    next: { revalidate: 10 }
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load knowledge embedding health: ${response.status}`);
+  }
+
+  return (await response.json()) as KnowledgeEmbeddingHealthSnapshot;
 }
 
 export async function askAiChat(request: AiChatRequest, options: AgencyApiOptions = {}): Promise<AiChatResponse> {

@@ -6,6 +6,7 @@ import type {
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
+  KnowledgeEmbeddingHealthSnapshot,
   KnowledgeDocumentSearchRequest,
   KnowledgeDocumentSnapshot
 } from "@propertyflow/contracts";
@@ -47,6 +48,24 @@ export class KnowledgeDocumentService {
     return {
       items,
       total: items.length,
+      retrieval: "hybrid-chunks-v1",
+      generatedAt: new Date().toISOString()
+    };
+  }
+
+  async embeddingHealth(tenantId: string): Promise<KnowledgeEmbeddingHealthSnapshot> {
+    const stats = await this.documents.summarizeChunkEmbeddingHealth(tenantId, this.embeddings.modelKey());
+    const unembeddedChunks = stats.staleChunks + stats.pendingChunks + stats.failedChunks;
+
+    return {
+      ...stats,
+      tenantId,
+      targetProvider: this.embeddings.provider(),
+      targetModel: this.embeddings.model(),
+      targetModelKey: this.embeddings.modelKey(),
+      targetDimensions: this.embeddings.dimensions(),
+      unembeddedChunks,
+      ready: stats.totalChunks > 0 && unembeddedChunks === 0,
       retrieval: "hybrid-chunks-v1",
       generatedAt: new Date().toISOString()
     };

@@ -3,6 +3,7 @@ import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   BackgroundJobSnapshot,
   CreateKnowledgeDocumentUploadResponse,
+  KnowledgeEmbeddingHealthSnapshot,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
   KnowledgeDocumentSnapshot,
@@ -53,6 +54,12 @@ export class KnowledgeDocumentsController {
     @Query() query: SearchKnowledgeChunksDto
   ): Promise<KnowledgeChunkSearchResponse> {
     return this.knowledge.searchChunks(tenantId, query);
+  }
+
+  @Get("chunks/embedding-health")
+  @Roles("agent", "broker", "manager", "admin")
+  embeddingHealth(@TenantId() tenantId: string): Promise<KnowledgeEmbeddingHealthSnapshot> {
+    return this.knowledge.embeddingHealth(tenantId);
   }
 
   @Post()

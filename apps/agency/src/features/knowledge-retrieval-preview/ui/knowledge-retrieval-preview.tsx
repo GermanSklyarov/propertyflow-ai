@@ -1,18 +1,26 @@
-import { DatabaseZap, Search, SearchCheck } from "lucide-react";
+import { CircleAlert, CircleCheck, DatabaseZap, Search, SearchCheck } from "lucide-react";
 import { embedKnowledgeChunksAction } from "@entities/knowledge/api/knowledge-actions";
 import { excerpt } from "@entities/knowledge/lib/knowledge-text";
 import { knowledgeKindOptions, knowledgeLocaleOptions } from "@entities/knowledge/model/knowledge-options";
-import type { KnowledgeChunkSearchRequest, KnowledgeChunkSearchResponse } from "@propertyflow/contracts";
+import type {
+  KnowledgeChunkSearchRequest,
+  KnowledgeChunkSearchResponse,
+  KnowledgeEmbeddingHealthSnapshot
+} from "@propertyflow/contracts";
 import { formatBucket, formatDate, formatNumber } from "@shared/lib/formatters";
 import styles from "./knowledge-retrieval-preview.module.css";
 
 export function KnowledgeRetrievalPreview({
+  embeddingHealth,
   retrieval,
   retrievalRequest
 }: {
+  embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   retrieval: KnowledgeChunkSearchResponse;
   retrievalRequest: KnowledgeChunkSearchRequest;
 }) {
+  const HealthIcon = embeddingHealth.ready ? CircleCheck : CircleAlert;
+
   return (
     <>
       <form className={styles.form}>
@@ -47,6 +55,24 @@ export function KnowledgeRetrievalPreview({
           Test retrieval
         </button>
       </form>
+      <section className={styles.healthPanel} data-ready={embeddingHealth.ready} aria-label="Knowledge embedding health">
+        <div className={styles.healthSummary}>
+          <HealthIcon size={18} />
+          <div>
+            <strong>{embeddingHealth.ready ? "Vectors current" : "Vectors need attention"}</strong>
+            <span>
+              {formatBucket(embeddingHealth.targetProvider)} · {embeddingHealth.targetModel} ·{" "}
+              {embeddingHealth.targetDimensions} dimensions
+            </span>
+          </div>
+        </div>
+        <div className={styles.healthStats}>
+          <HealthStat label="current" value={embeddingHealth.currentChunks} />
+          <HealthStat label="stale" value={embeddingHealth.staleChunks} />
+          <HealthStat label="pending" value={embeddingHealth.pendingChunks} />
+          <HealthStat label="failed" value={embeddingHealth.failedChunks} />
+        </div>
+      </section>
       <form action={embedKnowledgeChunksAction} className={styles.embedForm}>
         <input name="q" type="hidden" value={retrievalRequest.query} />
         <input name="locale" type="hidden" value={retrievalRequest.locale ?? ""} />
@@ -88,5 +114,14 @@ export function KnowledgeRetrievalPreview({
         </div>
       )}
     </>
+  );
+}
+
+function HealthStat({ label, value }: { label: string; value: number }) {
+  return (
+    <span>
+      <strong>{formatNumber(value)}</strong>
+      {label}
+    </span>
   );
 }

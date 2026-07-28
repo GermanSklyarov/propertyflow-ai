@@ -1,5 +1,6 @@
 import type {
   CreateKnowledgeDocumentRequest,
+  KnowledgeEmbeddingHealthSnapshot,
   KnowledgeChunkSearchRequest,
   KnowledgeDocumentChunkSnapshot,
   KnowledgeDocumentSearchRequest,
@@ -17,4 +18,13 @@ export interface KnowledgeDocumentRepository {
     request: KnowledgeChunkSearchRequest,
     queryEmbedding?: KnowledgeEmbeddingResult
   ): Promise<KnowledgeDocumentChunkSnapshot[]>;
+  summarizeChunkEmbeddingHealth(
+    tenantId: string,
+    targetModelKey: string
+  ): Promise<
+    Pick<
+      KnowledgeEmbeddingHealthSnapshot,
+      "totalChunks" | "currentChunks" | "staleChunks" | "pendingChunks" | "failedChunks"
+    >
+  >;
 }

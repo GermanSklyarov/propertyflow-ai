@@ -1307,6 +1307,23 @@ export interface KnowledgeChunkSearchResponse {
   generatedAt: string;
 }
 
+export interface KnowledgeEmbeddingHealthSnapshot {
+  tenantId: string;
+  targetProvider: "local-hash" | "openai" | "gemini";
+  targetModel: string;
+  targetModelKey: string;
+  targetDimensions: number;
+  totalChunks: number;
+  currentChunks: number;
+  staleChunks: number;
+  pendingChunks: number;
+  failedChunks: number;
+  unembeddedChunks: number;
+  ready: boolean;
+  retrieval: "hybrid-chunks-v1";
+  generatedAt: string;
+}
+
 export interface AiAdvisorSummary {
   propertyId: string;
   bestFor: PropertyPurpose[];

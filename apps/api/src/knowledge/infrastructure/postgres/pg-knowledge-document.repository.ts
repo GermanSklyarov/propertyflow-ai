@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   CreateKnowledgeDocumentRequest,
+  KnowledgeEmbeddingHealthSnapshot,
   KnowledgeChunkSearchRequest,
   KnowledgeDocumentChunkSnapshot,
   KnowledgeDocumentKind,
@@ -40,6 +41,14 @@ interface KnowledgeDocumentChunkRow {
   created_at: Date;
   updated_at: Date;
 }
+
+type KnowledgeEmbeddingHealthRow = {
+  total_chunks: string;
+  current_chunks: string;
+  stale_chunks: string;
+  pending_chunks: string;
+  failed_chunks: string;
+};
 
 @Injectable()
 export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepository {
@@ -186,6 +195,46 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     );
 
     return result.rows.map((row) => this.toChunkSnapshot(row));
+  }
+
+  async summarizeChunkEmbeddingHealth(
+    tenantId: string,
+    targetModelKey: string
+  ): Promise<
+    Pick<
+      KnowledgeEmbeddingHealthSnapshot,
+      "totalChunks" | "currentChunks" | "staleChunks" | "pendingChunks" | "failedChunks"
+    >
+  > {
+    const result = await this.pool.query<KnowledgeEmbeddingHealthRow>(
+      `
+        select
+          count(*)::text as total_chunks,
+          count(*) filter (
+            where embedding_status = 'embedded'
+              and embedding_model = $2
+              and embedding is not null
+          )::text as current_chunks,
+          count(*) filter (
+            where embedding_status = 'embedded'
+              and (embedding_model is distinct from $2 or embedding is null)
+          )::text as stale_chunks,
+          count(*) filter (where embedding_status = 'pending')::text as pending_chunks,
+          count(*) filter (where embedding_status = 'failed')::text as failed_chunks
+        from knowledge_document_chunks
+        where tenant_id = $1
+      `,
+      [tenantId, targetModelKey]
+    );
+    const row = result.rows[0];
+
+    return {
+      totalChunks: Number(row?.total_chunks ?? 0),
+      currentChunks: Number(row?.current_chunks ?? 0),
+      staleChunks: Number(row?.stale_chunks ?? 0),
+      pendingChunks: Number(row?.pending_chunks ?? 0),
+      failedChunks: Number(row?.failed_chunks ?? 0)
+    };
   }
 
   private searchTerms(query?: string): string[] {
