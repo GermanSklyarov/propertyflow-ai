@@ -1,6 +1,14 @@
 import { NextResponse } from "next/server";
-import { embedKnowledgeChunks, getKnowledgeEmbeddingHealth } from "@shared/api/agency-client";
+import type { BackgroundJobMonitorItem, BackgroundJobState, KnowledgeEmbeddingHealthSnapshot } from "@propertyflow/contracts";
+import { embedKnowledgeChunks, getKnowledgeEmbeddingHealth, listBackgroundJobs } from "@shared/api/agency-client";
 import { getAgencySession } from "@shared/lib/tenant-session";
+
+const embeddingJobStates: BackgroundJobState[] = ["active", "waiting", "delayed", "completed", "failed"];
+
+interface KnowledgeVectorRefreshSnapshot {
+  health: KnowledgeEmbeddingHealthSnapshot;
+  job: BackgroundJobMonitorItem | null;
+}
 
 export async function GET() {
   const session = await getAgencySession();
@@ -10,12 +18,25 @@ export async function GET() {
   }
 
   try {
-    const health = await getKnowledgeEmbeddingHealth({
-      revalidateSeconds: false,
-      tenantId: session.tenantId
-    });
+    const [health, jobs] = await Promise.all([
+      getKnowledgeEmbeddingHealth({
+        revalidateSeconds: false,
+        tenantId: session.tenantId
+      }),
+      listBackgroundJobs(
+        {
+          limit: 25,
+          states: embeddingJobStates
+        },
+        {
+          revalidateSeconds: false,
+          tenantId: session.tenantId
+        }
+      )
+    ]);
+    const job = jobs.items.find((item) => item.name === "knowledge.chunks.embed") ?? null;
 
-    return NextResponse.json(health);
+    return NextResponse.json({ health, job } satisfies KnowledgeVectorRefreshSnapshot);
   } catch {
     return NextResponse.json({ message: "Failed to load knowledge vector health" }, { status: 500 });
   }

@@ -2,14 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DatabaseZap } from "lucide-react";
-import type { KnowledgeEmbeddingHealthSnapshot } from "@propertyflow/contracts";
+import type { BackgroundJobMonitorItem, KnowledgeEmbeddingHealthSnapshot } from "@propertyflow/contracts";
 import { buildStarterEmbeddingReadiness } from "../../model/starter-setup";
 import styles from "../starter-setup-page.module.css";
 
 type RefreshState = "completed" | "failed" | "idle" | "queueing" | "refreshing";
+type KnowledgeVectorRefreshSnapshot = {
+  health: KnowledgeEmbeddingHealthSnapshot;
+  job: BackgroundJobMonitorItem | null;
+};
 
 const maxPollAttempts = 30;
 const pollIntervalMs = 2000;
+const runningJobStates = new Set<BackgroundJobMonitorItem["state"]>(["active", "waiting", "delayed", "waiting-children"]);
 
 export function EmbeddingReadinessPanel({
   initialHealth
@@ -17,12 +22,14 @@ export function EmbeddingReadinessPanel({
   initialHealth: KnowledgeEmbeddingHealthSnapshot;
 }) {
   const [health, setHealth] = useState(initialHealth);
+  const [job, setJob] = useState<BackgroundJobMonitorItem | null>(null);
   const [refreshState, setRefreshState] = useState<RefreshState>("idle");
   const [feedback, setFeedback] = useState("");
   const pollAttempts = useRef(0);
   const pollTimer = useRef<number | null>(null);
   const readiness = useMemo(() => buildStarterEmbeddingReadiness(health), [health]);
-  const isRefreshing = refreshState === "queueing" || refreshState === "refreshing";
+  const hasRunningJob = job ? runningJobStates.has(job.state) : false;
+  const isRefreshing = refreshState === "queueing" || refreshState === "refreshing" || hasRunningJob;
 
   const stopPolling = useCallback(() => {
     if (pollTimer.current) {
@@ -31,7 +38,7 @@ export function EmbeddingReadinessPanel({
     }
   }, []);
 
-  const loadHealth = useCallback(async () => {
+  const loadSnapshot = useCallback(async () => {
     const response = await fetch("/api/knowledge-vectors", {
       cache: "no-store"
     });
@@ -40,16 +47,30 @@ export function EmbeddingReadinessPanel({
       throw new Error(`Failed to load vector health: ${response.status}`);
     }
 
-    return (await response.json()) as KnowledgeEmbeddingHealthSnapshot;
+    return (await response.json()) as KnowledgeVectorRefreshSnapshot;
   }, []);
 
-  const settleFromHealth = useCallback((nextHealth: KnowledgeEmbeddingHealthSnapshot) => {
+  const settleFromSnapshot = useCallback((snapshot: KnowledgeVectorRefreshSnapshot) => {
+    const nextHealth = snapshot.health;
+    const nextJob = snapshot.job;
     const hasWorkLeft = nextHealth.pendingChunks > 0 || nextHealth.staleChunks > 0;
     const hasSettledLongEnough = pollAttempts.current >= 2;
+
+    if (nextJob && runningJobStates.has(nextJob.state)) {
+      setRefreshState("refreshing");
+      setFeedback("Worker is refreshing vectors. This panel checks progress every 2 seconds.");
+      return false;
+    }
 
     if (nextHealth.ready) {
       setRefreshState("completed");
       setFeedback("Vectors are current. Concierge retrieval can use the refreshed index.");
+      return true;
+    }
+
+    if (nextJob?.state === "failed") {
+      setRefreshState("failed");
+      setFeedback(nextJob.failedReason ? `Embedding job failed: ${nextJob.failedReason}` : "Embedding job failed. Check worker logs before launch.");
       return true;
     }
 
@@ -73,10 +94,11 @@ export function EmbeddingReadinessPanel({
   const pollHealth = useCallback(async () => {
     try {
       pollAttempts.current += 1;
-      const nextHealth = await loadHealth();
-      setHealth(nextHealth);
+      const snapshot = await loadSnapshot();
+      setHealth(snapshot.health);
+      setJob(snapshot.job);
 
-      if (settleFromHealth(nextHealth)) {
+      if (settleFromSnapshot(snapshot)) {
         stopPolling();
       }
     } catch {
@@ -84,11 +106,43 @@ export function EmbeddingReadinessPanel({
       setFeedback("Could not refresh vector status. Check the API connection and try again.");
       stopPolling();
     }
-  }, [loadHealth, settleFromHealth, stopPolling]);
+  }, [loadSnapshot, settleFromSnapshot, stopPolling]);
 
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function syncActiveJob() {
+      try {
+        const snapshot = await loadSnapshot();
+
+        if (!mounted) {
+          return;
+        }
+
+        setHealth(snapshot.health);
+        setJob(snapshot.job);
+
+        if (snapshot.job && runningJobStates.has(snapshot.job.state)) {
+          pollAttempts.current = 0;
+          setRefreshState("refreshing");
+          setFeedback("Vector refresh is already running. Tracking worker progress now.");
+          pollTimer.current = window.setInterval(pollHealth, pollIntervalMs);
+        }
+      } catch {
+        // Keep the server-rendered health snapshot if the live check is temporarily unavailable.
+      }
+    }
+
+    void syncActiveJob();
+
+    return () => {
+      mounted = false;
+    };
+  }, [loadSnapshot, pollHealth]);
 
   async function refreshVectors() {
     if (isRefreshing || !readiness.total) {
@@ -160,6 +214,13 @@ export function EmbeddingReadinessPanel({
           {refreshState === "queueing" ? "Queueing..." : refreshState === "refreshing" ? "Refreshing..." : readiness.actionLabel}
         </button>
       </div>
+      {job && (isRefreshing || refreshState !== "idle") ? (
+        <div className={styles.embeddingJob} data-state={job.state}>
+          <span>Job #{job.id}</span>
+          <strong>{job.state}</strong>
+          <span>{formatJobProgress(job.progress)}</span>
+        </div>
+      ) : null}
       {feedback ? (
         <p className={styles.embeddingFeedback} data-state={refreshState} aria-live="polite">
           {feedback}
@@ -167,4 +228,20 @@ export function EmbeddingReadinessPanel({
       ) : null}
     </section>
   );
+}
+
+function formatJobProgress(progress: BackgroundJobMonitorItem["progress"]) {
+  if (typeof progress === "number") {
+    return `${Math.max(0, Math.min(100, Math.round(progress)))}% progress`;
+  }
+
+  if (typeof progress === "string" && progress.trim()) {
+    return progress;
+  }
+
+  if (progress && typeof progress === "object") {
+    return "worker progress received";
+  }
+
+  return "waiting for worker snapshot";
 }
