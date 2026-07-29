@@ -22,7 +22,7 @@ describe("BackgroundJobPolicyService", () => {
         name: "knowledge.chunks.embed",
         payload: {
           dimensions: 768,
-          model: "text-embedding-004",
+          model: "gemini-embedding-001",
           provider: "gemini",
           refreshExisting: true,
           tenantId: "demo-agency"

@@ -106,6 +106,7 @@ describe("starter embedding readiness", () => {
       buildStarterEmbeddingReadiness(
         embeddingHealthFactory({
           currentChunks: 7,
+          pendingChunks: 1,
           ready: false,
           staleChunks: 2,
           totalChunks: 12,
@@ -115,10 +116,10 @@ describe("starter embedding readiness", () => {
     ).toMatchObject({
       actionLabel: "Refresh vectors",
       current: 7,
-      pending: 3,
+      pending: 1,
       ready: false,
       stale: 2,
-      summary: "5 chunks need fresh vectors before Concierge retrieval is production-ready."
+      summary: "3 chunks need fresh vectors before Concierge retrieval is production-ready."
     });
   });
 });

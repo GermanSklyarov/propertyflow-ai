@@ -1,33 +1,43 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";
-import type { KnowledgeChunkEmbeddingJobPayload } from "@propertyflow/contracts";
+import type { EmbedKnowledgeChunksRequest } from "@propertyflow/contracts";
 
-export class EmbedKnowledgeChunksDto
-  implements Omit<KnowledgeChunkEmbeddingJobPayload, "tenantId" | "requestedByUserId">
-{
+export class EmbedKnowledgeChunksDto implements EmbedKnowledgeChunksRequest {
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   documentId?: string;
 
-  @ApiProperty({ enum: ["local-hash", "openai", "anthropic", "gemini"], default: "local-hash" })
+  @ApiProperty({
+    enum: ["local-hash", "openai", "anthropic", "gemini"],
+    required: false,
+    description: "Omit provider, model, and dimensions to use the active server embedding configuration."
+  })
   @IsOptional()
   @IsIn(["local-hash", "openai", "anthropic", "gemini"])
-  provider: KnowledgeChunkEmbeddingJobPayload["provider"] = "local-hash";
+  provider?: EmbedKnowledgeChunksRequest["provider"];
 
-  @ApiProperty({ default: "local-hash-16" })
+  @ApiProperty({
+    required: false,
+    description: "Omit provider, model, and dimensions to use the active server embedding configuration."
+  })
   @IsOptional()
   @IsString()
-  model = "local-hash-16";
+  model?: string;
 
-  @ApiProperty({ minimum: 1, maximum: 4096, default: 16 })
+  @ApiProperty({
+    required: false,
+    minimum: 1,
+    maximum: 4096,
+    description: "Omit provider, model, and dimensions to use the active server embedding configuration."
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(4096)
-  dimensions = 16;
+  dimensions?: number;
 
   @ApiProperty({ required: false, minimum: 1, maximum: 500 })
   @IsOptional()

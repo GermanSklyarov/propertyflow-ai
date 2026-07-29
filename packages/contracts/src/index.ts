@@ -2479,6 +2479,15 @@ export interface KnowledgeDocumentIngestJobPayload extends BackgroundJobBasePayl
   reason: "created" | "updated" | "manual";
 }
 
+export interface EmbedKnowledgeChunksRequest {
+  documentId?: string;
+  provider?: "local-hash" | "openai" | "anthropic" | "gemini";
+  model?: string;
+  dimensions?: number;
+  limit?: number;
+  refreshExisting?: boolean;
+}
+
 export interface KnowledgeChunkEmbeddingJobPayload extends BackgroundJobBasePayload {
   documentId?: string;
   provider: "local-hash" | "openai" | "anthropic" | "gemini";

@@ -112,6 +112,7 @@ export class KnowledgeEmbeddingGenerator {
         body: JSON.stringify({
           model: `models/${this.config.model}`,
           taskType: taskType === "query" ? "RETRIEVAL_QUERY" : "RETRIEVAL_DOCUMENT",
+          outputDimensionality: this.config.dimensions,
           content: {
             parts: [{ text }]
           }
@@ -120,7 +121,7 @@ export class KnowledgeEmbeddingGenerator {
     );
 
     if (!response.ok) {
-      throw new Error(`Gemini embedding request failed: ${response.status}`);
+      throw new Error(`Gemini embedding request failed: ${response.status} ${await readProviderErrorBody(response)}`);
     }
 
     const payload = (await response.json()) as GeminiEmbeddingResponse;
@@ -165,7 +166,7 @@ export function defaultKnowledgeEmbeddingConfig(env: NodeJS.ProcessEnv = process
   if (provider === "gemini") {
     return {
       provider,
-      model: env.AI_EMBEDDING_MODEL?.trim() || env.GEMINI_EMBEDDING_MODEL?.trim() || "text-embedding-004",
+      model: env.AI_EMBEDDING_MODEL?.trim() || env.GEMINI_EMBEDDING_MODEL?.trim() || "gemini-embedding-001",
       dimensions: Number(env.AI_EMBEDDING_DIMENSIONS ?? env.GEMINI_EMBEDDING_DIMENSIONS ?? 768),
       apiKey: env.GEMINI_API_KEY?.trim()
     };
@@ -212,6 +213,15 @@ export function localHashEmbedding(text: string, dimensions: number): number[] {
 
 function isKnowledgeEmbeddingProvider(value: string): value is KnowledgeEmbeddingProviderName {
   return value === "local-hash" || value === "openai" || value === "gemini";
+}
+
+async function readProviderErrorBody(response: Response): Promise<string> {
+  try {
+    const text = await response.text();
+    return text ? text.slice(0, 300) : "";
+  } catch {
+    return "";
+  }
 }
 
 function hashToken(token: string): number {

@@ -28,6 +28,7 @@ import type {
   CreateKnowledgeDocumentUploadRequest,
   CreateKnowledgeDocumentUploadResponse,
   CreateKnowledgeDocumentRequest,
+  EmbedKnowledgeChunksRequest,
   CreateAgencySessionRequest,
   CreateAgencySessionResponse,
   CreateLeadNoteRequest,
@@ -35,7 +36,6 @@ import type {
   CreatePropertyImportUploadResponse,
   CreatePropertyProjectRequest,
   CreatePropertyRequest,
-  KnowledgeChunkEmbeddingJobPayload,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
@@ -101,6 +101,7 @@ const apiBaseUrl =
 
 interface AgencyApiOptions {
   accessToken?: string;
+  revalidateSeconds?: number | false;
   tenantId?: string;
 }
 
@@ -1102,7 +1103,9 @@ export async function getKnowledgeEmbeddingHealth(
 ): Promise<KnowledgeEmbeddingHealthSnapshot> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/embedding-health`, {
     headers: await tenantHeaders(options),
-    next: { revalidate: 10 }
+    ...(options.revalidateSeconds === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidateSeconds ?? 10 } })
   });
 
   if (!response.ok) {
@@ -1149,7 +1152,7 @@ export async function askPublicWidget(
 }
 
 export async function embedKnowledgeChunks(
-  request: Omit<KnowledgeChunkEmbeddingJobPayload, "tenantId" | "requestedByUserId">,
+  request: EmbedKnowledgeChunksRequest,
   options: AgencyApiOptions = {}
 ): Promise<BackgroundJobSnapshot> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents/chunks/embed`, {

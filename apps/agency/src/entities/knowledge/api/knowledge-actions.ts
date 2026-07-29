@@ -102,10 +102,7 @@ export async function embedKnowledgeChunksAction(formData: FormData) {
   const returnTo = resolveEmbeddingReturnPath(String(formData.get("returnTo") ?? "").trim());
 
   await embedKnowledgeChunks({
-    dimensions: 16,
     limit: 100,
-    model: "local-hash-16",
-    provider: "local-hash",
     refreshExisting: true
   }, { tenantId });
 

@@ -30,9 +30,9 @@ function createService() {
   const queryEmbedding: KnowledgeEmbeddingResult = {
     vector: [0.25, 0.75],
     provider: "gemini",
-    model: "text-embedding-004",
+    model: "gemini-embedding-001",
     dimensions: 2,
-    modelKey: "gemini:text-embedding-004",
+    modelKey: "gemini:gemini-embedding-001",
     isRemote: true
   };
   const fallbackEmbedding: KnowledgeEmbeddingResult = {
@@ -142,13 +142,13 @@ describe("KnowledgeDocumentService", () => {
       retrieval: "hybrid-chunks-v1",
       staleChunks: 2,
       targetDimensions: 2,
-      targetModel: "text-embedding-004",
-      targetModelKey: "gemini:text-embedding-004",
+      targetModel: "gemini-embedding-001",
+      targetModelKey: "gemini:gemini-embedding-001",
       targetProvider: "gemini",
       tenantId: "tenant-1",
       totalChunks: 12,
       unembeddedChunks: 4
     });
-    expect(documents.summarizeChunkEmbeddingHealth).toHaveBeenCalledWith("tenant-1", "gemini:text-embedding-004");
+    expect(documents.summarizeChunkEmbeddingHealth).toHaveBeenCalledWith("tenant-1", "gemini:gemini-embedding-001");
   });
 });

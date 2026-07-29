@@ -22,6 +22,7 @@ import { KnowledgeDocumentService } from "../../application/knowledge-document.s
 import { CreateKnowledgeDocumentDto } from "./create-knowledge-document.dto.js";
 import { CreateKnowledgeDocumentUploadDto } from "./create-knowledge-document-upload.dto.js";
 import { EmbedKnowledgeChunksDto } from "./embed-knowledge-chunks.dto.js";
+import { resolveKnowledgeEmbeddingJobConfig } from "./embedding-job-config.js";
 import { ListKnowledgeDocumentsDto } from "./list-knowledge-documents.dto.js";
 import { SearchKnowledgeChunksDto } from "./search-knowledge-chunks.dto.js";
 
@@ -130,7 +131,7 @@ export class KnowledgeDocumentsController {
     @CurrentUser() user: RequestUser,
     @Body() payload: EmbedKnowledgeChunksDto
   ): Promise<BackgroundJobSnapshot> {
-    const embeddingConfig = this.resolveEmbeddingJobConfig(payload);
+    const embeddingConfig = resolveKnowledgeEmbeddingJobConfig(payload, defaultKnowledgeEmbeddingConfig());
     const job = await this.jobs.enqueue("knowledge.chunks.embed", {
       tenantId,
       requestedByUserId: user.id,
@@ -159,18 +160,6 @@ export class KnowledgeDocumentsController {
     });
 
     return job;
-  }
-
-  private resolveEmbeddingJobConfig(payload: EmbedKnowledgeChunksDto) {
-    if (payload.provider === "local-hash" && payload.model === "local-hash-16" && payload.dimensions === 16) {
-      return defaultKnowledgeEmbeddingConfig();
-    }
-
-    return {
-      provider: payload.provider,
-      model: payload.model,
-      dimensions: payload.dimensions
-    };
   }
 
   private enqueueIngestion(

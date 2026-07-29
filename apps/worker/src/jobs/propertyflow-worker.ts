@@ -375,6 +375,7 @@ export class PropertyflowWorker {
     let embedded = 0;
     let failed = 0;
     const now = new Date().toISOString();
+    const failureReasons = new Map<string, number>();
 
     for (const chunk of chunks.rows) {
       try {
@@ -393,7 +394,17 @@ export class PropertyflowWorker {
           [embedding.vector, embedding.modelKey, now, job.data.tenantId, chunk.id]
         );
         embedded += 1;
-      } catch {
+      } catch (error) {
+        const reason = resolveErrorMessage(error);
+        failureReasons.set(reason, (failureReasons.get(reason) ?? 0) + 1);
+        console.error("[worker] knowledge chunk embedding failed", {
+          chunkId: chunk.id,
+          dimensions: job.data.dimensions,
+          model: job.data.model,
+          provider: job.data.provider,
+          reason,
+          tenantId: job.data.tenantId
+        });
         await this.pool.query(
           `
             update knowledge_document_chunks
@@ -416,7 +427,10 @@ export class PropertyflowWorker {
       targetModelKey,
       scanned: chunks.rowCount,
       embedded,
-      failed
+      failed,
+      failureSummary: Array.from(failureReasons.entries())
+        .map(([reason, count]) => ({ reason, count }))
+        .slice(0, 5)
     };
   }
 
@@ -761,6 +775,14 @@ export class PropertyflowWorker {
 
 function assertNever(value: never): never {
   throw new Error(`Unsupported job name: ${String(value)}`);
+}
+
+function resolveErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return String(error);
 }
 
 function isPropertyImportResult(value: Record<string, unknown>): value is Record<string, unknown> & {

@@ -189,8 +189,8 @@ function buildStarterSetupUpgradePreview(
 }
 
 export function buildStarterEmbeddingReadiness(embeddingHealth: KnowledgeEmbeddingHealthSnapshot): StarterEmbeddingReadiness {
-  const pending = embeddingHealth.pendingChunks + embeddingHealth.unembeddedChunks;
-  const needsRefresh = embeddingHealth.staleChunks + pending + embeddingHealth.failedChunks;
+  const pending = embeddingHealth.pendingChunks;
+  const needsRefresh = embeddingHealth.unembeddedChunks;
   const providerLabel = `${embeddingHealth.targetProvider} · ${embeddingHealth.targetModel}`;
 
   if (!embeddingHealth.totalChunks) {

@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpenText, CheckCircle2, CircleDot, Code2, DatabaseZap, Globe2, Languages, Rocket } from "lucide-react";
+import { ArrowRight, BookOpenText, CheckCircle2, CircleDot, Code2, Globe2, Languages, Rocket } from "lucide-react";
 import type {
   BackgroundJobMonitorItem,
   KnowledgeEmbeddingHealthSnapshot,
@@ -7,12 +7,12 @@ import type {
   TenantSubscriptionPlan
 } from "@propertyflow/contracts";
 import { countRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
-import { embedKnowledgeChunksAction } from "@entities/knowledge/api/knowledge-actions";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
 import { buildWidgetInstallPackage } from "@widgets/tenant-settings/model/widget-install";
 import { CopyWidgetSnippetButton } from "@widgets/tenant-settings/ui/copy-widget-snippet-button";
-import { buildStarterEmbeddingReadiness, buildStarterSetupProgress, type StarterSetupStep } from "../model/starter-setup";
+import { buildStarterSetupProgress, type StarterSetupStep } from "../model/starter-setup";
+import { EmbeddingReadinessPanel } from "./embedding-readiness-panel/embedding-readiness-panel";
 import styles from "./starter-setup-page.module.css";
 
 export function StarterSetupPage({
@@ -29,7 +29,6 @@ export function StarterSetupPage({
   tenant: TenantSnapshot;
 }) {
   const progress = buildStarterSetupProgress({ documents, jobs, requestedPlan, tenant });
-  const embeddingReadiness = buildStarterEmbeddingReadiness(embeddingHealth);
   const knowledgeReadiness = buildKnowledgeStarterReadiness(documents, countRunningKnowledgeJobs(jobs));
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
@@ -143,46 +142,7 @@ export function StarterSetupPage({
                 );
               })}
             </div>
-            <section
-              className={styles.embeddingPanel}
-              data-ready={String(embeddingReadiness.ready)}
-              id="ai-retrieval-readiness"
-              aria-label="AI retrieval readiness"
-            >
-              <div className={styles.embeddingHeader}>
-                <DatabaseZap size={18} />
-                <div>
-                  <strong>{embeddingReadiness.ready ? "AI retrieval vectors current" : "AI retrieval vectors need refresh"}</strong>
-                  <span>{embeddingReadiness.providerLabel}</span>
-                </div>
-              </div>
-              <p>{embeddingReadiness.summary}</p>
-              <div className={styles.embeddingStats}>
-                <span>
-                  <strong>{embeddingReadiness.current}</strong>
-                  current
-                </span>
-                <span>
-                  <strong>{embeddingReadiness.stale}</strong>
-                  stale
-                </span>
-                <span>
-                  <strong>{embeddingReadiness.pending}</strong>
-                  pending
-                </span>
-                <span>
-                  <strong>{embeddingReadiness.failed}</strong>
-                  failed
-                </span>
-              </div>
-              <form action={embedKnowledgeChunksAction} className={styles.embeddingAction}>
-                <input name="returnTo" type="hidden" value="/setup#ai-retrieval-readiness" />
-                <button disabled={!embeddingReadiness.total} type="submit">
-                  <DatabaseZap size={16} />
-                  {embeddingReadiness.actionLabel}
-                </button>
-              </form>
-            </section>
+            <EmbeddingReadinessPanel initialHealth={embeddingHealth} />
             <a className={styles.secondaryAction} href="/knowledge?create=source#create-knowledge-document">
               Add knowledge source
               <ArrowRight size={16} />

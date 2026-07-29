@@ -1,0 +1,170 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { DatabaseZap } from "lucide-react";
+import type { KnowledgeEmbeddingHealthSnapshot } from "@propertyflow/contracts";
+import { buildStarterEmbeddingReadiness } from "../../model/starter-setup";
+import styles from "../starter-setup-page.module.css";
+
+type RefreshState = "completed" | "failed" | "idle" | "queueing" | "refreshing";
+
+const maxPollAttempts = 30;
+const pollIntervalMs = 2000;
+
+export function EmbeddingReadinessPanel({
+  initialHealth
+}: {
+  initialHealth: KnowledgeEmbeddingHealthSnapshot;
+}) {
+  const [health, setHealth] = useState(initialHealth);
+  const [refreshState, setRefreshState] = useState<RefreshState>("idle");
+  const [feedback, setFeedback] = useState("");
+  const pollAttempts = useRef(0);
+  const pollTimer = useRef<number | null>(null);
+  const readiness = useMemo(() => buildStarterEmbeddingReadiness(health), [health]);
+  const isRefreshing = refreshState === "queueing" || refreshState === "refreshing";
+
+  const stopPolling = useCallback(() => {
+    if (pollTimer.current) {
+      window.clearInterval(pollTimer.current);
+      pollTimer.current = null;
+    }
+  }, []);
+
+  const loadHealth = useCallback(async () => {
+    const response = await fetch("/api/knowledge-vectors", {
+      cache: "no-store"
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to load vector health: ${response.status}`);
+    }
+
+    return (await response.json()) as KnowledgeEmbeddingHealthSnapshot;
+  }, []);
+
+  const settleFromHealth = useCallback((nextHealth: KnowledgeEmbeddingHealthSnapshot) => {
+    const hasWorkLeft = nextHealth.pendingChunks > 0 || nextHealth.staleChunks > 0;
+    const hasSettledLongEnough = pollAttempts.current >= 2;
+
+    if (nextHealth.ready) {
+      setRefreshState("completed");
+      setFeedback("Vectors are current. Concierge retrieval can use the refreshed index.");
+      return true;
+    }
+
+    if (!hasWorkLeft && nextHealth.failedChunks > 0 && hasSettledLongEnough) {
+      setRefreshState("failed");
+      setFeedback(`${nextHealth.failedChunks} chunks still failed after refresh. Check worker logs before launch.`);
+      return true;
+    }
+
+    if (pollAttempts.current >= maxPollAttempts) {
+      setRefreshState("idle");
+      setFeedback("Refresh is still running in the background. Reload later or check background jobs.");
+      return true;
+    }
+
+    setRefreshState("refreshing");
+    setFeedback("Worker is refreshing vectors. This panel checks progress every 2 seconds.");
+    return false;
+  }, []);
+
+  const pollHealth = useCallback(async () => {
+    try {
+      pollAttempts.current += 1;
+      const nextHealth = await loadHealth();
+      setHealth(nextHealth);
+
+      if (settleFromHealth(nextHealth)) {
+        stopPolling();
+      }
+    } catch {
+      setRefreshState("failed");
+      setFeedback("Could not refresh vector status. Check the API connection and try again.");
+      stopPolling();
+    }
+  }, [loadHealth, settleFromHealth, stopPolling]);
+
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
+  async function refreshVectors() {
+    if (isRefreshing || !readiness.total) {
+      return;
+    }
+
+    stopPolling();
+    pollAttempts.current = 0;
+    setRefreshState("queueing");
+    setFeedback("Queueing vector refresh...");
+
+    try {
+      const response = await fetch("/api/knowledge-vectors", {
+        method: "POST"
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to queue vector refresh: ${response.status}`);
+      }
+
+      setRefreshState("refreshing");
+      setFeedback("Refresh queued. Waiting for worker progress...");
+      pollTimer.current = window.setInterval(pollHealth, pollIntervalMs);
+      await pollHealth();
+    } catch {
+      setRefreshState("failed");
+      setFeedback("Could not start vector refresh. Check the API and worker, then try again.");
+      stopPolling();
+    }
+  }
+
+  return (
+    <section
+      className={styles.embeddingPanel}
+      data-ready={String(readiness.ready)}
+      data-refreshing={String(isRefreshing)}
+      id="ai-retrieval-readiness"
+      aria-label="AI retrieval readiness"
+    >
+      <div className={styles.embeddingHeader}>
+        <DatabaseZap size={18} />
+        <div>
+          <strong>{readiness.ready ? "AI retrieval vectors current" : "AI retrieval vectors need refresh"}</strong>
+          <span>{readiness.providerLabel}</span>
+        </div>
+      </div>
+      <p>{readiness.summary}</p>
+      <div className={styles.embeddingStats}>
+        <span>
+          <strong>{readiness.current}</strong>
+          current
+        </span>
+        <span>
+          <strong>{readiness.stale}</strong>
+          stale
+        </span>
+        <span>
+          <strong>{readiness.pending}</strong>
+          pending
+        </span>
+        <span>
+          <strong>{readiness.failed}</strong>
+          failed
+        </span>
+      </div>
+      <div className={styles.embeddingAction}>
+        <button data-refreshing={String(isRefreshing)} disabled={!readiness.total || isRefreshing} onClick={refreshVectors} type="button">
+          <DatabaseZap size={16} />
+          {refreshState === "queueing" ? "Queueing..." : refreshState === "refreshing" ? "Refreshing..." : readiness.actionLabel}
+        </button>
+      </div>
+      {feedback ? (
+        <p className={styles.embeddingFeedback} data-state={refreshState} aria-live="polite">
+          {feedback}
+        </p>
+      ) : null}
+    </section>
+  );
+}
