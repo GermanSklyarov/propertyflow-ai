@@ -376,6 +376,12 @@ export class PropertyflowWorker {
     let failed = 0;
     const now = new Date().toISOString();
     const failureReasons = new Map<string, number>();
+    await job.updateProgress({
+      embedded,
+      failed,
+      processed: 0,
+      total: chunks.rowCount ?? 0
+    });
 
     for (const chunk of chunks.rows) {
       try {
@@ -415,6 +421,13 @@ export class PropertyflowWorker {
         );
         failed += 1;
       }
+
+      await job.updateProgress({
+        embedded,
+        failed,
+        processed: embedded + failed,
+        total: chunks.rowCount ?? 0
+      });
     }
 
     return {

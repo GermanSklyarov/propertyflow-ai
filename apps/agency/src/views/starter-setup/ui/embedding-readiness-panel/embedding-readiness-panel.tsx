@@ -240,8 +240,31 @@ function formatJobProgress(progress: BackgroundJobMonitorItem["progress"]) {
   }
 
   if (progress && typeof progress === "object") {
+    const snapshot = progress as Partial<Record<"embedded" | "failed" | "processed" | "total", unknown>>;
+    const processed = toProgressNumber(snapshot.processed);
+    const total = toProgressNumber(snapshot.total);
+    const embedded = toProgressNumber(snapshot.embedded);
+    const failed = toProgressNumber(snapshot.failed);
+
+    if (processed !== null && total !== null) {
+      const details = [
+        embedded !== null ? `${embedded} embedded` : null,
+        failed !== null && failed > 0 ? `${failed} failed` : null
+      ].filter(Boolean);
+
+      return [`${processed}/${total} processed`, ...details].join(" · ");
+    }
+
     return "worker progress received";
   }
 
   return "waiting for worker snapshot";
+}
+
+function toProgressNumber(value: unknown) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return null;
+  }
+
+  return Math.max(0, Math.round(value));
 }
