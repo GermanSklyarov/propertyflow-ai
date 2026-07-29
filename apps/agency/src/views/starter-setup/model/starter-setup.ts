@@ -1,5 +1,6 @@
 import type {
   BackgroundJobMonitorItem,
+  KnowledgeEmbeddingHealthSnapshot,
   KnowledgeDocumentSnapshot,
   TenantSnapshot,
   TenantSubscriptionPlan
@@ -45,6 +46,19 @@ export interface StarterSetupUpgradePreview {
   description: string;
   features: string[];
   title: string;
+}
+
+export interface StarterEmbeddingReadiness {
+  actionLabel: string;
+  current: number;
+  failed: number;
+  pending: number;
+  providerLabel: string;
+  ready: boolean;
+  stale: number;
+  summary: string;
+  total: number;
+  unembedded: number;
 }
 
 export function buildStarterSetupProgress({
@@ -171,5 +185,54 @@ function buildStarterSetupUpgradePreview(
       "Keep Starter running the Concierge now, then unlock CRM lead creation when conversations become viewing or callback requests.",
     features: ["Conversation to lead handoff", "Agent assignment", "Pipeline follow-up", "Saved demand and analytics"],
     title: "Growth is the next step after Starter"
+  };
+}
+
+export function buildStarterEmbeddingReadiness(embeddingHealth: KnowledgeEmbeddingHealthSnapshot): StarterEmbeddingReadiness {
+  const pending = embeddingHealth.pendingChunks + embeddingHealth.unembeddedChunks;
+  const needsRefresh = embeddingHealth.staleChunks + pending + embeddingHealth.failedChunks;
+  const providerLabel = `${embeddingHealth.targetProvider} · ${embeddingHealth.targetModel}`;
+
+  if (!embeddingHealth.totalChunks) {
+    return {
+      actionLabel: "Add knowledge first",
+      current: 0,
+      failed: 0,
+      pending: 0,
+      providerLabel,
+      ready: false,
+      stale: 0,
+      summary: "No searchable chunks yet. Add at least one knowledge source before testing Concierge answers.",
+      total: 0,
+      unembedded: 0
+    };
+  }
+
+  if (embeddingHealth.ready) {
+    return {
+      actionLabel: "Refresh vectors",
+      current: embeddingHealth.currentChunks,
+      failed: embeddingHealth.failedChunks,
+      pending,
+      providerLabel,
+      ready: true,
+      stale: embeddingHealth.staleChunks,
+      summary: `${embeddingHealth.currentChunks}/${embeddingHealth.totalChunks} chunks are using the active embedding provider.`,
+      total: embeddingHealth.totalChunks,
+      unembedded: embeddingHealth.unembeddedChunks
+    };
+  }
+
+  return {
+    actionLabel: "Refresh vectors",
+    current: embeddingHealth.currentChunks,
+    failed: embeddingHealth.failedChunks,
+    pending,
+    providerLabel,
+    ready: false,
+    stale: embeddingHealth.staleChunks,
+    summary: `${needsRefresh} chunks need fresh vectors before Concierge retrieval is production-ready.`,
+    total: embeddingHealth.totalChunks,
+    unembedded: embeddingHealth.unembeddedChunks
   };
 }

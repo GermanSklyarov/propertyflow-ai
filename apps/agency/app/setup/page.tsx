@@ -1,5 +1,5 @@
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
-import { knowledgeDocumentsQueryOptions } from "@entities/knowledge/api/knowledge-queries";
+import { knowledgeDocumentsQueryOptions, knowledgeEmbeddingHealthQueryOptions } from "@entities/knowledge/api/knowledge-queries";
 import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
 import { getErrorMessage } from "@shared/lib/errors";
 import { requireAgencySession } from "@shared/lib/tenant-session";
@@ -20,13 +20,22 @@ export default async function AgencyStarterSetupPage({
   const queryClient = createPropertyFlowQueryClient();
 
   try {
-    const [tenant, documentsResult, jobsResult] = await Promise.all([
+    const [tenant, documentsResult, jobsResult, embeddingHealth] = await Promise.all([
       queryClient.ensureQueryData(currentTenantQueryOptions(tenantId)),
       queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 80 }, tenantId)),
-      queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId))
+      queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId)),
+      queryClient.ensureQueryData(knowledgeEmbeddingHealthQueryOptions(tenantId))
     ]);
 
-    return <StarterSetupPage documents={documentsResult.items} jobs={jobsResult.items} requestedPlan={requestedPlan} tenant={tenant} />;
+    return (
+      <StarterSetupPage
+        documents={documentsResult.items}
+        embeddingHealth={embeddingHealth}
+        jobs={jobsResult.items}
+        requestedPlan={requestedPlan}
+        tenant={tenant}
+      />
+    );
   } catch (error) {
     return (
       <PageLoadState

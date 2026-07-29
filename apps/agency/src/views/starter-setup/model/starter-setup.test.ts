@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, TenantSnapshot } from "@propertyflow/contracts";
-import { buildStarterSetupProgress } from "./starter-setup";
+import type {
+  BackgroundJobMonitorItem,
+  KnowledgeDocumentSnapshot,
+  KnowledgeEmbeddingHealthSnapshot,
+  TenantSnapshot
+} from "@propertyflow/contracts";
+import { buildStarterEmbeddingReadiness, buildStarterSetupProgress } from "./starter-setup";
 
 describe("starter setup progress", () => {
   it("points a new tenant at knowledge first", () => {
@@ -80,6 +85,40 @@ describe("starter setup progress", () => {
       actionHref: "/settings#plan-upgrade",
       actionLabel: "Review Growth controls",
       title: "Growth is the next step after Starter"
+    });
+  });
+});
+
+describe("starter embedding readiness", () => {
+  it("summarizes current vectors", () => {
+    expect(buildStarterEmbeddingReadiness(embeddingHealthFactory())).toMatchObject({
+      actionLabel: "Refresh vectors",
+      current: 12,
+      pending: 0,
+      ready: true,
+      stale: 0,
+      summary: "12/12 chunks are using the active embedding provider."
+    });
+  });
+
+  it("flags stale and unembedded chunks", () => {
+    expect(
+      buildStarterEmbeddingReadiness(
+        embeddingHealthFactory({
+          currentChunks: 7,
+          ready: false,
+          staleChunks: 2,
+          totalChunks: 12,
+          unembeddedChunks: 3
+        })
+      )
+    ).toMatchObject({
+      actionLabel: "Refresh vectors",
+      current: 7,
+      pending: 3,
+      ready: false,
+      stale: 2,
+      summary: "5 chunks need fresh vectors before Concierge retrieval is production-ready."
     });
   });
 });
@@ -171,5 +210,25 @@ function knowledgeJobFactory(): BackgroundJobMonitorItem {
     queue: "propertyflow.jobs",
     state: "active",
     tenantId: "tenant-demo"
+  };
+}
+
+function embeddingHealthFactory(overrides: Partial<KnowledgeEmbeddingHealthSnapshot> = {}): KnowledgeEmbeddingHealthSnapshot {
+  return {
+    currentChunks: 12,
+    failedChunks: 0,
+    generatedAt: "2026-07-20T00:00:00.000Z",
+    pendingChunks: 0,
+    ready: true,
+    retrieval: "hybrid-chunks-v1",
+    staleChunks: 0,
+    targetDimensions: 768,
+    targetModel: "gemini-embedding-001",
+    targetModelKey: "gemini:gemini-embedding-001:768",
+    targetProvider: "gemini",
+    tenantId: "tenant-demo",
+    totalChunks: 12,
+    unembeddedChunks: 0,
+    ...overrides
   };
 }

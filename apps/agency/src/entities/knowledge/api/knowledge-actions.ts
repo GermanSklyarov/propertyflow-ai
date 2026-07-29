@@ -99,6 +99,7 @@ export async function embedKnowledgeChunksAction(formData: FormData) {
   const query = String(formData.get("q") ?? "").trim();
   const locale = String(formData.get("locale") ?? "").trim();
   const kind = String(formData.get("kind") ?? "").trim();
+  const returnTo = resolveEmbeddingReturnPath(String(formData.get("returnTo") ?? "").trim());
 
   await embedKnowledgeChunks({
     dimensions: 16,
@@ -109,6 +110,9 @@ export async function embedKnowledgeChunksAction(formData: FormData) {
   }, { tenantId });
 
   revalidatePath("/knowledge");
+  if (returnTo) {
+    revalidatePath(returnTo.pathname);
+  }
 
   const params = new URLSearchParams();
   if (query) {
@@ -122,5 +126,21 @@ export async function embedKnowledgeChunksAction(formData: FormData) {
   }
   params.set("embed", "queued");
 
+  if (returnTo) {
+    returnTo.searchParams.set("embed", "queued");
+    redirect(`${returnTo.pathname}?${returnTo.searchParams.toString()}${returnTo.hash}`);
+  }
+
   redirect(`/knowledge?${params.toString()}#retrieval-preview`);
+}
+
+function resolveEmbeddingReturnPath(value: string): URL | null {
+  if (!value.startsWith("/")) {
+    return null;
+  }
+
+  const url = new URL(value, "https://propertyflow.local");
+  const allowedPaths = new Set(["/knowledge", "/setup"]);
+
+  return allowedPaths.has(url.pathname) ? url : null;
 }
