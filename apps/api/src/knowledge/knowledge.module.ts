@@ -7,15 +7,20 @@ import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
 import { StorageModule } from "../storage/storage.module.js";
 import { KnowledgeDocumentService } from "./application/knowledge-document.service.js";
+import { ListingSourceService } from "./application/listing-source.service.js";
 import { KNOWLEDGE_DOCUMENT_REPOSITORY } from "./domain/knowledge-document.repository.js";
+import { LISTING_SOURCE_REPOSITORY } from "./domain/listing-source.repository.js";
 import { PgKnowledgeDocumentRepository } from "./infrastructure/postgres/pg-knowledge-document.repository.js";
+import { PgListingSourceRepository } from "./infrastructure/postgres/pg-listing-source.repository.js";
 import { KnowledgeDocumentsController } from "./presentation/rest/knowledge-documents.controller.js";
+import { ListingSourcesController } from "./presentation/rest/listing-sources.controller.js";
 
 @Module({
   imports: [AuditModule, AuthModule, DatabaseModule, JobsModule, StorageModule, TenantsModule],
-  controllers: [KnowledgeDocumentsController],
+  controllers: [KnowledgeDocumentsController, ListingSourcesController],
   providers: [
     KnowledgeDocumentService,
+    ListingSourceService,
     {
       provide: KnowledgeEmbeddingGenerator,
       useFactory: () => new KnowledgeEmbeddingGenerator()
@@ -23,8 +28,12 @@ import { KnowledgeDocumentsController } from "./presentation/rest/knowledge-docu
     {
       provide: KNOWLEDGE_DOCUMENT_REPOSITORY,
       useClass: PgKnowledgeDocumentRepository
+    },
+    {
+      provide: LISTING_SOURCE_REPOSITORY,
+      useClass: PgListingSourceRepository
     }
   ],
-  exports: [KnowledgeDocumentService]
+  exports: [KnowledgeDocumentService, ListingSourceService]
 })
 export class KnowledgeModule {}

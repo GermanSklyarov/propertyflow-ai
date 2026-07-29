@@ -1,0 +1,140 @@
+import { Inject, Injectable } from "@nestjs/common";
+import type {
+  CreateListingSourceRequest,
+  ListingSourceAuthType,
+  ListingSourceFieldMapping,
+  ListingSourceImportMode,
+  ListingSourceSnapshot,
+  ListingSourceStatus,
+  ListingSourceType
+} from "@propertyflow/contracts";
+import type { Pool } from "pg";
+import { PG_POOL } from "../../../database/database.constants.js";
+import type { ListingSourceRepository } from "../../domain/listing-source.repository.js";
+
+interface ListingSourceRow {
+  id: string;
+  tenant_id: string;
+  name: string;
+  type: ListingSourceType;
+  endpoint_url: string;
+  auth_type: ListingSourceAuthType;
+  auth_header_name: string | null;
+  auth_secret_ref: string | null;
+  import_mode: ListingSourceImportMode;
+  mapping: ListingSourceFieldMapping;
+  status: ListingSourceStatus;
+  last_sync_at: Date | null;
+  last_error: string | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+@Injectable()
+export class PgListingSourceRepository implements ListingSourceRepository {
+  constructor(@Inject(PG_POOL) private readonly pool: Pool) {}
+
+  async save(tenantId: string, request: CreateListingSourceRequest): Promise<ListingSourceSnapshot> {
+    const now = new Date().toISOString();
+    const result = await this.pool.query<ListingSourceRow>(
+      `
+        insert into listing_source_configs (
+          id,
+          tenant_id,
+          name,
+          type,
+          endpoint_url,
+          auth_type,
+          auth_header_name,
+          auth_secret_ref,
+          import_mode,
+          mapping,
+          status,
+          created_at,
+          updated_at
+        ) values (
+          $1,
+          $2,
+          $3,
+          $4,
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10,
+          $11,
+          $12,
+          $13
+        )
+        returning *
+      `,
+      [
+        crypto.randomUUID(),
+        tenantId,
+        request.name,
+        request.type ?? "rest-api",
+        request.endpointUrl,
+        request.authType ?? "none",
+        request.authHeaderName ?? null,
+        request.authSecretRef ?? null,
+        request.importMode ?? "hybrid",
+        request.mapping,
+        "draft",
+        now,
+        now
+      ]
+    );
+
+    return this.toSnapshot(result.rows[0]);
+  }
+
+  async list(tenantId: string): Promise<ListingSourceSnapshot[]> {
+    const result = await this.pool.query<ListingSourceRow>(
+      `
+        select *
+        from listing_source_configs
+        where tenant_id = $1
+        order by updated_at desc
+      `,
+      [tenantId]
+    );
+
+    return result.rows.map((row) => this.toSnapshot(row));
+  }
+
+  async findById(tenantId: string, sourceId: string): Promise<ListingSourceSnapshot | null> {
+    const result = await this.pool.query<ListingSourceRow>(
+      `
+        select *
+        from listing_source_configs
+        where tenant_id = $1 and id = $2
+        limit 1
+      `,
+      [tenantId, sourceId]
+    );
+
+    const row = result.rows[0];
+    return row ? this.toSnapshot(row) : null;
+  }
+
+  private toSnapshot(row: ListingSourceRow): ListingSourceSnapshot {
+    return {
+      id: row.id,
+      tenantId: row.tenant_id,
+      name: row.name,
+      type: row.type,
+      endpointUrl: row.endpoint_url,
+      authType: row.auth_type,
+      authHeaderName: row.auth_header_name ?? undefined,
+      authSecretRef: row.auth_secret_ref ?? undefined,
+      importMode: row.import_mode,
+      mapping: row.mapping,
+      status: row.status,
+      lastSyncAt: row.last_sync_at?.toISOString(),
+      lastError: row.last_error ?? undefined,
+      createdAt: row.created_at.toISOString(),
+      updatedAt: row.updated_at.toISOString()
+    };
+  }
+}

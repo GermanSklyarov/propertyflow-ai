@@ -374,6 +374,8 @@ export type AuditAction =
   | "knowledge.document_created"
   | "knowledge.document_embedding_requested"
   | "knowledge.document_ingestion_requested"
+  | "knowledge.listing_source_created"
+  | "knowledge.listing_source_sync_requested"
   | "pricing.model_training_requested"
   | "property.created"
   | "property.ai_assistant"
@@ -1322,6 +1324,102 @@ export interface KnowledgeEmbeddingHealthSnapshot {
   ready: boolean;
   retrieval: "hybrid-chunks-v1";
   generatedAt: string;
+}
+
+export type ListingSourceType = "rest-api";
+export type ListingSourceAuthType = "none" | "bearer" | "api-key-header";
+export type ListingSourceStatus = "draft" | "connected" | "syncing" | "failed" | "disabled";
+export type ListingSourceImportMode = "crm_inventory" | "concierge_index_only" | "hybrid";
+
+export type ListingSourceCanonicalField =
+  | "externalId"
+  | "title"
+  | "description"
+  | "kind"
+  | "listingType"
+  | "market"
+  | "status"
+  | "priceAmount"
+  | "priceCurrency"
+  | "rentalPriceMonthlyAmount"
+  | "bedrooms"
+  | "bathrooms"
+  | "areaSqm"
+  | "floor"
+  | "address"
+  | "latitude"
+  | "longitude"
+  | "projectName"
+  | "developerName"
+  | "amenities"
+  | "imageUrls"
+  | "availableFrom"
+  | "availableUntil"
+  | "minimumRentalMonths"
+  | "foreignQuota"
+  | "maintenanceFee";
+
+export type ListingSourceCustomAttributeType = "text" | "number" | "boolean" | "date" | "enum" | "json";
+
+export type ListingSourceCustomAttributeFilterHint =
+  | "availability"
+  | "contract_term"
+  | "fee"
+  | "restriction"
+  | "view"
+  | "amenity"
+  | "ownership"
+  | "other";
+
+export interface ListingSourceCustomAttributeMapping {
+  key: string;
+  sourcePath: string;
+  type: ListingSourceCustomAttributeType;
+  label?: string;
+  description?: string;
+  searchable?: boolean;
+  filterHint?: ListingSourceCustomAttributeFilterHint;
+}
+
+export interface ListingSourceFieldMapping {
+  rootPath?: string;
+  canonical: Partial<Record<ListingSourceCanonicalField, string>>;
+  customAttributes?: ListingSourceCustomAttributeMapping[];
+  rawPayloadMode?: "store_selected" | "store_all";
+}
+
+export interface ListingSourceSnapshot {
+  id: string;
+  tenantId: string;
+  name: string;
+  type: ListingSourceType;
+  endpointUrl: string;
+  authType: ListingSourceAuthType;
+  authHeaderName?: string;
+  authSecretRef?: string;
+  importMode: ListingSourceImportMode;
+  mapping: ListingSourceFieldMapping;
+  status: ListingSourceStatus;
+  lastSyncAt?: string;
+  lastError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateListingSourceRequest {
+  name: string;
+  type?: ListingSourceType;
+  endpointUrl: string;
+  authType?: ListingSourceAuthType;
+  authHeaderName?: string;
+  authSecretRef?: string;
+  importMode?: ListingSourceImportMode;
+  mapping: ListingSourceFieldMapping;
+}
+
+export interface ListingSourceListResponse {
+  items: ListingSourceSnapshot[];
+  total: number;
 }
 
 export interface AiAdvisorSummary {
@@ -2471,6 +2569,8 @@ export interface PropertyImportJobPayload extends BackgroundJobBasePayload {
   importMode?: "crm_inventory" | "concierge_index_only" | "hybrid";
   objectUrl?: string;
   columnMapping?: Record<string, string>;
+  sourceConfigId?: string;
+  fieldMapping?: ListingSourceFieldMapping;
   dryRun?: boolean;
 }
 
