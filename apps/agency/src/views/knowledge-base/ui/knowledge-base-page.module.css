@@ -688,6 +688,7 @@
 .sourceCard {
   display: grid;
   min-width: 0;
+  align-content: start;
   gap: 12px;
   border: 1px solid rgb(15 118 110 / 14%);
   background: #fff;
@@ -697,8 +698,15 @@
 .sourceCardHeader {
   display: grid;
   min-width: 0;
+  grid-template-rows: auto minmax(64px, auto);
+  gap: 8px;
+}
+
+.sourceCardTitleRow {
+  display: grid;
+  min-width: 0;
   grid-template-columns: 36px minmax(0, 1fr) auto;
-  align-items: start;
+  align-items: center;
   gap: 10px;
 }
 
@@ -712,22 +720,23 @@
   color: var(--teal-dark);
 }
 
-.sourceCardHeader div:last-child {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-
 .sourceCardHeader strong {
+  min-width: 0;
   color: var(--ink);
   font-size: 1rem;
+  line-height: 1.18;
+  overflow-wrap: anywhere;
 }
 
 .sourceCardHeader span {
+  display: block;
+  min-width: 0;
+  align-self: start;
   color: var(--muted);
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.42;
+  overflow-wrap: anywhere;
 }
 
 .sourceGroupAction {
@@ -769,8 +778,16 @@
   padding: 9px;
 }
 
+.sourceConnector[data-status="planned"] {
+  background: #fffaf4;
+}
+
 .sourceConnector svg {
   color: var(--teal-dark);
+}
+
+.sourceConnector[data-status="planned"] svg {
+  color: #8a5a10;
 }
 
 .sourceConnector div {
@@ -1010,8 +1027,12 @@
     width: 100%;
   }
 
-  .sourceCardHeader {
+  .sourceCardTitleRow {
     grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .sourceCardHeader {
+    grid-template-rows: auto;
   }
 
   .sourceCoverageCard {

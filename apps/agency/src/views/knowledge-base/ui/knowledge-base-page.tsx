@@ -6,6 +6,7 @@ import {
   Building2,
   CheckCircle2,
   CircleDashed,
+  Clock3,
   DatabaseZap,
   FileText,
   Globe2,
@@ -400,17 +401,17 @@ function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {
   return (
     <article className={styles.sourceCard}>
       <div className={styles.sourceCardHeader}>
-        <div className={styles.sourceIcon}>{getSourceIcon(group.type)}</div>
-        <div>
+        <div className={styles.sourceCardTitleRow}>
+          <div className={styles.sourceIcon}>{getSourceIcon(group.type)}</div>
           <strong>{group.title}</strong>
-          <span>{group.description}</span>
+          {action ? (
+            <a className={styles.sourceGroupAction} href={action.href}>
+              {action.label}
+              <ArrowRight size={14} />
+            </a>
+          ) : null}
         </div>
-        {action ? (
-          <a className={styles.sourceGroupAction} href={action.href}>
-            {action.label}
-            <ArrowRight size={14} />
-          </a>
-        ) : null}
+        <span>{group.description}</span>
       </div>
 
       <div className={styles.sourceConnectorList}>
@@ -423,13 +424,16 @@ function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {
 }
 
 function SourceConnector({ connector }: { connector: KnowledgeSourceConnector }) {
+  const isPlanned = connector.status === "planned";
+
   return (
-    <div className={styles.sourceConnector}>
-      <CheckCircle2 size={15} />
+    <div className={styles.sourceConnector} data-status={connector.status}>
+      {isPlanned ? <Clock3 size={15} /> : <CheckCircle2 size={15} />}
       <div>
         <strong>{connector.label}</strong>
         <span>{formatSourceMode(connector.mode)}</span>
         {connector.runtimeNote ? <em>{connector.runtimeNote}</em> : null}
+        {isPlanned ? <em>Roadmap connector; not part of Starter launch yet.</em> : null}
       </div>
       <div className={styles.sourceConnectorBadges}>
         {connector.countLabel ? <small>{connector.countLabel}</small> : null}
