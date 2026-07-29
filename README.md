@@ -76,11 +76,12 @@ npm run seed:demo
 npm run dev
 ```
 
-`npm run dev` starts the API, worker, public web app, and agency app in one terminal:
+`npm run dev` starts the API, worker, public web app, agency app, and admin package watch in one terminal:
 
 - API docs: `http://localhost:3001/docs`
 - Public web: `http://localhost:3000`
 - Agency app: `http://localhost:3002`
+- Admin package: TypeScript watch process for admin automation contracts
 
 `npm run seed:demo` seeds the local `demo-agency` tenant with Starter-ready tenant settings, knowledge documents, projects, listings, media, price history, and optional CRM examples for upgrade demos. Use `npm run seed:demo-properties`, `npm run seed:demo-leads`, or `npm run seed:demo-knowledge` when you only need to refresh one slice of the demo dataset. Use `npm run seed:demo-embeddings` after the worker is running to refresh knowledge chunks with the currently configured embedding provider.
 

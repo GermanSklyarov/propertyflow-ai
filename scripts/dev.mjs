@@ -7,7 +7,8 @@ const processes = [
   { name: "api", color: "\x1b[36m", args: ["run", "dev:api"] },
   { name: "worker", color: "\x1b[35m", args: ["run", "dev:worker"] },
   { name: "web", color: "\x1b[32m", args: ["run", "dev:web"] },
-  { name: "agency", color: "\x1b[33m", args: ["run", "dev:agency"] }
+  { name: "agency", color: "\x1b[33m", args: ["run", "dev:agency"] },
+  { name: "admin", color: "\x1b[34m", args: ["run", "dev:admin"] }
 ];
 
 const reset = "\x1b[0m";
@@ -74,8 +75,8 @@ for (const processConfig of processes) {
   });
 }
 
-console.log("PropertyFlow dev stack started: api, worker, web, agency.");
-console.log("Web: http://localhost:3000 | Agency: http://localhost:3002 | API: http://localhost:3001/docs");
+console.log("PropertyFlow dev stack started: api, worker, web, agency, admin.");
+console.log("Web: http://localhost:3000 | Agency: http://localhost:3002 | API: http://localhost:3001/docs | Admin: type-check watch");
 console.log("Press Ctrl+C to stop all dev processes.");
 
 process.once("SIGINT", () => shutdown(0));
