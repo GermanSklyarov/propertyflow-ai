@@ -114,12 +114,51 @@ describe("starter embedding readiness", () => {
         })
       )
     ).toMatchObject({
-      actionLabel: "Refresh vectors",
+      actionLabel: "Refresh stale vectors",
       current: 7,
       pending: 1,
       ready: false,
       stale: 2,
-      summary: "3 chunks need fresh vectors before Concierge retrieval is production-ready."
+      summary: "3 chunks need fresh vectors (2 stale, 1 pending). Retry before Concierge retrieval is production-ready."
+    });
+  });
+
+  it("makes failed embedding chunks explicitly retryable", () => {
+    expect(
+      buildStarterEmbeddingReadiness(
+        embeddingHealthFactory({
+          currentChunks: 10,
+          failedChunks: 2,
+          ready: false,
+          totalChunks: 12,
+          unembeddedChunks: 2
+        })
+      )
+    ).toMatchObject({
+      actionLabel: "Retry failed vectors",
+      current: 10,
+      failed: 2,
+      ready: false,
+      summary: "2 chunks need fresh vectors (2 failed). Retry before Concierge retrieval is production-ready."
+    });
+  });
+
+  it("labels new unembedded chunks as buildable vectors", () => {
+    expect(
+      buildStarterEmbeddingReadiness(
+        embeddingHealthFactory({
+          currentChunks: 0,
+          pendingChunks: 12,
+          ready: false,
+          totalChunks: 12,
+          unembeddedChunks: 12
+        })
+      )
+    ).toMatchObject({
+      actionLabel: "Build vectors",
+      pending: 12,
+      ready: false,
+      summary: "12 chunks need fresh vectors (12 pending). Retry before Concierge retrieval is production-ready."
     });
   });
 });

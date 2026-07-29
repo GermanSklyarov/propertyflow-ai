@@ -192,6 +192,7 @@ export function buildStarterEmbeddingReadiness(embeddingHealth: KnowledgeEmbeddi
   const pending = embeddingHealth.pendingChunks;
   const needsRefresh = embeddingHealth.unembeddedChunks;
   const providerLabel = `${embeddingHealth.targetProvider} · ${embeddingHealth.targetModel}`;
+  const actionLabel = getEmbeddingRefreshActionLabel(embeddingHealth);
 
   if (!embeddingHealth.totalChunks) {
     return {
@@ -210,7 +211,7 @@ export function buildStarterEmbeddingReadiness(embeddingHealth: KnowledgeEmbeddi
 
   if (embeddingHealth.ready) {
     return {
-      actionLabel: "Refresh vectors",
+      actionLabel,
       current: embeddingHealth.currentChunks,
       failed: embeddingHealth.failedChunks,
       pending,
@@ -224,15 +225,56 @@ export function buildStarterEmbeddingReadiness(embeddingHealth: KnowledgeEmbeddi
   }
 
   return {
-    actionLabel: "Refresh vectors",
+    actionLabel,
     current: embeddingHealth.currentChunks,
     failed: embeddingHealth.failedChunks,
     pending,
     providerLabel,
     ready: false,
     stale: embeddingHealth.staleChunks,
-    summary: `${needsRefresh} chunks need fresh vectors before Concierge retrieval is production-ready.`,
+    summary: getEmbeddingRefreshSummary(embeddingHealth, needsRefresh),
     total: embeddingHealth.totalChunks,
     unembedded: embeddingHealth.unembeddedChunks
   };
+}
+
+function getEmbeddingRefreshActionLabel(embeddingHealth: KnowledgeEmbeddingHealthSnapshot): string {
+  if (embeddingHealth.failedChunks > 0) {
+    return "Retry failed vectors";
+  }
+
+  if (embeddingHealth.staleChunks > 0) {
+    return "Refresh stale vectors";
+  }
+
+  if (embeddingHealth.pendingChunks > 0 || embeddingHealth.unembeddedChunks > 0) {
+    return "Build vectors";
+  }
+
+  return "Refresh vectors";
+}
+
+function getEmbeddingRefreshSummary(
+  embeddingHealth: KnowledgeEmbeddingHealthSnapshot,
+  needsRefresh: number
+): string {
+  const parts: string[] = [];
+
+  if (embeddingHealth.failedChunks > 0) {
+    parts.push(`${embeddingHealth.failedChunks} failed`);
+  }
+
+  if (embeddingHealth.staleChunks > 0) {
+    parts.push(`${embeddingHealth.staleChunks} stale`);
+  }
+
+  if (embeddingHealth.pendingChunks > 0) {
+    parts.push(`${embeddingHealth.pendingChunks} pending`);
+  }
+
+  if (!parts.length) {
+    return `${needsRefresh} chunks need fresh vectors before Concierge retrieval is production-ready.`;
+  }
+
+  return `${needsRefresh} chunks need fresh vectors (${parts.join(", ")}). Retry before Concierge retrieval is production-ready.`;
 }
