@@ -45,6 +45,53 @@ describe("BackgroundJobPolicyService", () => {
     ).not.toThrow();
   });
 
+  it("allows partner API property imports with field mapping", () => {
+    expect(() =>
+      service.authorize(broker, {
+        name: "properties.import",
+        payload: {
+          fieldMapping: {
+            rootPath: "items",
+            canonical: {
+              externalId: "id",
+              title: "name",
+              market: "city",
+              priceAmount: "price.sale",
+              availableUntil: "availability.until"
+            },
+            customAttributes: [
+              {
+                key: "available_until_note",
+                sourcePath: "availability.note",
+                type: "text",
+                filterHint: "availability"
+              }
+            ]
+          },
+          importMode: "concierge_index_only",
+          objectUrl: "https://agency.example.com/feed.json",
+          source: "partner-api",
+          sourceConfigId: "source-1",
+          tenantId: "demo-agency"
+        }
+      } satisfies EnqueueBackgroundJobRequest)
+    ).not.toThrow();
+  });
+
+  it("rejects partner API property imports without field mapping", () => {
+    expect(() =>
+      service.authorize(broker, {
+        name: "properties.import",
+        payload: {
+          importMode: "concierge_index_only",
+          objectUrl: "https://agency.example.com/feed.json",
+          source: "partner-api",
+          tenantId: "demo-agency"
+        }
+      } satisfies EnqueueBackgroundJobRequest)
+    ).toThrow(BadRequestException);
+  });
+
   it("rejects unknown property import modes", () => {
     expect(() =>
       service.authorize(broker, {

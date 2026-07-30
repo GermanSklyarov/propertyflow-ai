@@ -76,9 +76,14 @@ export class BackgroundJobPolicyService {
         this.optionalEnum(payload, "importMode", importModes);
         this.optionalString(payload, "objectUrl");
         this.optionalStringRecord(payload, "columnMapping", 30);
+        this.optionalString(payload, "sourceConfigId");
+        this.optionalObject(payload, "fieldMapping");
         this.optionalBoolean(payload, "dryRun");
-        if ((payload.source === "csv" || payload.source === "json") && !payload.objectUrl) {
-          throw new BadRequestException("objectUrl is required for csv and json property imports");
+        if ((payload.source === "csv" || payload.source === "json" || payload.source === "partner-api") && !payload.objectUrl) {
+          throw new BadRequestException("objectUrl is required for property imports");
+        }
+        if (payload.source === "partner-api" && !payload.fieldMapping) {
+          throw new BadRequestException("fieldMapping is required for partner API property imports");
         }
         return;
       case "properties.ai_description.generate":
@@ -186,6 +191,12 @@ export class BackgroundJobPolicyService {
 
     if (!Object.values(value).every(isNonEmptyString)) {
       throw new BadRequestException(`${key} values must be non-empty strings`);
+    }
+  }
+
+  private optionalObject(payload: Record<string, unknown>, key: string): void {
+    if (payload[key] !== undefined && !isRecord(payload[key])) {
+      throw new BadRequestException(`${key} must be an object`);
     }
   }
 }

@@ -1,6 +1,12 @@
 import type { Job } from "bullmq";
 import type { Pool, PoolClient } from "pg";
-import type { PropertyImportJobPayload } from "@propertyflow/contracts";
+import type {
+  ListingSourceCanonicalField,
+  ListingSourceCustomAttributeMapping,
+  ListingSourceCustomAttributeType,
+  ListingSourceFieldMapping,
+  PropertyImportJobPayload
+} from "@propertyflow/contracts";
 import {
   KnowledgeEmbeddingGenerator,
   type PropertyKind,
@@ -29,23 +35,39 @@ interface ImportedPropertyDraft {
   address?: string;
   amenities: string[];
   areaSqm: number;
+  availableFrom?: string;
+  availableUntil?: string;
   bathrooms: number;
   beachDistanceMeters?: number;
   bedrooms: number;
+  customAttributes: ImportedCustomAttribute[];
   description?: string;
   externalId?: string;
   floor?: number;
+  foreignQuota?: string;
   kind: PropertyKind;
   listingType: PropertyListingType;
   maintenanceFeeMonthlyThb?: number;
   market: ThailandMarket;
+  minimumRentalMonths?: number;
   monthlyRentEstimateThb?: number;
+  priceCurrency?: string;
   priceThb: number;
   projectDeveloper?: string;
   projectName?: string;
   projectStatus?: PropertyProjectStatus;
+  rawPayload?: Record<string, unknown>;
   rentalPriceMonthlyThb?: number;
   title: string;
+}
+
+interface ImportedCustomAttribute {
+  key: string;
+  label: string;
+  type: ListingSourceCustomAttributeType;
+  value: unknown;
+  filterHint?: ListingSourceCustomAttributeMapping["filterHint"];
+  searchable: boolean;
 }
 
 interface ImportRow {
@@ -83,24 +105,12 @@ export class PropertyImporter {
   }
 
   async import(job: PropertyImportJob): Promise<PropertyImportResult | Record<string, unknown>> {
-    if (job.data.source === "partner-api") {
-      return {
-        tenantId: job.data.tenantId,
-        source: job.data.source,
-        dryRun: job.data.dryRun ?? false,
-        importMode: job.data.importMode ?? "hybrid",
-        imported: 0,
-        skipped: 0,
-        status: "partner-api-adapter-not-configured"
-      };
-    }
-
     if (!job.data.objectUrl) {
       throw new Error("objectUrl is required for property import jobs");
     }
 
     const content = await this.readObjectText(job.data.objectUrl);
-    const rows = job.data.source === "json" ? parseJsonRows(content) : parseCsvRows(content, job.data.columnMapping);
+    const rows = parseImportRows(content, job.data);
     const issues: ImportIssue[] = [];
     const propertyIds: string[] = [];
     const importMode = job.data.importMode ?? "hybrid";
@@ -157,6 +167,7 @@ export class PropertyImporter {
       importMode,
       crmRecordsCreated: propertyIds.length,
       aiIndexCandidates: shouldCreateAiKnowledge ? knowledgeDocumentsCreated : 0,
+      fieldMappingApplied: Boolean(job.data.fieldMapping),
       imported,
       knowledgeDocumentsCreated,
       skipped: issues.length,
@@ -164,6 +175,7 @@ export class PropertyImporter {
       propertyIds,
       rowsMissingExternalId,
       rowsWithExternalId,
+      sourceConfigId: job.data.sourceConfigId,
       total: rows.length
     };
   }
@@ -636,6 +648,18 @@ export class PropertyImporter {
 
 }
 
+function parseImportRows(content: string, payload: PropertyImportJobPayload): ImportRow[] {
+  if (payload.source === "csv") {
+    return parseCsvRows(content, payload.columnMapping);
+  }
+
+  if (payload.source === "partner-api") {
+    return parsePartnerApiRows(content, payload.fieldMapping);
+  }
+
+  return parseJsonRows(content);
+}
+
 function parseJsonRows(content: string): ImportRow[] {
   const value = JSON.parse(content) as unknown;
 
@@ -653,6 +677,160 @@ function parseJsonRows(content: string): ImportRow[] {
       values: item as Record<string, unknown>
     };
   });
+}
+
+function parsePartnerApiRows(content: string, fieldMapping: ListingSourceFieldMapping | undefined): ImportRow[] {
+  if (!fieldMapping) {
+    throw new Error("fieldMapping is required for partner API property imports");
+  }
+
+  const value = JSON.parse(content) as unknown;
+  const collection = resolvePartnerApiCollection(value, fieldMapping.rootPath);
+
+  return collection.map((item, index) => {
+    if (typeof item !== "object" || item === null || Array.isArray(item)) {
+      throw new Error(`Partner API row ${index + 1} must be an object`);
+    }
+
+    return {
+      rowNumber: index + 1,
+      values: mapPartnerApiRow(item as Record<string, unknown>, fieldMapping)
+    };
+  });
+}
+
+function resolvePartnerApiCollection(value: unknown, rootPath: string | undefined): unknown[] {
+  if (rootPath) {
+    const rootedValue = readPath(value, rootPath);
+
+    if (!Array.isArray(rootedValue)) {
+      throw new Error(`Partner API rootPath "${rootPath}" must resolve to an array`);
+    }
+
+    return rootedValue;
+  }
+
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    for (const key of ["items", "data", "listings", "properties", "results"]) {
+      const nestedValue = (value as Record<string, unknown>)[key];
+
+      if (Array.isArray(nestedValue)) {
+        return nestedValue;
+      }
+    }
+  }
+
+  throw new Error("Partner API response must be an array or contain items/data/listings/properties/results array");
+}
+
+function mapPartnerApiRow(row: Record<string, unknown>, fieldMapping: ListingSourceFieldMapping): Record<string, unknown> {
+  const values: Record<string, unknown> = {};
+
+  for (const [field, sourcePath] of Object.entries(fieldMapping.canonical)) {
+    if (!sourcePath) {
+      continue;
+    }
+
+    const value = readPath(row, sourcePath);
+
+    if (value !== undefined) {
+      values[canonicalFieldToImportKey(field as ListingSourceCanonicalField)] = value;
+    }
+  }
+
+  const customAttributes = (fieldMapping.customAttributes ?? []).flatMap((attribute): ImportedCustomAttribute[] => {
+    const value = readPath(row, attribute.sourcePath);
+
+    if (value === undefined || value === null || value === "") {
+      return [];
+    }
+
+    return [
+      {
+        key: attribute.key,
+        label: attribute.label ?? humanizeAttributeKey(attribute.key),
+        type: attribute.type,
+        value: coerceCustomAttributeValue(value, attribute.type),
+        filterHint: attribute.filterHint,
+        searchable: attribute.searchable ?? true
+      }
+    ];
+  });
+
+  if (fieldMapping.rawPayloadMode === "store_all") {
+    values.__rawPayload = row;
+  }
+
+  values.__customAttributes = customAttributes;
+
+  return values;
+}
+
+function readPath(value: unknown, path: string): unknown {
+  const segments = path
+    .replace(/\[(\d+)\]/g, ".$1")
+    .split(".")
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  let current = value;
+
+  for (const segment of segments) {
+    if (Array.isArray(current)) {
+      const index = Number(segment);
+
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) {
+        return undefined;
+      }
+
+      current = current[index];
+      continue;
+    }
+
+    if (typeof current !== "object" || current === null) {
+      return undefined;
+    }
+
+    current = (current as Record<string, unknown>)[segment];
+  }
+
+  return current;
+}
+
+function canonicalFieldToImportKey(field: ListingSourceCanonicalField) {
+  const keys = {
+    externalId: "external_id",
+    title: "title",
+    description: "description",
+    kind: "kind",
+    listingType: "listing_type",
+    market: "market",
+    status: "status",
+    priceAmount: "price",
+    priceCurrency: "price_currency",
+    rentalPriceMonthlyAmount: "monthly_rent",
+    bedrooms: "bedrooms",
+    bathrooms: "bathrooms",
+    areaSqm: "area_sqm",
+    floor: "floor",
+    address: "address",
+    latitude: "latitude",
+    longitude: "longitude",
+    projectName: "project_name",
+    developerName: "developer",
+    amenities: "amenities",
+    imageUrls: "image_urls",
+    availableFrom: "available_from",
+    availableUntil: "available_until",
+    minimumRentalMonths: "minimum_rental_months",
+    foreignQuota: "foreign_quota",
+    maintenanceFee: "maintenance"
+  } satisfies Record<ListingSourceCanonicalField, string>;
+
+  return keys[field];
 }
 
 function parseCsvRows(content: string, columnMapping: Record<string, string> | undefined): ImportRow[] {
@@ -696,21 +874,27 @@ function toImportedPropertyDraft(row: ImportRow): ImportedPropertyDraft {
     address: getString(row.values.address),
     amenities: getAmenities(row.values.amenities),
     areaSqm: getNumber(getAlias(row.values, ["areasqm", "area_sqm", "area"]), 1),
+    availableFrom: getString(getAlias(row.values, ["availablefrom", "available_from", "available_start"])),
+    availableUntil: getString(getAlias(row.values, ["availableuntil", "available_until", "available_end"])),
     bathrooms: getInteger(row.values.bathrooms, 0),
     beachDistanceMeters: getOptionalInteger(getAlias(row.values, ["beachdistancemeters", "beach_distance_meters"])),
     bedrooms: getInteger(row.values.bedrooms, 0),
+    customAttributes: getCustomAttributes(row.values.__customAttributes),
     description: getString(row.values.description),
     externalId: getString(getAlias(row.values, ["externalid", "external_id", "sourceid", "source_id", "listingid", "listing_id"])),
     floor: getOptionalInteger(row.values.floor),
+    foreignQuota: getString(getAlias(row.values, ["foreignquota", "foreign_quota", "quota"])),
     kind: getEnumValue(getString(row.values.kind), supportedKinds, "condo"),
     listingType: getEnumValue(getString(getAlias(row.values, ["listingtype", "listing_type"])), supportedListingTypes, "sale_or_rent"),
     maintenanceFeeMonthlyThb: getOptionalNumber(
       getAlias(row.values, ["maintenancefeemonthlythb", "maintenance_fee_monthly_thb", "maintenance"])
     ),
     market,
+    minimumRentalMonths: getOptionalInteger(getAlias(row.values, ["minimumrentalmonths", "minimum_rental_months", "min_rental_months"])),
     monthlyRentEstimateThb: getOptionalNumber(
       getAlias(row.values, ["monthlyrentestimatethb", "monthly_rent_estimate_thb", "rentestimate"])
     ),
+    priceCurrency: getString(getAlias(row.values, ["pricecurrency", "price_currency"])),
     priceThb: getNumber(getAlias(row.values, ["pricethb", "price_thb", "price"]), 0),
     projectDeveloper: getString(getAlias(row.values, ["projectdeveloper", "project_developer", "developer"])),
     projectName: getString(getAlias(row.values, ["projectname", "project_name", "development", "compound"])),
@@ -719,6 +903,7 @@ function toImportedPropertyDraft(row: ImportRow): ImportedPropertyDraft {
       supportedProjectStatuses,
       "completed"
     ),
+    rawPayload: getRawPayload(row.values.__rawPayload),
     rentalPriceMonthlyThb: getOptionalNumber(
       getAlias(row.values, ["rentalpricemonthlythb", "rental_price_monthly_thb", "monthly_rent"])
     ),
@@ -836,6 +1021,46 @@ function getAmenities(value: unknown) {
     .filter(Boolean);
 }
 
+function getCustomAttributes(value: unknown): ImportedCustomAttribute[] {
+  return Array.isArray(value) ? value.filter(isImportedCustomAttribute) : [];
+}
+
+function getRawPayload(value: unknown): Record<string, unknown> | undefined {
+  return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+function isImportedCustomAttribute(value: unknown): value is ImportedCustomAttribute {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as ImportedCustomAttribute).key === "string" &&
+    typeof (value as ImportedCustomAttribute).label === "string"
+  );
+}
+
+function coerceCustomAttributeValue(value: unknown, type: ListingSourceCustomAttributeType): unknown {
+  switch (type) {
+    case "number": {
+      const numberValue = Number(value);
+      return Number.isFinite(numberValue) ? numberValue : String(value);
+    }
+    case "boolean":
+      if (typeof value === "boolean") {
+        return value;
+      }
+      if (typeof value === "string") {
+        return ["true", "yes", "1", "available"].includes(value.trim().toLowerCase());
+      }
+      return Boolean(value);
+    case "date":
+    case "enum":
+    case "text":
+      return typeof value === "string" ? value.trim() : String(value);
+    case "json":
+      return value;
+  }
+}
+
 function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
   return [
     `Listing type: ${formatListingType(draft.listingType)}`,
@@ -845,20 +1070,57 @@ function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
     draft.projectName ? `Project: ${draft.projectName}` : undefined,
     draft.projectDeveloper ? `Developer: ${draft.projectDeveloper}` : undefined,
     draft.projectStatus ? `Project status: ${draft.projectStatus}` : undefined,
-    `Price: THB ${draft.priceThb}`,
+    `Price: ${draft.priceCurrency ?? "THB"} ${draft.priceThb}`,
     draft.rentalPriceMonthlyThb ? `Monthly rent: THB ${draft.rentalPriceMonthlyThb}` : undefined,
     draft.monthlyRentEstimateThb ? `Estimated monthly rent: THB ${draft.monthlyRentEstimateThb}` : undefined,
     draft.maintenanceFeeMonthlyThb ? `Maintenance fee: THB ${draft.maintenanceFeeMonthlyThb} per month` : undefined,
+    draft.availableFrom ? `Available from: ${draft.availableFrom}` : undefined,
+    draft.availableUntil ? `Available until: ${draft.availableUntil}` : undefined,
+    draft.minimumRentalMonths ? `Minimum rental term: ${draft.minimumRentalMonths} months` : undefined,
+    draft.foreignQuota ? `Foreign quota: ${draft.foreignQuota}` : undefined,
     `Area: ${draft.areaSqm} sqm`,
     `Bedrooms: ${draft.bedrooms}`,
     `Bathrooms: ${draft.bathrooms}`,
     draft.floor ? `Floor: ${draft.floor}` : undefined,
     draft.beachDistanceMeters ? `Beach distance: ${draft.beachDistanceMeters} meters` : undefined,
     draft.amenities.length ? `Amenities: ${draft.amenities.join(", ")}` : undefined,
-    draft.description ? `Description: ${draft.description}` : undefined
+    draft.description ? `Description: ${draft.description}` : undefined,
+    draft.customAttributes.length ? buildCustomAttributesKnowledgeBlock(draft.customAttributes) : undefined,
+    draft.rawPayload ? buildRawPayloadKnowledgeBlock(draft.rawPayload) : undefined
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function buildCustomAttributesKnowledgeBlock(attributes: ImportedCustomAttribute[]) {
+  const lines = attributes
+    .filter((attribute) => attribute.searchable)
+    .map((attribute) => {
+      const hint = attribute.filterHint && attribute.filterHint !== "other" ? ` (${attribute.filterHint})` : "";
+
+      return `${attribute.label}${hint}: ${formatCustomAttributeValue(attribute.value)}`;
+    });
+
+  return lines.length ? ["Source-specific agency fields:", ...lines].join("\n") : undefined;
+}
+
+function buildRawPayloadKnowledgeBlock(payload: Record<string, unknown>) {
+  const serialized = JSON.stringify(payload);
+  const truncated = serialized.length > 4000 ? `${serialized.slice(0, 4000)}...` : serialized;
+
+  return `Full source payload for agency-specific constraints: ${truncated}`;
+}
+
+function formatCustomAttributeValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.map(formatCustomAttributeValue).join(", ");
+  }
+
+  if (typeof value === "object" && value !== null) {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
 }
 
 function buildListingKnowledgeTags(
@@ -876,7 +1138,10 @@ function buildListingKnowledgeTags(
       `listing-type:${draft.listingType}`,
       draft.externalId ? externalIdTag(draft.externalId) : undefined,
       draft.projectName ? `project:${normalizeProjectName(draft.projectName)}` : undefined,
-      ...draft.amenities.map((amenity) => `amenity:${normalizeTagValue(amenity)}`)
+      ...draft.amenities.map((amenity) => `amenity:${normalizeTagValue(amenity)}`),
+      ...draft.customAttributes
+        .filter((attribute) => attribute.searchable)
+        .map((attribute) => `custom:${normalizeTagValue(attribute.key)}`)
     ].filter(isString)
   );
 }
@@ -895,6 +1160,14 @@ function uniqueStrings(values: string[]) {
 
 function isString(value: string | undefined): value is string {
   return typeof value === "string" && value.length > 0;
+}
+
+function humanizeAttributeKey(key: string) {
+  return key
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function formatListingType(value: PropertyListingType) {

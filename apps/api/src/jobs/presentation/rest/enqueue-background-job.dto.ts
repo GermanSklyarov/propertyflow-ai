@@ -175,6 +175,16 @@ export class PropertyImportPayloadDto implements PropertyImportJobPayload {
   @IsObject()
   columnMapping?: Record<string, string>;
 
+  @ApiProperty({ required: false, type: String })
+  @IsOptional()
+  @IsString()
+  sourceConfigId?: string;
+
+  @ApiProperty({ required: false, type: Object })
+  @IsOptional()
+  @IsObject()
+  fieldMapping?: PropertyImportJobPayload["fieldMapping"];
+
   @ApiProperty({ required: false, type: Boolean })
   @IsOptional()
   @IsBoolean()
