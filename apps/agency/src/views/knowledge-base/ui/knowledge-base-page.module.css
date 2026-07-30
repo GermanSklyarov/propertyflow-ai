@@ -598,6 +598,15 @@
   .listingApiSyncButton {
     width: 100%;
   }
+
+  .listingApiFormGrid,
+  .listingApiMappingGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .listingApiSaveButton {
+    width: 100%;
+  }
 }
 
 .sourceCoverageGrid {
@@ -875,6 +884,173 @@
   font-size: 0.78rem;
   font-weight: 800;
   line-height: 1.4;
+}
+
+.listingApiSetupSteps {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.listingApiSetupSteps li {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+}
+
+.listingApiSetupSteps strong {
+  font-size: 0.76rem;
+}
+
+.listingApiSetupSteps span {
+  font-size: 0.72rem;
+}
+
+.listingApiConnect {
+  display: grid;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+}
+
+.listingApiConnect summary {
+  display: flex;
+  min-height: 48px;
+  cursor: pointer;
+  align-items: center;
+  gap: 9px;
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 950;
+  padding: 0 14px;
+  text-transform: uppercase;
+}
+
+.listingApiConnect summary::marker,
+.listingApiConnect summary::-webkit-details-marker {
+  display: none;
+  content: "";
+}
+
+.listingApiConnect summary:hover,
+.listingApiConnect summary:focus-visible {
+  background: #edf8f4;
+}
+
+.listingApiConnect[open] summary {
+  border-bottom: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+}
+
+.listingApiConnectForm {
+  display: grid;
+  min-width: 0;
+  gap: 12px;
+  padding: 14px;
+}
+
+.listingApiFormGrid,
+.listingApiMappingGrid {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+}
+
+.listingApiFormGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.listingApiMappingGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.listingApiFormGrid label,
+.listingApiMappingGrid label {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.listingApiFormGrid input,
+.listingApiFormGrid select,
+.listingApiMappingGrid textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.listingApiFormGrid input,
+.listingApiFormGrid select {
+  min-height: 44px;
+  padding: 0 12px;
+}
+
+.listingApiMappingGrid textarea {
+  resize: vertical;
+  padding: 10px 12px;
+  font-family: var(--font-mono), "SFMono-Regular", Consolas, monospace;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  overflow-wrap: normal;
+  white-space: pre;
+}
+
+.listingApiSetupNote {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbfa;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+  padding: 10px;
+}
+
+.listingApiSetupNote svg {
+  color: var(--teal-dark);
+}
+
+.listingApiSaveButton {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 42px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid transparent;
+  background: var(--teal);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 950;
+  padding: 0 16px;
+}
+
+.listingApiSaveButton:hover,
+.listingApiSaveButton:focus-visible {
+  background: var(--teal-dark);
 }
 
 .listingApiSyncForm {

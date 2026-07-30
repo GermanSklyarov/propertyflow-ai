@@ -2,10 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { CreateKnowledgeDocumentRequest, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
+import type { CreateKnowledgeDocumentRequest, CreateListingSourceRequest, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
 import {
   createKnowledgeDocument,
   createKnowledgeDocumentUploadUrl,
+  createRestListingSource,
   embedKnowledgeChunks,
   ingestKnowledgeDocument,
   syncListingSource
@@ -110,6 +111,53 @@ export async function syncListingSourceAction(sourceId: string, name: string) {
   redirect(`/knowledge?${params.toString()}#listing-api-sources`);
 }
 
+export async function createRestListingSourceAction(formData: FormData) {
+  const { tenantId } = await requireAgencySession();
+  const name = String(formData.get("name") ?? "").trim();
+  const endpointUrl = String(formData.get("endpointUrl") ?? "").trim();
+  const rootPath = String(formData.get("rootPath") ?? "").trim();
+  const authType = String(formData.get("authType") ?? "api-key-header") as CreateListingSourceRequest["authType"];
+  const authHeaderName = String(formData.get("authHeaderName") ?? "").trim();
+  const authSecretRef = String(formData.get("authSecretRef") ?? "").trim();
+  const importMode = String(formData.get("importMode") ?? "concierge_index_only") as CreateListingSourceRequest["importMode"];
+  const canonical = parseMappingJson(formData.get("canonicalMapping"));
+  const customAttributes = parseCustomAttributeJson(formData.get("customAttributes"));
+
+  if (!name || !endpointUrl) {
+    return;
+  }
+
+  const source = await createRestListingSource(
+    {
+      authHeaderName: authHeaderName || undefined,
+      authSecretRef: authSecretRef || undefined,
+      authType,
+      endpointUrl,
+      importMode,
+      mapping: {
+        canonical,
+        customAttributes,
+        rawPayloadMode: "store_selected",
+        rootPath: rootPath || undefined
+      },
+      name,
+      type: "rest-api"
+    },
+    { tenantId }
+  );
+
+  await syncListingSource(source.id, { tenantId });
+
+  revalidatePath("/knowledge");
+
+  const params = new URLSearchParams({
+    listingSync: "queued",
+    source: source.name
+  });
+
+  redirect(`/knowledge?${params.toString()}#listing-api-sources`);
+}
+
 export async function embedKnowledgeChunksAction(formData: FormData) {
   const { tenantId } = await requireAgencySession();
   const query = String(formData.get("q") ?? "").trim();
@@ -145,6 +193,36 @@ export async function embedKnowledgeChunksAction(formData: FormData) {
   }
 
   redirect(`/knowledge?${params.toString()}#retrieval-preview`);
+}
+
+function parseMappingJson(value: FormDataEntryValue | null): CreateListingSourceRequest["mapping"]["canonical"] {
+  const parsed = parseJsonRecord(value);
+
+  return Object.fromEntries(
+    Object.entries(parsed).filter(([, sourcePath]) => typeof sourcePath === "string" && sourcePath.trim().length > 0)
+  ) as CreateListingSourceRequest["mapping"]["canonical"];
+}
+
+function parseCustomAttributeJson(value: FormDataEntryValue | null): NonNullable<CreateListingSourceRequest["mapping"]["customAttributes"]> {
+  if (typeof value !== "string" || !value.trim()) {
+    return [];
+  }
+
+  const parsed = JSON.parse(value) as unknown;
+
+  return Array.isArray(parsed)
+    ? (parsed as NonNullable<CreateListingSourceRequest["mapping"]["customAttributes"]>)
+    : [];
+}
+
+function parseJsonRecord(value: FormDataEntryValue | null): Record<string, unknown> {
+  if (typeof value !== "string" || !value.trim()) {
+    return {};
+  }
+
+  const parsed = JSON.parse(value) as unknown;
+
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
 }
 
 function resolveEmbeddingReturnPath(value: string): URL | null {

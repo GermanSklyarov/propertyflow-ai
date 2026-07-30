@@ -18,7 +18,7 @@ import {
   Tags,
   UploadCloud
 } from "lucide-react";
-import { syncListingSourceAction } from "@entities/knowledge/api/knowledge-actions";
+import { createRestListingSourceAction, syncListingSourceAction } from "@entities/knowledge/api/knowledge-actions";
 import {
   buildKnowledgeSourceCoverage,
   buildKnowledgeSourceGroupAction,
@@ -418,15 +418,127 @@ function ListingApiSourcesPanel({ sources }: { sources: ListingSourceSnapshot[] 
           ))}
         </div>
       ) : (
-        <div className={styles.listingApiEmpty}>
-          <DatabaseZap size={18} />
-          <div>
-            <strong>No REST inventory source connected yet</strong>
-            <span>Use REST API sync when an agency wants Concierge search without moving listings into our CRM first.</span>
-          </div>
-        </div>
+        <ListingApiEmptyState />
       )}
+
+      <ListingApiConnectForm defaultOpen={activeSources.length === 0} />
     </section>
+  );
+}
+
+function ListingApiEmptyState() {
+  return (
+    <div className={styles.listingApiEmpty}>
+      <DatabaseZap size={18} />
+      <div>
+        <strong>No REST inventory source connected yet</strong>
+        <span>Connect an agency listing endpoint, map fields once, and let Concierge search it without forcing CRM migration.</span>
+      </div>
+      <ol className={styles.listingApiSetupSteps}>
+        <li>
+          <strong>Expose endpoint</strong>
+          <span>Use a JSON endpoint that returns listings as an array or under a root path like data.items.</span>
+        </li>
+        <li>
+          <strong>Choose auth</strong>
+          <span>Use bearer auth or an API-key header. Store the real secret as a backend secret reference.</span>
+        </li>
+        <li>
+          <strong>Map core fields</strong>
+          <span>Map title, market, price, type, images, project, available dates, and minimum rental term.</span>
+        </li>
+        <li>
+          <strong>Preserve extras</strong>
+          <span>Add custom attributes for agency-specific rules, fees, restrictions, views, and availability hints.</span>
+        </li>
+      </ol>
+    </div>
+  );
+}
+
+function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
+  return (
+    <details className={styles.listingApiConnect} open={defaultOpen}>
+      <summary>
+        <Plus size={16} />
+        {defaultOpen ? "Connect REST feed" : "Add another REST feed"}
+      </summary>
+
+      <form action={createRestListingSourceAction} className={styles.listingApiConnectForm}>
+        <div className={styles.listingApiFormGrid}>
+          <label>
+            Source name
+            <input name="name" placeholder="Agency website REST feed" required />
+          </label>
+          <label>
+            Endpoint URL
+            <input name="endpointUrl" placeholder="https://agency.co.th/api/listings" required type="url" />
+          </label>
+          <label>
+            Import mode
+            <select name="importMode" defaultValue="concierge_index_only">
+              <option value="concierge_index_only">Concierge index only</option>
+              <option value="hybrid">Hybrid: index + CRM drafts</option>
+              <option value="crm_inventory">CRM inventory</option>
+            </select>
+          </label>
+          <label>
+            Auth type
+            <select name="authType" defaultValue="api-key-header">
+              <option value="api-key-header">API-key header</option>
+              <option value="bearer">Bearer token</option>
+              <option value="none">No auth</option>
+            </select>
+          </label>
+          <label>
+            Auth header
+            <input name="authHeaderName" defaultValue="x-api-key" placeholder="x-api-key" />
+          </label>
+          <label>
+            Secret reference
+            <input name="authSecretRef" placeholder="secret://demo-agency/listings-api-key" />
+          </label>
+          <label>
+            Root path
+            <input name="rootPath" placeholder="data.items" />
+          </label>
+        </div>
+
+        <div className={styles.listingApiMappingGrid}>
+          <label>
+            Canonical mapping
+            <textarea
+              name="canonicalMapping"
+              defaultValue={DEFAULT_LISTING_CANONICAL_MAPPING}
+              rows={13}
+              spellCheck={false}
+            />
+          </label>
+          <label>
+            Custom searchable attributes
+            <textarea
+              name="customAttributes"
+              defaultValue={DEFAULT_LISTING_CUSTOM_ATTRIBUTES}
+              rows={13}
+              spellCheck={false}
+            />
+          </label>
+        </div>
+
+        <div className={styles.listingApiSetupNote}>
+          <DatabaseZap size={17} />
+          <span>
+            The first sync stores mapped data for Concierge retrieval. Custom attributes keep local fields queryable without
+            pretending they are universal CRM columns.
+          </span>
+        </div>
+
+        <button className={styles.listingApiSaveButton} type="submit">
+          <DatabaseZap size={16} />
+          Save and sync feed
+        </button>
+      </form>
+    </details>
   );
 }
 
@@ -572,6 +684,48 @@ function formatImportMode(value: ListingSourceSnapshot["importMode"]) {
 
   return labels[value];
 }
+
+const DEFAULT_LISTING_CANONICAL_MAPPING = `{
+  "externalId": "id",
+  "title": "name",
+  "description": "description",
+  "kind": "property_type",
+  "listingType": "deal_type",
+  "market": "city",
+  "status": "status",
+  "priceAmount": "sale_price",
+  "priceCurrency": "currency",
+  "rentalPriceMonthlyAmount": "monthly_rent",
+  "bedrooms": "bedrooms",
+  "bathrooms": "bathrooms",
+  "areaSqm": "area_sqm",
+  "address": "address",
+  "projectName": "project_name",
+  "amenities": "amenities",
+  "imageUrls": "images",
+  "availableUntil": "rent_available_until",
+  "minimumRentalMonths": "minimum_rental_months"
+}`;
+
+const DEFAULT_LISTING_CUSTOM_ATTRIBUTES = `[
+  {
+    "key": "lease_available_until",
+    "sourcePath": "rent_available_until",
+    "type": "date",
+    "label": "Rent available until",
+    "description": "Do not recommend this listing for stays that end after this date.",
+    "filterHint": "availability",
+    "searchable": true
+  },
+  {
+    "key": "view_quality",
+    "sourcePath": "view_note",
+    "type": "text",
+    "label": "View quality",
+    "filterHint": "view",
+    "searchable": true
+  }
+]`;
 
 function formatListingSourceStatus(value: ListingSourceSnapshot["status"]) {
   const labels = {
