@@ -947,6 +947,16 @@
   text-transform: uppercase;
 }
 
+.listingApiGuide summary span {
+  margin-left: auto;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  color: var(--muted);
+  font-size: 0.7rem;
+  line-height: 1;
+  padding: 6px 8px;
+}
+
 .listingApiGuide summary::marker,
 .listingApiGuide summary::-webkit-details-marker {
   display: none;
@@ -996,10 +1006,22 @@
   line-height: 1.42;
 }
 
+.listingApiFieldList {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.listingApiFieldList code,
 .listingApiGuideBody article code {
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
   color: var(--teal-dark);
   font-size: 0.72rem;
   font-weight: 950;
+  line-height: 1.1;
+  padding: 5px 7px;
 }
 
 .listingApiExample {

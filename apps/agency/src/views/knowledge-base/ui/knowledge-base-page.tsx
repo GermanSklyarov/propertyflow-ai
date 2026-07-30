@@ -34,6 +34,11 @@ import {
 } from "@entities/knowledge/model/knowledge-sources";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import {
+  LISTING_API_CONTRACT_SECTIONS,
+  LISTING_API_EXAMPLE_PAYLOAD,
+  countListingApiContractFields
+} from "@entities/knowledge/model/listing-api-contract";
+import {
   DEFAULT_LISTING_CANONICAL_MAPPING,
   DEFAULT_LISTING_CUSTOM_ATTRIBUTES
 } from "@entities/knowledge/model/listing-source-form";
@@ -432,56 +437,32 @@ function ListingApiSourcesPanel({ sources }: { sources: ListingSourceSnapshot[] 
 }
 
 function ListingApiIntegrationGuide() {
+  const fieldCount = countListingApiContractFields();
+
   return (
     <details className={styles.listingApiGuide}>
       <summary>
         <DatabaseZap size={16} />
-        How REST API sync is connected
+        REST API sync setup contract
+        <span>{fieldCount} mapped signals</span>
       </summary>
 
       <div className={styles.listingApiGuideBody}>
-        <article>
-          <strong>1. Expose a listing endpoint</strong>
-          <p>
-            Return a JSON array or a nested array such as <code>data.items</code>. Each item should include a stable id,
-            title, market, price, status, photos, and any local fields your agency already uses.
-          </p>
-        </article>
-
-        <article>
-          <strong>2. Map canonical fields</strong>
-          <p>
-            Canonical mapping tells PropertyFlow which source fields mean title, price, rent, project, amenities,
-            availability, and minimum rental term.
-          </p>
-        </article>
-
-        <article>
-          <strong>3. Preserve agency-specific fields</strong>
-          <p>
-            Custom attributes stay searchable for Concierge. A field like <code>rent_available_until</code> can prevent
-            the AI from recommending a short-availability unit to a client asking for a one-year rental.
-          </p>
-        </article>
+        {LISTING_API_CONTRACT_SECTIONS.map((section) => (
+          <article key={section.title}>
+            <strong>{section.title}</strong>
+            <p>{section.description}</p>
+            <div className={styles.listingApiFieldList}>
+              {section.fields.map((field) => (
+                <code key={field}>{field}</code>
+              ))}
+            </div>
+          </article>
+        ))}
 
         <div className={styles.listingApiExample}>
           <span>Expected payload shape</span>
-          <code>{`{
-  "data": {
-    "items": [
-      {
-        "id": "pattaya-102",
-        "name": "Wongamat sea-view condo",
-        "city": "pattaya",
-        "deal_type": "rent",
-        "monthly_rent": 28000,
-        "rent_available_until": "2027-03-31",
-        "minimum_rental_months": 12,
-        "view_note": "protected sea view"
-      }
-    ]
-  }
-}`}</code>
+          <code>{LISTING_API_EXAMPLE_PAYLOAD}</code>
         </div>
       </div>
     </details>
