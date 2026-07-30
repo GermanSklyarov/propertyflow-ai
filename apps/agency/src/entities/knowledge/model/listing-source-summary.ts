@@ -37,11 +37,17 @@ export interface ListingSourceSummary {
   availabilitySignals: string[];
   canonicalCount: number;
   customAttributeCount: number;
+  lastSyncLabel: string;
   mappedCanonicalFields: string[];
   missingProductionFields: string[];
+  operationalMessage: string;
   readinessLabel: string;
   searchableCustomAttributeCount: number;
   searchableCustomAttributes: string[];
+  statusLabel: string;
+  statusTone: "muted" | "ready" | "warning" | "working";
+  syncButtonDisabled: boolean;
+  syncButtonLabel: string;
   syncLabel: string;
 }
 
@@ -72,11 +78,17 @@ export function buildListingSourceSummary(source: ListingSourceSnapshot): Listin
     availabilitySignals,
     canonicalCount: mappedCanonicalEntries.length,
     customAttributeCount: customAttributes.length,
+    lastSyncLabel: buildLastSyncLabel(source),
     mappedCanonicalFields,
     missingProductionFields,
+    operationalMessage: buildOperationalMessage(source),
     readinessLabel: buildReadinessLabel(source, missingProductionFields),
     searchableCustomAttributeCount: searchableCustomAttributes.length,
     searchableCustomAttributes,
+    statusLabel: buildStatusLabel(source),
+    statusTone: buildStatusTone(source),
+    syncButtonDisabled: source.status === "syncing" || source.status === "disabled",
+    syncButtonLabel: buildSyncButtonLabel(source),
     syncLabel: source.lastSyncAt ? `Last sync ${formatSyncDate(source.lastSyncAt)}` : "No completed sync yet"
   };
 }
@@ -101,6 +113,71 @@ function buildReadinessLabel(source: ListingSourceSnapshot, missingProductionFie
   }
 
   return "Concierge-ready";
+}
+
+function buildStatusLabel(source: ListingSourceSnapshot) {
+  const labels = {
+    connected: "Connected",
+    disabled: "Disabled",
+    draft: "Draft",
+    failed: "Sync failed",
+    syncing: "Syncing now"
+  } satisfies Record<ListingSourceSnapshot["status"], string>;
+
+  return labels[source.status];
+}
+
+function buildStatusTone(source: ListingSourceSnapshot): ListingSourceSummary["statusTone"] {
+  if (source.status === "connected") {
+    return "ready";
+  }
+  if (source.status === "failed") {
+    return "warning";
+  }
+  if (source.status === "syncing") {
+    return "working";
+  }
+
+  return "muted";
+}
+
+function buildOperationalMessage(source: ListingSourceSnapshot) {
+  if (source.status === "syncing") {
+    return "Worker is importing mapped fields and refreshing Concierge search context.";
+  }
+  if (source.status === "failed") {
+    return "Fix the endpoint, auth, or mapping, then retry the feed sync.";
+  }
+  if (source.status === "connected") {
+    return "Feed is available for Concierge listing answers and can be refreshed on demand.";
+  }
+  if (source.status === "disabled") {
+    return "Feed is disabled and will not update Concierge listing knowledge.";
+  }
+
+  return "Run the first sync after the endpoint and field mapping are ready.";
+}
+
+function buildSyncButtonLabel(source: ListingSourceSnapshot) {
+  if (source.status === "syncing") {
+    return "Syncing...";
+  }
+  if (source.status === "failed") {
+    return "Retry sync";
+  }
+  if (source.lastSyncAt) {
+    return "Refresh feed";
+  }
+
+  return "Sync feed";
+}
+
+function buildLastSyncLabel(source: ListingSourceSnapshot) {
+  if (source.status === "syncing") {
+    return source.lastSyncAt ? `Last completed ${formatSyncDate(source.lastSyncAt)}` : "First sync is running";
+  }
+
+  return source.lastSyncAt ? `Last completed ${formatSyncDate(source.lastSyncAt)}` : "No completed sync yet";
 }
 
 function formatSyncDate(value: string) {

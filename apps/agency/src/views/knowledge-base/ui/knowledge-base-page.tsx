@@ -597,7 +597,9 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
           <h4 className={styles.listingApiSourceTitle}>{source.name}</h4>
           <p className={styles.listingApiSourceEndpoint}>{source.endpointUrl}</p>
         </div>
-        <span className={styles.listingApiStatus}>{formatListingSourceStatus(source.status)}</span>
+        <span className={styles.listingApiStatus} data-tone={summary.statusTone}>
+          {summary.statusLabel}
+        </span>
       </div>
 
       <div className={styles.listingApiSourceMetrics}>
@@ -607,9 +609,12 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
         <span>{formatImportMode(source.importMode)}</span>
       </div>
 
-      <div className={styles.listingApiReadiness} data-ready={summary.missingProductionFields.length === 0}>
-        <strong>{summary.readinessLabel}</strong>
-        <span>{summary.syncLabel}</span>
+      <div className={styles.listingApiReadiness} data-ready={summary.missingProductionFields.length === 0} data-tone={summary.statusTone}>
+        <div>
+          <strong>{summary.readinessLabel}</strong>
+          <span>{summary.operationalMessage}</span>
+        </div>
+        <small>{summary.lastSyncLabel}</small>
       </div>
 
       <div className={styles.listingApiCoverageGrid}>
@@ -640,9 +645,9 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
       {source.lastError ? <p className={styles.listingApiError}>{source.lastError}</p> : null}
 
       <form action={syncAction} className={styles.listingApiSyncForm}>
-        <button className={styles.listingApiSyncButton} type="submit">
+        <button className={styles.listingApiSyncButton} disabled={summary.syncButtonDisabled} type="submit">
           <RefreshCw size={15} />
-          Sync feed
+          {summary.syncButtonLabel}
         </button>
       </form>
     </article>
@@ -762,18 +767,6 @@ function formatImportMode(value: ListingSourceSnapshot["importMode"]) {
     crm_inventory: "CRM inventory",
     hybrid: "CRM + AI index"
   } satisfies Record<ListingSourceSnapshot["importMode"], string>;
-
-  return labels[value];
-}
-
-function formatListingSourceStatus(value: ListingSourceSnapshot["status"]) {
-  const labels = {
-    connected: "Connected",
-    disabled: "Disabled",
-    draft: "Draft",
-    failed: "Failed",
-    syncing: "Syncing"
-  } satisfies Record<ListingSourceSnapshot["status"], string>;
 
   return labels[value];
 }

@@ -10,8 +10,14 @@ describe("buildListingSourceSummary", () => {
       availabilitySignals: ["Available until", "Minimum rental term", "Rent available until"],
       canonicalCount: 8,
       customAttributeCount: 2,
+      lastSyncLabel: "Last completed Jul 30, 12:10 PM",
+      operationalMessage: "Feed is available for Concierge listing answers and can be refreshed on demand.",
       readinessLabel: "Concierge-ready",
       searchableCustomAttributeCount: 2,
+      statusLabel: "Connected",
+      statusTone: "ready",
+      syncButtonDisabled: false,
+      syncButtonLabel: "Refresh feed",
       syncLabel: "Last sync Jul 30, 12:10 PM"
     });
     expect(summary.missingProductionFields).toEqual([]);
@@ -38,7 +44,28 @@ describe("buildListingSourceSummary", () => {
   it("prioritizes failed sync status over mapping completeness", () => {
     const summary = buildListingSourceSummary(listingSource({ status: "failed" }));
 
-    expect(summary.readinessLabel).toBe("Fix sync before production");
+    expect(summary).toMatchObject({
+      operationalMessage: "Fix the endpoint, auth, or mapping, then retry the feed sync.",
+      readinessLabel: "Fix sync before production",
+      statusLabel: "Sync failed",
+      statusTone: "warning",
+      syncButtonDisabled: false,
+      syncButtonLabel: "Retry sync"
+    });
+  });
+
+  it("blocks repeat sync actions while a feed is already syncing", () => {
+    const summary = buildListingSourceSummary(listingSource({ lastSyncAt: undefined, status: "syncing" }));
+
+    expect(summary).toMatchObject({
+      lastSyncLabel: "First sync is running",
+      operationalMessage: "Worker is importing mapped fields and refreshing Concierge search context.",
+      readinessLabel: "Sync in progress",
+      statusLabel: "Syncing now",
+      statusTone: "working",
+      syncButtonDisabled: true,
+      syncButtonLabel: "Syncing..."
+    });
   });
 });
 
