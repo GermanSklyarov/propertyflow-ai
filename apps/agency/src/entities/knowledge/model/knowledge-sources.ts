@@ -1,4 +1,4 @@
-import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
+import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, ListingSourceSnapshot } from "@propertyflow/contracts";
 import { isRunningBackgroundJob } from "@entities/jobs/model/background-jobs";
 import { assessKnowledgeDocumentReadiness } from "./knowledge-document-readiness";
 
@@ -113,7 +113,13 @@ export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
         mode: "hybrid",
         status: "ready"
       },
-      { label: "REST API inventory sync", mode: "concierge_index_only", status: "planned" },
+      {
+        actionHref: "#listing-api-sources",
+        actionLabel: "Manage APIs",
+        label: "REST API inventory sync",
+        mode: "concierge_index_only",
+        status: "ready"
+      },
       { label: "XML feed import", mode: "concierge_index_only", status: "planned" }
     ],
     description: "Listings can feed Concierge search without forcing the agency to adopt our CRM first.",
@@ -305,17 +311,28 @@ export function buildRuntimeKnowledgeSourceGroups(
   input: {
     documents: KnowledgeDocumentSnapshot[];
     jobs: BackgroundJobMonitorItem[];
+    listingSources?: ListingSourceSnapshot[];
     totalDocuments: number;
   }
 ): KnowledgeSourceGroup[] {
   const activeKnowledgeJobs = input.jobs.some(
     (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && isRunningBackgroundJob(job)
   );
-  const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && isRunningBackgroundJob(job));
+  const activeImportJobs = input.jobs.some(
+    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) !== "partner-api" && isRunningBackgroundJob(job)
+  );
   const failedKnowledgeJobs = input.jobs.some(
     (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && job.state === "failed"
   );
-  const failedImportJobs = input.jobs.some((job) => job.name === "properties.import" && job.state === "failed");
+  const failedImportJobs = input.jobs.some(
+    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) !== "partner-api" && job.state === "failed"
+  );
+  const activePartnerImportJobs = input.jobs.some(
+    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && isRunningBackgroundJob(job)
+  );
+  const failedPartnerImportJobs = input.jobs.some(
+    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && job.state === "failed"
+  );
   const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
   const readyGuideDocuments = countReadyDocumentsWithTags(input.documents, [
     "faq",
@@ -364,6 +381,20 @@ export function buildRuntimeKnowledgeSourceGroups(
   const recentImportKnowledgeDocuments = input.jobs
     .filter((job) => job.name === "properties.import")
     .reduce((total, job) => total + getResultNumber(job.result, "knowledgeDocumentsCreated"), 0);
+  const listingSources = input.listingSources ?? [];
+  const activeListingSources = listingSources.filter((source) => source.status !== "disabled");
+  const connectedListingSources = activeListingSources.filter((source) => source.status === "connected" || source.status === "syncing");
+  const failedListingSources = activeListingSources.filter((source) => source.status === "failed");
+  const listingSourceCanonicalFields = activeListingSources.reduce(
+    (total, source) =>
+      total +
+      Object.values(source.mapping.canonical).filter((sourcePath) => typeof sourcePath === "string" && sourcePath.trim().length > 0).length,
+    0
+  );
+  const listingSourceCustomAttributes = activeListingSources.reduce(
+    (total, source) => total + (source.mapping.customAttributes?.length ?? 0),
+    0
+  );
 
   return groups.map((group) => {
     if (group.type === "document") {
@@ -418,6 +449,19 @@ export function buildRuntimeKnowledgeSourceGroups(
       return {
         ...group,
         connectors: group.connectors.map((connector) => {
+          if (connector.label === "REST API inventory sync") {
+            return buildRuntimeListingSourceConnector({
+              activeImportJobs: activePartnerImportJobs,
+              connectedCount: connectedListingSources.length,
+              connector,
+              failedCount: failedListingSources.length,
+              failedImportJobs: failedPartnerImportJobs,
+              sourceCount: activeListingSources.length,
+              totalCanonicalFields: listingSourceCanonicalFields,
+              totalCustomAttributes: listingSourceCustomAttributes
+            });
+          }
+
           if (connector.label !== "CSV upload with field mapping") {
             return connector;
           }
@@ -473,6 +517,47 @@ export function buildRuntimeKnowledgeSourceGroups(
 
     return group;
   });
+}
+
+function buildRuntimeListingSourceConnector(input: {
+  activeImportJobs: boolean;
+  connectedCount: number;
+  connector: KnowledgeSourceConnector;
+  failedCount: number;
+  failedImportJobs: boolean;
+  sourceCount: number;
+  totalCanonicalFields: number;
+  totalCustomAttributes: number;
+}): KnowledgeSourceConnector {
+  const healthyCount = input.connectedCount || input.sourceCount;
+
+  return {
+    ...input.connector,
+    countLabel: `${input.sourceCount} API source${input.sourceCount === 1 ? "" : "s"}`,
+    runtimeNote: input.failedImportJobs || input.failedCount
+      ? "Last API sync failed; review source mapping or credentials"
+      : input.activeImportJobs
+        ? "REST feed is syncing listing knowledge"
+        : healthyCount
+          ? buildListingSourceMappingNote(input.totalCanonicalFields, input.totalCustomAttributes)
+          : "Connect REST inventory without migrating CRM",
+    status: input.failedImportJobs || input.failedCount
+      ? "failed"
+      : input.activeImportJobs
+        ? "indexing"
+        : input.connectedCount
+          ? "connected"
+          : input.sourceCount
+            ? "draft"
+            : input.connector.status
+  };
+}
+
+function buildListingSourceMappingNote(canonicalFields: number, customAttributes: number) {
+  const mappedFields = canonicalFields ? `${canonicalFields} mapped fields` : "canonical field mapping";
+  const customFields = customAttributes ? `${customAttributes} custom attributes` : "custom agency attributes";
+
+  return `${mappedFields} and ${customFields} feed Concierge search`;
 }
 
 function buildRuntimeDocumentConnector(input: {
@@ -531,6 +616,16 @@ function countDocumentsWithTags(documents: KnowledgeDocumentSnapshot[], tags: st
 
 function countReadyDocumentsWithTags(documents: KnowledgeDocumentSnapshot[], tags: string[]) {
   return documents.filter((document) => tags.some((tag) => document.tags.includes(tag)) && isAiReadyDocument(document)).length;
+}
+
+function getBackgroundJobPayloadSource(job: BackgroundJobMonitorItem) {
+  if (!job.payload || typeof job.payload !== "object" || !("source" in job.payload)) {
+    return "";
+  }
+
+  const source = (job.payload as { source?: unknown }).source;
+
+  return typeof source === "string" ? source : "";
 }
 
 function isAiReadyDocument(document: KnowledgeDocumentSnapshot) {

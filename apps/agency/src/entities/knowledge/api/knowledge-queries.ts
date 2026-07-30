@@ -1,6 +1,11 @@
 import type { KnowledgeChunkSearchRequest } from "@propertyflow/contracts";
 import { queryOptions } from "@tanstack/react-query";
-import { getKnowledgeEmbeddingHealth, listKnowledgeDocuments, searchKnowledgeChunks } from "@shared/api/agency-client";
+import {
+  getKnowledgeEmbeddingHealth,
+  listKnowledgeDocuments,
+  listListingSources,
+  searchKnowledgeChunks
+} from "@shared/api/agency-client";
 import { queryKeys } from "@shared/query/query-keys";
 
 export function knowledgeDocumentsQueryOptions(request: { limit?: number } = { limit: 24 }, tenantId?: string) {
@@ -21,5 +26,12 @@ export function knowledgeEmbeddingHealthQueryOptions(tenantId?: string) {
   return queryOptions({
     queryKey: queryKeys.knowledge.embeddingHealth(tenantId),
     queryFn: () => getKnowledgeEmbeddingHealth({ tenantId })
+  });
+}
+
+export function listingSourcesQueryOptions(tenantId?: string) {
+  return queryOptions({
+    queryKey: queryKeys.knowledge.listingSources(tenantId),
+    queryFn: () => listListingSources({ tenantId })
   });
 }

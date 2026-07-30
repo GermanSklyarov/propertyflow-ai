@@ -34,6 +34,7 @@ export const queryKeys = {
     all: ["knowledge"] as const,
     chunks: (filters: object, tenantId?: string) => [...queryKeys.knowledge.all, "chunks", filters, tenantId] as const,
     embeddingHealth: (tenantId?: string) => [...queryKeys.knowledge.all, "embedding-health", tenantId] as const,
+    listingSources: (tenantId?: string) => [...queryKeys.knowledge.all, "listing-sources", tenantId] as const,
     list: (filters: object, tenantId?: string) => [...queryKeys.knowledge.all, "list", filters, tenantId] as const
   },
   savedSearches: {

@@ -7,7 +7,8 @@ import {
   createKnowledgeDocument,
   createKnowledgeDocumentUploadUrl,
   embedKnowledgeChunks,
-  ingestKnowledgeDocument
+  ingestKnowledgeDocument,
+  syncListingSource
 } from "@shared/api/agency-client";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
@@ -92,6 +93,21 @@ export async function ingestKnowledgeDocumentAction(documentId: KnowledgeDocumen
   revalidatePath("/knowledge");
 
   redirect(`/knowledge?ingest=queued&document=${encodeURIComponent(title)}#knowledge-jobs`);
+}
+
+export async function syncListingSourceAction(sourceId: string, name: string) {
+  const { tenantId } = await requireAgencySession();
+
+  await syncListingSource(sourceId, { tenantId });
+
+  revalidatePath("/knowledge");
+
+  const params = new URLSearchParams({
+    listingSync: "queued",
+    source: name
+  });
+
+  redirect(`/knowledge?${params.toString()}#listing-api-sources`);
 }
 
 export async function embedKnowledgeChunksAction(formData: FormData) {

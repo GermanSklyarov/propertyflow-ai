@@ -2,7 +2,8 @@ import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import {
   knowledgeChunkSearchQueryOptions,
   knowledgeDocumentsQueryOptions,
-  knowledgeEmbeddingHealthQueryOptions
+  knowledgeEmbeddingHealthQueryOptions,
+  listingSourcesQueryOptions
 } from "@entities/knowledge/api/knowledge-queries";
 import { buildKnowledgePageNotice } from "@entities/knowledge/model/knowledge-page-notice";
 import type { AiChatRequest, KnowledgeChunkSearchRequest } from "@propertyflow/contracts";
@@ -24,8 +25,10 @@ export default async function AgencyKnowledgePage({
     embed?: string;
     ingest?: string;
     kind?: string;
+    listingSync?: string;
     locale?: string;
     q?: string;
+    source?: string;
   }>;
 }) {
   const query = await searchParams;
@@ -35,11 +38,12 @@ export default async function AgencyKnowledgePage({
   const chatRequest = buildChatRequest(query);
 
   try {
-    const [documents, jobs, retrieval, embeddingHealth] = await Promise.all([
+    const [documents, jobs, retrieval, embeddingHealth, listingSources] = await Promise.all([
       queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 24 }, tenantId)),
       queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId)),
       queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest, tenantId)),
-      queryClient.ensureQueryData(knowledgeEmbeddingHealthQueryOptions(tenantId))
+      queryClient.ensureQueryData(knowledgeEmbeddingHealthQueryOptions(tenantId)),
+      queryClient.ensureQueryData(listingSourcesQueryOptions(tenantId))
     ]);
     const chat = chatRequest ? await askAiChat(chatRequest, { tenantId }) : undefined;
     const knowledgeJobs = jobs.items.filter((job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed");
@@ -52,6 +56,7 @@ export default async function AgencyKnowledgePage({
         documents={documents.items}
         jobs={knowledgeJobs}
         embeddingHealth={embeddingHealth}
+        listingSources={listingSources.items}
         notice={buildKnowledgePageNotice(query)}
         retrieval={retrieval}
         retrievalRequest={retrievalRequest}

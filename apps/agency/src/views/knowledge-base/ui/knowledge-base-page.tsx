@@ -12,11 +12,13 @@ import {
   Globe2,
   Languages,
   Plus,
+  RefreshCw,
   Rocket,
   SearchCheck,
   Tags,
   UploadCloud
 } from "lucide-react";
+import { syncListingSourceAction } from "@entities/knowledge/api/knowledge-actions";
 import {
   buildKnowledgeSourceCoverage,
   buildKnowledgeSourceGroupAction,
@@ -42,7 +44,8 @@ import type {
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentSnapshot,
-  KnowledgeEmbeddingHealthSnapshot
+  KnowledgeEmbeddingHealthSnapshot,
+  ListingSourceSnapshot
 } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import { KnowledgeJobsPanel } from "@widgets/knowledge-jobs/ui/knowledge-jobs-panel";
@@ -55,6 +58,7 @@ export function KnowledgeBasePage({
   documents,
   embeddingHealth,
   jobs,
+  listingSources,
   notice,
   retrieval,
   retrievalRequest,
@@ -67,6 +71,7 @@ export function KnowledgeBasePage({
   documents: KnowledgeDocumentSnapshot[];
   embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
+  listingSources: ListingSourceSnapshot[];
   notice?: { message: string; tone: "success" };
   retrieval: KnowledgeChunkSearchResponse;
   retrievalRequest: KnowledgeChunkSearchRequest;
@@ -81,6 +86,7 @@ export function KnowledgeBasePage({
   const runtimeSourceGroups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
     documents,
     jobs: sourceJobs ?? jobs,
+    listingSources,
     totalDocuments: total
   });
   const sourceModeSummary = summarizeKnowledgeSourceModes(runtimeSourceGroups);
@@ -209,6 +215,8 @@ export function KnowledgeBasePage({
               <SourceCoverageCard item={item} key={item.type} />
             ))}
           </div>
+
+          <ListingApiSourcesPanel sources={listingSources} />
 
           <div className={styles.sourcesGrid}>
             {runtimeSourceGroups.map((group) => (
@@ -384,6 +392,87 @@ function SourceCoverageCard({ item }: { item: KnowledgeSourceCoverageItem }) {
   );
 }
 
+function ListingApiSourcesPanel({ sources }: { sources: ListingSourceSnapshot[] }) {
+  const activeSources = sources.filter((source) => source.status !== "disabled");
+
+  return (
+    <section className={styles.listingApiSources} id="listing-api-sources" aria-label="REST API inventory sources">
+      <div className={styles.listingApiSourcesHeader}>
+        <div>
+          <p className="section-kicker">REST inventory sync</p>
+          <h3 className={styles.listingApiSourcesTitle}>API feeds can power Concierge before CRM migration</h3>
+          <p>
+            Canonical mapping keeps listing search reliable, while custom attributes preserve agency-specific availability,
+            fees, restrictions, and source fields the AI should still understand.
+          </p>
+        </div>
+        <span className={styles.statusBadge}>
+          {activeSources.length} API source{activeSources.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      {activeSources.length ? (
+        <div className={styles.listingApiSourceGrid}>
+          {activeSources.map((source) => (
+            <ListingApiSourceCard source={source} key={source.id} />
+          ))}
+        </div>
+      ) : (
+        <div className={styles.listingApiEmpty}>
+          <DatabaseZap size={18} />
+          <div>
+            <strong>No REST inventory source connected yet</strong>
+            <span>Use REST API sync when an agency wants Concierge search without moving listings into our CRM first.</span>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
+  const canonicalFields = Object.values(source.mapping.canonical).filter(
+    (sourcePath) => typeof sourcePath === "string" && sourcePath.trim().length > 0
+  ).length;
+  const customAttributes = source.mapping.customAttributes ?? [];
+  const searchableAttributes = customAttributes.filter((attribute) => attribute.searchable).length;
+  const syncAction = syncListingSourceAction.bind(null, source.id, source.name);
+
+  return (
+    <article className={styles.listingApiSourceCard} data-status={source.status}>
+      <div className={styles.listingApiSourceHeader}>
+        <div>
+          <h4 className={styles.listingApiSourceTitle}>{source.name}</h4>
+          <p className={styles.listingApiSourceEndpoint}>{source.endpointUrl}</p>
+        </div>
+        <span className={styles.listingApiStatus}>{formatListingSourceStatus(source.status)}</span>
+      </div>
+
+      <div className={styles.listingApiSourceMetrics}>
+        <span>{canonicalFields} mapped fields</span>
+        <span>{customAttributes.length} custom attrs</span>
+        <span>{searchableAttributes} searchable</span>
+        <span>{formatImportMode(source.importMode)}</span>
+      </div>
+
+      <p className={styles.listingApiCustomFields}>
+        {customAttributes.length
+          ? `Preserves custom fields: ${customAttributes.map(formatCustomAttribute).join(", ")}`
+          : "No custom attributes mapped yet; add availability, fees, restrictions, and local agency fields before production sync."}
+      </p>
+
+      {source.lastError ? <p className={styles.listingApiError}>{source.lastError}</p> : null}
+
+      <form action={syncAction} className={styles.listingApiSyncForm}>
+        <button className={styles.listingApiSyncButton} type="submit">
+          <RefreshCw size={15} />
+          Sync feed
+        </button>
+      </form>
+    </article>
+  );
+}
+
 function formatStarterPhase(phase: ReturnType<typeof buildKnowledgeStarterReadiness>["phase"]) {
   const labels = {
     empty: "Upload first source",
@@ -466,6 +555,32 @@ function formatSourceMode(value: KnowledgeSourceConnector["mode"]) {
     crm_inventory: "CRM inventory",
     hybrid: "CRM + AI index"
   } satisfies Record<KnowledgeSourceConnector["mode"], string>;
+
+  return labels[value];
+}
+
+function formatCustomAttribute(attribute: NonNullable<ListingSourceSnapshot["mapping"]["customAttributes"]>[number]) {
+  return attribute.label ?? attribute.key;
+}
+
+function formatImportMode(value: ListingSourceSnapshot["importMode"]) {
+  const labels = {
+    concierge_index_only: "AI index only",
+    crm_inventory: "CRM inventory",
+    hybrid: "CRM + AI index"
+  } satisfies Record<ListingSourceSnapshot["importMode"], string>;
+
+  return labels[value];
+}
+
+function formatListingSourceStatus(value: ListingSourceSnapshot["status"]) {
+  const labels = {
+    connected: "Connected",
+    disabled: "Disabled",
+    draft: "Draft",
+    failed: "Failed",
+    syncing: "Syncing"
+  } satisfies Record<ListingSourceSnapshot["status"], string>;
 
   return labels[value];
 }

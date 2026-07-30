@@ -584,6 +584,20 @@
     grid-column: 2;
     justify-self: start;
   }
+
+  .listingApiSourcesHeader,
+  .listingApiSourceHeader {
+    display: grid;
+  }
+
+  .listingApiSourcesHeader .statusBadge,
+  .listingApiStatus {
+    justify-self: start;
+  }
+
+  .listingApiSyncButton {
+    width: 100%;
+  }
 }
 
 .sourceCoverageGrid {
@@ -683,6 +697,211 @@
 
 .sourceCoverageCard[data-status="planned"] {
   background: #fff;
+}
+
+.listingApiSources {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 14px;
+}
+
+.listingApiSourcesHeader {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.listingApiSourcesHeader div {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.listingApiSourcesHeader p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.listingApiSourcesTitle {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(1.1rem, 2vw, 1.45rem);
+  font-weight: 850;
+  line-height: 1.12;
+}
+
+.listingApiSourceGrid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 10px;
+}
+
+.listingApiSourceCard {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 12px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbfa;
+  padding: 12px;
+}
+
+.listingApiSourceCard[data-status="failed"] {
+  border-color: rgb(180 55 45 / 22%);
+  background: #fff7f5;
+}
+
+.listingApiSourceCard[data-status="syncing"] {
+  border-color: rgb(180 83 9 / 20%);
+  background: #fff9ed;
+}
+
+.listingApiSourceHeader {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.listingApiSourceHeader div {
+  min-width: 0;
+}
+
+.listingApiSourceTitle {
+  margin: 0;
+  color: var(--teal-dark);
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.listingApiSourceEndpoint {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.listingApiStatus {
+  flex: 0 0 auto;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-size: 0.66rem;
+  font-weight: 950;
+  padding: 5px 7px;
+  text-transform: uppercase;
+}
+
+.listingApiSourceMetrics {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.listingApiSourceMetrics span {
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  color: var(--teal-dark);
+  font-size: 0.7rem;
+  font-weight: 950;
+  padding: 6px 8px;
+}
+
+.listingApiCustomFields,
+.listingApiError {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.listingApiCustomFields {
+  color: var(--muted);
+}
+
+.listingApiError {
+  border: 1px solid rgb(180 55 45 / 22%);
+  background: #fff1f0;
+  color: #9f352c;
+  padding: 8px;
+}
+
+.listingApiEmpty {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px dashed rgb(15 118 110 / 22%);
+  background: #f7fbfa;
+  padding: 12px;
+}
+
+.listingApiEmpty svg {
+  color: var(--teal-dark);
+}
+
+.listingApiEmpty div {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.listingApiEmpty strong {
+  color: var(--teal-dark);
+  font-size: 0.88rem;
+  font-weight: 950;
+}
+
+.listingApiEmpty span {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.listingApiSyncForm {
+  margin: 0;
+}
+
+.listingApiSyncButton {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 38px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: #fff;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 950;
+  padding: 0 14px;
+}
+
+.listingApiSyncButton:hover,
+.listingApiSyncButton:focus-visible {
+  background: var(--teal);
+  color: #fff;
 }
 
 .sourceCard {

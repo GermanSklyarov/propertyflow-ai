@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot } from "@propertyflow/contracts";
+import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, ListingSourceSnapshot } from "@propertyflow/contracts";
 import {
   buildKnowledgeSourceCoverage,
   buildKnowledgeSourceGroupAction,
@@ -82,9 +82,9 @@ describe("knowledge sources model", () => {
 
     expect(summary.total).toBe(12);
     expect(summary.connected).toBe(3);
-    expect(summary.ready).toBe(3);
-    expect(summary.planned).toBe(6);
-    expect(summary.actionable).toBe(6);
+    expect(summary.ready).toBe(4);
+    expect(summary.planned).toBe(5);
+    expect(summary.actionable).toBe(7);
   });
 
   it("builds compact source coverage for the starter dashboard", () => {
@@ -309,6 +309,23 @@ describe("knowledge sources model", () => {
     });
   });
 
+  it("surfaces REST API listing sources with flexible mapping metadata", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [],
+      listingSources: [listingSource()],
+      totalDocuments: 0
+    });
+    const propertyFeed = groups.find((group) => group.type === "property_feed");
+    const rest = propertyFeed?.connectors.find((connector) => connector.label === "REST API inventory sync");
+
+    expect(rest).toMatchObject({
+      countLabel: "1 API source",
+      runtimeNote: "3 mapped fields and 2 custom attributes feed Concierge search",
+      status: "connected"
+    });
+  });
+
   it("surfaces pasted website pages as concierge knowledge sources", () => {
     const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
       documents: [
@@ -364,6 +381,47 @@ function backgroundJob(overrides: Partial<BackgroundJobMonitorItem> = {}): Backg
     queue: "propertyflow.jobs",
     state: "completed",
     tenantId: "demo-agency",
+    ...overrides
+  };
+}
+
+function listingSource(overrides: Partial<ListingSourceSnapshot> = {}): ListingSourceSnapshot {
+  return {
+    authType: "api-key-header",
+    createdAt: "2026-07-30T00:00:00.000Z",
+    endpointUrl: "https://agency.example.com/api/listings",
+    id: "listing-source-1",
+    importMode: "concierge_index_only",
+    mapping: {
+      canonical: {
+        externalId: "id",
+        priceAmount: "price",
+        title: "title"
+      },
+      customAttributes: [
+        {
+          filterHint: "availability",
+          key: "available_until",
+          searchable: true,
+          sourcePath: "availability.until",
+          type: "date"
+        },
+        {
+          filterHint: "contract_term",
+          key: "minimum_term_months",
+          label: "Minimum lease term",
+          searchable: true,
+          sourcePath: "lease.minMonths",
+          type: "number"
+        }
+      ],
+      rawPayloadMode: "store_selected"
+    },
+    name: "Partner API",
+    status: "connected",
+    tenantId: "demo-agency",
+    type: "rest-api",
+    updatedAt: "2026-07-30T00:00:00.000Z",
     ...overrides
   };
 }

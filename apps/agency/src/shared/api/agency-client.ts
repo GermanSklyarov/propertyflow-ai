@@ -28,6 +28,7 @@ import type {
   CreateKnowledgeDocumentUploadRequest,
   CreateKnowledgeDocumentUploadResponse,
   CreateKnowledgeDocumentRequest,
+  CreateListingSourceRequest,
   EmbedKnowledgeChunksRequest,
   CreateAgencySessionRequest,
   CreateAgencySessionResponse,
@@ -48,6 +49,8 @@ import type {
   LeadSnapshot,
   LeadTimelineResponse,
   ListLeadsRequest,
+  ListingSourceListResponse,
+  ListingSourceSnapshot,
   AddPropertyImageRequest,
   ConfirmPropertyImageDeleteRequest,
   ConfirmPropertyImageUploadRequest,
@@ -1149,6 +1152,54 @@ export async function askPublicWidget(
   }
 
   return (await response.json()) as PublicWidgetAskResponse;
+}
+
+export async function listListingSources(options: AgencyApiOptions = {}): Promise<ListingSourceListResponse> {
+  const response = await fetch(`${apiBaseUrl}/listing-sources`, {
+    headers: await tenantHeaders(options),
+    ...(options.revalidateSeconds === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidateSeconds ?? 20 } })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to list listing sources: ${response.status}`);
+  }
+
+  return (await response.json()) as ListingSourceListResponse;
+}
+
+export async function createRestListingSource(
+  request: CreateListingSourceRequest,
+  options: AgencyApiOptions = {}
+): Promise<ListingSourceSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/listing-sources/rest`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(await tenantHeaders(options))
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to create REST listing source: ${response.status}`);
+  }
+
+  return (await response.json()) as ListingSourceSnapshot;
+}
+
+export async function syncListingSource(sourceId: string, options: AgencyApiOptions = {}): Promise<BackgroundJobSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/listing-sources/${sourceId}/sync`, {
+    method: "POST",
+    headers: await tenantHeaders(options)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to sync listing source: ${response.status}`);
+  }
+
+  return (await response.json()) as BackgroundJobSnapshot;
 }
 
 export async function embedKnowledgeChunks(

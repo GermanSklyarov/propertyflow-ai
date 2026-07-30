@@ -3,6 +3,8 @@ export type KnowledgePageNoticeQuery = {
   document?: string;
   embed?: string;
   ingest?: string;
+  listingSync?: string;
+  source?: string;
 };
 
 export type KnowledgePageNotice = {
@@ -11,6 +13,13 @@ export type KnowledgePageNotice = {
 };
 
 export function buildKnowledgePageNotice(query: KnowledgePageNoticeQuery): KnowledgePageNotice | undefined {
+  if (query.listingSync === "queued") {
+    return {
+      message: `${query.source ?? "REST inventory source"} sync was queued. Worker progress appears below.`,
+      tone: "success"
+    };
+  }
+
   if (query.created && query.ingest === "queued") {
     return {
       message: `${query.created} was added. AI is indexing this source now, and worker progress appears below.`,

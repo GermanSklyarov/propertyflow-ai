@@ -23,6 +23,13 @@ describe("buildKnowledgePageNotice", () => {
     });
   });
 
+  it("announces REST listing source sync jobs", () => {
+    expect(buildKnowledgePageNotice({ listingSync: "queued", source: "Partner API" })).toEqual({
+      message: "Partner API sync was queued. Worker progress appears below.",
+      tone: "success"
+    });
+  });
+
   it("stays empty without a supported status", () => {
     expect(buildKnowledgePageNotice({})).toBeUndefined();
   });
