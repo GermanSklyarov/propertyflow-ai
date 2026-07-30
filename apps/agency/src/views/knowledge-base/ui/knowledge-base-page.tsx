@@ -42,6 +42,7 @@ import {
   DEFAULT_LISTING_CANONICAL_MAPPING,
   DEFAULT_LISTING_CUSTOM_ATTRIBUTES
 } from "@entities/knowledge/model/listing-source-form";
+import { buildListingSourceSummary } from "@entities/knowledge/model/listing-source-summary";
 import { KnowledgeDocumentCard } from "@entities/knowledge/ui/knowledge-document-card";
 import { CreateKnowledgeDocumentForm } from "@features/knowledge-document-create/ui/create-knowledge-document-form";
 import { KnowledgeAiAnswerPanel } from "@features/knowledge-ai-answer/ui/knowledge-ai-answer-panel";
@@ -586,11 +587,7 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
 }
 
 function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
-  const canonicalFields = Object.values(source.mapping.canonical).filter(
-    (sourcePath) => typeof sourcePath === "string" && sourcePath.trim().length > 0
-  ).length;
-  const customAttributes = source.mapping.customAttributes ?? [];
-  const searchableAttributes = customAttributes.filter((attribute) => attribute.searchable).length;
+  const summary = buildListingSourceSummary(source);
   const syncAction = syncListingSourceAction.bind(null, source.id, source.name);
 
   return (
@@ -604,17 +601,41 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
       </div>
 
       <div className={styles.listingApiSourceMetrics}>
-        <span>{canonicalFields} mapped fields</span>
-        <span>{customAttributes.length} custom attrs</span>
-        <span>{searchableAttributes} searchable</span>
+        <span>{summary.canonicalCount} mapped fields</span>
+        <span>{summary.customAttributeCount} custom attrs</span>
+        <span>{summary.searchableCustomAttributeCount} searchable</span>
         <span>{formatImportMode(source.importMode)}</span>
       </div>
 
-      <p className={styles.listingApiCustomFields}>
-        {customAttributes.length
-          ? `Preserves custom fields: ${customAttributes.map(formatCustomAttribute).join(", ")}`
-          : "No custom attributes mapped yet; add availability, fees, restrictions, and local agency fields before production sync."}
-      </p>
+      <div className={styles.listingApiReadiness} data-ready={summary.missingProductionFields.length === 0}>
+        <strong>{summary.readinessLabel}</strong>
+        <span>{summary.syncLabel}</span>
+      </div>
+
+      <div className={styles.listingApiCoverageGrid}>
+        <ListingApiCoverageGroup
+          empty="Map title, market, prices, listing type, status, and project fields."
+          items={summary.mappedCanonicalFields}
+          title="Canonical search"
+        />
+        <ListingApiCoverageGroup
+          empty="Add available_until or minimum rental term so AI avoids impossible recommendations."
+          items={summary.availabilitySignals}
+          title="Availability logic"
+        />
+        <ListingApiCoverageGroup
+          empty="Preserve local agency fields as searchable custom attributes."
+          items={summary.searchableCustomAttributes}
+          title="Custom attributes"
+        />
+      </div>
+
+      {summary.missingProductionFields.length ? (
+        <div className={styles.listingApiGaps}>
+          <strong>Before production</strong>
+          <span>{summary.missingProductionFields.join(", ")}</span>
+        </div>
+      ) : null}
 
       {source.lastError ? <p className={styles.listingApiError}>{source.lastError}</p> : null}
 
@@ -625,6 +646,27 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
         </button>
       </form>
     </article>
+  );
+}
+
+function ListingApiCoverageGroup({ empty, items, title }: { empty: string; items: string[]; title: string }) {
+  const visibleItems = items.slice(0, 5);
+  const overflow = Math.max(0, items.length - visibleItems.length);
+
+  return (
+    <div className={styles.listingApiCoverageGroup}>
+      <strong>{title}</strong>
+      {items.length ? (
+        <div>
+          {visibleItems.map((item) => (
+            <span key={`${title}-${item}`}>{item}</span>
+          ))}
+          {overflow ? <span>+{overflow} more</span> : null}
+        </div>
+      ) : (
+        <p>{empty}</p>
+      )}
+    </div>
   );
 }
 
@@ -712,10 +754,6 @@ function formatSourceMode(value: KnowledgeSourceConnector["mode"]) {
   } satisfies Record<KnowledgeSourceConnector["mode"], string>;
 
   return labels[value];
-}
-
-function formatCustomAttribute(attribute: NonNullable<ListingSourceSnapshot["mapping"]["customAttributes"]>[number]) {
-  return attribute.label ?? attribute.key;
 }
 
 function formatImportMode(value: ListingSourceSnapshot["importMode"]) {

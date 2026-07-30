@@ -839,6 +839,120 @@
   padding: 6px 8px;
 }
 
+.listingApiReadiness {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgb(180 83 9 / 18%);
+  background: #fff9ed;
+  color: #80520d;
+  padding: 9px 10px;
+}
+
+.listingApiReadiness[data-ready="true"] {
+  border-color: rgb(22 163 74 / 18%);
+  background: #effbf4;
+  color: #14713a;
+}
+
+.listingApiReadiness strong,
+.listingApiReadiness span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.listingApiReadiness strong {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.listingApiReadiness span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.listingApiCoverageGrid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+  gap: 8px;
+}
+
+.listingApiCoverageGroup {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 9px;
+}
+
+.listingApiCoverageGroup strong {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.listingApiCoverageGroup div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.listingApiCoverageGroup span {
+  max-width: 100%;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  padding: 5px 7px;
+}
+
+.listingApiCoverageGroup p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.listingApiGaps {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border: 1px solid rgb(180 83 9 / 18%);
+  background: #fff9ed;
+  padding: 8px 10px;
+}
+
+.listingApiGaps strong {
+  color: #80520d;
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.listingApiGaps span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
 .listingApiCustomFields,
 .listingApiError {
   margin: 0;
