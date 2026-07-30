@@ -118,6 +118,25 @@ export class PgListingSourceRepository implements ListingSourceRepository {
     return row ? this.toSnapshot(row) : null;
   }
 
+  async markSyncStarted(tenantId: string, sourceId: string): Promise<ListingSourceSnapshot | null> {
+    const now = new Date().toISOString();
+    const result = await this.pool.query<ListingSourceRow>(
+      `
+        update listing_source_configs
+        set
+          status = 'syncing',
+          last_error = null,
+          updated_at = $3
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, sourceId, now]
+    );
+
+    const row = result.rows[0];
+    return row ? this.toSnapshot(row) : null;
+  }
+
   private toSnapshot(row: ListingSourceRow): ListingSourceSnapshot {
     return {
       id: row.id,

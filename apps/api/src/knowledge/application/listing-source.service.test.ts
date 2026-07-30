@@ -23,7 +23,8 @@ function createService() {
       updatedAt: now
     })),
     list: vi.fn(),
-    findById: vi.fn()
+    findById: vi.fn(),
+    markSyncStarted: vi.fn()
   } as unknown as ListingSourceRepository;
   const jobs = {
     enqueue: vi.fn()
@@ -128,16 +129,16 @@ describe("ListingSourceService", () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
-  it("queues REST source sync with field mapping", async () => {
+  it("marks source syncing and queues REST source sync with field mapping", async () => {
     const { jobs, service, sources } = createService();
-    vi.mocked(sources.findById).mockResolvedValue({
+    const source = {
       id: "source-1",
       tenantId: "demo-agency",
       name: "REST feed",
-      type: "rest-api",
+      type: "rest-api" as const,
       endpointUrl: "https://agency.co.th/api/listings",
-      authType: "none",
-      importMode: "concierge_index_only",
+      authType: "none" as const,
+      importMode: "concierge_index_only" as const,
       mapping: {
         canonical: {
           externalId: "id",
@@ -147,14 +148,24 @@ describe("ListingSourceService", () => {
           {
             key: "lease_available_until",
             sourcePath: "lease_until",
-            type: "date",
-            filterHint: "availability"
+            type: "date" as const,
+            filterHint: "availability" as const
           }
         ]
       },
-      status: "connected",
+      status: "connected" as const,
+      lastError: "Previous sync failed",
       createdAt: "2026-07-29T00:00:00.000Z",
       updatedAt: "2026-07-29T00:00:00.000Z"
+    };
+    vi.mocked(sources.findById).mockResolvedValue({
+      ...source
+    });
+    vi.mocked(sources.markSyncStarted).mockResolvedValue({
+      ...source,
+      status: "syncing",
+      lastError: undefined,
+      updatedAt: "2026-07-29T00:01:00.000Z"
     });
     vi.mocked(jobs.enqueue).mockResolvedValue({
       id: "job-1",
@@ -167,6 +178,7 @@ describe("ListingSourceService", () => {
 
     await service.sync("demo-agency", "user-1", "source-1");
 
+    expect(sources.markSyncStarted).toHaveBeenCalledWith("demo-agency", "source-1");
     expect(jobs.enqueue).toHaveBeenCalledWith("properties.import", {
       tenantId: "demo-agency",
       requestedByUserId: "user-1",

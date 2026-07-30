@@ -64,6 +64,8 @@ export class ListingSourceService {
       throw new BadRequestException("Listing source was not found for this tenant.");
     }
 
+    await this.sources.markSyncStarted(tenantId, sourceId);
+
     return this.jobs.enqueue("properties.import", {
       tenantId,
       requestedByUserId,

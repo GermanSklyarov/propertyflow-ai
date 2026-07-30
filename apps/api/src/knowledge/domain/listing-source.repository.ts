@@ -6,4 +6,5 @@ export interface ListingSourceRepository {
   save(tenantId: string, request: CreateListingSourceRequest): Promise<ListingSourceSnapshot>;
   list(tenantId: string): Promise<ListingSourceSnapshot[]>;
   findById(tenantId: string, sourceId: string): Promise<ListingSourceSnapshot | null>;
+  markSyncStarted(tenantId: string, sourceId: string): Promise<ListingSourceSnapshot | null>;
 }

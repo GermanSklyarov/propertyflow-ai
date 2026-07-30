@@ -140,37 +140,99 @@ export class PropertyflowWorker {
   }
 
   private async importProperties(job: PropertyImportJob): Promise<Record<string, unknown>> {
-    const result = await this.propertyImporter.import(job);
+    try {
+      const result = await this.propertyImporter.import(job);
 
-    if (
-      !isPropertyImportResult(result) ||
-      result.dryRun ||
-      result.importMode === "crm_inventory" ||
-      result.propertyIds.length === 0
-    ) {
-      return result;
-    }
-
-    const indexFailures: Array<{ propertyId: string; reason: string }> = [];
-    let indexed = 0;
-
-    for (const propertyId of result.propertyIds) {
-      try {
-        await this.searchIndexer.indexProperty(job.data.tenantId, propertyId);
-        indexed += 1;
-      } catch (error) {
-        indexFailures.push({
-          propertyId,
-          reason: error instanceof Error ? error.message : "Failed to index imported property"
-        });
+      if (
+        !isPropertyImportResult(result) ||
+        result.dryRun ||
+        result.importMode === "crm_inventory" ||
+        result.propertyIds.length === 0
+      ) {
+        await this.markListingSourceSyncCompleted(job, result);
+        return result;
       }
+
+      const indexFailures: Array<{ propertyId: string; reason: string }> = [];
+      let indexed = 0;
+
+      for (const propertyId of result.propertyIds) {
+        try {
+          await this.searchIndexer.indexProperty(job.data.tenantId, propertyId);
+          indexed += 1;
+        } catch (error) {
+          indexFailures.push({
+            propertyId,
+            reason: error instanceof Error ? error.message : "Failed to index imported property"
+          });
+        }
+      }
+
+      const completedResult = {
+        ...result,
+        indexed,
+        indexFailures: indexFailures.slice(0, 25)
+      };
+
+      await this.markListingSourceSyncCompleted(job, completedResult);
+
+      return completedResult;
+    } catch (error) {
+      await this.markListingSourceSyncFailed(job, error);
+      throw error;
+    }
+  }
+
+  private async markListingSourceSyncCompleted(
+    job: PropertyImportJob,
+    result: Record<string, unknown>
+  ): Promise<void> {
+    if (!job.data.sourceConfigId || job.data.dryRun) {
+      return;
     }
 
-    return {
-      ...result,
-      indexed,
-      indexFailures: indexFailures.slice(0, 25)
-    };
+    const skipped = typeof result.skipped === "number" ? result.skipped : 0;
+    const total = typeof result.total === "number" ? result.total : 0;
+    const indexFailures = Array.isArray(result.indexFailures) ? result.indexFailures.length : 0;
+    const warning = [
+      skipped > 0 ? `${skipped} of ${total} rows were skipped` : undefined,
+      indexFailures > 0 ? `${indexFailures} imported listings failed search indexing` : undefined
+    ].filter(Boolean).join("; ");
+    const now = new Date().toISOString();
+
+    await this.pool.query(
+      `
+        update listing_source_configs
+        set
+          status = 'connected',
+          last_sync_at = $3,
+          last_error = $4,
+          updated_at = $3
+        where tenant_id = $1 and id = $2
+      `,
+      [job.data.tenantId, job.data.sourceConfigId, now, warning || null]
+    );
+  }
+
+  private async markListingSourceSyncFailed(job: PropertyImportJob, error: unknown): Promise<void> {
+    if (!job.data.sourceConfigId || job.data.dryRun) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const reason = error instanceof Error ? error.message : "Listing source sync failed";
+
+    await this.pool.query(
+      `
+        update listing_source_configs
+        set
+          status = 'failed',
+          last_error = $3,
+          updated_at = $4
+        where tenant_id = $1 and id = $2
+      `,
+      [job.data.tenantId, job.data.sourceConfigId, reason, now]
+    );
   }
 
   private async ingestKnowledgeDocument(job: KnowledgeDocumentIngestJob): Promise<Record<string, unknown>> {
