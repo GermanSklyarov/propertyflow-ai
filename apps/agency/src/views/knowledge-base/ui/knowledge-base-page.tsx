@@ -33,6 +33,10 @@ import {
   type KnowledgeSourceGroup
 } from "@entities/knowledge/model/knowledge-sources";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
+import {
+  DEFAULT_LISTING_CANONICAL_MAPPING,
+  DEFAULT_LISTING_CUSTOM_ATTRIBUTES
+} from "@entities/knowledge/model/listing-source-form";
 import { KnowledgeDocumentCard } from "@entities/knowledge/ui/knowledge-document-card";
 import { CreateKnowledgeDocumentForm } from "@features/knowledge-document-create/ui/create-knowledge-document-form";
 import { KnowledgeAiAnswerPanel } from "@features/knowledge-ai-answer/ui/knowledge-ai-answer-panel";
@@ -72,7 +76,7 @@ export function KnowledgeBasePage({
   embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
   listingSources: ListingSourceSnapshot[];
-  notice?: { message: string; tone: "success" };
+  notice?: { message: string; tone: "success" | "warning" };
   retrieval: KnowledgeChunkSearchResponse;
   retrievalRequest: KnowledgeChunkSearchRequest;
   sourceJobs?: BackgroundJobMonitorItem[];
@@ -114,7 +118,7 @@ export function KnowledgeBasePage({
         </header>
 
         {notice ? (
-          <section className={styles.notice} aria-live="polite">
+          <section className={styles.notice} data-tone={notice.tone} aria-live="polite">
             <DatabaseZap size={18} />
             <strong>{notice.message}</strong>
           </section>
@@ -421,8 +425,66 @@ function ListingApiSourcesPanel({ sources }: { sources: ListingSourceSnapshot[] 
         <ListingApiEmptyState />
       )}
 
+      <ListingApiIntegrationGuide />
       <ListingApiConnectForm defaultOpen={activeSources.length === 0} />
     </section>
+  );
+}
+
+function ListingApiIntegrationGuide() {
+  return (
+    <details className={styles.listingApiGuide}>
+      <summary>
+        <DatabaseZap size={16} />
+        How REST API sync is connected
+      </summary>
+
+      <div className={styles.listingApiGuideBody}>
+        <article>
+          <strong>1. Expose a listing endpoint</strong>
+          <p>
+            Return a JSON array or a nested array such as <code>data.items</code>. Each item should include a stable id,
+            title, market, price, status, photos, and any local fields your agency already uses.
+          </p>
+        </article>
+
+        <article>
+          <strong>2. Map canonical fields</strong>
+          <p>
+            Canonical mapping tells PropertyFlow which source fields mean title, price, rent, project, amenities,
+            availability, and minimum rental term.
+          </p>
+        </article>
+
+        <article>
+          <strong>3. Preserve agency-specific fields</strong>
+          <p>
+            Custom attributes stay searchable for Concierge. A field like <code>rent_available_until</code> can prevent
+            the AI from recommending a short-availability unit to a client asking for a one-year rental.
+          </p>
+        </article>
+
+        <div className={styles.listingApiExample}>
+          <span>Expected payload shape</span>
+          <code>{`{
+  "data": {
+    "items": [
+      {
+        "id": "pattaya-102",
+        "name": "Wongamat sea-view condo",
+        "city": "pattaya",
+        "deal_type": "rent",
+        "monthly_rent": 28000,
+        "rent_available_until": "2027-03-31",
+        "minimum_rental_months": 12,
+        "view_note": "protected sea view"
+      }
+    ]
+  }
+}`}</code>
+        </div>
+      </div>
+    </details>
   );
 }
 
@@ -684,48 +746,6 @@ function formatImportMode(value: ListingSourceSnapshot["importMode"]) {
 
   return labels[value];
 }
-
-const DEFAULT_LISTING_CANONICAL_MAPPING = `{
-  "externalId": "id",
-  "title": "name",
-  "description": "description",
-  "kind": "property_type",
-  "listingType": "deal_type",
-  "market": "city",
-  "status": "status",
-  "priceAmount": "sale_price",
-  "priceCurrency": "currency",
-  "rentalPriceMonthlyAmount": "monthly_rent",
-  "bedrooms": "bedrooms",
-  "bathrooms": "bathrooms",
-  "areaSqm": "area_sqm",
-  "address": "address",
-  "projectName": "project_name",
-  "amenities": "amenities",
-  "imageUrls": "images",
-  "availableUntil": "rent_available_until",
-  "minimumRentalMonths": "minimum_rental_months"
-}`;
-
-const DEFAULT_LISTING_CUSTOM_ATTRIBUTES = `[
-  {
-    "key": "lease_available_until",
-    "sourcePath": "rent_available_until",
-    "type": "date",
-    "label": "Rent available until",
-    "description": "Do not recommend this listing for stays that end after this date.",
-    "filterHint": "availability",
-    "searchable": true
-  },
-  {
-    "key": "view_quality",
-    "sourcePath": "view_note",
-    "type": "text",
-    "label": "View quality",
-    "filterHint": "view",
-    "searchable": true
-  }
-]`;
 
 function formatListingSourceStatus(value: ListingSourceSnapshot["status"]) {
   const labels = {

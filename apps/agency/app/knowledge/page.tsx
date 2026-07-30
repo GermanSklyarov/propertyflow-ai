@@ -23,6 +23,7 @@ export default async function AgencyKnowledgePage({
     created?: string;
     document?: string;
     embed?: string;
+    error?: string;
     ingest?: string;
     kind?: string;
     listingSync?: string;

@@ -2,6 +2,7 @@ export type KnowledgePageNoticeQuery = {
   created?: string;
   document?: string;
   embed?: string;
+  error?: string;
   ingest?: string;
   listingSync?: string;
   source?: string;
@@ -9,10 +10,17 @@ export type KnowledgePageNoticeQuery = {
 
 export type KnowledgePageNotice = {
   message: string;
-  tone: "success";
+  tone: "success" | "warning";
 };
 
 export function buildKnowledgePageNotice(query: KnowledgePageNoticeQuery): KnowledgePageNotice | undefined {
+  if (query.listingSync === "invalid") {
+    return {
+      message: query.error ?? "REST inventory source could not be saved. Check the mapping and try again.",
+      tone: "warning"
+    };
+  }
+
   if (query.listingSync === "queued") {
     return {
       message: `${query.source ?? "REST inventory source"} sync was queued. Worker progress appears below.`,

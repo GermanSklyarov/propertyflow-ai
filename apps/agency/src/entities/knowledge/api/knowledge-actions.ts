@@ -13,6 +13,10 @@ import {
 } from "@shared/api/agency-client";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
+import {
+  parseListingSourceCanonicalMappingDraft,
+  parseListingSourceCustomAttributesDraft
+} from "../model/listing-source-form";
 import { buildKnowledgeSourceTags, resolveKnowledgeSourceKind } from "../model/knowledge-source-presets";
 
 export async function createKnowledgeDocumentAction(formData: FormData) {
@@ -120,11 +124,17 @@ export async function createRestListingSourceAction(formData: FormData) {
   const authHeaderName = String(formData.get("authHeaderName") ?? "").trim();
   const authSecretRef = String(formData.get("authSecretRef") ?? "").trim();
   const importMode = String(formData.get("importMode") ?? "concierge_index_only") as CreateListingSourceRequest["importMode"];
-  const canonical = parseMappingJson(formData.get("canonicalMapping"));
-  const customAttributes = parseCustomAttributeJson(formData.get("customAttributes"));
+  const canonical = parseListingSourceCanonicalMappingDraft(formData.get("canonicalMapping"));
+  const customAttributes = parseListingSourceCustomAttributesDraft(formData.get("customAttributes"));
 
   if (!name || !endpointUrl) {
-    return;
+    redirectListingSourceSetupError("Source name and endpoint URL are required.");
+  }
+  if (!canonical.ok) {
+    redirectListingSourceSetupError(canonical.message);
+  }
+  if (!customAttributes.ok) {
+    redirectListingSourceSetupError(customAttributes.message);
   }
 
   const source = await createRestListingSource(
@@ -135,8 +145,8 @@ export async function createRestListingSourceAction(formData: FormData) {
       endpointUrl,
       importMode,
       mapping: {
-        canonical,
-        customAttributes,
+        canonical: canonical.value,
+        customAttributes: customAttributes.value,
         rawPayloadMode: "store_selected",
         rootPath: rootPath || undefined
       },
@@ -195,36 +205,6 @@ export async function embedKnowledgeChunksAction(formData: FormData) {
   redirect(`/knowledge?${params.toString()}#retrieval-preview`);
 }
 
-function parseMappingJson(value: FormDataEntryValue | null): CreateListingSourceRequest["mapping"]["canonical"] {
-  const parsed = parseJsonRecord(value);
-
-  return Object.fromEntries(
-    Object.entries(parsed).filter(([, sourcePath]) => typeof sourcePath === "string" && sourcePath.trim().length > 0)
-  ) as CreateListingSourceRequest["mapping"]["canonical"];
-}
-
-function parseCustomAttributeJson(value: FormDataEntryValue | null): NonNullable<CreateListingSourceRequest["mapping"]["customAttributes"]> {
-  if (typeof value !== "string" || !value.trim()) {
-    return [];
-  }
-
-  const parsed = JSON.parse(value) as unknown;
-
-  return Array.isArray(parsed)
-    ? (parsed as NonNullable<CreateListingSourceRequest["mapping"]["customAttributes"]>)
-    : [];
-}
-
-function parseJsonRecord(value: FormDataEntryValue | null): Record<string, unknown> {
-  if (typeof value !== "string" || !value.trim()) {
-    return {};
-  }
-
-  const parsed = JSON.parse(value) as unknown;
-
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
-}
-
 function resolveEmbeddingReturnPath(value: string): URL | null {
   if (!value.startsWith("/")) {
     return null;
@@ -234,4 +214,13 @@ function resolveEmbeddingReturnPath(value: string): URL | null {
   const allowedPaths = new Set(["/knowledge", "/setup"]);
 
   return allowedPaths.has(url.pathname) ? url : null;
+}
+
+function redirectListingSourceSetupError(error: string): never {
+  const params = new URLSearchParams({
+    error,
+    listingSync: "invalid"
+  });
+
+  redirect(`/knowledge?${params.toString()}#listing-api-sources`);
 }

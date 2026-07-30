@@ -56,6 +56,12 @@
   padding: 14px 16px;
 }
 
+.notice[data-tone="warning"] {
+  border-color: rgb(180 83 9 / 28%);
+  background: #fff7ed;
+  color: #7c4a03;
+}
+
 .onboardingPanel {
   display: grid;
   min-width: 0;
@@ -600,7 +606,8 @@
   }
 
   .listingApiFormGrid,
-  .listingApiMappingGrid {
+  .listingApiMappingGrid,
+  .listingApiGuideBody {
     grid-template-columns: 1fr;
   }
 
@@ -918,6 +925,102 @@
   min-width: 0;
   border: 1px solid rgb(15 118 110 / 14%);
   background: #fff;
+}
+
+.listingApiGuide {
+  display: grid;
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbfa;
+}
+
+.listingApiGuide summary {
+  display: flex;
+  min-height: 46px;
+  cursor: pointer;
+  align-items: center;
+  gap: 9px;
+  color: var(--teal-dark);
+  font-size: 0.8rem;
+  font-weight: 950;
+  padding: 0 14px;
+  text-transform: uppercase;
+}
+
+.listingApiGuide summary::marker,
+.listingApiGuide summary::-webkit-details-marker {
+  display: none;
+  content: "";
+}
+
+.listingApiGuide summary:hover,
+.listingApiGuide summary:focus-visible {
+  background: #edf8f4;
+}
+
+.listingApiGuide[open] summary {
+  border-bottom: 1px solid rgb(15 118 110 / 14%);
+}
+
+.listingApiGuideBody {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+}
+
+.listingApiGuideBody article,
+.listingApiExample {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 7px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 10px;
+}
+
+.listingApiGuideBody article strong,
+.listingApiExample span {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.listingApiGuideBody article p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 800;
+  line-height: 1.42;
+}
+
+.listingApiGuideBody article code {
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+}
+
+.listingApiExample {
+  grid-column: 1 / -1;
+  background: #08231d;
+}
+
+.listingApiExample span {
+  color: #d4f5e9;
+}
+
+.listingApiExample code {
+  display: block;
+  min-width: 0;
+  overflow-x: auto;
+  color: #fff;
+  font-family: var(--font-mono), "SFMono-Regular", Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.45;
+  white-space: pre;
 }
 
 .listingApiConnect summary {

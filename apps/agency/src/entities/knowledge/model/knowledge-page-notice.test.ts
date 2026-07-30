@@ -30,6 +30,13 @@ describe("buildKnowledgePageNotice", () => {
     });
   });
 
+  it("announces REST listing source setup errors", () => {
+    expect(buildKnowledgePageNotice({ error: "Canonical mapping contains invalid JSON.", listingSync: "invalid" })).toEqual({
+      message: "Canonical mapping contains invalid JSON.",
+      tone: "warning"
+    });
+  });
+
   it("stays empty without a supported status", () => {
     expect(buildKnowledgePageNotice({})).toBeUndefined();
   });
