@@ -170,6 +170,24 @@ export interface CreateAgencySessionResponse {
   user: TenantUserSnapshot;
 }
 
+export interface RequestAgencyMagicLinkRequest {
+  tenantSlug: string;
+  workEmail: string;
+}
+
+export interface RequestAgencyMagicLinkResponse {
+  accepted: true;
+  delivery: "email";
+  developmentToken?: string;
+  expiresAt?: string;
+  message: string;
+}
+
+export interface ExchangeAgencyMagicLinkRequest {
+  tenantSlug: string;
+  token: string;
+}
+
 export interface RefreshAgencySessionRequest {
   refreshToken: string;
   tenantId: string;

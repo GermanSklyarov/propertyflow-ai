@@ -65,6 +65,9 @@
 ## Phase 7.5: AI Concierge Starter Onboarding
 
 - Track the production launch criteria in [Starter Launch Plan](./starter-launch-plan.md).
+- Add a production onboarding path: pricing page -> plan selection -> workspace signup -> owner verification -> first-run setup.
+- Replace bootstrap-only login with one-time email magic links, invitation tokens, refresh-token rotation, logout, and safe non-enumerating responses.
+- Keep bootstrap session codes as an explicit local-development fallback only, not the normal agency login path.
 - Reframe the first tenant experience around Knowledge -> AI -> Widget, with CRM hidden until leads are actually created.
 - Add a setup wizard for new agencies: upload FAQ, buying/selling guides, company information, condo brochures, developer PDFs, tax information, visa guides, and internal instructions.
 - Show knowledge indexing progress immediately after upload, using background jobs as the source of truth.
@@ -90,6 +93,10 @@
 - Add public REST API.
 - Add WebSocket collaboration and task updates.
 - Add billing-ready plan limits.
+- Add billing-ready account lifecycle: trial, plan selection, owner email verification, subscription activation, and plan upgrade path.
+- Add production email delivery adapters for workspace invitations, magic links, verification emails, and resend/revoke flows.
+- Add member invitation and RBAC flows for Growth and Enterprise workspaces.
+- Add auth audit events for login requests, token exchange, refresh rotation, logout, and suspicious tenant access attempts.
 
 ## Phase 8.5: Multi-Tenant Intelligence Layer
 

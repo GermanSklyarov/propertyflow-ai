@@ -10,7 +10,9 @@ import { getTenantPlanDefinition, tenantPlanCatalog } from "@propertyflow/contra
 import type { TenantSnapshot, TenantUserSnapshot, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
 import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
 import type { UserService } from "../../users/application/user.service.js";
+import type { AgencyEmailTokenRecord } from "../domain/agency-email-token.repository.js";
 import type { TenantRepository } from "../domain/tenant.repository.js";
+import { AgencyEmailTokenService } from "./agency-email-token.service.js";
 import { TenantService } from "./tenant.service.js";
 
 describe("TenantService", () => {
@@ -276,6 +278,136 @@ describe("TenantService", () => {
       user: {
         id: "owner-user-1"
       }
+    });
+  });
+
+  it("accepts a magic-link request for an active workspace member without exposing production tokens", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const issuedAt = new Date("2026-07-31T10:00:00.000Z");
+    const expiresAt = new Date("2026-07-31T10:15:00.000Z");
+    const member = tenantUser({ email: "owner@demo.example", id: "owner-user-1", tenantId: "tenant-demo" });
+    const issue = vi.fn(async () => ({
+      record: agencyEmailToken({
+        createdAt: issuedAt,
+        email: "owner@demo.example",
+        expiresAt,
+        tenantId: "tenant-demo"
+      }),
+      token: "magic-token-value"
+    }));
+    const service = new TenantService(
+      repository({
+        findBySlug: async () => tenant({ id: "tenant-demo", slug: "demo-agency" })
+      }),
+      new AuthIdentityService(),
+      userService({
+        getActiveTenantMemberByEmail: async (tenantId, email) => {
+          expect(tenantId).toBe("tenant-demo");
+          expect(email).toBe("owner@demo.example");
+
+          return member;
+        }
+      }),
+      undefined,
+      agencyEmailTokens({ issue })
+    );
+
+    await expect(
+      service.requestAgencyMagicLink({
+        tenantSlug: "demo-agency",
+        workEmail: " OWNER@Demo.Example "
+      })
+    ).resolves.toEqual({
+      accepted: true,
+      delivery: "email",
+      expiresAt: "2026-07-31T10:15:00.000Z",
+      message: "If this workspace user exists, a secure sign-in link will be sent to the work email."
+    });
+    expect(issue).toHaveBeenCalledWith({
+      email: "owner@demo.example",
+      metadata: {
+        tenantSlug: "demo-agency",
+        userId: "owner-user-1"
+      },
+      purpose: "magic-link",
+      tenantId: "tenant-demo"
+    });
+  });
+
+  it("keeps magic-link requests neutral for unknown workspace emails", async () => {
+    const issue = vi.fn();
+    const service = new TenantService(
+      repository({
+        findBySlug: async () => tenant({ id: "tenant-demo", slug: "demo-agency" })
+      }),
+      new AuthIdentityService(),
+      userService({
+        getActiveTenantMemberByEmail: async () => null
+      }),
+      undefined,
+      agencyEmailTokens({ issue })
+    );
+
+    await expect(
+      service.requestAgencyMagicLink({
+        tenantSlug: "demo-agency",
+        workEmail: "missing@demo.example"
+      })
+    ).resolves.toEqual({
+      accepted: true,
+      delivery: "email",
+      message: "If this workspace user exists, a secure sign-in link will be sent to the work email."
+    });
+    expect(issue).not.toHaveBeenCalled();
+  });
+
+  it("exchanges a valid magic-link token for an agency session", async () => {
+    vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
+    const member = tenantUser({ email: "owner@demo.example", id: "owner-user-1", tenantId: "tenant-demo" });
+    const consume = vi.fn(async () =>
+      agencyEmailToken({
+        email: "owner@demo.example",
+        purpose: "magic-link",
+        tenantId: "tenant-demo"
+      })
+    );
+    const service = new TenantService(
+      repository({
+        findBySlug: async () => tenant({ id: "tenant-demo", slug: "demo-agency", subscriptionPlan: "starter" })
+      }),
+      new AuthIdentityService(),
+      userService({
+        getActiveTenantMemberByEmail: async (tenantId, email) => {
+          expect(tenantId).toBe("tenant-demo");
+          expect(email).toBe("owner@demo.example");
+
+          return member;
+        }
+      }),
+      undefined,
+      agencyEmailTokens({ consume })
+    );
+
+    await expect(
+      service.exchangeAgencyMagicLink({
+        tenantSlug: "demo-agency",
+        token: "magic-token-value-123"
+      })
+    ).resolves.toMatchObject({
+      accessToken: expect.any(String),
+      refreshToken: expect.any(String),
+      setupUrl: "/setup?plan=starter",
+      tenant: {
+        id: "tenant-demo"
+      },
+      user: {
+        id: "owner-user-1"
+      }
+    });
+    expect(consume).toHaveBeenCalledWith({
+      purpose: "magic-link",
+      tenantId: "tenant-demo",
+      token: "magic-token-value-123"
     });
   });
 
@@ -632,6 +764,31 @@ function userService(overrides: Partial<UserService> = {}): UserService {
     listAgents: async () => [],
     ...overrides
   } as UserService;
+}
+
+function agencyEmailTokens(overrides: Partial<AgencyEmailTokenService> = {}): AgencyEmailTokenService {
+  return {
+    consume: async () => agencyEmailToken(),
+    issue: async () => ({
+      record: agencyEmailToken(),
+      token: "magic-token-value"
+    }),
+    ...overrides
+  } as unknown as AgencyEmailTokenService;
+}
+
+function agencyEmailToken(overrides: Partial<AgencyEmailTokenRecord> = {}): AgencyEmailTokenRecord {
+  return {
+    createdAt: new Date("2026-07-31T10:00:00.000Z"),
+    email: "owner@demo.example",
+    expiresAt: new Date("2026-07-31T10:15:00.000Z"),
+    id: "email-token-1",
+    metadata: {},
+    purpose: "magic-link",
+    tenantId: "demo-agency",
+    tokenHash: "token-hash",
+    ...overrides
+  };
 }
 
 function tenantUser(overrides: Partial<TenantUserSnapshot> = {}): TenantUserSnapshot {

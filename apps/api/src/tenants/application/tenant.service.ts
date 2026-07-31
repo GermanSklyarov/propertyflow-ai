@@ -12,6 +12,7 @@ import {
 import type {
   CreateAgencySessionRequest,
   CreateAgencySessionResponse,
+  ExchangeAgencyMagicLinkRequest,
   LogoutAgencySessionRequest,
   LogoutAgencySessionResponse,
   ProvisionTenantRequest,
@@ -21,6 +22,8 @@ import type {
   PublicWidgetReadinessCheck,
   RefreshAgencySessionRequest,
   RefreshAgencySessionResponse,
+  RequestAgencyMagicLinkRequest,
+  RequestAgencyMagicLinkResponse,
   TenantSnapshot,
   TenantSubscriptionPlan,
   TenantWidgetInstallCheckItem,
@@ -34,6 +37,7 @@ import type {
 import { getTenantPlanDefinition } from "@propertyflow/contracts";
 import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
 import { UserService } from "../../users/application/user.service.js";
+import { AgencyEmailTokenService } from "./agency-email-token.service.js";
 import {
   AGENCY_REFRESH_TOKEN_REPOSITORY,
   type AgencyRefreshTokenRecord,
@@ -53,7 +57,10 @@ export class TenantService {
     @Optional() @Inject(UserService) private readonly users?: UserService,
     @Optional()
     @Inject(AGENCY_REFRESH_TOKEN_REPOSITORY)
-    private readonly refreshTokens: AgencyRefreshTokenRepository = new InMemoryAgencyRefreshTokenRepository()
+    private readonly refreshTokens: AgencyRefreshTokenRepository = new InMemoryAgencyRefreshTokenRepository(),
+    @Optional()
+    @Inject(AgencyEmailTokenService)
+    private readonly emailTokens?: AgencyEmailTokenService
   ) {}
 
   async provision(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
@@ -107,6 +114,61 @@ export class TenantService {
 
     if (!user) {
       throw new NotFoundException("Agency user was not found for this workspace");
+    }
+
+    const session = await this.issueAgencySession(tenant, user.id);
+
+    return {
+      ...session,
+      setupUrl: `/setup?plan=${tenant.subscriptionPlan}`,
+      tenant,
+      user
+    };
+  }
+
+  async requestAgencyMagicLink(request: RequestAgencyMagicLinkRequest): Promise<RequestAgencyMagicLinkResponse> {
+    const tenant = await this.getActiveTenantBySlugOrThrow(request.tenantSlug, "Agency workspace not found");
+    const workEmail = normalizeRequiredText(request.workEmail).toLowerCase();
+
+    if (!workEmail) {
+      throw new BadRequestException("Work email is required");
+    }
+
+    const user = await this.users?.getActiveTenantMemberByEmail(tenant.id, workEmail);
+
+    if (!user || !this.emailTokens) {
+      return buildAcceptedMagicLinkResponse();
+    }
+
+    const issued = await this.emailTokens.issue({
+      email: workEmail,
+      metadata: {
+        tenantSlug: tenant.slug,
+        userId: user.id
+      },
+      purpose: "magic-link",
+      tenantId: tenant.id
+    });
+
+    return buildAcceptedMagicLinkResponse(issued.record.expiresAt, issued.token);
+  }
+
+  async exchangeAgencyMagicLink(request: ExchangeAgencyMagicLinkRequest): Promise<CreateAgencySessionResponse> {
+    const tenant = await this.getActiveTenantBySlugOrThrow(request.tenantSlug, "Agency workspace not found");
+
+    if (!this.emailTokens) {
+      throw new ForbiddenException("Magic-link exchange is not configured");
+    }
+
+    const token = await this.emailTokens.consume({
+      purpose: "magic-link",
+      tenantId: tenant.id,
+      token: normalizeRequiredText(request.token)
+    });
+    const user = await this.users?.getActiveTenantMemberByEmail(tenant.id, token.email);
+
+    if (!user) {
+      throw new UnauthorizedException("Agency magic link is no longer valid");
     }
 
     const session = await this.issueAgencySession(tenant, user.id);
@@ -599,6 +661,25 @@ function createRefreshTokenValue(): string {
 
 function hashRefreshToken(token: string): string {
   return createHash("sha256").update(token).digest("base64url");
+}
+
+function buildAcceptedMagicLinkResponse(expiresAt?: Date, token?: string): RequestAgencyMagicLinkResponse {
+  const includeDevelopmentToken = process.env.NODE_ENV !== "production" && token;
+  const response: RequestAgencyMagicLinkResponse = {
+    accepted: true,
+    delivery: "email",
+    message: "If this workspace user exists, a secure sign-in link will be sent to the work email."
+  };
+
+  if (includeDevelopmentToken) {
+    response.developmentToken = token;
+  }
+
+  if (expiresAt) {
+    response.expiresAt = expiresAt.toISOString();
+  }
+
+  return response;
 }
 
 function addSeconds(date: Date, seconds: number): Date {

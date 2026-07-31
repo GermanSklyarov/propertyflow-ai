@@ -4,13 +4,16 @@ import type {
   CreateAgencySessionResponse,
   LogoutAgencySessionResponse,
   ProvisionTenantResponse,
-  RefreshAgencySessionResponse
+  RefreshAgencySessionResponse,
+  RequestAgencyMagicLinkResponse
 } from "@propertyflow/contracts";
 import { TenantService } from "../../application/tenant.service.js";
 import { CreateAgencySessionDto } from "./create-agency-session.dto.js";
+import { ExchangeAgencyMagicLinkDto } from "./exchange-agency-magic-link.dto.js";
 import { LogoutAgencySessionDto } from "./logout-agency-session.dto.js";
 import { ProvisionTenantDto } from "./provision-tenant.dto.js";
 import { RefreshAgencySessionDto } from "./refresh-agency-session.dto.js";
+import { RequestAgencyMagicLinkDto } from "./request-agency-magic-link.dto.js";
 
 @Controller("tenants")
 @ApiTags("tenants")
@@ -29,6 +32,20 @@ export class TenantProvisioningController {
   @ApiCreatedResponse({ description: "Agency session was created" })
   createSession(@Body() payload: CreateAgencySessionDto): Promise<CreateAgencySessionResponse> {
     return this.tenants.createAgencySession(payload);
+  }
+
+  @Post("session/magic-link")
+  @ApiOperation({ summary: "Request a one-time agency sign-in link for a workspace user" })
+  @ApiCreatedResponse({ description: "Magic-link request was accepted" })
+  requestMagicLink(@Body() payload: RequestAgencyMagicLinkDto): Promise<RequestAgencyMagicLinkResponse> {
+    return this.tenants.requestAgencyMagicLink(payload);
+  }
+
+  @Post("session/magic-link/exchange")
+  @ApiOperation({ summary: "Exchange a one-time agency magic link for an access and refresh session" })
+  @ApiCreatedResponse({ description: "Agency session was created from a magic link" })
+  exchangeMagicLink(@Body() payload: ExchangeAgencyMagicLinkDto): Promise<CreateAgencySessionResponse> {
+    return this.tenants.exchangeAgencyMagicLink(payload);
   }
 
   @Post("session/refresh")
