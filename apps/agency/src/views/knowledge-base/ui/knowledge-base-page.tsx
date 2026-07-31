@@ -59,6 +59,7 @@ import type {
 } from "@propertyflow/contracts";
 import { formatBucket } from "@shared/lib/formatters";
 import { KnowledgeJobsPanel } from "@widgets/knowledge-jobs/ui/knowledge-jobs-panel";
+import { ListingSourceSyncRefresh } from "./listing-source-sync-refresh";
 import styles from "./knowledge-base-page.module.css";
 
 export function KnowledgeBasePage({
@@ -404,9 +405,11 @@ function SourceCoverageCard({ item }: { item: KnowledgeSourceCoverageItem }) {
 
 function ListingApiSourcesPanel({ sources }: { sources: ListingSourceSnapshot[] }) {
   const activeSources = sources.filter((source) => source.status !== "disabled");
+  const hasSyncingSources = activeSources.some((source) => source.status === "syncing");
 
   return (
     <section className={styles.listingApiSources} id="listing-api-sources" aria-label="REST API inventory sources">
+      <ListingSourceSyncRefresh enabled={hasSyncingSources} />
       <div className={styles.listingApiSourcesHeader}>
         <div>
           <p className="section-kicker">REST inventory sync</p>
@@ -420,6 +423,14 @@ function ListingApiSourcesPanel({ sources }: { sources: ListingSourceSnapshot[] 
           {activeSources.length} API source{activeSources.length === 1 ? "" : "s"}
         </span>
       </div>
+
+      {hasSyncingSources ? (
+        <div className={styles.listingApiSyncNotice} aria-live="polite">
+          <RefreshCw size={15} />
+          <strong>Feed sync is running</strong>
+          <span>This panel refreshes automatically every 2.5 seconds until the worker settles.</span>
+        </div>
+      ) : null}
 
       {activeSources.length ? (
         <div className={styles.listingApiSourceGrid}>
