@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAgencyEntryPlanCards,
+  buildAgencyMagicSigninHref,
   buildAgencySignupSummary,
   parseAgencySigninForm,
   parseAgencySignupForm,
@@ -8,6 +9,7 @@ import {
   resolveAgencySignupError,
   resolveSignupPlan,
   toCreateAgencySessionRequest,
+  toRequestAgencyMagicLinkRequest,
   toProvisionTenantRequest
 } from "./agency-entry";
 
@@ -72,7 +74,27 @@ describe("agency entry", () => {
     });
   });
 
+  it("maps signin form fields into the agency magic-link request", () => {
+    const form = new FormData();
+    form.set("bootstrapCode", " old-bootstrap-code ");
+    form.set("email", " owner@jomtien.test ");
+    form.set("tenantSlug", " jomtien-homes ");
+
+    expect(toRequestAgencyMagicLinkRequest(parseAgencySigninForm(form))).toEqual({
+      tenantSlug: "jomtien-homes",
+      workEmail: "owner@jomtien.test"
+    });
+  });
+
+  it("builds an encoded local development magic-link href", () => {
+    expect(buildAgencyMagicSigninHref("demo agency", "token/with+chars")).toBe(
+      "/signin/magic?token=token%2Fwith%2Bchars&workspace=demo+agency"
+    );
+  });
+
   it("renders friendly signin errors from query codes", () => {
+    expect(resolveAgencySigninError("magic-link-failed")).toContain("secure sign-in link");
+    expect(resolveAgencySigninError("magic-link-invalid")).toContain("expired or invalid");
     expect(resolveAgencySigninError("session-forbidden")).toContain("invitation code");
     expect(resolveAgencySigninError("session-failed")).toContain("could not sign you in");
     expect(resolveAgencySigninError("session-required")).toContain("Sign in");

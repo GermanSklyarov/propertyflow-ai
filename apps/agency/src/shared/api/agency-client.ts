@@ -16,6 +16,8 @@ import type {
   RecordPropertySocialPostReviewResponse,
   LogoutAgencySessionRequest,
   LogoutAgencySessionResponse,
+  RequestAgencyMagicLinkRequest,
+  RequestAgencyMagicLinkResponse,
   RefreshAgencySessionRequest,
   RefreshAgencySessionResponse,
   ReorderPropertyImagesRequest,
@@ -32,6 +34,7 @@ import type {
   EmbedKnowledgeChunksRequest,
   CreateAgencySessionRequest,
   CreateAgencySessionResponse,
+  ExchangeAgencyMagicLinkRequest,
   CreateLeadNoteRequest,
   CreatePropertyImportUploadRequest,
   CreatePropertyImportUploadResponse,
@@ -151,6 +154,42 @@ export async function createAgencySession(
 
   if (!response.ok) {
     throw new Error(`Failed to create agency session: ${response.status}`);
+  }
+
+  return (await response.json()) as CreateAgencySessionResponse;
+}
+
+export async function requestAgencyMagicLink(
+  request: RequestAgencyMagicLinkRequest
+): Promise<RequestAgencyMagicLinkResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/session/magic-link`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to request agency magic link: ${response.status}`);
+  }
+
+  return (await response.json()) as RequestAgencyMagicLinkResponse;
+}
+
+export async function exchangeAgencyMagicLink(
+  request: ExchangeAgencyMagicLinkRequest
+): Promise<CreateAgencySessionResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/session/magic-link/exchange`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to exchange agency magic link: ${response.status}`);
   }
 
   return (await response.json()) as CreateAgencySessionResponse;

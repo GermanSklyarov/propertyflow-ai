@@ -1,12 +1,14 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createAgencySession, provisionTenant } from "@shared/api/agency-client";
+import { createAgencySession, provisionTenant, requestAgencyMagicLink } from "@shared/api/agency-client";
 import { setAgencySession } from "@shared/lib/tenant-session";
 import {
+  buildAgencyMagicSigninHref,
   parseAgencySigninForm,
   parseAgencySignupForm,
   toCreateAgencySessionRequest,
+  toRequestAgencyMagicLinkRequest,
   toProvisionTenantRequest
 } from "../model/agency-entry";
 
@@ -48,4 +50,21 @@ export async function submitAgencySignin(formData: FormData) {
   });
 
   redirect(session.setupUrl);
+}
+
+export async function requestAgencySigninLink(formData: FormData) {
+  const values = parseAgencySigninForm(formData);
+  const response = await requestAgencyMagicLink(toRequestAgencyMagicLinkRequest(values)).catch(() => {
+    redirect("/signin?error=magic-link-failed");
+  });
+  const query = new URLSearchParams({
+    sent: "1",
+    workspace: values.tenantSlug
+  });
+
+  if (response.developmentToken) {
+    query.set("devLink", buildAgencyMagicSigninHref(values.tenantSlug, response.developmentToken));
+  }
+
+  redirect(`/signin?${query.toString()}`);
 }

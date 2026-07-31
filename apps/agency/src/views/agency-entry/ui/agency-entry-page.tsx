@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Bot, CheckCircle2, DatabaseZap, FileText, Globe2, KeyRound, Sparkles } from "lucide-react";
-import { submitAgencySignin, submitAgencySignup } from "../api/signup-actions";
+import { requestAgencySigninLink, submitAgencySignup } from "../api/signup-actions";
 import type { AgencySignupSummary } from "../model/agency-entry";
 import { buildAgencyEntryPlanCards } from "../model/agency-entry";
 import styles from "./agency-entry-page.module.css";
@@ -203,7 +203,17 @@ export function SignupEntryPage({ errorMessage, signup }: { errorMessage?: strin
   );
 }
 
-export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null }) {
+export function SigninEntryPage({
+  developmentMagicLinkHref,
+  errorMessage,
+  linkSent,
+  linkSentWorkspace
+}: {
+  developmentMagicLinkHref?: string;
+  errorMessage?: string | null;
+  linkSent?: boolean;
+  linkSentWorkspace?: string;
+}) {
   return (
     <main className={styles.page}>
       <section className={styles.signinPanel}>
@@ -226,32 +236,43 @@ export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null
             </ul>
           </div>
         </div>
-        <form action={submitAgencySignin} className={styles.signinForm}>
+        <form action={requestAgencySigninLink} className={styles.signinForm}>
           {errorMessage ? (
             <div className={styles.signupError} role="alert">
               {errorMessage}
             </div>
           ) : null}
+          {linkSent ? (
+            <div className={styles.signinNotice} role="status">
+              <CheckCircle2 size={19} />
+              <div>
+                <strong>Secure sign-in link requested</strong>
+                <p>
+                  If this email belongs to {linkSentWorkspace ?? "the workspace"}, the agency owner will receive a
+                  sign-in link.
+                </p>
+                {developmentMagicLinkHref ? (
+                  <Link href={developmentMagicLinkHref}>Continue with local development link</Link>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
           <label>
             Workspace slug
-            <input name="tenantSlug" placeholder="your-agency" required />
+            <input name="tenantSlug" placeholder="your-agency" required defaultValue={linkSentWorkspace} />
           </label>
           <label>
             Work email
             <input name="email" placeholder="you@agency.com" required type="email" />
           </label>
-          <label>
-            Invitation code
-            <input name="bootstrapCode" placeholder="Code from your workspace invite" />
-          </label>
           <div className={styles.signinActions}>
             <button className={styles.primaryAction} type="submit">
-              Sign in
+              Send secure sign-in link
               <ArrowRight size={18} />
             </button>
             <span>
               <KeyRound size={16} />
-              Invitation codes protect workspaces that are not open to self-serve sign-in yet.
+              We send a short-lived link instead of trusting a workspace id from the browser.
             </span>
           </div>
           <p className={styles.signinFootnote}>

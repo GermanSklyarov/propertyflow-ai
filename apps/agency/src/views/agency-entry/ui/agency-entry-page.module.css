@@ -563,6 +563,45 @@ button.secondaryAction {
   text-underline-offset: 4px;
 }
 
+.signinNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: #eef9f6;
+  color: var(--teal-dark);
+  padding: 14px 16px;
+  font-weight: 800;
+  line-height: 1.42;
+}
+
+.signinNotice svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--teal);
+}
+
+.signinNotice strong {
+  display: block;
+  font-weight: 950;
+}
+
+.signinNotice p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.signinNotice a {
+  display: inline-flex;
+  margin-top: 10px;
+  color: var(--teal-dark);
+  font-weight: 950;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
 .signinForm {
   display: grid;
   gap: 16px;

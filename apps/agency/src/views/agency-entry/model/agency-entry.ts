@@ -1,4 +1,4 @@
-import type { CreateAgencySessionRequest, ProvisionTenantRequest } from "@propertyflow/contracts";
+import type { CreateAgencySessionRequest, ProvisionTenantRequest, RequestAgencyMagicLinkRequest } from "@propertyflow/contracts";
 import { tenantPlanCatalog, type TenantSubscriptionPlan } from "@propertyflow/contracts";
 
 export interface AgencyEntryPlanCard {
@@ -21,7 +21,13 @@ export interface AgencySignupSummary {
 
 export type AgencySignupErrorCode = "workspace-exists" | "provision-failed";
 
-export type AgencySigninErrorCode = "session-expired" | "session-forbidden" | "session-failed" | "session-required";
+export type AgencySigninErrorCode =
+  | "magic-link-failed"
+  | "magic-link-invalid"
+  | "session-expired"
+  | "session-forbidden"
+  | "session-failed"
+  | "session-required";
 
 export interface AgencySignupFormValues {
   agencyName: string;
@@ -120,6 +126,22 @@ export function toCreateAgencySessionRequest(values: AgencySigninFormValues): Cr
   };
 }
 
+export function toRequestAgencyMagicLinkRequest(values: AgencySigninFormValues): RequestAgencyMagicLinkRequest {
+  return {
+    tenantSlug: values.tenantSlug,
+    workEmail: values.workEmail
+  };
+}
+
+export function buildAgencyMagicSigninHref(tenantSlug: string, token: string): string {
+  const query = new URLSearchParams({
+    token,
+    workspace: tenantSlug
+  });
+
+  return `/signin/magic?${query.toString()}`;
+}
+
 export function resolveAgencySignupError(error: string | string[] | undefined): string | null {
   const value = Array.isArray(error) ? error[0] : error;
 
@@ -139,6 +161,14 @@ export function resolveAgencySigninError(error: string | string[] | undefined): 
 
   if (value === "session-forbidden") {
     return "This workspace requires a valid invitation code before signing in.";
+  }
+
+  if (value === "magic-link-failed") {
+    return "We could not send a secure sign-in link. Check the workspace and work email, then try again.";
+  }
+
+  if (value === "magic-link-invalid") {
+    return "This secure sign-in link is expired or invalid. Request a new link to continue.";
   }
 
   if (value === "session-failed") {
