@@ -112,15 +112,14 @@
 }
 
 .healthStats span {
-  display: flex;
+  display: grid;
   min-width: 0;
-  min-height: 34px;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  min-height: 46px;
+  align-content: center;
+  gap: 2px;
   border: 1px solid rgb(15 118 110 / 14%);
   background: rgb(255 255 255 / 74%);
-  padding: 0 10px;
+  padding: 7px 10px;
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 950;
@@ -130,6 +129,14 @@
 .healthStats strong {
   color: var(--teal-dark);
   font-size: 0.92rem;
+  line-height: 1;
+}
+
+.healthStats em {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-style: normal;
+  line-height: 1.12;
 }
 
 .embedForm {

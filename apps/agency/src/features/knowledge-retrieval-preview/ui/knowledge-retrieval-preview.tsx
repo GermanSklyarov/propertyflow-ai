@@ -121,7 +121,7 @@ function HealthStat({ label, value }: { label: string; value: number }) {
   return (
     <span>
       <strong>{formatNumber(value)}</strong>
-      {label}
+      <em>{label}</em>
     </span>
   );
 }
