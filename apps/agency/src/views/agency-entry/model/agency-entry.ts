@@ -31,6 +31,7 @@ export interface AgencySignupFormValues {
 }
 
 export interface AgencySigninFormValues {
+  /** Maps to the current backend bootstrap code field until invite/OTP exchange replaces it. */
   bootstrapCode?: string;
   tenantSlug: string;
   workEmail: string;
@@ -137,11 +138,11 @@ export function resolveAgencySigninError(error: string | string[] | undefined): 
   const value = Array.isArray(error) ? error[0] : error;
 
   if (value === "session-forbidden") {
-    return "This workspace requires a bootstrap code before creating an agency session.";
+    return "This workspace requires a valid invitation code before signing in.";
   }
 
   if (value === "session-failed") {
-    return "We could not create an agency session. Check the workspace slug, email, and bootstrap code.";
+    return "We could not sign you in. Check the workspace, email, and invitation code.";
   }
 
   if (value === "session-required") {

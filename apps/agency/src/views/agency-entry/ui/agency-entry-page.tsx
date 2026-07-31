@@ -241,8 +241,8 @@ export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null
             <input name="email" placeholder="you@agency.com" required type="email" />
           </label>
           <label>
-            Access code
-            <input name="bootstrapCode" placeholder="From your invitation email" />
+            Invitation code
+            <input name="bootstrapCode" placeholder="Code from your workspace invite" />
           </label>
           <div className={styles.signinActions}>
             <button className={styles.primaryAction} type="submit">
@@ -251,7 +251,7 @@ export function SigninEntryPage({ errorMessage }: { errorMessage?: string | null
             </button>
             <span>
               <KeyRound size={16} />
-              Access codes are used for protected workspace invitations.
+              Invitation codes protect workspaces that are not open to self-serve sign-in yet.
             </span>
           </div>
           <p className={styles.signinFootnote}>

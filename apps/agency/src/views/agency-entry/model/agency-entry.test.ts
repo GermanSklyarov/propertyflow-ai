@@ -73,8 +73,8 @@ describe("agency entry", () => {
   });
 
   it("renders friendly signin errors from query codes", () => {
-    expect(resolveAgencySigninError("session-forbidden")).toContain("bootstrap code");
-    expect(resolveAgencySigninError("session-failed")).toContain("could not create");
+    expect(resolveAgencySigninError("session-forbidden")).toContain("invitation code");
+    expect(resolveAgencySigninError("session-failed")).toContain("could not sign you in");
     expect(resolveAgencySigninError("session-required")).toContain("Sign in");
     expect(resolveAgencySigninError("unknown")).toBeNull();
   });
