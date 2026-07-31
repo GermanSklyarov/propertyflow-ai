@@ -34,8 +34,10 @@ import {
 } from "@entities/knowledge/model/knowledge-sources";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
 import {
+  LISTING_API_CUSTOM_ATTRIBUTE_RULES,
   LISTING_API_CONTRACT_SECTIONS,
   LISTING_API_EXAMPLE_PAYLOAD,
+  LISTING_API_SETUP_STEPS,
   countListingApiContractFields
 } from "@entities/knowledge/model/listing-api-contract";
 import {
@@ -460,6 +462,18 @@ function ListingApiIntegrationGuide() {
       </summary>
 
       <div className={styles.listingApiGuideBody}>
+        <div className={styles.listingApiSetupFlow} aria-label="REST listing API setup steps">
+          {LISTING_API_SETUP_STEPS.map((step, index) => (
+            <article key={step.title}>
+              <span>{index + 1}</span>
+              <div>
+                <strong>{step.title}</strong>
+                <p>{step.description}</p>
+              </div>
+            </article>
+          ))}
+        </div>
+
         {LISTING_API_CONTRACT_SECTIONS.map((section) => (
           <article key={section.title}>
             <strong>{section.title}</strong>
@@ -471,6 +485,22 @@ function ListingApiIntegrationGuide() {
             </div>
           </article>
         ))}
+
+        <details className={styles.listingApiCustomRules}>
+          <summary>
+            <span>How custom fields stay useful for AI</span>
+            <strong>{LISTING_API_CUSTOM_ATTRIBUTE_RULES.length} rule groups</strong>
+          </summary>
+          <div>
+            {LISTING_API_CUSTOM_ATTRIBUTE_RULES.map((rule) => (
+              <article key={rule.title}>
+                <strong>{rule.title}</strong>
+                <p>{rule.description}</p>
+                <code>{rule.example}</code>
+              </article>
+            ))}
+          </div>
+        </details>
 
         <div className={styles.listingApiExample}>
           <span>Expected payload shape</span>

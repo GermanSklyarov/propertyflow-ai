@@ -4,6 +4,17 @@ export type ListingApiContractSection = {
   title: string;
 };
 
+export type ListingApiSetupStep = {
+  description: string;
+  title: string;
+};
+
+export type ListingApiCustomAttributeRule = {
+  description: string;
+  example: string;
+  title: string;
+};
+
 export const LISTING_API_CONTRACT_SECTIONS: ListingApiContractSection[] = [
   {
     description: "Minimum fields needed to identify, price, and publish a listing in Concierge search.",
@@ -19,6 +30,43 @@ export const LISTING_API_CONTRACT_SECTIONS: ListingApiContractSection[] = [
     description: "Agency-specific fields stay queryable as custom attributes instead of being dropped during import.",
     fields: ["rent_available_until", "minimum_rental_months", "view_note", "foreign_quota", "maintenance_fee"],
     title: "Preserved custom attributes"
+  }
+];
+
+export const LISTING_API_SETUP_STEPS: ListingApiSetupStep[] = [
+  {
+    description: "Return a stable JSON feed with an item id, updated timestamp, and deleted/archived marker when possible.",
+    title: "Expose feed"
+  },
+  {
+    description: "Use bearer auth or an API-key header. Store the real secret as a backend secret reference, not in browser code.",
+    title: "Secure access"
+  },
+  {
+    description: "Map only universal fields to the canonical listing shape so search, price filters, and cards stay predictable.",
+    title: "Map canonical fields"
+  },
+  {
+    description: "Keep agency-specific rules as custom searchable attributes so Concierge can reason about them without CRM migration.",
+    title: "Preserve extras"
+  }
+];
+
+export const LISTING_API_CUSTOM_ATTRIBUTE_RULES: ListingApiCustomAttributeRule[] = [
+  {
+    description: "Use this for lease windows, minimum stay, blocked months, handover dates, or owner blackout periods.",
+    example: "rent_available_until -> availability",
+    title: "Availability rules"
+  },
+  {
+    description: "Use this for foreign quota, company ownership, maintenance fee, sinking fund, transfer split, or pet rules.",
+    example: "foreign_quota -> ownership",
+    title: "Deal constraints"
+  },
+  {
+    description: "Use this for protected sea view, noise note, renovation status, internet speed, or building-specific flags.",
+    example: "view_note -> view",
+    title: "Local signals"
   }
 ];
 
