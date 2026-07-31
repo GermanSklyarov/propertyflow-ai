@@ -955,6 +955,107 @@
   text-align: right;
 }
 
+.listingApiSignalGrid {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
+  gap: 7px;
+}
+
+.listingApiSignalCard {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border: 1px solid rgb(180 83 9 / 18%);
+  background: #fff9ed;
+  padding: 8px;
+}
+
+.listingApiSignalCard[data-tone="ready"] {
+  border-color: rgb(22 163 74 / 18%);
+  background: #effbf4;
+}
+
+.listingApiSignalCard span,
+.listingApiSignalCard strong,
+.listingApiSignalCard small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.listingApiSignalCard span {
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 950;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.listingApiSignalCard strong {
+  color: var(--teal-dark);
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.listingApiSignalCard small {
+  color: var(--muted);
+  font-size: 0.64rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.listingApiFieldDetails {
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+}
+
+.listingApiFieldDetails summary {
+  display: flex;
+  min-width: 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  list-style: none;
+  padding: 8px 9px;
+  text-transform: uppercase;
+}
+
+.listingApiFieldDetails summary::marker,
+.listingApiFieldDetails summary::-webkit-details-marker {
+  display: none;
+}
+
+.listingApiFieldDetails summary:hover,
+.listingApiFieldDetails summary:focus-visible {
+  background: #edf8f4;
+  outline: none;
+}
+
+.listingApiFieldDetails summary span,
+.listingApiFieldDetails summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.listingApiFieldDetails summary strong {
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.listingApiFieldDetails[open] summary {
+  border-bottom: 1px solid rgb(15 118 110 / 12%);
+}
+
+.listingApiFieldDetails .listingApiCoverageGrid {
+  padding: 8px;
+}
+
 .listingApiCoverageGrid {
   display: grid;
   min-width: 0;

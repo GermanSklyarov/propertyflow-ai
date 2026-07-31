@@ -628,23 +628,41 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
         <small>{summary.lastSyncLabel}</small>
       </div>
 
-      <div className={styles.listingApiCoverageGrid}>
-        <ListingApiCoverageGroup
-          empty="Map title, market, prices, listing type, status, and project fields."
-          items={summary.mappedCanonicalFields}
-          title="Canonical search"
-        />
-        <ListingApiCoverageGroup
-          empty="Add available_until or minimum rental term so AI avoids impossible recommendations."
-          items={summary.availabilitySignals}
-          title="Availability logic"
-        />
-        <ListingApiCoverageGroup
-          empty="Preserve local agency fields as searchable custom attributes."
-          items={summary.searchableCustomAttributes}
-          title="Custom attributes"
-        />
+      <div className={styles.listingApiSignalGrid} aria-label={`${source.name} Concierge signal coverage`}>
+        {summary.signalCoverage.map((signal) => (
+          <div className={styles.listingApiSignalCard} data-tone={signal.tone} key={signal.id}>
+            <span>{signal.label}</span>
+            <strong>
+              {signal.covered}/{signal.total}
+            </strong>
+            <small>{signal.summary}</small>
+          </div>
+        ))}
       </div>
+
+      <details className={styles.listingApiFieldDetails}>
+        <summary>
+          <span>Mapped field details</span>
+          <strong>{summary.canonicalCount + summary.customAttributeCount} signals</strong>
+        </summary>
+        <div className={styles.listingApiCoverageGrid}>
+          <ListingApiCoverageGroup
+            empty="Map title, market, prices, listing type, status, and project fields."
+            items={summary.mappedCanonicalFields}
+            title="Canonical search"
+          />
+          <ListingApiCoverageGroup
+            empty="Add available_until or minimum rental term so AI avoids impossible recommendations."
+            items={summary.availabilitySignals}
+            title="Availability logic"
+          />
+          <ListingApiCoverageGroup
+            empty="Preserve local agency fields as searchable custom attributes."
+            items={summary.searchableCustomAttributes}
+            title="Custom attributes"
+          />
+        </div>
+      </details>
 
       {summary.missingProductionFields.length ? (
         <div className={styles.listingApiGaps}>

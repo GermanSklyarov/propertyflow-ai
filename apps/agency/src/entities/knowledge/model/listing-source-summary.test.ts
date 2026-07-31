@@ -21,6 +21,62 @@ describe("buildListingSourceSummary", () => {
       syncLabel: "Last sync Jul 30, 12:10 PM"
     });
     expect(summary.missingProductionFields).toEqual([]);
+    expect(summary.signalCoverage).toEqual([
+      {
+        covered: 4,
+        id: "identity",
+        label: "Identity",
+        missing: [],
+        summary: "Ready for Concierge",
+        tone: "ready",
+        total: 4
+      },
+      {
+        covered: 1,
+        id: "location",
+        label: "Location",
+        missing: ["Address", "Project", "Latitude", "Longitude"],
+        summary: "Missing Address, Project...",
+        tone: "warning",
+        total: 5
+      },
+      {
+        covered: 1,
+        id: "pricing",
+        label: "Pricing",
+        missing: ["Currency", "Maintenance fee"],
+        summary: "Missing Currency, Maintenance fee",
+        tone: "warning",
+        total: 3
+      },
+      {
+        covered: 2,
+        id: "availability",
+        label: "Availability",
+        missing: ["Available from", "Restrictions"],
+        summary: "Missing Available from, Restrictions",
+        tone: "warning",
+        total: 4
+      },
+      {
+        covered: 1,
+        id: "media",
+        label: "Media",
+        missing: ["Images", "Description", "Amenities"],
+        summary: "Missing Images, Description...",
+        tone: "warning",
+        total: 4
+      },
+      {
+        covered: 0,
+        id: "ownership",
+        label: "Ownership",
+        missing: ["Developer", "Foreign quota"],
+        summary: "Missing Developer, Foreign quota",
+        tone: "warning",
+        total: 2
+      }
+    ]);
   });
 
   it("reports production gaps that would weaken Concierge answers", () => {
@@ -39,6 +95,66 @@ describe("buildListingSourceSummary", () => {
 
     expect(summary.readinessLabel).toBe("4 production gaps");
     expect(summary.missingProductionFields).toEqual(["Sale/rent", "Status", "Sale or rent price", "Availability or lease term"]);
+    expect(summary.signalCoverage.find((signal) => signal.id === "identity")).toMatchObject({
+      covered: 1,
+      missing: ["External ID", "Sale/rent", "Status"],
+      tone: "warning"
+    });
+  });
+
+  it("treats searchable custom attributes as Concierge signals", () => {
+    const summary = buildListingSourceSummary(
+      listingSource({
+        mapping: {
+          canonical: {
+            externalId: "id",
+            listingType: "deal_type",
+            market: "city",
+            priceAmount: "sale_price",
+            priceCurrency: "currency",
+            status: "status",
+            title: "name"
+          },
+          customAttributes: [
+            {
+              filterHint: "fee",
+              key: "common_fee",
+              searchable: true,
+              sourcePath: "fees.common_area",
+              type: "number"
+            },
+            {
+              filterHint: "restriction",
+              key: "short_term_policy",
+              searchable: true,
+              sourcePath: "building.short_term_policy",
+              type: "text"
+            },
+            {
+              filterHint: "ownership",
+              key: "quota_note",
+              searchable: true,
+              sourcePath: "ownership.foreign_quota_note",
+              type: "text"
+            }
+          ]
+        }
+      })
+    );
+
+    expect(summary.signalCoverage.find((signal) => signal.id === "pricing")).toMatchObject({
+      covered: 3,
+      missing: [],
+      tone: "ready"
+    });
+    expect(summary.signalCoverage.find((signal) => signal.id === "availability")).toMatchObject({
+      covered: 1,
+      missing: ["Available from", "Available until", "Minimum term"]
+    });
+    expect(summary.signalCoverage.find((signal) => signal.id === "ownership")).toMatchObject({
+      covered: 1,
+      missing: ["Developer"]
+    });
   });
 
   it("prioritizes failed sync status over mapping completeness", () => {
