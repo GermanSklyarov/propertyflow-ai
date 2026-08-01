@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobQueueService } from "../../jobs/application/job-queue.service.js";
 import type { ListingSourceRepository } from "../domain/listing-source.repository.js";
 import { ListingSourceService } from "./listing-source.service.js";
@@ -38,6 +38,10 @@ function createService() {
 }
 
 describe("ListingSourceService", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it("preserves canonical and custom mapped fields for Concierge retrieval", async () => {
     const { service, sources } = createService();
 
@@ -124,6 +128,115 @@ describe("ListingSourceService", () => {
               type: "date"
             }
           ]
+        }
+      })
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it("previews a REST feed against canonical and custom mapping before saving", async () => {
+    const { service } = createService();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          data: {
+            items: [
+              {
+                id: "p-1",
+                name: "Jomtien yearly rental",
+                city: "pattaya",
+                sale_price: 2_900_000,
+                rent_available_until: "2027-05-01",
+                local: {
+                  lease_note: "Available for 6 months only"
+                }
+              }
+            ]
+          }
+        }),
+        status: 200
+      }))
+    );
+
+    await expect(
+      service.preview("demo-agency", {
+        name: "Agency feed",
+        endpointUrl: "https://agency.co.th/api/listings",
+        authType: "none",
+        mapping: {
+          rootPath: "data.items",
+          canonical: {
+            externalId: "id",
+            title: "name",
+            market: "city",
+            priceAmount: "sale_price",
+            availableUntil: "rent_available_until"
+          },
+          customAttributes: [
+            {
+              key: "lease_note",
+              sourcePath: "local.lease_note",
+              type: "text",
+              filterHint: "contract_term"
+            }
+          ]
+        }
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      itemCount: 1,
+      sampleCount: 1,
+      canonical: expect.arrayContaining([
+        expect.objectContaining({
+          field: "title",
+          present: true,
+          sampleValue: "Jomtien yearly rental"
+        }),
+        expect.objectContaining({
+          field: "availableUntil",
+          present: true,
+          sampleValue: "2027-05-01"
+        })
+      ]),
+      customAttributes: [
+        expect.objectContaining({
+          key: "lease_note",
+          present: true,
+          sampleValue: "Available for 6 months only"
+        })
+      ],
+      missingRequiredFields: []
+    });
+  });
+
+  it("rejects preview when the root path does not resolve to listing rows", async () => {
+    const { service } = createService();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          data: {
+            metadata: {
+              count: 1
+            }
+          }
+        }),
+        status: 200
+      }))
+    );
+
+    await expect(
+      service.preview("demo-agency", {
+        name: "Broken agency feed",
+        endpointUrl: "https://agency.co.th/api/listings",
+        mapping: {
+          rootPath: "data.items",
+          canonical: {
+            title: "name",
+            market: "city"
+          }
         }
       })
     ).rejects.toBeInstanceOf(BadRequestException);

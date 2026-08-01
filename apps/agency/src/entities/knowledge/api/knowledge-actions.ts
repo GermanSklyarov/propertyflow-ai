@@ -9,6 +9,7 @@ import {
   createRestListingSource,
   embedKnowledgeChunks,
   ingestKnowledgeDocument,
+  previewRestListingSource,
   syncListingSource
 } from "@shared/api/agency-client";
 import { requireAgencySession } from "@shared/lib/tenant-session";
@@ -117,6 +118,47 @@ export async function syncListingSourceAction(sourceId: string, name: string) {
 
 export async function createRestListingSourceAction(formData: FormData) {
   const { tenantId } = await requireAgencySession();
+  const request = buildRestListingSourceRequest(formData);
+
+  const source = await createRestListingSource(request, { tenantId });
+
+  await syncListingSource(source.id, { tenantId });
+
+  revalidatePath("/knowledge");
+
+  const params = new URLSearchParams({
+    listingSync: "queued",
+    source: source.name
+  });
+
+  redirect(`/knowledge?${params.toString()}#listing-api-sources`);
+}
+
+export async function previewRestListingSourceAction(formData: FormData) {
+  const { tenantId } = await requireAgencySession();
+  const request = buildRestListingSourceRequest(formData);
+  let preview: Awaited<ReturnType<typeof previewRestListingSource>>;
+
+  try {
+    preview = await previewRestListingSource(request, { tenantId });
+  } catch (error) {
+    redirectListingSourceSetupError(error instanceof Error ? error.message : "REST inventory preview failed.");
+  }
+
+  revalidatePath("/knowledge");
+
+  const params = new URLSearchParams({
+    fields: String(preview.canonical.filter((field) => field.present).length + preview.customAttributes.filter((field) => field.present).length),
+    items: String(preview.itemCount),
+    listingPreview: preview.ok ? "ok" : "warning",
+    source: request.name,
+    warnings: String(preview.warnings.length)
+  });
+
+  redirect(`/knowledge?${params.toString()}#listing-api-sources`);
+}
+
+function buildRestListingSourceRequest(formData: FormData): CreateListingSourceRequest {
   const name = String(formData.get("name") ?? "").trim();
   const endpointUrl = String(formData.get("endpointUrl") ?? "").trim();
   const rootPath = String(formData.get("rootPath") ?? "").trim();
@@ -137,35 +179,21 @@ export async function createRestListingSourceAction(formData: FormData) {
     redirectListingSourceSetupError(customAttributes.message);
   }
 
-  const source = await createRestListingSource(
-    {
-      authHeaderName: authHeaderName || undefined,
-      authSecretRef: authSecretRef || undefined,
-      authType,
-      endpointUrl,
-      importMode,
-      mapping: {
-        canonical: canonical.value,
-        customAttributes: customAttributes.value,
-        rawPayloadMode: "store_selected",
-        rootPath: rootPath || undefined
-      },
-      name,
-      type: "rest-api"
+  return {
+    authHeaderName: authHeaderName || undefined,
+    authSecretRef: authSecretRef || undefined,
+    authType,
+    endpointUrl,
+    importMode,
+    mapping: {
+      canonical: canonical.value,
+      customAttributes: customAttributes.value,
+      rawPayloadMode: "store_selected",
+      rootPath: rootPath || undefined
     },
-    { tenantId }
-  );
-
-  await syncListingSource(source.id, { tenantId });
-
-  revalidatePath("/knowledge");
-
-  const params = new URLSearchParams({
-    listingSync: "queued",
-    source: source.name
-  });
-
-  redirect(`/knowledge?${params.toString()}#listing-api-sources`);
+    name,
+    type: "rest-api"
+  };
 }
 
 export async function embedKnowledgeChunksAction(formData: FormData) {

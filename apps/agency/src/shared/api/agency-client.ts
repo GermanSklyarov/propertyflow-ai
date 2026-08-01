@@ -53,6 +53,7 @@ import type {
   LeadTimelineResponse,
   ListLeadsRequest,
   ListingSourceListResponse,
+  ListingSourcePreviewResponse,
   ListingSourceSnapshot,
   AddPropertyImageRequest,
   ConfirmPropertyImageDeleteRequest,
@@ -1226,6 +1227,26 @@ export async function createRestListingSource(
   }
 
   return (await response.json()) as ListingSourceSnapshot;
+}
+
+export async function previewRestListingSource(
+  request: CreateListingSourceRequest,
+  options: AgencyApiOptions = {}
+): Promise<ListingSourcePreviewResponse> {
+  const response = await fetch(`${apiBaseUrl}/listing-sources/rest/preview`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(await tenantHeaders(options))
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to preview REST listing source: ${response.status}`);
+  }
+
+  return (await response.json()) as ListingSourcePreviewResponse;
 }
 
 export async function syncListingSource(sourceId: string, options: AgencyApiOptions = {}): Promise<BackgroundJobSnapshot> {

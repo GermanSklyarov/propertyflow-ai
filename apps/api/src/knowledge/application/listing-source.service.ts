@@ -3,12 +3,14 @@ import type {
   BackgroundJobSnapshot,
   CreateListingSourceRequest,
   ListingSourceAuthType,
+  ListingSourceCanonicalField,
   ListingSourceCustomAttributeFilterHint,
   ListingSourceCustomAttributeMapping,
   ListingSourceCustomAttributeType,
   ListingSourceFieldMapping,
   ListingSourceImportMode,
   ListingSourceListResponse,
+  ListingSourcePreviewResponse,
   ListingSourceSnapshot,
   ListingSourceType
 } from "@propertyflow/contracts";
@@ -32,6 +34,9 @@ const allowedFilterHints: ListingSourceCustomAttributeFilterHint[] = [
   "ownership",
   "other"
 ];
+const requiredPreviewFields: ListingSourceCanonicalField[] = ["title", "market"];
+const previewSampleSize = 3;
+const previewTimeoutMs = 5000;
 
 @Injectable()
 export class ListingSourceService {
@@ -50,6 +55,55 @@ export class ListingSourceService {
     return {
       items,
       total: items.length
+    };
+  }
+
+  async preview(_tenantId: string, request: CreateListingSourceRequest): Promise<ListingSourcePreviewResponse> {
+    const normalized = this.normalizeCreateRequest(request);
+    const payload = await this.fetchPreviewPayload(normalized);
+    const items = this.extractPreviewItems(payload, normalized.mapping.rootPath);
+    const samples = items.slice(0, previewSampleSize);
+    const canonical = Object.entries(normalized.mapping.canonical).map(([field, sourcePath]) => {
+      const sampleValue = this.firstMappedSample(samples, sourcePath);
+
+      return {
+        field: field as ListingSourceCanonicalField,
+        sourcePath,
+        present: sampleValue !== undefined,
+        ...(sampleValue !== undefined ? { sampleValue } : {})
+      };
+    });
+    const customAttributes = (normalized.mapping.customAttributes ?? []).map((attribute) => {
+      const sampleValue = this.firstMappedSample(samples, attribute.sourcePath);
+
+      return {
+        key: attribute.key,
+        sourcePath: attribute.sourcePath,
+        present: sampleValue !== undefined,
+        ...(sampleValue !== undefined ? { sampleValue } : {}),
+        ...(attribute.filterHint ? { filterHint: attribute.filterHint } : {})
+      };
+    });
+    const missingRequiredFields = requiredPreviewFields.filter(
+      (field) => !canonical.some((result) => result.field === field && result.present)
+    );
+    const warnings = this.buildPreviewWarnings({
+      customAttributeCount: customAttributes.length,
+      missingRequiredFields,
+      normalized,
+      presentCustomAttributeCount: customAttributes.filter((result) => result.present).length
+    });
+
+    return {
+      endpointUrl: normalized.endpointUrl,
+      ok: missingRequiredFields.length === 0,
+      rootPath: normalized.mapping.rootPath,
+      itemCount: items.length,
+      sampleCount: samples.length,
+      canonical,
+      customAttributes,
+      missingRequiredFields,
+      warnings
     };
   }
 
@@ -186,5 +240,140 @@ export class ListingSourceService {
 
   private optionalString(value: unknown): string | undefined {
     return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  }
+
+  private async fetchPreviewPayload(source: CreateListingSourceRequest): Promise<unknown> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), previewTimeoutMs);
+
+    try {
+      const headers: Record<string, string> = {
+        accept: "application/json"
+      };
+
+      if (source.authType === "api-key-header" && source.authHeaderName && source.authSecretRef) {
+        headers[source.authHeaderName] = source.authSecretRef;
+      }
+      if (source.authType === "bearer" && source.authSecretRef) {
+        headers.authorization = `Bearer ${source.authSecretRef}`;
+      }
+
+      const response = await fetch(source.endpointUrl, {
+        headers,
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        throw new BadRequestException(`Listing source preview failed with HTTP ${response.status}.`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
+
+      throw new BadRequestException("Listing source preview could not read a JSON response from the endpoint.");
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private extractPreviewItems(payload: unknown, rootPath?: string): unknown[] {
+    const root = rootPath ? this.readMappedPath(payload, rootPath) : this.resolveImplicitItems(payload);
+    if (!Array.isArray(root)) {
+      throw new BadRequestException("Listing source preview did not find an array of listings. Check the root path.");
+    }
+    if (!root.length) {
+      throw new BadRequestException("Listing source preview found zero listings in the feed.");
+    }
+
+    return root;
+  }
+
+  private resolveImplicitItems(payload: unknown): unknown {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    const items = this.readMappedPath(payload, "items");
+    if (Array.isArray(items)) {
+      return items;
+    }
+    const dataItems = this.readMappedPath(payload, "data.items");
+    if (Array.isArray(dataItems)) {
+      return dataItems;
+    }
+    const data = this.readMappedPath(payload, "data");
+    if (Array.isArray(data)) {
+      return data;
+    }
+
+    return payload;
+  }
+
+  private firstMappedSample(samples: unknown[], sourcePath: string): unknown {
+    for (const sample of samples) {
+      const value = this.toPreviewSampleValue(this.readMappedPath(sample, sourcePath));
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  private readMappedPath(payload: unknown, sourcePath: string): unknown {
+    return sourcePath.split(".").reduce<unknown>((current, segment) => {
+      if (!segment || current === null || current === undefined) {
+        return undefined;
+      }
+      if (Array.isArray(current)) {
+        const index = Number(segment);
+        return Number.isInteger(index) ? current[index] : undefined;
+      }
+      if (typeof current === "object") {
+        return (current as Record<string, unknown>)[segment];
+      }
+
+      return undefined;
+    }, payload);
+  }
+
+  private toPreviewSampleValue(value: unknown): unknown {
+    if (value === null || value === undefined || value === "") {
+      return undefined;
+    }
+    if (Array.isArray(value)) {
+      return value.slice(0, 4);
+    }
+    if (typeof value === "object") {
+      return JSON.stringify(value).slice(0, 180);
+    }
+
+    return value;
+  }
+
+  private buildPreviewWarnings(input: {
+    customAttributeCount: number;
+    missingRequiredFields: ListingSourceCanonicalField[];
+    normalized: CreateListingSourceRequest;
+    presentCustomAttributeCount: number;
+  }): string[] {
+    const warnings: string[] = [];
+
+    if (input.missingRequiredFields.length) {
+      warnings.push(`Missing required mapped fields: ${input.missingRequiredFields.join(", ")}.`);
+    }
+    if (input.normalized.authType !== "none" && !input.normalized.authSecretRef) {
+      warnings.push("Auth is enabled, but no secret reference was provided for the preview request.");
+    }
+    if (input.customAttributeCount > 0 && input.presentCustomAttributeCount === 0) {
+      warnings.push("Custom attributes are configured, but none were found in the sample listings.");
+    }
+    if (input.normalized.mapping.rawPayloadMode === "store_all") {
+      warnings.push("Raw payload storage is enabled; verify tenant data retention rules before production sync.");
+    }
+
+    return warnings;
   }
 }

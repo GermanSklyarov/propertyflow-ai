@@ -1437,6 +1437,33 @@ export interface CreateListingSourceRequest {
   mapping: ListingSourceFieldMapping;
 }
 
+export interface ListingSourcePreviewFieldResult {
+  field: ListingSourceCanonicalField;
+  sourcePath: string;
+  present: boolean;
+  sampleValue?: unknown;
+}
+
+export interface ListingSourcePreviewCustomAttributeResult {
+  key: string;
+  sourcePath: string;
+  present: boolean;
+  sampleValue?: unknown;
+  filterHint?: ListingSourceCustomAttributeFilterHint;
+}
+
+export interface ListingSourcePreviewResponse {
+  endpointUrl: string;
+  ok: boolean;
+  rootPath?: string;
+  itemCount: number;
+  sampleCount: number;
+  canonical: ListingSourcePreviewFieldResult[];
+  customAttributes: ListingSourcePreviewCustomAttributeResult[];
+  missingRequiredFields: ListingSourceCanonicalField[];
+  warnings: string[];
+}
+
 export interface ListingSourceListResponse {
   items: ListingSourceSnapshot[];
   total: number;

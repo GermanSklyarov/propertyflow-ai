@@ -3,9 +3,13 @@ export type KnowledgePageNoticeQuery = {
   document?: string;
   embed?: string;
   error?: string;
+  fields?: string;
   ingest?: string;
+  items?: string;
+  listingPreview?: string;
   listingSync?: string;
   source?: string;
+  warnings?: string;
 };
 
 export type KnowledgePageNotice = {
@@ -14,6 +18,20 @@ export type KnowledgePageNotice = {
 };
 
 export function buildKnowledgePageNotice(query: KnowledgePageNoticeQuery): KnowledgePageNotice | undefined {
+  if (query.listingPreview === "ok") {
+    return {
+      message: `${query.source ?? "REST inventory source"} preview passed: ${query.items ?? "0"} listing rows found and ${query.fields ?? "0"} mapped signals detected.`,
+      tone: "success"
+    };
+  }
+
+  if (query.listingPreview === "warning") {
+    return {
+      message: `${query.source ?? "REST inventory source"} preview needs review: ${query.items ?? "0"} rows found with ${query.warnings ?? "0"} warnings. Check required fields before syncing.`,
+      tone: "warning"
+    };
+  }
+
   if (query.listingSync === "invalid") {
     return {
       message: query.error ?? "REST inventory source could not be saved. Check the mapping and try again.",

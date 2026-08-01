@@ -30,6 +30,20 @@ describe("buildKnowledgePageNotice", () => {
     });
   });
 
+  it("announces successful REST listing source previews", () => {
+    expect(buildKnowledgePageNotice({ fields: "7", items: "120", listingPreview: "ok", source: "Partner API" })).toEqual({
+      message: "Partner API preview passed: 120 listing rows found and 7 mapped signals detected.",
+      tone: "success"
+    });
+  });
+
+  it("announces REST listing source preview warnings", () => {
+    expect(buildKnowledgePageNotice({ items: "120", listingPreview: "warning", source: "Partner API", warnings: "2" })).toEqual({
+      message: "Partner API preview needs review: 120 rows found with 2 warnings. Check required fields before syncing.",
+      tone: "warning"
+    });
+  });
+
   it("announces REST listing source setup errors", () => {
     expect(buildKnowledgePageNotice({ error: "Canonical mapping contains invalid JSON.", listingSync: "invalid" })).toEqual({
       message: "Canonical mapping contains invalid JSON.",

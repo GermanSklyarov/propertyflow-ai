@@ -18,7 +18,11 @@ import {
   Tags,
   UploadCloud
 } from "lucide-react";
-import { createRestListingSourceAction, syncListingSourceAction } from "@entities/knowledge/api/knowledge-actions";
+import {
+  createRestListingSourceAction,
+  previewRestListingSourceAction,
+  syncListingSourceAction
+} from "@entities/knowledge/api/knowledge-actions";
 import {
   buildKnowledgeSourceCoverage,
   buildKnowledgeSourceGroupAction,
@@ -625,10 +629,16 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
           </span>
         </div>
 
-        <button className={styles.listingApiSaveButton} type="submit">
-          <DatabaseZap size={16} />
-          Save and sync feed
-        </button>
+        <div className={styles.listingApiFormActions}>
+          <button className={styles.listingApiPreviewButton} formAction={previewRestListingSourceAction} type="submit">
+            <SearchCheck size={16} />
+            Check feed
+          </button>
+          <button className={styles.listingApiSaveButton} type="submit">
+            <DatabaseZap size={16} />
+            Save and sync feed
+          </button>
+        </div>
       </form>
     </details>
   );

@@ -1,6 +1,12 @@
 import { Body, Controller, Get, Inject, Param, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { BackgroundJobSnapshot, ListingSourceListResponse, ListingSourceSnapshot, RequestUser } from "@propertyflow/contracts";
+import type {
+  BackgroundJobSnapshot,
+  ListingSourceListResponse,
+  ListingSourcePreviewResponse,
+  ListingSourceSnapshot,
+  RequestUser
+} from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -57,6 +63,18 @@ export class ListingSourcesController {
     });
 
     return source;
+  }
+
+  @Post("rest/preview")
+  @Roles("manager", "admin")
+  previewRestSource(
+    @TenantId() tenantId: string,
+    @Body() payload: CreateListingSourceDto
+  ): Promise<ListingSourcePreviewResponse> {
+    return this.listingSources.preview(tenantId, {
+      ...payload,
+      type: "rest-api"
+    });
   }
 
   @Post(":sourceId/sync")

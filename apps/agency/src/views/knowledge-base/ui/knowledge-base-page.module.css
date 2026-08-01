@@ -613,6 +613,11 @@
     grid-template-columns: 1fr;
   }
 
+  .listingApiFormActions {
+    display: grid;
+  }
+
+  .listingApiPreviewButton,
   .listingApiSaveButton {
     width: 100%;
   }
@@ -1596,6 +1601,14 @@
   color: var(--teal-dark);
 }
 
+.listingApiFormActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.listingApiPreviewButton,
 .listingApiSaveButton {
   display: inline-flex;
   width: fit-content;
@@ -1611,6 +1624,24 @@
   font-size: 0.82rem;
   font-weight: 950;
   padding: 0 16px;
+}
+
+.listingApiPreviewButton {
+  border-color: rgb(15 118 110 / 18%);
+  background: #fff;
+  color: var(--teal-dark);
+}
+
+.listingApiPreviewButton:hover,
+.listingApiPreviewButton:focus-visible {
+  border-color: rgb(15 118 110 / 36%);
+  background: #eef8f5;
+}
+
+.listingApiSaveButton {
+  border-color: transparent;
+  background: var(--teal);
+  color: #fff;
 }
 
 .listingApiSaveButton:hover,

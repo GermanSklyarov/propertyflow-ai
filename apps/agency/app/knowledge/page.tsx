@@ -24,12 +24,16 @@ export default async function AgencyKnowledgePage({
     document?: string;
     embed?: string;
     error?: string;
+    fields?: string;
     ingest?: string;
+    items?: string;
     kind?: string;
+    listingPreview?: string;
     listingSync?: string;
     locale?: string;
     q?: string;
     source?: string;
+    warnings?: string;
   }>;
 }) {
   const query = await searchParams;
