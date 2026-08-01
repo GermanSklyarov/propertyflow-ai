@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAgencyEntryPlanCards,
-  buildAgencyMagicSigninHref,
   buildAgencySignupSummary,
   parseAgencySigninForm,
   parseAgencySignupForm,
@@ -84,12 +83,6 @@ describe("agency entry", () => {
       tenantSlug: "jomtien-homes",
       workEmail: "owner@jomtien.test"
     });
-  });
-
-  it("builds an encoded local development magic-link href", () => {
-    expect(buildAgencyMagicSigninHref("demo agency", "token/with+chars")).toBe(
-      "/signin/magic?token=token%2Fwith%2Bchars&workspace=demo+agency"
-    );
   });
 
   it("renders friendly signin errors from query codes", () => {

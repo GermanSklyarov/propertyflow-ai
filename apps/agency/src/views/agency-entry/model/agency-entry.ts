@@ -133,15 +133,6 @@ export function toRequestAgencyMagicLinkRequest(values: AgencySigninFormValues):
   };
 }
 
-export function buildAgencyMagicSigninHref(tenantSlug: string, token: string): string {
-  const query = new URLSearchParams({
-    token,
-    workspace: tenantSlug
-  });
-
-  return `/signin/magic?${query.toString()}`;
-}
-
 export function resolveAgencySignupError(error: string | string[] | undefined): string | null {
   const value = Array.isArray(error) ? error[0] : error;
 
