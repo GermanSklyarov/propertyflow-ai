@@ -214,6 +214,14 @@ export function summarizeKnowledgeSourceReadiness(groups: KnowledgeSourceGroup[]
   );
 }
 
+export function filterOperationalKnowledgeSourceGroups(groups: KnowledgeSourceGroup[]): KnowledgeSourceGroup[] {
+  return filterKnowledgeSourceGroupsByStatus(groups, (connector) => connector.status !== "planned");
+}
+
+export function filterPlannedKnowledgeSourceGroups(groups: KnowledgeSourceGroup[]): KnowledgeSourceGroup[] {
+  return filterKnowledgeSourceGroupsByStatus(groups, (connector) => connector.status === "planned");
+}
+
 export function buildKnowledgeSourceLaunchGate(
   summary: KnowledgeSourceReadinessSummary,
   options: KnowledgeSourceLaunchGateOptions = {}
@@ -517,6 +525,18 @@ export function buildRuntimeKnowledgeSourceGroups(
 
     return group;
   });
+}
+
+function filterKnowledgeSourceGroupsByStatus(
+  groups: KnowledgeSourceGroup[],
+  predicate: (connector: KnowledgeSourceConnector) => boolean
+): KnowledgeSourceGroup[] {
+  return groups
+    .map((group) => ({
+      ...group,
+      connectors: group.connectors.filter(predicate)
+    }))
+    .filter((group) => group.connectors.length > 0);
 }
 
 function buildRuntimeListingSourceConnector(input: {

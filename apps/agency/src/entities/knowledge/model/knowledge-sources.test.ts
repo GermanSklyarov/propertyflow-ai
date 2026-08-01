@@ -5,6 +5,8 @@ import {
   buildKnowledgeSourceGroupAction,
   buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
+  filterOperationalKnowledgeSourceGroups,
+  filterPlannedKnowledgeSourceGroups,
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
   summarizeKnowledgeSourceModes,
@@ -85,6 +87,16 @@ describe("knowledge sources model", () => {
     expect(summary.ready).toBe(4);
     expect(summary.planned).toBe(5);
     expect(summary.actionable).toBe(7);
+  });
+
+  it("separates Starter-ready sources from roadmap connectors", () => {
+    const operational = filterOperationalKnowledgeSourceGroups(knowledgeSourceGroups);
+    const planned = filterPlannedKnowledgeSourceGroups(knowledgeSourceGroups);
+
+    expect(operational.flatMap((group) => group.connectors).every((connector) => connector.status !== "planned")).toBe(true);
+    expect(planned.flatMap((group) => group.connectors).every((connector) => connector.status === "planned")).toBe(true);
+    expect(operational.find((group) => group.type === "external")).toBeUndefined();
+    expect(summarizeKnowledgeSourceReadiness(planned).planned).toBe(5);
   });
 
   it("builds compact source coverage for the starter dashboard", () => {

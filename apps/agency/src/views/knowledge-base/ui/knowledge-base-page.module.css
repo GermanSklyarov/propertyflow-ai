@@ -1671,7 +1671,6 @@
 .sourceCardHeader {
   display: grid;
   min-width: 0;
-  grid-template-rows: auto minmax(64px, auto);
   gap: 8px;
 }
 
@@ -1714,6 +1713,7 @@
 
 .sourceGroupAction {
   display: inline-flex;
+  min-width: max-content;
   min-height: 34px;
   align-items: center;
   justify-content: center;
@@ -1819,6 +1819,103 @@
 .sourceConnectorAction:focus-visible {
   background: var(--teal);
   color: #fff;
+}
+
+.plannedSources {
+  display: grid;
+  min-width: 0;
+  border: 1px solid rgb(180 83 9 / 18%);
+  background: #fffaf4;
+}
+
+.plannedSources summary {
+  display: flex;
+  min-width: 0;
+  cursor: pointer;
+  list-style: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+}
+
+.plannedSources summary::-webkit-details-marker {
+  display: none;
+}
+
+.plannedSources summary span,
+.plannedSources summary strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.plannedSources summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal-dark);
+  font-size: 0.85rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.plannedSources summary svg {
+  color: #8a5a10;
+}
+
+.plannedSources summary strong {
+  border: 1px solid rgb(180 83 9 / 18%);
+  background: #fff7ed;
+  color: #7c4a05;
+  font-size: 0.72rem;
+  font-weight: 950;
+  padding: 7px 9px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.plannedConnectorGrid {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid rgb(180 83 9 / 14%);
+  padding: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+}
+
+.plannedConnectorCard {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #fff;
+  padding: 10px;
+}
+
+.plannedConnectorCard small,
+.plannedConnectorCard strong,
+.plannedConnectorCard span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.plannedConnectorCard small {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.plannedConnectorCard strong {
+  color: var(--teal-dark);
+  font-size: 0.86rem;
+  line-height: 1.2;
+}
+
+.plannedConnectorCard span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 850;
+  text-transform: uppercase;
 }
 
 .sourceConnectorBadges {

@@ -24,6 +24,8 @@ import {
   buildKnowledgeSourceGroupAction,
   buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
+  filterOperationalKnowledgeSourceGroups,
+  filterPlannedKnowledgeSourceGroups,
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
   summarizeKnowledgeSourceModes,
@@ -102,14 +104,17 @@ export function KnowledgeBasePage({
     listingSources,
     totalDocuments: total
   });
-  const sourceModeSummary = summarizeKnowledgeSourceModes(runtimeSourceGroups);
-  const sourceReadiness = summarizeKnowledgeSourceReadiness(runtimeSourceGroups);
+  const operationalSourceGroups = filterOperationalKnowledgeSourceGroups(runtimeSourceGroups);
+  const plannedSourceGroups = filterPlannedKnowledgeSourceGroups(runtimeSourceGroups);
+  const sourceModeSummary = summarizeKnowledgeSourceModes(operationalSourceGroups);
+  const sourceReadiness = summarizeKnowledgeSourceReadiness(operationalSourceGroups);
+  const plannedSourceReadiness = summarizeKnowledgeSourceReadiness(plannedSourceGroups);
   const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness, {
     starterLaunchReady: starterReadiness.launchReady,
     starterNextAction: starterReadiness.nextAction,
     starterSummary: starterReadiness.summary
   });
-  const sourceCoverage = buildKnowledgeSourceCoverage(runtimeSourceGroups);
+  const sourceCoverage = buildKnowledgeSourceCoverage(operationalSourceGroups);
 
   return (
     <main className={styles.page}>
@@ -211,7 +216,7 @@ export function KnowledgeBasePage({
             <SourceReadinessMetric label="Indexing" note="worker active" value={sourceReadiness.indexing} />
             <SourceReadinessMetric label="Failed" note="needs retry" value={sourceReadiness.failed} />
             <SourceReadinessMetric label="Actionable" note="setup links ready" value={sourceReadiness.actionable} />
-            <SourceReadinessMetric label="Planned" note="roadmap sources" value={sourceReadiness.planned} />
+            <SourceReadinessMetric label="Roadmap" note="planned sources" value={plannedSourceReadiness.planned} />
           </div>
 
           <div className={styles.sourceLaunchGate} data-status={sourceLaunchGate.status}>
@@ -232,10 +237,12 @@ export function KnowledgeBasePage({
           <ListingApiSourcesPanel sources={listingSources} />
 
           <div className={styles.sourcesGrid}>
-            {runtimeSourceGroups.map((group) => (
+            {operationalSourceGroups.map((group) => (
               <KnowledgeSourceGroupCard group={group} key={group.type} />
             ))}
           </div>
+
+          {plannedSourceGroups.length ? <PlannedKnowledgeSources groups={plannedSourceGroups} summary={plannedSourceReadiness} /> : null}
 
           <div className={styles.pipelineStrip} aria-label="Unified knowledge ingestion pipeline">
             {knowledgeSourcePipeline.map((step, index) => (
@@ -770,6 +777,42 @@ function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {
         ))}
       </div>
     </article>
+  );
+}
+
+function PlannedKnowledgeSources({
+  groups,
+  summary
+}: {
+  groups: KnowledgeSourceGroup[];
+  summary: ReturnType<typeof summarizeKnowledgeSourceReadiness>;
+}) {
+  const connectors = groups.flatMap((group) =>
+    group.connectors.map((connector) => ({
+      connector,
+      group
+    }))
+  );
+
+  return (
+    <details className={styles.plannedSources}>
+      <summary>
+        <span>
+          <Clock3 size={16} />
+          Roadmap connectors
+        </span>
+        <strong>{summary.planned} planned</strong>
+      </summary>
+      <div className={styles.plannedConnectorGrid}>
+        {connectors.map(({ connector, group }) => (
+          <article className={styles.plannedConnectorCard} key={`${group.type}-${connector.label}`}>
+            <small>{group.title}</small>
+            <strong>{connector.label}</strong>
+            <span>{formatSourceMode(connector.mode)}</span>
+          </article>
+        ))}
+      </div>
+    </details>
   );
 }
 
