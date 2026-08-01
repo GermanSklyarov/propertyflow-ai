@@ -41,6 +41,7 @@ Starter is launch-ready only when all items below are true:
 - Add an agency Starter entry page with pricing, service positioning, and clear CTAs.
 - Add a signup entry route that preserves the selected plan before workspace provisioning.
 - Add a tenant provisioning flow for local and future hosted environments.
+- Keep production agency sign-in on one-time magic links; the bootstrap session endpoint is a local-development fallback only.
 - Define Starter, Growth, and Enterprise plan contracts in the domain/contracts package.
 - Store subscription plan, status, and limits on the tenant.
 - Add plan-aware UI so Starter hides CRM-heavy navigation by default.

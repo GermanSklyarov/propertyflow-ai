@@ -312,17 +312,19 @@ describe("TenantService", () => {
       agencyEmailTokens({ issue })
     );
 
-    await expect(
-      service.requestAgencyMagicLink({
-        tenantSlug: "demo-agency",
-        workEmail: " OWNER@Demo.Example "
-      })
-    ).resolves.toEqual({
+    const response = await service.requestAgencyMagicLink({
+      tenantSlug: "demo-agency",
+      workEmail: " OWNER@Demo.Example "
+    });
+
+    expect(response).toEqual({
       accepted: true,
       delivery: "email",
       expiresAt: "2026-07-31T10:15:00.000Z",
       message: "If this workspace user exists, a secure sign-in link will be sent to the work email."
     });
+    expect(response.developmentMagicLinkUrl).toBeUndefined();
+    expect(response.developmentToken).toBeUndefined();
     expect(issue).toHaveBeenCalledWith({
       email: "owner@demo.example",
       metadata: {

@@ -13,7 +13,7 @@ export class CreateAgencySessionDto implements CreateAgencySessionRequest {
   workEmail!: string;
 
   @ApiPropertyOptional({
-    description: "Workspace invitation code used before OTP or magic-link exchange is enabled."
+    description: "Local-development bootstrap code. Production agency sign-in uses one-time magic links."
   })
   @IsOptional()
   @IsString()

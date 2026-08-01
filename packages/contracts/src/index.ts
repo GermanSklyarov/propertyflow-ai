@@ -155,6 +155,7 @@ export interface ProvisionTenantResponse {
 }
 
 export interface CreateAgencySessionRequest {
+  /** Local-development fallback only. Production agency sign-in uses the magic-link exchange flow. */
   bootstrapCode?: string;
   tenantSlug: string;
   workEmail: string;

@@ -28,8 +28,8 @@ export class TenantProvisioningController {
   }
 
   @Post("session")
-  @ApiOperation({ summary: "Create an agency workspace session after signup or bootstrap login" })
-  @ApiCreatedResponse({ description: "Agency session was created" })
+  @ApiOperation({ summary: "Create a local-development agency session with the bootstrap fallback" })
+  @ApiCreatedResponse({ description: "Local-development agency session was created" })
   createSession(@Body() payload: CreateAgencySessionDto): Promise<CreateAgencySessionResponse> {
     return this.tenants.createAgencySession(payload);
   }
