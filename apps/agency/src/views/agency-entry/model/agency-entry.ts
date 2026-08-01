@@ -1,4 +1,4 @@
-import type { CreateAgencySessionRequest, ProvisionTenantRequest, RequestAgencyMagicLinkRequest } from "@propertyflow/contracts";
+import type { ProvisionTenantRequest, RequestAgencyMagicLinkRequest } from "@propertyflow/contracts";
 import { tenantPlanCatalog, type TenantSubscriptionPlan } from "@propertyflow/contracts";
 
 export interface AgencyEntryPlanCard {
@@ -37,8 +37,6 @@ export interface AgencySignupFormValues {
 }
 
 export interface AgencySigninFormValues {
-  /** Maps to the current backend bootstrap code field until invite/OTP exchange replaces it. */
-  bootstrapCode?: string;
   tenantSlug: string;
   workEmail: string;
 }
@@ -112,17 +110,8 @@ export function toProvisionTenantRequest(values: AgencySignupFormValues): Provis
 
 export function parseAgencySigninForm(formData: FormData): AgencySigninFormValues {
   return {
-    bootstrapCode: readOptionalFormValue(formData, "bootstrapCode"),
     tenantSlug: readRequiredFormValue(formData, "tenantSlug"),
     workEmail: readRequiredFormValue(formData, "email")
-  };
-}
-
-export function toCreateAgencySessionRequest(values: AgencySigninFormValues): CreateAgencySessionRequest {
-  return {
-    bootstrapCode: values.bootstrapCode,
-    tenantSlug: values.tenantSlug,
-    workEmail: values.workEmail
   };
 }
 
@@ -151,7 +140,7 @@ export function resolveAgencySigninError(error: string | string[] | undefined): 
   const value = Array.isArray(error) ? error[0] : error;
 
   if (value === "session-forbidden") {
-    return "This workspace requires a valid invitation code before signing in.";
+    return "This workspace cannot accept this sign-in request. Ask the workspace owner for access.";
   }
 
   if (value === "magic-link-failed") {
@@ -163,7 +152,7 @@ export function resolveAgencySigninError(error: string | string[] | undefined): 
   }
 
   if (value === "session-failed") {
-    return "We could not sign you in. Check the workspace, email, and invitation code.";
+    return "We could not sign you in. Check the workspace and work email.";
   }
 
   if (value === "session-required") {
