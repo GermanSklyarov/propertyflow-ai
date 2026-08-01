@@ -48,6 +48,13 @@ describe("buildAgencyApiHeaders", () => {
     });
   });
 
+  it("requires explicit tenant context for development identity headers", () => {
+    process.env.PROPERTYFLOW_ALLOW_DEV_AUTH_HEADERS = "true";
+    delete process.env.PROPERTYFLOW_TENANT_ID;
+
+    expect(() => buildAgencyApiHeaders()).toThrow("Tenant id is required for development agency API headers");
+  });
+
   it("requires tenant context for bearer-authenticated agency calls", () => {
     delete process.env.PROPERTYFLOW_TENANT_ID;
 

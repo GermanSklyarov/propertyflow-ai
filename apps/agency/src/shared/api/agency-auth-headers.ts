@@ -22,8 +22,12 @@ export function buildAgencyApiHeaders(options: AgencyApiAuthOptions = {}): Recor
     throw new Error("Agency API access token is required");
   }
 
+  if (!tenantId) {
+    throw new Error("Tenant id is required for development agency API headers");
+  }
+
   return {
-    "x-tenant-id": tenantId ?? "demo-agency",
+    "x-tenant-id": tenantId,
     "x-user-id": process.env.PROPERTYFLOW_USER_ID ?? "manager-demo-1",
     "x-user-role": process.env.PROPERTYFLOW_USER_ROLE ?? "manager"
   };
