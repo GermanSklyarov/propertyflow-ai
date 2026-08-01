@@ -67,6 +67,7 @@
 - Track the production launch criteria in [Starter Launch Plan](./starter-launch-plan.md).
 - Add a production onboarding path: pricing page -> plan selection -> workspace signup -> owner verification -> first-run setup.
 - Replace bootstrap-only login with one-time email magic links, invitation tokens, refresh-token rotation, logout, and safe non-enumerating responses.
+- Generate agency magic-link URLs on the API from `AGENCY_APP_BASE_URL` so web UI and future email adapters share one trusted link builder.
 - Keep bootstrap session codes as an explicit local-development fallback only, not the normal agency login path.
 - Reframe the first tenant experience around Knowledge -> AI -> Widget, with CRM hidden until leads are actually created.
 - Add a setup wizard for new agencies: upload FAQ, buying/selling guides, company information, condo brochures, developer PDFs, tax information, visa guides, and internal instructions.

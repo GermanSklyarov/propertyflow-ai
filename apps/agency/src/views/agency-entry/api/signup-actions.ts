@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { createAgencySession, provisionTenant, requestAgencyMagicLink } from "@shared/api/agency-client";
 import { setAgencySession } from "@shared/lib/tenant-session";
 import {
-  buildAgencyMagicSigninHref,
   parseAgencySigninForm,
   parseAgencySignupForm,
   toCreateAgencySessionRequest,
@@ -62,8 +61,8 @@ export async function requestAgencySigninLink(formData: FormData) {
     workspace: values.tenantSlug
   });
 
-  if (response.developmentToken) {
-    query.set("devLink", buildAgencyMagicSigninHref(values.tenantSlug, response.developmentToken));
+  if (response.developmentMagicLinkUrl) {
+    query.set("devLink", response.developmentMagicLinkUrl);
   }
 
   redirect(`/signin?${query.toString()}`);

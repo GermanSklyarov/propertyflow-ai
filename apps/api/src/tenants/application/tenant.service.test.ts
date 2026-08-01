@@ -334,6 +334,44 @@ describe("TenantService", () => {
     });
   });
 
+  it("returns a local development magic-link URL outside production", async () => {
+    vi.stubEnv("AGENCY_APP_BASE_URL", "https://agency.propertyflow.test/app/");
+    const expiresAt = new Date("2026-07-31T10:15:00.000Z");
+    const member = tenantUser({ email: "owner@demo.example", id: "owner-user-1", tenantId: "tenant-demo" });
+    const service = new TenantService(
+      repository({
+        findBySlug: async () => tenant({ id: "tenant-demo", slug: "demo-agency" })
+      }),
+      new AuthIdentityService(),
+      userService({
+        getActiveTenantMemberByEmail: async () => member
+      }),
+      undefined,
+      agencyEmailTokens({
+        issue: async () => ({
+          record: agencyEmailToken({
+            email: "owner@demo.example",
+            expiresAt,
+            tenantId: "tenant-demo"
+          }),
+          token: "magic token/value"
+        })
+      })
+    );
+
+    await expect(
+      service.requestAgencyMagicLink({
+        tenantSlug: "demo-agency",
+        workEmail: "owner@demo.example"
+      })
+    ).resolves.toMatchObject({
+      developmentMagicLinkUrl:
+        "https://agency.propertyflow.test/signin/magic?token=magic+token%2Fvalue&workspace=demo-agency",
+      developmentToken: "magic token/value",
+      expiresAt: "2026-07-31T10:15:00.000Z"
+    });
+  });
+
   it("keeps magic-link requests neutral for unknown workspace emails", async () => {
     const issue = vi.fn();
     const service = new TenantService(

@@ -178,6 +178,7 @@ export interface RequestAgencyMagicLinkRequest {
 export interface RequestAgencyMagicLinkResponse {
   accepted: true;
   delivery: "email";
+  developmentMagicLinkUrl?: string;
   developmentToken?: string;
   expiresAt?: string;
   message: string;

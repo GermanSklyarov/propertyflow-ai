@@ -150,7 +150,7 @@ export class TenantService {
       tenantId: tenant.id
     });
 
-    return buildAcceptedMagicLinkResponse(issued.record.expiresAt, issued.token);
+    return buildAcceptedMagicLinkResponse(tenant.slug, issued.record.expiresAt, issued.token);
   }
 
   async exchangeAgencyMagicLink(request: ExchangeAgencyMagicLinkRequest): Promise<CreateAgencySessionResponse> {
@@ -663,7 +663,7 @@ function hashRefreshToken(token: string): string {
   return createHash("sha256").update(token).digest("base64url");
 }
 
-function buildAcceptedMagicLinkResponse(expiresAt?: Date, token?: string): RequestAgencyMagicLinkResponse {
+function buildAcceptedMagicLinkResponse(tenantSlug?: string, expiresAt?: Date, token?: string): RequestAgencyMagicLinkResponse {
   const includeDevelopmentToken = process.env.NODE_ENV !== "production" && token;
   const response: RequestAgencyMagicLinkResponse = {
     accepted: true,
@@ -673,6 +673,7 @@ function buildAcceptedMagicLinkResponse(expiresAt?: Date, token?: string): Reque
 
   if (includeDevelopmentToken) {
     response.developmentToken = token;
+    response.developmentMagicLinkUrl = buildAgencyMagicLinkUrl(tenantSlug, token);
   }
 
   if (expiresAt) {
@@ -680,6 +681,19 @@ function buildAcceptedMagicLinkResponse(expiresAt?: Date, token?: string): Reque
   }
 
   return response;
+}
+
+function buildAgencyMagicLinkUrl(tenantSlug: string | undefined, token: string): string {
+  const baseUrl = (process.env.AGENCY_APP_BASE_URL ?? "http://localhost:3002").replace(/\/+$/, "");
+  const url = new URL("/signin/magic", baseUrl);
+
+  url.searchParams.set("token", token);
+
+  if (tenantSlug) {
+    url.searchParams.set("workspace", tenantSlug);
+  }
+
+  return url.toString();
 }
 
 function addSeconds(date: Date, seconds: number): Date {
