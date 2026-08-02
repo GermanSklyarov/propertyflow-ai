@@ -1,5 +1,6 @@
 import { FileSpreadsheet, Upload } from "lucide-react";
 import { importPropertiesCsvAction } from "@entities/listing/api/listing-actions";
+import { listingImportTemplateColumns } from "@entities/listing/lib/listing-import-mapping";
 import type { BackgroundJobMonitorItem } from "@propertyflow/contracts";
 import { ListingImportJobsPanel } from "./listing-import-jobs-panel";
 import { ListingBulkImportForm } from "./listing-bulk-import-form";
@@ -13,44 +14,36 @@ interface ListingBulkImportPanelProps {
   };
 }
 
-const templateColumns = [
-  "externalId",
-  "title",
-  "projectName",
-  "projectStatus",
-  "projectDeveloper",
-  "market",
-  "kind",
-  "listingType",
-  "priceThb",
-  "rentalPriceMonthlyThb",
-  "areaSqm",
-  "bedrooms",
-  "bathrooms",
-  "address",
-  "amenities",
-  "description"
-];
-
 const csvTemplate = [
-  templateColumns.join(","),
+  listingImportTemplateColumns.join(","),
   [
     "crm-1001",
     "Wongamat Sea View Residence",
-    "The Riviera Wongamat",
-    "completed",
-    "Riviera Group",
-    "pattaya",
+    "High-floor condo near the beach with winter rental appeal",
     "condo",
     "sale_or_rent",
+    "pattaya",
+    "available",
     "3500000",
+    "THB",
     "24000",
     "45",
     "1",
     "1",
+    "18",
     "Wongamat Beach, Pattaya",
+    "12.9685",
+    "100.8859",
+    "The Riviera Wongamat",
+    "completed",
+    "Riviera Group",
     "pool|gym|sea view|fiber internet",
-    "High-floor condo near the beach with winter rental appeal"
+    "https://agency.co.th/photos/wongamat-1.jpg|https://agency.co.th/photos/wongamat-2.jpg",
+    "2026-11-01",
+    "2027-03-31",
+    "6",
+    "foreign quota available",
+    "2200"
   ]
     .map(csvCell)
     .join(",")
@@ -100,7 +93,7 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
           <ListingBulkImportForm
             action={importPropertiesCsvAction}
             csvTemplateHref={csvTemplateHref}
-            templateColumns={templateColumns}
+            templateColumns={[...listingImportTemplateColumns]}
           />
 
           <ListingImportJobsPanel initialJobs={jobs} queuedJobId={result?.jobId} />

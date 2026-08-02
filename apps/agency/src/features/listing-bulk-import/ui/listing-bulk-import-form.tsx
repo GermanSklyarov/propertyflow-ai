@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Download, FileSpreadsheet, Upload } from "lucide-react";
+import { buildListingImportColumnMapping, parseListingImportHeaderRow } from "@entities/listing/lib/listing-import-mapping";
 import styles from "./listing-bulk-import-panel.module.css";
 
 type ImportAction = (formData: FormData) => void | Promise<void>;
@@ -11,25 +12,6 @@ interface ListingBulkImportFormProps {
   csvTemplateHref: string;
   templateColumns: string[];
 }
-
-const columnSynonyms: Record<string, string[]> = {
-  externalId: ["externalid", "external_id", "sourceid", "source_id", "listingid", "listing_id", "reference", "ref", "crm_id"],
-  title: ["title", "name", "property_name", "listing_title", "unit_name"],
-  projectName: ["projectname", "project_name", "project", "development", "compound", "village"],
-  projectStatus: ["projectstatus", "project_status", "construction_status", "completion_status"],
-  projectDeveloper: ["projectdeveloper", "project_developer", "developer", "developer_name"],
-  market: ["market", "city", "area", "location", "province", "destination"],
-  kind: ["kind", "type", "property_type", "asset_type", "category"],
-  listingType: ["listingtype", "listing_type", "intent", "transaction", "deal_type", "offer_type"],
-  priceThb: ["pricethb", "price_thb", "price", "sale_price", "asking_price", "purchase_price"],
-  rentalPriceMonthlyThb: ["rentalpricemonthlythb", "rental_price_monthly_thb", "monthly_rent", "rent", "rental_price"],
-  areaSqm: ["areasqm", "area_sqm", "area", "sqm", "size", "size_sqm"],
-  bedrooms: ["bedrooms", "beds", "bed"],
-  bathrooms: ["bathrooms", "baths", "bath"],
-  address: ["address", "location_address", "street", "landmark"],
-  amenities: ["amenities", "features", "facilities", "tags"],
-  description: ["description", "details", "notes", "agent_note", "remark"]
-};
 
 export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns }: ListingBulkImportFormProps) {
   const [headers, setHeaders] = useState<string[]>([]);
@@ -45,8 +27,8 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
   }
 
   function updateHeaders(csvText: string) {
-    const nextHeaders = parseCsvFirstRow(csvText);
-    const nextMapping = automapColumns(templateColumns, nextHeaders);
+    const nextHeaders = parseListingImportHeaderRow(csvText);
+    const nextMapping = buildListingImportColumnMapping(templateColumns, nextHeaders);
 
     setHeaders(nextHeaders);
     setMapping(nextMapping);
@@ -85,7 +67,7 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
         <textarea
           name="csvText"
           onChange={(event) => updateHeaders(event.currentTarget.value)}
-          placeholder="externalId,title,market,kind,listingType,priceThb,areaSqm&#10;crm-1001,Wongamat Sea View,pattaya,condo,sale,3500000,45"
+          placeholder="externalId,title,market,kind,listingType,priceThb,availableUntil,minimumRentalMonths&#10;crm-1001,Wongamat Sea View,pattaya,condo,rent,3500000,2027-03-31,12"
         />
       </label>
 
@@ -164,61 +146,4 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
       </div>
     </form>
   );
-}
-
-function automapColumns(columns: string[], headers: string[]) {
-  const normalizedHeaderByHeader = new Map(headers.map((header) => [normalizeHeader(header), header]));
-
-  return Object.fromEntries(
-    columns
-      .map((column) => {
-        const match = columnSynonyms[column]?.find((candidate) => normalizedHeaderByHeader.has(candidate));
-
-        return match ? [column, normalizedHeaderByHeader.get(match)!] : undefined;
-      })
-      .filter((entry): entry is [string, string] => Boolean(entry))
-  );
-}
-
-function parseCsvFirstRow(csv: string) {
-  const row: string[] = [];
-  let currentCell = "";
-  let inQuotes = false;
-
-  for (let index = 0; index < csv.length; index += 1) {
-    const char = csv[index];
-    const nextChar = csv[index + 1];
-
-    if (char === '"' && inQuotes && nextChar === '"') {
-      currentCell += '"';
-      index += 1;
-      continue;
-    }
-
-    if (char === '"') {
-      inQuotes = !inQuotes;
-      continue;
-    }
-
-    if (char === "," && !inQuotes) {
-      row.push(currentCell.trim());
-      currentCell = "";
-      continue;
-    }
-
-    if ((char === "\n" || char === "\r") && !inQuotes) {
-      row.push(currentCell.trim());
-      return row.filter(Boolean);
-    }
-
-    currentCell += char;
-  }
-
-  row.push(currentCell.trim());
-
-  return row.filter(Boolean);
-}
-
-function normalizeHeader(value: string) {
-  return value.trim().toLowerCase().replace(/[\s-]+/g, "_").replace(/[^a-z0-9_]/g, "");
 }
