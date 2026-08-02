@@ -108,22 +108,12 @@
   font-weight: 800;
 }
 
-.fileDrop,
 .csvPaste {
   display: grid;
   gap: 8px;
   min-width: 0;
 }
 
-.fileDrop {
-  cursor: pointer;
-  border: 1px dashed rgb(15 118 110 / 28%);
-  background: #f5faf7;
-  padding: 14px;
-  color: var(--teal-dark);
-}
-
-.fileDrop span,
 .csvPaste span {
   color: var(--teal-dark);
   font-size: 0.82rem;
@@ -131,20 +121,8 @@
   text-transform: uppercase;
 }
 
-.fileDrop small {
-  color: var(--muted);
-  font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1.4;
-}
-
-.fileDrop input {
-  cursor: pointer;
-  max-width: 100%;
-  color: var(--muted);
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 800;
+.importDrop {
+  min-height: 150px;
 }
 
 .csvPaste textarea {
@@ -162,8 +140,7 @@
   resize: vertical;
 }
 
-.csvPaste textarea:focus,
-.fileDrop:focus-within {
+.csvPaste textarea:focus {
   border-color: rgb(15 118 110 / 48%);
   outline: 2px solid rgb(15 118 110 / 12%);
 }
@@ -246,11 +223,25 @@
   gap: 8px;
 }
 
+.mappingHeader div {
+  display: grid;
+  max-width: 760px;
+  gap: 4px;
+}
+
 .mappingHeader span {
   color: var(--teal-dark);
   font-size: 0.78rem;
   font-weight: 950;
   text-transform: uppercase;
+}
+
+.mappingHeader p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .mappingHeader small {
@@ -262,6 +253,12 @@
   font-weight: 900;
 }
 
+.mappingLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .mappingGrid {
   display: grid;
   gap: 8px;
@@ -270,15 +267,62 @@
 
 .mappingField {
   display: grid;
-  gap: 5px;
+  align-content: start;
+  gap: 7px;
   min-width: 0;
+  border: 1px solid rgb(15 118 110 / 12%);
+  background: #f7fbfa;
+  padding: 9px;
 }
 
-.mappingField span {
+.mappingFieldTop {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mappingFieldTop > span {
+  min-width: 0;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 900;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
+}
+
+.mappingImportanceRequired,
+.mappingImportanceRecommended,
+.mappingImportanceOptional {
+  display: inline-flex;
+  width: fit-content;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(15 118 110 / 14%);
+  padding: 4px 6px;
+  font-size: 0.62rem;
+  font-weight: 950;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.mappingImportanceRequired {
+  border-color: rgb(148 59 47 / 24%);
+  background: #fff1ed;
+  color: #943b2f;
+}
+
+.mappingImportanceRecommended {
+  border-color: rgb(126 82 10 / 18%);
+  background: #fff8e9;
+  color: #75510d;
+}
+
+.mappingImportanceOptional {
+  background: #edf8f4;
+  color: var(--teal-dark);
 }
 
 .mappingField select {
@@ -298,58 +342,40 @@
   outline: 2px solid rgb(15 118 110 / 12%);
 }
 
-.modePanel {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-  border: 1px solid rgb(15 118 110 / 14%);
-  background: #fff;
-  margin: 0;
-  padding: 10px;
-}
-
-.modePanel legend {
-  color: var(--teal-dark);
-  font-size: 0.78rem;
-  font-weight: 950;
-  text-transform: uppercase;
-}
-
-.modePanel label {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 3px 8px;
-  border: 1px solid rgb(15 118 110 / 12%);
-  background: #f7fbfa;
-  padding: 9px;
-}
-
-.modePanel input {
-  grid-row: 1 / span 2;
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--teal);
-}
-
-.modePanel span {
-  color: var(--teal-dark);
-  font-size: 0.78rem;
-  font-weight: 950;
-  text-transform: uppercase;
-}
-
-.modePanel small {
+.mappingHint {
   color: var(--muted);
-  font-size: 0.73rem;
+  font-size: 0.68rem;
   font-weight: 800;
   line-height: 1.35;
 }
 
-.modePanel label:has(input:checked) {
-  border-color: rgb(15 118 110 / 28%);
+.starterModeNotice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
   background: #edf8f4;
+  padding: 10px;
+  color: var(--teal-dark);
+}
+
+.starterModeNotice div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.starterModeNotice strong {
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.starterModeNotice span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .checkbox {
@@ -597,6 +623,17 @@
   background: var(--teal-dark);
 }
 
+.actions button:disabled {
+  cursor: not-allowed;
+  border-color: rgb(15 118 110 / 12%);
+  background: #9ab8b2;
+}
+
+.actions button:disabled:hover,
+.actions button:disabled:focus-visible {
+  background: #9ab8b2;
+}
+
 .actions small {
   color: var(--muted);
   font-size: 0.74rem;
@@ -611,9 +648,9 @@
 
   .templatePanel,
   .mappingPanel,
-  .modePanel,
   .checkbox,
   .jobsPanel,
+  .starterModeNotice,
   .actions {
     grid-column: 1 / -1;
   }

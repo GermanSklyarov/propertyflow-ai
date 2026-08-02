@@ -10,6 +10,7 @@ interface FileDropFieldProps {
   icon: ReactNode;
   multiple?: boolean;
   name: string;
+  onFilesSelected?: (files: File[]) => void;
   required?: boolean;
   title: string;
   variant?: "default" | "compact" | "photo";
@@ -22,6 +23,7 @@ export function FileDropField({
   icon,
   multiple,
   name,
+  onFilesSelected,
   required,
   title,
   variant = "default"
@@ -53,7 +55,11 @@ export function FileDropField({
         accept={accept}
         multiple={multiple}
         name={name}
-        onChange={(event) => setFiles(Array.from(event.currentTarget.files ?? []))}
+        onChange={(event) => {
+          const nextFiles = Array.from(event.currentTarget.files ?? []);
+          setFiles(nextFiles);
+          onFilesSelected?.(nextFiles);
+        }}
         required={required}
         type="file"
       />

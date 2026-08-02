@@ -1,8 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, FileSpreadsheet, Upload } from "lucide-react";
-import { buildListingImportColumnMapping, parseListingImportHeaderRow } from "@entities/listing/lib/listing-import-mapping";
+import { Download, FileSpreadsheet, Info, Upload } from "lucide-react";
+import {
+  buildListingImportColumnMapping,
+  getListingImportColumnImportance,
+  getListingImportColumnLabel,
+  parseListingImportHeaderRow,
+  type ListingImportColumnImportance
+} from "@entities/listing/lib/listing-import-mapping";
+import { FileDropField } from "@shared/ui/file-drop-field";
 import styles from "./listing-bulk-import-panel.module.css";
 
 type ImportAction = (formData: FormData) => void | Promise<void>;
@@ -13,10 +20,27 @@ interface ListingBulkImportFormProps {
   templateColumns: string[];
 }
 
+const importanceClassByValue: Record<ListingImportColumnImportance, string> = {
+  optional: styles.mappingImportanceOptional,
+  recommended: styles.mappingImportanceRecommended,
+  required: styles.mappingImportanceRequired
+};
+
 export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns }: ListingBulkImportFormProps) {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const mappingJson = useMemo(() => JSON.stringify(mapping), [mapping]);
+  const requiredColumns = useMemo(
+    () => templateColumns.filter((column) => getListingImportColumnImportance(column) === "required"),
+    [templateColumns]
+  );
+  const recommendedColumns = useMemo(
+    () => templateColumns.filter((column) => getListingImportColumnImportance(column) === "recommended"),
+    [templateColumns]
+  );
+  const missingRequiredCount = requiredColumns.filter((column) => !mapping[column]).length;
+  const matchedRecommendedCount = recommendedColumns.filter((column) => mapping[column]).length;
+  const hasBlockingMapping = headers.length > 0 && missingRequiredCount > 0;
 
   async function updateHeadersFromFile(file: File | undefined) {
     if (!file) {
@@ -48,19 +72,36 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
     });
   }
 
+  function getMappingHint(column: string, mappedHeader?: string) {
+    const importance = getListingImportColumnImportance(column);
+
+    if (mappedHeader) {
+      return `Mapped from "${mappedHeader}".`;
+    }
+
+    if (importance === "required") {
+      return "Required. Choose the matching column before queueing the import.";
+    }
+
+    if (importance === "recommended") {
+      return "Recommended for stronger Concierge answers. Leave unmapped if your export has no such field.";
+    }
+
+    return "Optional. Safe to skip if your agency does not track this data.";
+  }
+
   return (
     <form action={action} className={styles.form}>
-      <label className={styles.fileDrop}>
-        <FileSpreadsheet size={20} />
-        <span>Upload CSV export</span>
-        <small>Use UTF-8 CSV. We will detect headers and suggest column mapping before queueing the import.</small>
-        <input
-          accept=".csv,text/csv,text/plain"
-          name="listingsCsv"
-          onChange={(event) => void updateHeadersFromFile(event.currentTarget.files?.[0])}
-          type="file"
-        />
-      </label>
+      <FileDropField
+        accept=".csv,text/csv,text/plain"
+        className={styles.importDrop}
+        description="Drop a UTF-8 CSV export here. We will detect headers and suggest column mapping before queueing the import."
+        icon={<FileSpreadsheet size={22} />}
+        name="listingsCsv"
+        onFilesSelected={(files) => void updateHeadersFromFile(files[0])}
+        title="Upload CSV export"
+        variant="compact"
+      />
 
       <label className={styles.csvPaste}>
         <span>Or paste CSV rows</span>
@@ -89,47 +130,62 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
       {headers.length ? (
         <div className={styles.mappingPanel}>
           <div className={styles.mappingHeader}>
-            <span>Column mapping</span>
-            <small>{Object.keys(mapping).length}/{templateColumns.length} matched</small>
+            <div>
+              <span>Column mapping</span>
+              <p>
+                Required fields must be mapped. Recommended fields improve Concierge answers. Optional fields can stay
+                skipped when they do not exist in the agency export.
+              </p>
+            </div>
+            <small>
+              {Object.keys(mapping).length}/{templateColumns.length} matched · {matchedRecommendedCount}/
+              {recommendedColumns.length} recommended
+            </small>
+          </div>
+          <div className={styles.mappingLegend}>
+            <span className={styles.mappingImportanceRequired}>Required</span>
+            <span className={styles.mappingImportanceRecommended}>Recommended</span>
+            <span className={styles.mappingImportanceOptional}>Optional</span>
           </div>
           <div className={styles.mappingGrid}>
-            {templateColumns.map((column) => (
-              <label className={styles.mappingField} key={column}>
-                <span>{column}</span>
-                <select onChange={(event) => updateMapping(column, event.currentTarget.value)} value={mapping[column] ?? ""}>
-                  <option value="">Not mapped</option>
-                  {headers.map((header) => (
-                    <option key={header} value={header}>
-                      {header}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ))}
+            {templateColumns.map((column) => {
+              const importance = getListingImportColumnImportance(column);
+              const mappedHeader = mapping[column];
+
+              return (
+                <label className={styles.mappingField} key={column}>
+                  <span className={styles.mappingFieldTop}>
+                    <span>{getListingImportColumnLabel(column)}</span>
+                    <small className={importanceClassByValue[importance]}>{importance}</small>
+                  </span>
+                  <select onChange={(event) => updateMapping(column, event.currentTarget.value)} value={mappedHeader ?? ""}>
+                    <option value="">Skip / not in my export</option>
+                    {headers.map((header) => (
+                      <option key={header} value={header}>
+                        {header}
+                      </option>
+                    ))}
+                  </select>
+                  <small className={styles.mappingHint}>{getMappingHint(column, mappedHeader)}</small>
+                </label>
+              );
+            })}
           </div>
         </div>
       ) : null}
 
       <input name="columnMapping" type="hidden" value={mappingJson} />
+      <input name="importMode" type="hidden" value="concierge_index_only" />
 
-      <fieldset className={styles.modePanel}>
-        <legend>Import mode</legend>
-        <label>
-          <input defaultChecked name="importMode" type="radio" value="hybrid" />
-          <span>CRM + AI index</span>
-          <small>Create listing drafts and make them searchable by Concierge.</small>
-        </label>
-        <label>
-          <input name="importMode" type="radio" value="concierge_index_only" />
-          <span>AI Concierge only</span>
-          <small>Use this inventory for website AI search without migrating to PropertyFlow CRM yet.</small>
-        </label>
-        <label>
-          <input name="importMode" type="radio" value="crm_inventory" />
-          <span>CRM inventory only</span>
-          <small>Create operational listing drafts. AI indexing can be run later.</small>
-        </label>
-      </fieldset>
+      <div className={styles.starterModeNotice}>
+        <Info size={17} />
+        <div>
+          <strong>Starter import</strong>
+          <span>
+            Listings become searchable by the AI Concierge without forcing the agency to migrate into PropertyFlow CRM.
+          </span>
+        </div>
+      </div>
 
       <label className={styles.checkbox}>
         <input name="dryRun" type="checkbox" />
@@ -138,11 +194,15 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
       </label>
 
       <div className={styles.actions}>
-        <button type="submit">
+        <button disabled={hasBlockingMapping} type="submit">
           <Upload size={16} />
           Queue import job
         </button>
-        <small>After import, agents can open drafts, attach photos, run AI description, and publish.</small>
+        <small>
+          {hasBlockingMapping
+            ? "Map the required title column before queueing the import."
+            : "After import, Concierge can use listing data together with documents and website knowledge."}
+        </small>
       </div>
     </form>
   );

@@ -30,6 +30,59 @@ export const listingImportTemplateColumns = [
 
 export type ListingImportTemplateColumn = (typeof listingImportTemplateColumns)[number];
 
+export type ListingImportColumnImportance = "required" | "recommended" | "optional";
+
+export const listingImportColumnLabels: Record<ListingImportTemplateColumn, string> = {
+  address: "Address",
+  amenities: "Amenities",
+  areaSqm: "Area, sqm",
+  availableFrom: "Available from",
+  availableUntil: "Available until",
+  bathrooms: "Bathrooms",
+  bedrooms: "Bedrooms",
+  description: "Description",
+  externalId: "External ID",
+  floor: "Floor",
+  foreignQuota: "Foreign quota",
+  imageUrls: "Image URLs",
+  kind: "Property kind",
+  latitude: "Latitude",
+  listingType: "Sale / rent",
+  longitude: "Longitude",
+  maintenanceFeeMonthlyThb: "Maintenance fee",
+  market: "Market / city",
+  minimumRentalMonths: "Minimum rental months",
+  priceCurrency: "Currency",
+  priceThb: "Sale price",
+  projectDeveloper: "Project developer",
+  projectName: "Project name",
+  projectStatus: "Project status",
+  rentalPriceMonthlyThb: "Monthly rent",
+  status: "Listing status",
+  title: "Title"
+};
+
+const requiredListingImportColumns = new Set<ListingImportTemplateColumn>(["title"]);
+
+const recommendedListingImportColumns = new Set<ListingImportTemplateColumn>([
+  "address",
+  "amenities",
+  "areaSqm",
+  "availableUntil",
+  "bathrooms",
+  "bedrooms",
+  "description",
+  "externalId",
+  "imageUrls",
+  "kind",
+  "listingType",
+  "market",
+  "minimumRentalMonths",
+  "priceThb",
+  "projectName",
+  "rentalPriceMonthlyThb"
+]);
+
 export const listingImportColumnSynonyms: Record<ListingImportTemplateColumn, string[]> = {
   address: ["address", "location_address", "street", "landmark"],
   amenities: ["amenities", "features", "facilities", "tags"],
@@ -66,6 +119,24 @@ export const listingImportColumnSynonyms: Record<ListingImportTemplateColumn, st
   status: ["status", "availability", "listing_status"],
   title: ["title", "name", "property_name", "listing_title", "unit_name"]
 };
+
+export function getListingImportColumnImportance(column: string): ListingImportColumnImportance {
+  const canonicalColumn = column as ListingImportTemplateColumn;
+
+  if (requiredListingImportColumns.has(canonicalColumn)) {
+    return "required";
+  }
+
+  if (recommendedListingImportColumns.has(canonicalColumn)) {
+    return "recommended";
+  }
+
+  return "optional";
+}
+
+export function getListingImportColumnLabel(column: string) {
+  return listingImportColumnLabels[column as ListingImportTemplateColumn] ?? column;
+}
 
 export function buildListingImportColumnMapping(columns: readonly string[], headers: readonly string[]) {
   const normalizedHeaderByHeader = new Map(headers.map((header) => [normalizeListingImportHeader(header), header]));

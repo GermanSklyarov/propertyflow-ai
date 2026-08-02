@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildListingImportColumnMapping,
+  getListingImportColumnImportance,
+  getListingImportColumnLabel,
   listingImportTemplateColumns,
   parseListingImportHeaderRow
 } from "./listing-import-mapping";
@@ -49,5 +51,16 @@ describe("listing import mapping", () => {
       rentalPriceMonthlyThb: "Monthly Rent",
       title: "Property Name"
     });
+  });
+
+  it("explains which import columns are required, recommended, or optional", () => {
+    expect(getListingImportColumnImportance("title")).toBe("required");
+    expect(getListingImportColumnImportance("availableUntil")).toBe("recommended");
+    expect(getListingImportColumnImportance("projectDeveloper")).toBe("optional");
+  });
+
+  it("formats canonical columns for agent-facing mapping labels", () => {
+    expect(getListingImportColumnLabel("rentalPriceMonthlyThb")).toBe("Monthly rent");
+    expect(getListingImportColumnLabel("unknownAgencyField")).toBe("unknownAgencyField");
   });
 });
