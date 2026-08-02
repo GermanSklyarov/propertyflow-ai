@@ -116,3 +116,40 @@
 - Reuse AI-selected gallery photos and image-analysis tags when composing posts.
 - Add approval workflow: draft, review, approved, published.
 - Track generated posts, source channels, UTM tags, leads, and conversion back to the listing and agent.
+
+## Phase 10: Agents Hub
+
+- Add an AI Agents section as the agency-facing control center for specialized agents instead of a single generic assistant.
+- Start with role-specific agents:
+  - Sales Concierge: answers buyer and renter questions, recommends listings, and hands off hot conversations.
+  - Listing Optimizer: audits listing quality and suggests missing photos, amenities, project links, pricing gaps, and copy improvements.
+  - Price Advisor: compares market data, nearby listings, project history, rent signals, and ownership costs.
+  - Lead Analyzer: scores leads by buying/renting intent, urgency, budget fit, and next best action.
+  - Market Analyst: summarizes new listings, price changes, demand shifts, and area-level changes every morning.
+  - CRM Assistant: detects neglected leads, overdue follow-ups, missing notes, and stalled deals.
+  - Document AI: extracts and structures PDFs, brochures, Chanote data, contracts, and internal instructions.
+  - Translation AI: translates and localizes listings, knowledge documents, and client-facing messages.
+  - SEO AI: writes page titles, meta descriptions, structured snippets, and search-ready listing copy.
+  - Social Media AI: prepares channel-specific posts, carousel notes, captions, hashtags, and publishing checklists.
+- Give each agent a clear scope, permissions, source access, output type, and approval policy so automation does not become an uncontrolled chat surface.
+- Let agencies enable agents by plan:
+  - Starter: Sales Concierge, Document AI, Translation AI, and basic Listing Optimizer.
+  - Growth: Lead Analyzer, CRM Assistant, Price Advisor, and Social Media AI.
+  - Enterprise: Market Analyst, advanced SEO AI, cross-branch automation, custom agents, and scheduled workflows.
+- Add an agent activity feed so managers can review what each agent suggested, changed, queued, or escalated.
+- Add audit events and human approval gates for agent actions that can affect public listings, pricing, CRM ownership, messages, or publication.
+
+## Phase 10.5: Proactive Agents
+
+- Move beyond reactive chat by allowing agents to create scheduled or event-driven recommendations.
+- Add daily proactive checks:
+  - listings with stale prices, old descriptions, missing project links, or outdated availability;
+  - objects without key photos such as kitchen, bathroom, pool, view, parking, or building facade;
+  - popular listings with high views but no lead conversion;
+  - leads that revisited the same property, asked follow-up questions, or went quiet after high intent;
+  - newly imported listings that match saved searches or active buyer requirements;
+  - market movements such as new competing listings, rent changes, or price drops in an agency's target areas.
+- Add delivery channels for proactive insights: in-app inbox, morning digest, email, Slack/LINE integration, and task queue.
+- Add controls for frequency, priority, recipients, ignored signals, and escalation rules so agencies can tune signal without noise.
+- Require every proactive recommendation to include evidence, source links, confidence, and a clear next action.
+- Track whether proactive insights were accepted, ignored, converted into tasks, or led to a listing/lead update.
