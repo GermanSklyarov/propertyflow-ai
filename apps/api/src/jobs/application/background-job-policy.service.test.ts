@@ -78,6 +78,39 @@ describe("BackgroundJobPolicyService", () => {
     ).not.toThrow();
   });
 
+  it("allows XML property feed imports with field mapping", () => {
+    expect(() =>
+      service.authorize(broker, {
+        name: "properties.import",
+        payload: {
+          fieldMapping: {
+            rootPath: "listings.listing",
+            canonical: {
+              externalId: "id",
+              title: "title",
+              market: "city",
+              priceAmount: "price.sale",
+              availableUntil: "availability.until"
+            },
+            customAttributes: [
+              {
+                key: "availability_note",
+                sourcePath: "availability.note",
+                type: "text",
+                filterHint: "availability"
+              }
+            ]
+          },
+          importMode: "concierge_index_only",
+          objectUrl: "https://agency.example.com/feed.xml",
+          source: "partner-xml",
+          sourceConfigId: "source-xml",
+          tenantId: "demo-agency"
+        }
+      } satisfies EnqueueBackgroundJobRequest)
+    ).not.toThrow();
+  });
+
   it("rejects partner API property imports without field mapping", () => {
     expect(() =>
       service.authorize(broker, {

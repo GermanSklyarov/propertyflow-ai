@@ -1346,7 +1346,7 @@ export interface KnowledgeEmbeddingHealthSnapshot {
   generatedAt: string;
 }
 
-export type ListingSourceType = "rest-api";
+export type ListingSourceType = "rest-api" | "xml-feed";
 export type ListingSourceAuthType = "none" | "bearer" | "api-key-header";
 export type ListingSourceStatus = "draft" | "connected" | "syncing" | "failed" | "disabled";
 export type ListingSourceImportMode = "crm_inventory" | "concierge_index_only" | "hybrid";
@@ -2612,7 +2612,7 @@ export interface BackgroundJobBasePayload {
 }
 
 export interface PropertyImportJobPayload extends BackgroundJobBasePayload {
-  source: "csv" | "json" | "partner-api";
+  source: "csv" | "json" | "partner-api" | "partner-xml";
   importMode?: "crm_inventory" | "concierge_index_only" | "hybrid";
   objectUrl?: string;
   columnMapping?: Record<string, string>;

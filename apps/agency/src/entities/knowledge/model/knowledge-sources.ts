@@ -115,12 +115,18 @@ export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
       },
       {
         actionHref: "#listing-api-sources",
-        actionLabel: "Manage APIs",
+        actionLabel: "Manage feeds",
         label: "REST API inventory sync",
         mode: "concierge_index_only",
         status: "ready"
       },
-      { label: "XML feed import", mode: "concierge_index_only", status: "planned" }
+      {
+        actionHref: "#listing-api-sources",
+        actionLabel: "Connect XML",
+        label: "XML feed import",
+        mode: "concierge_index_only",
+        status: "ready"
+      }
     ],
     description: "Listings can feed Concierge search without forcing the agency to adopt our CRM first.",
     title: "Property Listings",
@@ -326,21 +332,19 @@ export function buildRuntimeKnowledgeSourceGroups(
   const activeKnowledgeJobs = input.jobs.some(
     (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && isRunningBackgroundJob(job)
   );
-  const activeImportJobs = input.jobs.some(
-    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) !== "partner-api" && isRunningBackgroundJob(job)
-  );
+  const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && !isPartnerFeedJob(job) && isRunningBackgroundJob(job));
   const failedKnowledgeJobs = input.jobs.some(
     (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && job.state === "failed"
   );
-  const failedImportJobs = input.jobs.some(
-    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) !== "partner-api" && job.state === "failed"
-  );
-  const activePartnerImportJobs = input.jobs.some(
+  const failedImportJobs = input.jobs.some((job) => job.name === "properties.import" && !isPartnerFeedJob(job) && job.state === "failed");
+  const activeRestImportJobs = input.jobs.some(
     (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && isRunningBackgroundJob(job)
   );
-  const failedPartnerImportJobs = input.jobs.some(
-    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && job.state === "failed"
+  const failedRestImportJobs = input.jobs.some((job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && job.state === "failed");
+  const activeXmlImportJobs = input.jobs.some(
+    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-xml" && isRunningBackgroundJob(job)
   );
+  const failedXmlImportJobs = input.jobs.some((job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-xml" && job.state === "failed");
   const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
   const readyGuideDocuments = countReadyDocumentsWithTags(input.documents, [
     "faq",
@@ -391,18 +395,16 @@ export function buildRuntimeKnowledgeSourceGroups(
     .reduce((total, job) => total + getResultNumber(job.result, "knowledgeDocumentsCreated"), 0);
   const listingSources = input.listingSources ?? [];
   const activeListingSources = listingSources.filter((source) => source.status !== "disabled");
-  const connectedListingSources = activeListingSources.filter((source) => source.status === "connected" || source.status === "syncing");
-  const failedListingSources = activeListingSources.filter((source) => source.status === "failed");
-  const listingSourceCanonicalFields = activeListingSources.reduce(
-    (total, source) =>
-      total +
-      Object.values(source.mapping.canonical).filter((sourcePath) => typeof sourcePath === "string" && sourcePath.trim().length > 0).length,
-    0
-  );
-  const listingSourceCustomAttributes = activeListingSources.reduce(
-    (total, source) => total + (source.mapping.customAttributes?.length ?? 0),
-    0
-  );
+  const activeRestSources = activeListingSources.filter((source) => source.type === "rest-api");
+  const activeXmlSources = activeListingSources.filter((source) => source.type === "xml-feed");
+  const connectedRestSources = activeRestSources.filter((source) => source.status === "connected" || source.status === "syncing");
+  const failedRestSources = activeRestSources.filter((source) => source.status === "failed");
+  const connectedXmlSources = activeXmlSources.filter((source) => source.status === "connected" || source.status === "syncing");
+  const failedXmlSources = activeXmlSources.filter((source) => source.status === "failed");
+  const restCanonicalFields = countListingSourceCanonicalFields(activeRestSources);
+  const restCustomAttributes = countListingSourceCustomAttributes(activeRestSources);
+  const xmlCanonicalFields = countListingSourceCanonicalFields(activeXmlSources);
+  const xmlCustomAttributes = countListingSourceCustomAttributes(activeXmlSources);
 
   return groups.map((group) => {
     if (group.type === "document") {
@@ -459,14 +461,35 @@ export function buildRuntimeKnowledgeSourceGroups(
         connectors: group.connectors.map((connector) => {
           if (connector.label === "REST API inventory sync") {
             return buildRuntimeListingSourceConnector({
-              activeImportJobs: activePartnerImportJobs,
-              connectedCount: connectedListingSources.length,
+              activeImportJobs: activeRestImportJobs,
+              connectedCount: connectedRestSources.length,
               connector,
-              failedCount: failedListingSources.length,
-              failedImportJobs: failedPartnerImportJobs,
-              sourceCount: activeListingSources.length,
-              totalCanonicalFields: listingSourceCanonicalFields,
-              totalCustomAttributes: listingSourceCustomAttributes
+              emptyNote: "Connect REST inventory without migrating CRM",
+              failedCount: failedRestSources.length,
+              failedImportJobs: failedRestImportJobs,
+              failedNote: "Last REST sync failed; review source mapping or credentials",
+              sourceCount: activeRestSources.length,
+              sourceLabel: "API source",
+              syncingNote: "REST feed is syncing listing knowledge",
+              totalCanonicalFields: restCanonicalFields,
+              totalCustomAttributes: restCustomAttributes
+            });
+          }
+
+          if (connector.label === "XML feed import") {
+            return buildRuntimeListingSourceConnector({
+              activeImportJobs: activeXmlImportJobs,
+              connectedCount: connectedXmlSources.length,
+              connector,
+              emptyNote: "Connect XML inventory without migrating CRM",
+              failedCount: failedXmlSources.length,
+              failedImportJobs: failedXmlImportJobs,
+              failedNote: "Last XML sync failed; review feed mapping or availability",
+              sourceCount: activeXmlSources.length,
+              sourceLabel: "XML feed",
+              syncingNote: "XML feed is syncing listing knowledge",
+              totalCanonicalFields: xmlCanonicalFields,
+              totalCustomAttributes: xmlCustomAttributes
             });
           }
 
@@ -543,24 +566,29 @@ function buildRuntimeListingSourceConnector(input: {
   activeImportJobs: boolean;
   connectedCount: number;
   connector: KnowledgeSourceConnector;
+  emptyNote: string;
   failedCount: number;
   failedImportJobs: boolean;
+  failedNote: string;
   sourceCount: number;
+  sourceLabel: string;
+  syncingNote: string;
   totalCanonicalFields: number;
   totalCustomAttributes: number;
 }): KnowledgeSourceConnector {
   const healthyCount = input.connectedCount || input.sourceCount;
+  const sourceLabel = `${input.sourceLabel}${input.sourceCount === 1 ? "" : "s"}`;
 
   return {
     ...input.connector,
-    countLabel: `${input.sourceCount} API source${input.sourceCount === 1 ? "" : "s"}`,
+    countLabel: `${input.sourceCount} ${sourceLabel}`,
     runtimeNote: input.failedImportJobs || input.failedCount
-      ? "Last API sync failed; review source mapping or credentials"
+      ? input.failedNote
       : input.activeImportJobs
-        ? "REST feed is syncing listing knowledge"
+        ? input.syncingNote
         : healthyCount
           ? buildListingSourceMappingNote(input.totalCanonicalFields, input.totalCustomAttributes)
-          : "Connect REST inventory without migrating CRM",
+          : input.emptyNote,
     status: input.failedImportJobs || input.failedCount
       ? "failed"
       : input.activeImportJobs
@@ -648,8 +676,27 @@ function getBackgroundJobPayloadSource(job: BackgroundJobMonitorItem) {
   return typeof source === "string" ? source : "";
 }
 
+function isPartnerFeedJob(job: BackgroundJobMonitorItem) {
+  const source = getBackgroundJobPayloadSource(job);
+
+  return source === "partner-api" || source === "partner-xml";
+}
+
 function isAiReadyDocument(document: KnowledgeDocumentSnapshot) {
   return assessKnowledgeDocumentReadiness(document).status === "ready";
+}
+
+function countListingSourceCanonicalFields(sources: ListingSourceSnapshot[]) {
+  return sources.reduce(
+    (total, source) =>
+      total +
+      Object.values(source.mapping.canonical).filter((sourcePath) => typeof sourcePath === "string" && sourcePath.trim().length > 0).length,
+    0
+  );
+}
+
+function countListingSourceCustomAttributes(sources: ListingSourceSnapshot[]) {
+  return sources.reduce((total, source) => total + (source.mapping.customAttributes?.length ?? 0), 0);
 }
 
 function buildKnowledgeSourceCoverageStatus(summary: KnowledgeSourceReadinessSummary): KnowledgeSourceCoverageItem["status"] {

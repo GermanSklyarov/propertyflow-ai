@@ -17,6 +17,7 @@ import {
 
 type PropertyImportJob = Job<PropertyImportJobPayload, unknown, "properties.import">;
 type PropertyImportMode = NonNullable<PropertyImportJobPayload["importMode"]>;
+type PartnerFeedSource = Extract<PropertyImportJobPayload["source"], "partner-api" | "partner-xml">;
 
 const supportedMarkets = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"] as const;
 const supportedKinds = ["condo", "villa", "townhouse", "land", "commercial"] as const;
@@ -653,8 +654,8 @@ function parseImportRows(content: string, payload: PropertyImportJobPayload): Im
     return parseCsvRows(content, payload.columnMapping);
   }
 
-  if (payload.source === "partner-api") {
-    return parsePartnerApiRows(content, payload.fieldMapping);
+  if (payload.source === "partner-api" || payload.source === "partner-xml") {
+    return parsePartnerFeedRows(content, payload.fieldMapping, payload.source);
   }
 
   return parseJsonRows(content);
@@ -679,17 +680,21 @@ function parseJsonRows(content: string): ImportRow[] {
   });
 }
 
-function parsePartnerApiRows(content: string, fieldMapping: ListingSourceFieldMapping | undefined): ImportRow[] {
+function parsePartnerFeedRows(
+  content: string,
+  fieldMapping: ListingSourceFieldMapping | undefined,
+  source: PartnerFeedSource
+): ImportRow[] {
   if (!fieldMapping) {
-    throw new Error("fieldMapping is required for partner API property imports");
+    throw new Error("fieldMapping is required for partner feed property imports");
   }
 
-  const value = JSON.parse(content) as unknown;
-  const collection = resolvePartnerApiCollection(value, fieldMapping.rootPath);
+  const value = source === "partner-xml" ? parseXmlFeed(content) : (JSON.parse(content) as unknown);
+  const collection = resolvePartnerFeedCollection(value, fieldMapping.rootPath, source);
 
   return collection.map((item, index) => {
     if (typeof item !== "object" || item === null || Array.isArray(item)) {
-      throw new Error(`Partner API row ${index + 1} must be an object`);
+      throw new Error(`Partner feed row ${index + 1} must be an object`);
     }
 
     return {
@@ -699,32 +704,50 @@ function parsePartnerApiRows(content: string, fieldMapping: ListingSourceFieldMa
   });
 }
 
-function resolvePartnerApiCollection(value: unknown, rootPath: string | undefined): unknown[] {
+function resolvePartnerFeedCollection(value: unknown, rootPath: string | undefined, source: PartnerFeedSource): unknown[] {
   if (rootPath) {
     const rootedValue = readPath(value, rootPath);
 
-    if (!Array.isArray(rootedValue)) {
-      throw new Error(`Partner API rootPath "${rootPath}" must resolve to an array`);
+    if (Array.isArray(rootedValue)) {
+      return rootedValue.filter(isRecord);
     }
 
-    return rootedValue;
+    if (isRecord(rootedValue)) {
+      return [rootedValue];
+    }
+
+    throw new Error(`Partner ${formatPartnerFeedSource(source)} rootPath "${rootPath}" must resolve to an array or object`);
   }
 
   if (Array.isArray(value)) {
-    return value;
+    return value.filter(isRecord);
   }
 
-  if (typeof value === "object" && value !== null) {
-    for (const key of ["items", "data", "listings", "properties", "results"]) {
-      const nestedValue = (value as Record<string, unknown>)[key];
+  if (isRecord(value)) {
+    for (const key of ["items", "data", "listings", "listing", "properties", "property", "results"]) {
+      const nestedValue = value[key];
 
       if (Array.isArray(nestedValue)) {
-        return nestedValue;
+        return nestedValue.filter(isRecord);
+      }
+
+      if (isRecord(nestedValue)) {
+        return resolvePartnerFeedCollection(nestedValue, undefined, source);
       }
     }
+
+    return [value];
   }
 
-  throw new Error("Partner API response must be an array or contain items/data/listings/properties/results array");
+  throw new Error("Partner feed response must be an object or array of listing rows");
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function formatPartnerFeedSource(source: PartnerFeedSource): string {
+  return source === "partner-xml" ? "XML" : "API";
 }
 
 function mapPartnerApiRow(row: Record<string, unknown>, fieldMapping: ListingSourceFieldMapping): Record<string, unknown> {
@@ -782,11 +805,16 @@ function readPath(value: unknown, path: string): unknown {
     if (Array.isArray(current)) {
       const index = Number(segment);
 
-      if (!Number.isInteger(index) || index < 0 || index >= current.length) {
-        return undefined;
+      if (Number.isInteger(index) && index >= 0 && index < current.length) {
+        current = current[index];
+        continue;
       }
 
-      current = current[index];
+      const mappedValues = current
+        .map((item) => readPath(item, segment))
+        .filter((item): item is Exclude<unknown, undefined> => item !== undefined);
+
+      current = mappedValues.length ? mappedValues : undefined;
       continue;
     }
 
@@ -798,6 +826,143 @@ function readPath(value: unknown, path: string): unknown {
   }
 
   return current;
+}
+
+interface XmlElement {
+  attributes: Record<string, string>;
+  children: XmlElement[];
+  name: string;
+  text: string;
+}
+
+function parseXmlFeed(content: string): Record<string, unknown> {
+  const root: XmlElement = { attributes: {}, children: [], name: "__root__", text: "" };
+  const stack = [root];
+  const tokens = content.match(/<[^>]+>|[^<]+/g) ?? [];
+
+  for (const token of tokens) {
+    if (token.startsWith("<?") || token.startsWith("<!")) {
+      continue;
+    }
+
+    if (token.startsWith("</")) {
+      if (stack.length > 1) {
+        stack.pop();
+      }
+      continue;
+    }
+
+    if (token.startsWith("<")) {
+      const selfClosing = token.endsWith("/>");
+      const tagBody = token.slice(1, selfClosing ? -2 : -1).trim();
+      const [rawName = ""] = tagBody.split(/\s+/, 1);
+      const name = normalizeXmlTagName(rawName);
+
+      if (!name) {
+        continue;
+      }
+
+      const element: XmlElement = {
+        attributes: parseXmlAttributes(tagBody.slice(rawName.length)),
+        children: [],
+        name,
+        text: ""
+      };
+
+      stack.at(-1)?.children.push(element);
+
+      if (!selfClosing) {
+        stack.push(element);
+      }
+
+      continue;
+    }
+
+    const text = decodeXmlText(token).trim();
+
+    if (text) {
+      const current = stack.at(-1);
+      if (current) {
+        current.text = [current.text, text].filter(Boolean).join(" ");
+      }
+    }
+  }
+
+  return xmlChildrenToObject(root.children);
+}
+
+function xmlChildrenToObject(children: XmlElement[]): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const child of children) {
+    addXmlValue(result, child.name, xmlElementToValue(child));
+  }
+
+  return result;
+}
+
+function xmlElementToValue(element: XmlElement): unknown {
+  const childrenValue = xmlChildrenToObject(element.children);
+  const hasChildren = Object.keys(childrenValue).length > 0;
+  const hasAttributes = Object.keys(element.attributes).length > 0;
+
+  if (!hasChildren && !hasAttributes) {
+    return element.text;
+  }
+
+  return {
+    ...childrenValue,
+    ...(element.text ? { text: element.text } : {}),
+    ...(hasAttributes ? { attributes: element.attributes } : {})
+  };
+}
+
+function addXmlValue(target: Record<string, unknown>, key: string, value: unknown) {
+  const existing = target[key];
+
+  if (existing === undefined) {
+    target[key] = value;
+    return;
+  }
+
+  if (Array.isArray(existing)) {
+    existing.push(value);
+    return;
+  }
+
+  target[key] = [existing, value];
+}
+
+function normalizeXmlTagName(name: string): string {
+  return name.replace(/^[^:]+:/, "").trim();
+}
+
+function parseXmlAttributes(input: string): Record<string, string> {
+  const attributes: Record<string, string> = {};
+  const pattern = /([\w:.-]+)\s*=\s*(["'])(.*?)\2/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(input))) {
+    const rawName = match[1];
+    const value = match[3];
+
+    if (!rawName || value === undefined) {
+      continue;
+    }
+
+    attributes[normalizeXmlTagName(rawName)] = decodeXmlText(value);
+  }
+
+  return attributes;
+}
+
+function decodeXmlText(value: string): string {
+  return value
+    .replaceAll("&quot;", '"')
+    .replaceAll("&apos;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">")
+    .replaceAll("&amp;", "&");
 }
 
 function canonicalFieldToImportKey(field: ListingSourceCanonicalField) {

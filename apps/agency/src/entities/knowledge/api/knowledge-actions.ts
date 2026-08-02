@@ -142,7 +142,7 @@ export async function previewRestListingSourceAction(formData: FormData) {
   try {
     preview = await previewRestListingSource(request, { tenantId });
   } catch (error) {
-    redirectListingSourceSetupError(error instanceof Error ? error.message : "REST inventory preview failed.");
+    redirectListingSourceSetupError(error instanceof Error ? error.message : "Listing feed preview failed.");
   }
 
   revalidatePath("/knowledge");
@@ -160,6 +160,7 @@ export async function previewRestListingSourceAction(formData: FormData) {
 
 function buildRestListingSourceRequest(formData: FormData): CreateListingSourceRequest {
   const name = String(formData.get("name") ?? "").trim();
+  const type = String(formData.get("type") ?? "rest-api").trim();
   const endpointUrl = String(formData.get("endpointUrl") ?? "").trim();
   const rootPath = String(formData.get("rootPath") ?? "").trim();
   const authType = String(formData.get("authType") ?? "api-key-header") as CreateListingSourceRequest["authType"];
@@ -171,6 +172,9 @@ function buildRestListingSourceRequest(formData: FormData): CreateListingSourceR
 
   if (!name || !endpointUrl) {
     redirectListingSourceSetupError("Source name and endpoint URL are required.");
+  }
+  if (type !== "rest-api" && type !== "xml-feed") {
+    redirectListingSourceSetupError("Choose a supported listing feed type.");
   }
   if (!canonical.ok) {
     redirectListingSourceSetupError(canonical.message);
@@ -192,7 +196,7 @@ function buildRestListingSourceRequest(formData: FormData): CreateListingSourceR
       rootPath: rootPath || undefined
     },
     name,
-    type: "rest-api"
+    type
   };
 }
 

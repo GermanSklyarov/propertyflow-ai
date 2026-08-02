@@ -20,7 +20,7 @@ import {
   type ListingSourceRepository
 } from "../domain/listing-source.repository.js";
 
-const allowedTypes: ListingSourceType[] = ["rest-api"];
+const allowedTypes: ListingSourceType[] = ["rest-api", "xml-feed"];
 const allowedAuthTypes: ListingSourceAuthType[] = ["none", "bearer", "api-key-header"];
 const allowedImportModes: ListingSourceImportMode[] = ["crm_inventory", "concierge_index_only", "hybrid"];
 const allowedAttributeTypes: ListingSourceCustomAttributeType[] = ["text", "number", "boolean", "date", "enum", "json"];
@@ -123,7 +123,7 @@ export class ListingSourceService {
     return this.jobs.enqueue("properties.import", {
       tenantId,
       requestedByUserId,
-      source: "partner-api",
+      source: source.type === "xml-feed" ? "partner-xml" : "partner-api",
       importMode: source.importMode,
       objectUrl: source.endpointUrl,
       sourceConfigId: source.id,
@@ -248,7 +248,7 @@ export class ListingSourceService {
 
     try {
       const headers: Record<string, string> = {
-        accept: "application/json"
+        accept: source.type === "xml-feed" ? "application/xml, text/xml, */*" : "application/json"
       };
 
       if (source.authType === "api-key-header" && source.authHeaderName && source.authSecretRef) {
@@ -267,13 +267,21 @@ export class ListingSourceService {
         throw new BadRequestException(`Listing source preview failed with HTTP ${response.status}.`);
       }
 
+      if (source.type === "xml-feed") {
+        return parseXmlFeed(await response.text());
+      }
+
       return await response.json();
     } catch (error) {
       if (error instanceof BadRequestException) {
         throw error;
       }
 
-      throw new BadRequestException("Listing source preview could not read a JSON response from the endpoint.");
+      throw new BadRequestException(
+        source.type === "xml-feed"
+          ? "Listing source preview could not read an XML response from the endpoint."
+          : "Listing source preview could not read a JSON response from the endpoint."
+      );
     } finally {
       clearTimeout(timeout);
     }
@@ -281,14 +289,12 @@ export class ListingSourceService {
 
   private extractPreviewItems(payload: unknown, rootPath?: string): unknown[] {
     const root = rootPath ? this.readMappedPath(payload, rootPath) : this.resolveImplicitItems(payload);
-    if (!Array.isArray(root)) {
+    const items = Array.isArray(root) ? root : root && typeof root === "object" ? [root] : [];
+    if (!items.length) {
       throw new BadRequestException("Listing source preview did not find an array of listings. Check the root path.");
     }
-    if (!root.length) {
-      throw new BadRequestException("Listing source preview found zero listings in the feed.");
-    }
 
-    return root;
+    return items;
   }
 
   private resolveImplicitItems(payload: unknown): unknown {
@@ -329,7 +335,10 @@ export class ListingSourceService {
       }
       if (Array.isArray(current)) {
         const index = Number(segment);
-        return Number.isInteger(index) ? current[index] : undefined;
+        if (Number.isInteger(index)) {
+          return current[index];
+        }
+        return current.map((item) => this.readMappedPath(item, segment)).filter((item) => item !== undefined);
       }
       if (typeof current === "object") {
         return (current as Record<string, unknown>)[segment];
@@ -376,4 +385,141 @@ export class ListingSourceService {
 
     return warnings;
   }
+}
+
+function parseXmlFeed(xml: string): unknown {
+  const cleaned = xml
+    .replace(/<\?xml[\s\S]*?\?>/g, "")
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .trim();
+  const root: XmlElement = { children: [], name: "root" };
+  const stack: XmlElement[] = [root];
+  const tokenPattern = /<[^>]+>|[^<]+/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = tokenPattern.exec(cleaned)) !== null) {
+    const token = match[0];
+    const current = stack[stack.length - 1];
+
+    if (!current) {
+      throw new BadRequestException("Listing source XML feed is malformed.");
+    }
+
+    if (token.startsWith("<![CDATA[")) {
+      current.text = `${current.text ?? ""}${token.replace(/^<!\[CDATA\[/, "").replace(/\]\]>$/, "")}`;
+      continue;
+    }
+
+    if (!token.startsWith("<")) {
+      const text = decodeXmlText(token.trim());
+      if (text) {
+        current.text = `${current.text ?? ""}${text}`;
+      }
+      continue;
+    }
+
+    if (token.startsWith("</")) {
+      const closingName = normalizeXmlTagName(token.slice(2, -1));
+      const element = stack.pop();
+      if (!element || element.name !== closingName) {
+        throw new BadRequestException("Listing source XML feed is malformed.");
+      }
+      stack[stack.length - 1]?.children.push(element);
+      continue;
+    }
+
+    if (token.startsWith("<!")) {
+      continue;
+    }
+
+    const selfClosing = token.endsWith("/>");
+    const tagBody = token.slice(1, selfClosing ? -2 : -1);
+    const element: XmlElement = {
+      attributes: parseXmlAttributes(tagBody),
+      children: [],
+      name: normalizeXmlTagName(tagBody)
+    };
+
+    if (selfClosing) {
+      current.children.push(element);
+    } else {
+      stack.push(element);
+    }
+  }
+
+  if (stack.length !== 1) {
+    throw new BadRequestException("Listing source XML feed is malformed.");
+  }
+
+  return xmlChildrenToObject(root.children);
+}
+
+interface XmlElement {
+  attributes?: Record<string, string>;
+  children: XmlElement[];
+  name: string;
+  text?: string;
+}
+
+function xmlChildrenToObject(children: XmlElement[]): Record<string, unknown> {
+  const value: Record<string, unknown> = {};
+
+  for (const child of children) {
+    addXmlValue(value, child.name, xmlElementToValue(child));
+  }
+
+  return value;
+}
+
+function xmlElementToValue(element: XmlElement): unknown {
+  const children = xmlChildrenToObject(element.children);
+  const hasChildren = Object.keys(children).length > 0;
+  const hasAttributes = Boolean(element.attributes && Object.keys(element.attributes).length);
+  const text = element.text?.trim();
+
+  if (!hasChildren && !hasAttributes) {
+    return text ?? "";
+  }
+
+  return {
+    ...children,
+    ...(text ? { text } : {}),
+    ...(hasAttributes ? { attributes: element.attributes } : {})
+  };
+}
+
+function addXmlValue(target: Record<string, unknown>, key: string, value: unknown) {
+  const existing = target[key];
+
+  if (existing === undefined) {
+    target[key] = value;
+    return;
+  }
+
+  target[key] = Array.isArray(existing) ? [...existing, value] : [existing, value];
+}
+
+function normalizeXmlTagName(tagBody: string): string {
+  return tagBody.trim().split(/\s+/)[0] ?? "";
+}
+
+function parseXmlAttributes(tagBody: string): Record<string, string> | undefined {
+  const attributes: Record<string, string> = {};
+  const attributePattern = /([A-Za-z_:][\w:.-]*)\s*=\s*"([^"]*)"/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = attributePattern.exec(tagBody)) !== null) {
+    attributes[match[1]] = decodeXmlText(match[2]);
+  }
+
+  return Object.keys(attributes).length ? attributes : undefined;
+}
+
+function decodeXmlText(value: string): string {
+  return value
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 }

@@ -8,12 +8,12 @@ import type {
   ListingSourceType
 } from "@propertyflow/contracts";
 
-const sourceTypes: ListingSourceType[] = ["rest-api"];
+const sourceTypes: ListingSourceType[] = ["rest-api", "xml-feed"];
 const authTypes: ListingSourceAuthType[] = ["none", "bearer", "api-key-header"];
 const importModes: ListingSourceImportMode[] = ["crm_inventory", "concierge_index_only", "hybrid"];
 
 export class CreateListingSourceDto implements CreateListingSourceRequest {
-  @ApiProperty({ example: "Agency website REST feed" })
+  @ApiProperty({ example: "Agency website listing feed" })
   @IsString()
   @MinLength(3)
   name!: string;

@@ -21,7 +21,7 @@ const minimumRoleByJob: Record<BackgroundJobName, UserRole> = {
 };
 
 const locales = ["en", "ru", "th", "zh"] as const;
-const importSources = ["csv", "json", "partner-api"] as const;
+const importSources = ["csv", "json", "partner-api", "partner-xml"] as const;
 const importModes = ["crm_inventory", "concierge_index_only", "hybrid"] as const;
 const searchIndexReasons = ["created", "updated", "manual"] as const;
 const embeddingProviders = ["local-hash", "openai", "anthropic", "gemini"] as const;
@@ -79,11 +79,14 @@ export class BackgroundJobPolicyService {
         this.optionalString(payload, "sourceConfigId");
         this.optionalObject(payload, "fieldMapping");
         this.optionalBoolean(payload, "dryRun");
-        if ((payload.source === "csv" || payload.source === "json" || payload.source === "partner-api") && !payload.objectUrl) {
+        if (
+          (payload.source === "csv" || payload.source === "json" || payload.source === "partner-api" || payload.source === "partner-xml") &&
+          !payload.objectUrl
+        ) {
           throw new BadRequestException("objectUrl is required for property imports");
         }
-        if (payload.source === "partner-api" && !payload.fieldMapping) {
-          throw new BadRequestException("fieldMapping is required for partner API property imports");
+        if ((payload.source === "partner-api" || payload.source === "partner-xml") && !payload.fieldMapping) {
+          throw new BadRequestException("fieldMapping is required for partner feed property imports");
         }
         return;
       case "properties.ai_description.generate":

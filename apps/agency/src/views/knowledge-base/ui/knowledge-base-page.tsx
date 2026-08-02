@@ -421,19 +421,19 @@ function ListingApiSourcesPanel({ sources }: { sources: ListingSourceSnapshot[] 
   const hasSyncingSources = activeSources.some((source) => source.status === "syncing");
 
   return (
-    <section className={styles.listingApiSources} id="listing-api-sources" aria-label="REST API inventory sources">
+    <section className={styles.listingApiSources} id="listing-api-sources" aria-label="Listing feed inventory sources">
       <ListingSourceSyncRefresh enabled={hasSyncingSources} />
       <div className={styles.listingApiSourcesHeader}>
         <div>
-          <p className="section-kicker">REST inventory sync</p>
-          <h3 className={styles.listingApiSourcesTitle}>API feeds can power Concierge before CRM migration</h3>
+          <p className="section-kicker">Listing feed sync</p>
+          <h3 className={styles.listingApiSourcesTitle}>Existing feeds can power Concierge before CRM migration</h3>
           <p>
             Canonical mapping keeps listing search reliable, while custom attributes preserve agency-specific availability,
             fees, restrictions, and source fields the AI should still understand.
           </p>
         </div>
         <span className={styles.statusBadge}>
-          {activeSources.length} API source{activeSources.length === 1 ? "" : "s"}
+          {activeSources.length} feed source{activeSources.length === 1 ? "" : "s"}
         </span>
       </div>
 
@@ -468,12 +468,12 @@ function ListingApiIntegrationGuide() {
     <details className={styles.listingApiGuide}>
       <summary>
         <DatabaseZap size={16} />
-        REST API sync setup contract
+        Listing feed setup contract
         <span>{fieldCount} mapped signals</span>
       </summary>
 
       <div className={styles.listingApiGuideBody}>
-        <div className={styles.listingApiSetupFlow} aria-label="REST listing API setup steps">
+        <div className={styles.listingApiSetupFlow} aria-label="Listing feed setup steps">
           {LISTING_API_SETUP_STEPS.map((step, index) => (
             <article key={step.title}>
               <span>{index + 1}</span>
@@ -527,13 +527,13 @@ function ListingApiEmptyState() {
     <div className={styles.listingApiEmpty}>
       <DatabaseZap size={18} />
       <div>
-        <strong>No REST inventory source connected yet</strong>
-        <span>Connect an agency listing endpoint, map fields once, and let Concierge search it without forcing CRM migration.</span>
+        <strong>No listing feed connected yet</strong>
+        <span>Connect an agency JSON or XML feed, map fields once, and let Concierge search it without forcing CRM migration.</span>
       </div>
       <ol className={styles.listingApiSetupSteps}>
         <li>
           <strong>Expose endpoint</strong>
-          <span>Use a JSON endpoint that returns listings as an array or under a root path like data.items.</span>
+          <span>Use a JSON or XML endpoint that returns listings as an array or under a root path like data.items or listings.listing.</span>
         </li>
         <li>
           <strong>Choose auth</strong>
@@ -557,18 +557,25 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
     <details className={styles.listingApiConnect} open={defaultOpen}>
       <summary>
         <Plus size={16} />
-        {defaultOpen ? "Connect REST feed" : "Add another REST feed"}
+        {defaultOpen ? "Connect listing feed" : "Add another listing feed"}
       </summary>
 
       <form action={createRestListingSourceAction} className={styles.listingApiConnectForm}>
         <div className={styles.listingApiFormGrid}>
           <label>
+            Feed type
+            <select name="type" defaultValue="rest-api">
+              <option value="rest-api">REST JSON feed</option>
+              <option value="xml-feed">XML feed</option>
+            </select>
+          </label>
+          <label>
             Source name
-            <input name="name" placeholder="Agency website REST feed" required />
+            <input name="name" placeholder="Agency website listing feed" required />
           </label>
           <label>
             Endpoint URL
-            <input name="endpointUrl" placeholder="https://agency.co.th/api/listings" required type="url" />
+            <input name="endpointUrl" placeholder="https://agency.co.th/api/listings or https://agency.co.th/feed.xml" required type="url" />
           </label>
           <label>
             Import mode
@@ -596,7 +603,7 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
           </label>
           <label>
             Root path
-            <input name="rootPath" placeholder="data.items" />
+            <input name="rootPath" placeholder="data.items or listings.listing" />
           </label>
         </div>
 
@@ -625,7 +632,7 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
           <DatabaseZap size={17} />
           <span>
             The first sync stores mapped data for Concierge retrieval. Custom attributes keep local fields queryable without
-            pretending they are universal CRM columns.
+            pretending they are universal CRM columns. XML and JSON feeds use the same mapping contract.
           </span>
         </div>
 
@@ -661,6 +668,7 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
       </div>
 
       <div className={styles.listingApiSourceMetrics}>
+        <span>{formatListingSourceType(source.type)}</span>
         <span>{summary.canonicalCount} mapped fields</span>
         <span>{summary.customAttributeCount} custom attrs</span>
         <span>{summary.searchableCustomAttributeCount} searchable</span>
@@ -879,6 +887,15 @@ function formatImportMode(value: ListingSourceSnapshot["importMode"]) {
     crm_inventory: "CRM inventory",
     hybrid: "CRM + AI index"
   } satisfies Record<ListingSourceSnapshot["importMode"], string>;
+
+  return labels[value];
+}
+
+function formatListingSourceType(value: ListingSourceSnapshot["type"]) {
+  const labels = {
+    "rest-api": "REST JSON",
+    "xml-feed": "XML feed"
+  } satisfies Record<ListingSourceSnapshot["type"], string>;
 
   return labels[value];
 }

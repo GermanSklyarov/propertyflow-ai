@@ -84,9 +84,9 @@ describe("knowledge sources model", () => {
 
     expect(summary.total).toBe(12);
     expect(summary.connected).toBe(3);
-    expect(summary.ready).toBe(4);
-    expect(summary.planned).toBe(5);
-    expect(summary.actionable).toBe(7);
+    expect(summary.ready).toBe(5);
+    expect(summary.planned).toBe(4);
+    expect(summary.actionable).toBe(8);
   });
 
   it("separates Starter-ready sources from roadmap connectors", () => {
@@ -96,7 +96,7 @@ describe("knowledge sources model", () => {
     expect(operational.flatMap((group) => group.connectors).every((connector) => connector.status !== "planned")).toBe(true);
     expect(planned.flatMap((group) => group.connectors).every((connector) => connector.status === "planned")).toBe(true);
     expect(operational.find((group) => group.type === "external")).toBeUndefined();
-    expect(summarizeKnowledgeSourceReadiness(planned).planned).toBe(5);
+    expect(summarizeKnowledgeSourceReadiness(planned).planned).toBe(4);
   });
 
   it("builds compact source coverage for the starter dashboard", () => {
@@ -333,6 +333,30 @@ describe("knowledge sources model", () => {
 
     expect(rest).toMatchObject({
       countLabel: "1 API source",
+      runtimeNote: "3 mapped fields and 2 custom attributes feed Concierge search",
+      status: "connected"
+    });
+  });
+
+  it("surfaces XML listing sources with flexible mapping metadata", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [],
+      listingSources: [
+        listingSource({
+          endpointUrl: "https://agency.example.com/feed.xml",
+          id: "listing-source-xml",
+          name: "Agency XML feed",
+          type: "xml-feed"
+        })
+      ],
+      totalDocuments: 0
+    });
+    const propertyFeed = groups.find((group) => group.type === "property_feed");
+    const xml = propertyFeed?.connectors.find((connector) => connector.label === "XML feed import");
+
+    expect(xml).toMatchObject({
+      countLabel: "1 XML feed",
       runtimeNote: "3 mapped fields and 2 custom attributes feed Concierge search",
       status: "connected"
     });

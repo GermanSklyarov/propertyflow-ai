@@ -210,6 +210,94 @@ describe("ListingSourceService", () => {
     });
   });
 
+  it("previews an XML feed against canonical and custom mapping before saving", async () => {
+    const { service } = createService();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        text: async () => `
+          <?xml version="1.0"?>
+          <listings>
+            <listing>
+              <id>xml-1</id>
+              <title>Jomtien yearly rental</title>
+              <city>pattaya</city>
+              <price>
+                <sale>2900000</sale>
+              </price>
+              <availability>
+                <until>2027-05-01</until>
+                <note>Available for 6 months only</note>
+              </availability>
+            </listing>
+          </listings>
+        `
+      }))
+    );
+
+    await expect(
+      service.preview("demo-agency", {
+        name: "Agency XML feed",
+        type: "xml-feed",
+        endpointUrl: "https://agency.co.th/feed.xml",
+        authType: "none",
+        mapping: {
+          rootPath: "listings.listing",
+          canonical: {
+            externalId: "id",
+            title: "title",
+            market: "city",
+            priceAmount: "price.sale",
+            availableUntil: "availability.until"
+          },
+          customAttributes: [
+            {
+              key: "lease_note",
+              sourcePath: "availability.note",
+              type: "text",
+              filterHint: "contract_term"
+            }
+          ]
+        }
+      })
+    ).resolves.toMatchObject({
+      ok: true,
+      itemCount: 1,
+      sampleCount: 1,
+      canonical: expect.arrayContaining([
+        expect.objectContaining({
+          field: "title",
+          present: true,
+          sampleValue: "Jomtien yearly rental"
+        }),
+        expect.objectContaining({
+          field: "availableUntil",
+          present: true,
+          sampleValue: "2027-05-01"
+        })
+      ]),
+      customAttributes: [
+        expect.objectContaining({
+          key: "lease_note",
+          present: true,
+          sampleValue: "Available for 6 months only"
+        })
+      ],
+      missingRequiredFields: []
+    });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://agency.co.th/feed.xml",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          accept: expect.stringContaining("application/xml")
+        })
+      })
+    );
+  });
+
   it("rejects preview when the root path does not resolve to listing rows", async () => {
     const { service } = createService();
     vi.stubGlobal(
@@ -313,6 +401,63 @@ describe("ListingSourceService", () => {
           }
         ]
       }
+    });
+  });
+
+  it("marks XML source syncing and queues XML feed import with field mapping", async () => {
+    const { jobs, service, sources } = createService();
+    const source = {
+      id: "source-xml",
+      tenantId: "demo-agency",
+      name: "XML feed",
+      type: "xml-feed" as const,
+      endpointUrl: "https://agency.co.th/feed.xml",
+      authType: "none" as const,
+      importMode: "concierge_index_only" as const,
+      mapping: {
+        rootPath: "listings.listing",
+        canonical: {
+          externalId: "id",
+          title: "title"
+        },
+        customAttributes: [
+          {
+            key: "available_until_note",
+            sourcePath: "availability.note",
+            type: "text" as const,
+            filterHint: "availability" as const
+          }
+        ]
+      },
+      status: "connected" as const,
+      createdAt: "2026-07-29T00:00:00.000Z",
+      updatedAt: "2026-07-29T00:00:00.000Z"
+    };
+    vi.mocked(sources.findById).mockResolvedValue(source);
+    vi.mocked(sources.markSyncStarted).mockResolvedValue({
+      ...source,
+      status: "syncing",
+      updatedAt: "2026-07-29T00:01:00.000Z"
+    });
+    vi.mocked(jobs.enqueue).mockResolvedValue({
+      id: "job-xml",
+      name: "properties.import",
+      queue: "propertyflow.jobs",
+      status: "queued",
+      tenantId: "demo-agency",
+      createdAt: "2026-07-29T00:00:00.000Z"
+    });
+
+    await service.sync("demo-agency", "user-1", "source-xml");
+
+    expect(jobs.enqueue).toHaveBeenCalledWith("properties.import", {
+      tenantId: "demo-agency",
+      requestedByUserId: "user-1",
+      source: "partner-xml",
+      importMode: "concierge_index_only",
+      objectUrl: "https://agency.co.th/feed.xml",
+      sourceConfigId: "source-xml",
+      fieldMapping: source.mapping
     });
   });
 });
