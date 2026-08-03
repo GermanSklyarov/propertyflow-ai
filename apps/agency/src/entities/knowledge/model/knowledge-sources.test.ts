@@ -26,7 +26,7 @@ describe("knowledge sources model", () => {
     expect(propertySources?.connectors).toContainEqual(
       expect.objectContaining({
         label: "CSV upload with field mapping",
-        mode: "hybrid",
+        mode: "concierge_index_only",
         status: "ready"
       })
     );
@@ -70,7 +70,7 @@ describe("knowledge sources model", () => {
     const summary = summarizeKnowledgeSourceModes(knowledgeSourceGroups);
 
     expect(summary.concierge_index_only).toBeGreaterThan(summary.hybrid);
-    expect(summary.hybrid).toBe(1);
+    expect(summary.hybrid).toBe(0);
     expect(summary.crm_inventory).toBe(0);
   });
 

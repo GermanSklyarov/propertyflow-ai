@@ -577,14 +577,11 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
             Endpoint URL
             <input name="endpointUrl" placeholder="https://agency.co.th/api/listings or https://agency.co.th/feed.xml" required type="url" />
           </label>
-          <label>
-            Import mode
-            <select name="importMode" defaultValue="concierge_index_only">
-              <option value="concierge_index_only">Concierge index only</option>
-              <option value="hybrid">Hybrid: index + CRM drafts</option>
-              <option value="crm_inventory">CRM inventory</option>
-            </select>
-          </label>
+          <input name="importMode" type="hidden" value="concierge_index_only" />
+          <div className={styles.listingApiStarterMode}>
+            <strong>Starter Concierge index</strong>
+            <span>Feed data stays a searchable AI source first. CRM drafts can be enabled later on Growth.</span>
+          </div>
           <label>
             Auth type
             <select name="authType" defaultValue="api-key-header">

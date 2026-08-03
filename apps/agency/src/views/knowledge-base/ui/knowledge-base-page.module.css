@@ -1537,6 +1537,37 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.listingApiStarterMode {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 4px;
+  border: 1px solid rgb(15 118 110 / 18%);
+  background: var(--mint);
+  color: var(--ink);
+  padding: 10px 12px;
+}
+
+.listingApiStarterMode strong,
+.listingApiStarterMode span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.listingApiStarterMode strong {
+  color: var(--teal-dark);
+  font-size: 0.8rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.listingApiStarterMode span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .listingApiMappingGrid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }

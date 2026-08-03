@@ -110,7 +110,7 @@ export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
         actionHref: "/listings#import-listings",
         actionLabel: "Open importer",
         label: "CSV upload with field mapping",
-        mode: "hybrid",
+        mode: "concierge_index_only",
         status: "ready"
       },
       {
