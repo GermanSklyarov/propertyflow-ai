@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supportedTenantWidgetLanguages, type TenantWidgetLanguage } from "@propertyflow/contracts";
 import { askPublicWidget } from "@shared/api/agency-client";
-import { summarizeConciergeAnswerCheck } from "@widgets/tenant-settings/model/concierge-answer-check";
+import {
+  buildConciergeAnswerCheckRequestContext,
+  summarizeConciergeAnswerCheck
+} from "@widgets/tenant-settings/model/concierge-answer-check";
 
 interface ConciergeAnswerCheckRequestBody {
   locale?: TenantWidgetLanguage;
   message?: string;
   tenantSlug?: string;
+  widgetPageUrl?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -14,6 +18,7 @@ export async function POST(request: NextRequest) {
   const locale = body.locale;
   const message = body.message?.trim();
   const tenantSlug = body.tenantSlug?.trim();
+  const widgetPageUrl = body.widgetPageUrl?.trim();
 
   if (!tenantSlug) {
     return NextResponse.json({ message: "Tenant slug is required" }, { status: 400 });
@@ -27,11 +32,28 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Question is required" }, { status: 400 });
   }
 
+  if (!widgetPageUrl) {
+    return NextResponse.json({ message: "Widget page URL is required" }, { status: 400 });
+  }
+
+  const requestContext = buildConciergeAnswerCheckRequestContext(widgetPageUrl);
+
+  if (!requestContext) {
+    return NextResponse.json({ message: "Valid widget page URL is required" }, { status: 400 });
+  }
+
   try {
-    const response = await askPublicWidget(tenantSlug, {
-      locale,
-      message
-    });
+    const response = await askPublicWidget(
+      tenantSlug,
+      {
+        locale,
+        message
+      },
+      {
+        origin: requestContext.origin,
+        referer: requestContext.referer
+      }
+    );
 
     return NextResponse.json(summarizeConciergeAnswerCheck(response));
   } catch (error) {

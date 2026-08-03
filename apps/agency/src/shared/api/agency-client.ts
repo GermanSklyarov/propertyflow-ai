@@ -1177,12 +1177,15 @@ export async function askAiChat(request: AiChatRequest, options: AgencyApiOption
 
 export async function askPublicWidget(
   tenantSlug: string,
-  request: PublicWidgetAskRequest
+  request: PublicWidgetAskRequest,
+  options: { origin?: string; referer?: string } = {}
 ): Promise<PublicWidgetAskResponse> {
   const response = await fetch(`${apiBaseUrl}/public/v1/widget/ask/${encodeURIComponent(tenantSlug)}`, {
     method: "POST",
     headers: {
-      "content-type": "application/json"
+      "content-type": "application/json",
+      ...(options.origin ? { origin: options.origin } : {}),
+      ...(options.referer ? { referer: options.referer } : {})
     },
     body: JSON.stringify(request)
   });

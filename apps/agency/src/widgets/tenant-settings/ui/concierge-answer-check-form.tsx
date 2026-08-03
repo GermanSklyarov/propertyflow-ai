@@ -3,20 +3,20 @@
 import { Bot, CheckCircle2, MessageCircle, ShieldAlert } from "lucide-react";
 import { type FormEvent, useState, useTransition } from "react";
 import type { TenantWidgetLanguage } from "@propertyflow/contracts";
-import {
-  getDefaultConciergeAnswerCheckMessage,
-  type ConciergeAnswerCheckResult
-} from "../model/concierge-answer-check";
+import { getDefaultConciergeAnswerCheckMessage, type ConciergeAnswerCheckResult } from "../model/concierge-answer-check";
 import styles from "./tenant-settings-panel.module.css";
 
 export function ConciergeAnswerCheckForm({
+  defaultWidgetPageUrl,
   locale,
   tenantSlug
 }: {
+  defaultWidgetPageUrl?: string;
   locale: TenantWidgetLanguage;
   tenantSlug: string;
 }) {
   const [message, setMessage] = useState(getDefaultConciergeAnswerCheckMessage(locale));
+  const [widgetPageUrl, setWidgetPageUrl] = useState(defaultWidgetPageUrl ?? "");
   const [result, setResult] = useState<ConciergeAnswerCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -32,7 +32,8 @@ export function ConciergeAnswerCheckForm({
           body: JSON.stringify({
             locale,
             message,
-            tenantSlug
+            tenantSlug,
+            widgetPageUrl
           }),
           headers: {
             "content-type": "application/json"
@@ -46,7 +47,7 @@ export function ConciergeAnswerCheckForm({
 
         setResult((await response.json()) as ConciergeAnswerCheckResult);
       } catch (_error) {
-        setError("Could not ask the live Concierge. Check AI provider credentials and API availability.");
+        setError("Could not ask the live Concierge. Check the page URL, allowed origins, AI provider credentials, and API availability.");
       }
     });
   };
@@ -57,14 +58,27 @@ export function ConciergeAnswerCheckForm({
   return (
     <form className={styles.conciergeAnswerCheck} onSubmit={verify}>
       <div className={styles.conciergeAnswerCheckHeader}>
-        <label htmlFor="concierge-answer-check-message">
+        <div className={styles.conciergeAnswerCheckTitle}>
           <Bot size={15} />
           Live AI answer check
-        </label>
-        <span>{locale.toUpperCase()}</span>
+        </div>
+        <span className={styles.conciergeAnswerCheckLocale}>{locale.toUpperCase()}</span>
       </div>
       <div className={styles.conciergeAnswerCheckRow}>
         <input
+          aria-label="Widget page URL"
+          id="concierge-answer-check-page-url"
+          onChange={(event) => {
+            setWidgetPageUrl(event.target.value);
+            setError(null);
+            setResult(null);
+          }}
+          placeholder="https://agency.example.com"
+          type="url"
+          value={widgetPageUrl}
+        />
+        <input
+          aria-label="Concierge check question"
           id="concierge-answer-check-message"
           onChange={(event) => {
             setMessage(event.target.value);
@@ -73,7 +87,7 @@ export function ConciergeAnswerCheckForm({
           }}
           value={message}
         />
-        <button disabled={isPending || !message.trim() || !tenantSlug} type="submit">
+        <button disabled={isPending || !message.trim() || !tenantSlug || !widgetPageUrl.trim()} type="submit">
           <MessageCircle size={17} />
           {isPending ? "Asking" : "Ask Concierge"}
         </button>

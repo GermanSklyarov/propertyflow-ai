@@ -28,7 +28,13 @@ export function StarterSetupPage({
   requestedPlan?: TenantSubscriptionPlan;
   tenant: TenantSnapshot;
 }) {
-  const progress = buildStarterSetupProgress({ documents, embeddingHealth, jobs, requestedPlan, tenant });
+  const progress = buildStarterSetupProgress({
+    documents,
+    embeddingHealth,
+    jobs,
+    requestedPlan,
+    tenant
+  });
   const knowledgeReadiness = buildKnowledgeStarterReadiness(documents, countRunningKnowledgeJobs(jobs));
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
@@ -41,11 +47,14 @@ export function StarterSetupPage({
             <p className="section-kicker">Starter launch</p>
             <h1 className={styles.title}>Set up AI Concierge</h1>
             <p className={styles.subtitle}>
-              Launch the website assistant first. Knowledge, personality, origins, and widget install come before CRM migration.
+              Launch the website assistant first. Knowledge, personality, origins, and widget install come before CRM
+              migration.
             </p>
           </div>
           <div className={styles.headerBadges}>
-            <span className={styles.statusBadge}>{progress.completed}/{progress.total} ready</span>
+            <span className={styles.statusBadge}>
+              {progress.completed}/{progress.total} ready
+            </span>
             <span className={styles.planBadge} data-matched={String(progress.selectedPlanMatchesWorkspace)}>
               Selected {progress.requestedPlanLabel}
               {!progress.selectedPlanMatchesWorkspace ? ` · workspace still ${progress.workspacePlanLabel}` : ""}
@@ -59,7 +68,11 @@ export function StarterSetupPage({
             <div>
               <p className="section-kicker">Next best action</p>
               <h2>{progress.launchReady ? "Starter is ready to install." : progress.nextAction.title}</h2>
-              <p>{progress.launchReady ? "Copy the widget snippet and test it on the agency website." : progress.nextAction.description}</p>
+              <p>
+                {progress.launchReady
+                  ? "Copy the widget snippet and test it on the agency website."
+                  : progress.nextAction.description}
+              </p>
             </div>
           </div>
           <a className={styles.primaryAction} href={progress.nextAction.actionHref}>
@@ -104,7 +117,12 @@ export function StarterSetupPage({
             </div>
             <div className={styles.blockerList}>
               {progress.blockers.map((blocker) => (
-                <a className={styles.blockerItem} data-status={blocker.status} href={blocker.actionHref} key={blocker.id}>
+                <a
+                  className={styles.blockerItem}
+                  data-status={blocker.status}
+                  href={blocker.actionHref}
+                  key={blocker.id}
+                >
                   <CircleDot size={16} />
                   <span>
                     <strong>{blocker.title}</strong>
@@ -127,7 +145,9 @@ export function StarterSetupPage({
               <BookOpenText size={20} />
             </div>
             <div className={styles.knowledgeMeter}>
-              <strong>{knowledgeReadiness.completed}/{knowledgeReadiness.total}</strong>
+              <strong>
+                {knowledgeReadiness.completed}/{knowledgeReadiness.total}
+              </strong>
               <span>{knowledgeReadiness.summary}</span>
             </div>
             <div className={styles.requirementList}>
@@ -172,7 +192,9 @@ export function StarterSetupPage({
             <div className={styles.infoList}>
               <span>
                 <Globe2 size={15} />
-                {widgetSettings.allowedOrigins.length ? `${widgetSettings.allowedOrigins.length} allowed origin` : "Test mode until origins are added"}
+                {widgetSettings.allowedOrigins.length
+                  ? `${widgetSettings.allowedOrigins.length} allowed origin`
+                  : "Test mode until origins are added"}
               </span>
               <span>
                 <Languages size={15} />

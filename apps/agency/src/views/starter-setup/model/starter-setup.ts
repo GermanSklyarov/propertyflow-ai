@@ -98,7 +98,8 @@ export function buildStarterSetupProgress({
   const languageCheckReady = widgetInstall.readiness.checks
     .filter((check) => check.key === "languages" || check.key === "localized-welcome")
     .every((check) => check.ready);
-  const originCheckReady = widgetInstall.readiness.checks.find((check) => check.key === "origin-policy")?.ready ?? false;
+  const originCheckReady =
+    widgetInstall.readiness.checks.find((check) => check.key === "origin-policy")?.ready ?? false;
   const widgetChecksReady = widgetLaunchReadiness.completed === widgetLaunchReadiness.total;
   const widgetReadyForProduction = widgetChecksReady && embeddingReadiness.ready;
   const widgetBlockerDescription = !embeddingReadiness.ready
@@ -107,8 +108,7 @@ export function buildStarterSetupProgress({
         .filter((item) => !item.done)
         .slice(0, 2)
         .map((item) => item.note)
-        .join(" ")
-      || "Widget snippet is ready to copy into the agency website.";
+        .join(" ") || "Widget snippet is ready to copy into the agency website.";
 
   const steps: StarterSetupStep[] = [
     {
@@ -151,7 +151,9 @@ export function buildStarterSetupProgress({
           ? "waiting"
           : "action",
       title: "AI retrieval",
-      value: embeddingReadiness.ready ? "Vectors current" : `${embeddingReadiness.unembedded}/${embeddingReadiness.total} need refresh`
+      value: embeddingReadiness.ready
+        ? "Vectors current"
+        : `${embeddingReadiness.unembedded}/${embeddingReadiness.total} need refresh`
     },
     {
       actionHref: "/settings#widget-origin-settings",
@@ -209,7 +211,9 @@ function buildStarterSetupUpgradePreview(
   };
 }
 
-export function buildStarterEmbeddingReadiness(embeddingHealth: KnowledgeEmbeddingHealthSnapshot): StarterEmbeddingReadiness {
+export function buildStarterEmbeddingReadiness(
+  embeddingHealth: KnowledgeEmbeddingHealthSnapshot
+): StarterEmbeddingReadiness {
   const pending = embeddingHealth.pendingChunks;
   const needsRefresh = embeddingHealth.unembeddedChunks;
   const providerLabel = `${embeddingHealth.targetProvider} · ${embeddingHealth.targetModel}`;
@@ -275,10 +279,7 @@ function getEmbeddingRefreshActionLabel(embeddingHealth: KnowledgeEmbeddingHealt
   return "Refresh vectors";
 }
 
-function getEmbeddingRefreshSummary(
-  embeddingHealth: KnowledgeEmbeddingHealthSnapshot,
-  needsRefresh: number
-): string {
+function getEmbeddingRefreshSummary(embeddingHealth: KnowledgeEmbeddingHealthSnapshot, needsRefresh: number): string {
   const parts: string[] = [];
 
   if (embeddingHealth.failedChunks > 0) {

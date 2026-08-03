@@ -21,6 +21,12 @@ export interface ConciergeAnswerCheckResult {
   tenantSlug: string;
 }
 
+export interface ConciergeAnswerCheckRequestContext {
+  origin: string;
+  referer: string;
+  url: string;
+}
+
 const defaultCheckMessages: Record<TenantWidgetLanguage, string> = {
   en: "I need a Pattaya sea-view condo under 5M THB. Explain why it fits and mention risks.",
   ru: "Подбери кондо в Паттайе с видом на море до 5 млн бат. Объясни, почему подходит, и назови риски.",
@@ -30,6 +36,24 @@ const defaultCheckMessages: Record<TenantWidgetLanguage, string> = {
 
 export function getDefaultConciergeAnswerCheckMessage(locale: TenantWidgetLanguage) {
   return defaultCheckMessages[locale] ?? defaultCheckMessages.en;
+}
+
+export function buildConciergeAnswerCheckRequestContext(pageUrl: string): ConciergeAnswerCheckRequestContext | null {
+  try {
+    const url = new URL(pageUrl.trim());
+
+    if (url.protocol !== "https:" && url.protocol !== "http:") {
+      return null;
+    }
+
+    return {
+      origin: url.origin.toLowerCase(),
+      referer: url.toString(),
+      url: url.toString()
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function summarizeConciergeAnswerCheck(response: PublicWidgetAskResponse): ConciergeAnswerCheckResult {

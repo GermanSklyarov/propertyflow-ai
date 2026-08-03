@@ -11,7 +11,10 @@ describe("starter setup progress", () => {
   it("points a new tenant at knowledge first", () => {
     const progress = buildStarterSetupProgress({
       documents: [],
-      embeddingHealth: embeddingHealthFactory({ currentChunks: 0, totalChunks: 0 }),
+      embeddingHealth: embeddingHealthFactory({
+        currentChunks: 0,
+        totalChunks: 0
+      }),
       jobs: [],
       tenant: tenantFactory()
     });
@@ -38,7 +41,11 @@ describe("starter setup progress", () => {
   it("waits for indexing before marking knowledge complete", () => {
     const progress = buildStarterSetupProgress({
       documents: readyStarterDocuments(),
-      embeddingHealth: embeddingHealthFactory({ pendingChunks: 4, ready: false, unembeddedChunks: 4 }),
+      embeddingHealth: embeddingHealthFactory({
+        pendingChunks: 4,
+        ready: false,
+        unembeddedChunks: 4
+      }),
       jobs: [knowledgeJobFactory()],
       tenant: tenantFactory()
     });
@@ -95,7 +102,10 @@ describe("starter setup progress", () => {
   it("keeps the signup-selected plan visible before tenant provisioning updates the workspace", () => {
     const progress = buildStarterSetupProgress({
       documents: [],
-      embeddingHealth: embeddingHealthFactory({ currentChunks: 0, totalChunks: 0 }),
+      embeddingHealth: embeddingHealthFactory({
+        currentChunks: 0,
+        totalChunks: 0
+      }),
       jobs: [],
       requestedPlan: "growth",
       tenant: tenantFactory()
@@ -291,7 +301,9 @@ function knowledgeJobFactory(): BackgroundJobMonitorItem {
   };
 }
 
-function embeddingHealthFactory(overrides: Partial<KnowledgeEmbeddingHealthSnapshot> = {}): KnowledgeEmbeddingHealthSnapshot {
+function embeddingHealthFactory(
+  overrides: Partial<KnowledgeEmbeddingHealthSnapshot> = {}
+): KnowledgeEmbeddingHealthSnapshot {
   return {
     currentChunks: 12,
     failedChunks: 0,

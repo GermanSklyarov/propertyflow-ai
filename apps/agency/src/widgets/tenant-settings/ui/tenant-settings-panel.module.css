@@ -816,8 +816,8 @@
   min-width: 0;
 }
 
-.conciergeAnswerCheckHeader label,
-.conciergeAnswerCheckHeader span {
+.conciergeAnswerCheckTitle,
+.conciergeAnswerCheckLocale {
   align-items: center;
   color: var(--muted);
   display: inline-flex;
@@ -827,12 +827,12 @@
   text-transform: uppercase;
 }
 
-.conciergeAnswerCheckHeader label {
+.conciergeAnswerCheckTitle {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.conciergeAnswerCheckHeader span {
+.conciergeAnswerCheckLocale {
   flex: 0 0 auto;
   border: 1px solid rgb(15 118 110 / 14%);
   background: #fff;

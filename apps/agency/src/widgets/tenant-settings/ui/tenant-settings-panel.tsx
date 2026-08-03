@@ -81,6 +81,7 @@ export function TenantSettingsPanel({
   const widgetInstallStepSummary = summarizeWidgetInstallSteps(widgetInstall.steps);
   const localizedWidgetSnippets = widgetInstall.localeOptions.filter((option) => option.value !== 'data-locale="auto"');
   const conciergeCheckLocale = widgetSettings.languages[0] ?? "en";
+  const defaultWidgetPageUrl = tenant.customDomain ? `https://${tenant.customDomain}` : widgetSettings.allowedOrigins[0];
 
   return (
     <>
@@ -282,8 +283,12 @@ export function TenantSettingsPanel({
                   </div>
                 </div>
               </details>
-              <WidgetInstallCheckForm defaultUrl={tenant.customDomain ? `https://${tenant.customDomain}` : undefined} />
-              <ConciergeAnswerCheckForm locale={conciergeCheckLocale} tenantSlug={tenant.slug} />
+              <WidgetInstallCheckForm defaultUrl={defaultWidgetPageUrl} />
+              <ConciergeAnswerCheckForm
+                defaultWidgetPageUrl={defaultWidgetPageUrl}
+                locale={conciergeCheckLocale}
+                tenantSlug={tenant.slug}
+              />
               <details className={styles.widgetReadinessDetails}>
                 <summary>
                   Install prerequisites
