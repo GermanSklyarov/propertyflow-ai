@@ -63,17 +63,20 @@ export interface StarterEmbeddingReadiness {
 
 export function buildStarterSetupProgress({
   documents,
+  embeddingHealth,
   jobs,
   requestedPlan,
   tenant
 }: {
   documents: KnowledgeDocumentSnapshot[];
+  embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
   requestedPlan?: TenantSubscriptionPlan;
   tenant: TenantSnapshot;
 }): StarterSetupProgress {
   const activeKnowledgeJobs = countRunningKnowledgeJobs(jobs);
   const knowledgeReadiness = buildKnowledgeStarterReadiness(documents, activeKnowledgeJobs);
+  const embeddingReadiness = buildStarterEmbeddingReadiness(embeddingHealth);
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);
   const plan = getTenantPlanDefinition(tenant.subscriptionPlan);
@@ -96,6 +99,16 @@ export function buildStarterSetupProgress({
     .filter((check) => check.key === "languages" || check.key === "localized-welcome")
     .every((check) => check.ready);
   const originCheckReady = widgetInstall.readiness.checks.find((check) => check.key === "origin-policy")?.ready ?? false;
+  const widgetChecksReady = widgetLaunchReadiness.completed === widgetLaunchReadiness.total;
+  const widgetReadyForProduction = widgetChecksReady && embeddingReadiness.ready;
+  const widgetBlockerDescription = !embeddingReadiness.ready
+    ? `Refresh AI retrieval before production install. ${embeddingReadiness.summary}`
+    : widgetReadinessItems
+        .filter((item) => !item.done)
+        .slice(0, 2)
+        .map((item) => item.note)
+        .join(" ")
+      || "Widget snippet is ready to copy into the agency website.";
 
   const steps: StarterSetupStep[] = [
     {
@@ -128,6 +141,19 @@ export function buildStarterSetupProgress({
       value: `${widgetSettings.languages.length} locales`
     },
     {
+      actionHref: "/setup#ai-retrieval-readiness",
+      actionLabel: embeddingReadiness.ready ? "Review retrieval" : embeddingReadiness.actionLabel,
+      description: embeddingReadiness.summary,
+      id: "retrieval",
+      status: embeddingReadiness.ready
+        ? "complete"
+        : activeKnowledgeJobs > 0 || embeddingHealth.pendingChunks > 0
+          ? "waiting"
+          : "action",
+      title: "AI retrieval",
+      value: embeddingReadiness.ready ? "Vectors current" : `${embeddingReadiness.unembedded}/${embeddingReadiness.total} need refresh`
+    },
+    {
       actionHref: "/settings#widget-origin-settings",
       actionLabel: originCheckReady ? "Review origins" : "Add origins",
       description: originCheckReady
@@ -140,15 +166,10 @@ export function buildStarterSetupProgress({
     },
     {
       actionHref: "/settings#widget-install",
-      actionLabel: widgetLaunchReadiness.completed === widgetLaunchReadiness.total ? "Copy snippet" : "Fix blockers",
-      description: widgetReadinessItems
-        .filter((item) => !item.done)
-        .slice(0, 2)
-        .map((item) => item.note)
-        .join(" ")
-        || "Widget snippet is ready to copy into the agency website.",
+      actionLabel: widgetReadyForProduction ? "Copy snippet" : "Fix blockers",
+      description: widgetBlockerDescription,
       id: "widget",
-      status: widgetLaunchReadiness.completed === widgetLaunchReadiness.total ? "complete" : "blocked",
+      status: widgetReadyForProduction ? "complete" : "blocked",
       title: "Website widget",
       value: `${widgetLaunchReadiness.completed}/${widgetLaunchReadiness.total} checks`
     }

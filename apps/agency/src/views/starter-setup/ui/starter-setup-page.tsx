@@ -28,7 +28,7 @@ export function StarterSetupPage({
   requestedPlan?: TenantSubscriptionPlan;
   tenant: TenantSnapshot;
 }) {
-  const progress = buildStarterSetupProgress({ documents, jobs, requestedPlan, tenant });
+  const progress = buildStarterSetupProgress({ documents, embeddingHealth, jobs, requestedPlan, tenant });
   const knowledgeReadiness = buildKnowledgeStarterReadiness(documents, countRunningKnowledgeJobs(jobs));
   const widgetInstall = buildWidgetInstallPackage(tenant);
   const widgetSettings = getTenantWidgetSettings(tenant);

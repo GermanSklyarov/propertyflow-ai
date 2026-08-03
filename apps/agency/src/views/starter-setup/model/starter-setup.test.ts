@@ -11,6 +11,7 @@ describe("starter setup progress", () => {
   it("points a new tenant at knowledge first", () => {
     const progress = buildStarterSetupProgress({
       documents: [],
+      embeddingHealth: embeddingHealthFactory({ currentChunks: 0, totalChunks: 0 }),
       jobs: [],
       tenant: tenantFactory()
     });
@@ -23,7 +24,7 @@ describe("starter setup progress", () => {
       value: "Starter"
     });
     expect(progress.completed).toBe(2);
-    expect(progress.total).toBe(5);
+    expect(progress.total).toBe(6);
     expect(progress.selectedPlanMatchesWorkspace).toBe(true);
     expect(progress.requestedPlanLabel).toBe("Starter");
     expect(progress.nextAction).toMatchObject({
@@ -31,12 +32,13 @@ describe("starter setup progress", () => {
       status: "action",
       title: "Knowledge Sources"
     });
-    expect(progress.blockers.map((blocker) => blocker.id)).toEqual(["knowledge", "origins", "widget"]);
+    expect(progress.blockers.map((blocker) => blocker.id)).toEqual(["knowledge", "retrieval", "origins"]);
   });
 
   it("waits for indexing before marking knowledge complete", () => {
     const progress = buildStarterSetupProgress({
       documents: readyStarterDocuments(),
+      embeddingHealth: embeddingHealthFactory({ pendingChunks: 4, ready: false, unembeddedChunks: 4 }),
       jobs: [knowledgeJobFactory()],
       tenant: tenantFactory()
     });
@@ -45,24 +47,44 @@ describe("starter setup progress", () => {
       status: "waiting",
       value: "9/9 ready"
     });
+    expect(progress.steps.find((step) => step.id === "retrieval")).toMatchObject({
+      status: "waiting",
+      value: "4/12 need refresh"
+    });
+  });
+
+  it("blocks launch until AI retrieval vectors are current", () => {
+    const progress = buildStarterSetupProgress({
+      documents: readyStarterDocuments(),
+      embeddingHealth: embeddingHealthFactory({
+        currentChunks: 7,
+        pendingChunks: 1,
+        ready: false,
+        staleChunks: 2,
+        totalChunks: 12,
+        unembeddedChunks: 3
+      }),
+      jobs: [],
+      tenant: productionReadyTenant()
+    });
+
+    expect(progress.launchReady).toBe(false);
+    expect(progress.steps.find((step) => step.id === "retrieval")).toMatchObject({
+      actionHref: "/setup#ai-retrieval-readiness",
+      actionLabel: "Refresh stale vectors",
+      status: "waiting",
+      title: "AI retrieval",
+      value: "3/12 need refresh"
+    });
+    expect(progress.blockers.map((blocker) => blocker.id)).toEqual(["retrieval", "widget"]);
   });
 
   it("marks the setup launch-ready when starter gates are complete", () => {
     const progress = buildStarterSetupProgress({
       documents: readyStarterDocuments(),
+      embeddingHealth: embeddingHealthFactory(),
       jobs: [],
-      tenant: tenantFactory({
-        widget: {
-          ...tenantFactory().widget,
-          allowedOrigins: ["https://demo.example.com"],
-          welcomeMessages: {
-            en: "Hi",
-            ru: "Привет",
-            th: "สวัสดีค่ะ",
-            zh: "你好"
-          }
-        }
-      })
+      tenant: productionReadyTenant()
     });
 
     expect(progress.launchReady).toBe(true);
@@ -73,6 +95,7 @@ describe("starter setup progress", () => {
   it("keeps the signup-selected plan visible before tenant provisioning updates the workspace", () => {
     const progress = buildStarterSetupProgress({
       documents: [],
+      embeddingHealth: embeddingHealthFactory({ currentChunks: 0, totalChunks: 0 }),
       jobs: [],
       requestedPlan: "growth",
       tenant: tenantFactory()
@@ -210,6 +233,21 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
     },
     ...overrides
   };
+}
+
+function productionReadyTenant(): TenantSnapshot {
+  return tenantFactory({
+    widget: {
+      ...tenantFactory().widget,
+      allowedOrigins: ["https://demo.example.com"],
+      welcomeMessages: {
+        en: "Hi",
+        ru: "Привет",
+        th: "สวัสดีค่ะ",
+        zh: "你好"
+      }
+    }
+  });
 }
 
 function readyStarterDocuments(): KnowledgeDocumentSnapshot[] {
