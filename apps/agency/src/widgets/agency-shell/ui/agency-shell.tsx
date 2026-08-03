@@ -60,29 +60,17 @@ export function AgencyShell({
           <nav className={styles.nav}>
             {navigationItems.map((item) => {
               const Icon = item.icon;
-              const isLive = item.status === "live";
               const isActive = isAgencyNavigationItemActive(pathname, item.href);
 
-              return isLive ? (
+              return (
                 <Link
-                  className={`${styles.navItem} ${isActive ? styles.navItemActive : styles.navItemLive}`}
+                  className={`${styles.navItem} ${isActive ? styles.navItemActive : styles.navItemLink}`}
                   href={item.href}
                   key={item.href}
                 >
                   <Icon size={17} />
                   <span>{item.label}</span>
-                  <span className={styles.navBadge}>Live</span>
                 </Link>
-              ) : (
-                <span
-                  aria-disabled="true"
-                  className={`${styles.navItem} ${styles.navItemMuted}`}
-                  key={item.href}
-                >
-                  <Icon size={17} />
-                  <span>{item.label}</span>
-                  <span className={styles.navBadge}>Next</span>
-                </span>
               );
             })}
           </nav>

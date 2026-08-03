@@ -26,6 +26,8 @@ export default async function AgencyKnowledgePage({
     error?: string;
     fields?: string;
     ingest?: string;
+    importError?: string;
+    importJob?: string;
     items?: string;
     kind?: string;
     listingPreview?: string;
@@ -52,6 +54,7 @@ export default async function AgencyKnowledgePage({
     ]);
     const chat = chatRequest ? await askAiChat(chatRequest, { tenantId }) : undefined;
     const knowledgeJobs = jobs.items.filter((job) => job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed");
+    const listingImportResult = buildListingImportResult(query);
 
     return (
       <KnowledgeBasePage
@@ -61,6 +64,7 @@ export default async function AgencyKnowledgePage({
         documents={documents.items}
         jobs={knowledgeJobs}
         embeddingHealth={embeddingHealth}
+        listingImportResult={listingImportResult}
         listingSources={listingSources.items}
         notice={buildKnowledgePageNotice(query)}
         retrieval={retrieval}
@@ -79,6 +83,20 @@ export default async function AgencyKnowledgePage({
       />
     );
   }
+}
+
+function buildListingImportResult(query: { importError?: string; importJob?: string }): { error?: "empty"; jobId?: string } | undefined {
+  const result: { error?: "empty"; jobId?: string } = {};
+
+  if (query.importError === "empty") {
+    result.error = "empty";
+  }
+
+  if (query.importJob) {
+    result.jobId = query.importJob;
+  }
+
+  return result.error || result.jobId ? result : undefined;
 }
 
 function buildChatRequest(query: { ask?: string; locale?: string }): AiChatRequest | undefined {

@@ -55,6 +55,7 @@ import { KnowledgeDocumentCard } from "@entities/knowledge/ui/knowledge-document
 import { CreateKnowledgeDocumentForm } from "@features/knowledge-document-create/ui/create-knowledge-document-form";
 import { KnowledgeAiAnswerPanel } from "@features/knowledge-ai-answer/ui/knowledge-ai-answer-panel";
 import { KnowledgeRetrievalPreview } from "@features/knowledge-retrieval-preview/ui/knowledge-retrieval-preview";
+import { ListingBulkImportPanel } from "@features/listing-bulk-import/ui/listing-bulk-import-panel";
 import type {
   AiChatRequest,
   AiChatResponse,
@@ -77,6 +78,7 @@ export function KnowledgeBasePage({
   documents,
   embeddingHealth,
   jobs,
+  listingImportResult,
   listingSources,
   notice,
   retrieval,
@@ -90,6 +92,7 @@ export function KnowledgeBasePage({
   documents: KnowledgeDocumentSnapshot[];
   embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
+  listingImportResult?: { error?: "empty"; jobId?: string };
   listingSources: ListingSourceSnapshot[];
   notice?: { message: string; tone: "success" | "warning" };
   retrieval: KnowledgeChunkSearchResponse;
@@ -113,6 +116,7 @@ export function KnowledgeBasePage({
   const sourceModeSummary = summarizeKnowledgeSourceModes(operationalSourceGroups);
   const sourceReadiness = summarizeKnowledgeSourceReadiness(operationalSourceGroups);
   const plannedSourceReadiness = summarizeKnowledgeSourceReadiness(plannedSourceGroups);
+  const listingImportJobs = (sourceJobs ?? jobs).filter((job) => job.name === "properties.import");
   const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness, {
     starterLaunchReady: starterReadiness.launchReady,
     starterNextAction: starterReadiness.nextAction,
@@ -239,6 +243,13 @@ export function KnowledgeBasePage({
           </div>
 
           <ListingApiSourcesPanel sources={listingSources} />
+
+          <ListingBulkImportPanel
+            jobs={listingImportJobs}
+            result={listingImportResult}
+            returnTo="/knowledge"
+            variant="starter"
+          />
 
           <div className={styles.sourcesGrid}>
             {operationalSourceGroups.map((group) => (

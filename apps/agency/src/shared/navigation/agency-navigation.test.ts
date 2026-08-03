@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  agencyNavigationItems,
-  getAgencyNavigationItems,
-  getAgencyTopbarQuickLinks,
-  getAgencyUpgradeCta,
-  isAgencyNavigationItemActive
-} from "./agency-navigation";
+import { getAgencyNavigationItems, getAgencyTopbarQuickLinks, getAgencyUpgradeCta, isAgencyNavigationItemActive } from "./agency-navigation";
 
 describe("agency navigation", () => {
   it("keeps the dashboard active only on dashboard routes", () => {
@@ -24,27 +18,30 @@ describe("agency navigation", () => {
     expect(isAgencyNavigationItemActive("/saved-searches", "/saved")).toBe(false);
   });
 
-  it("exposes projects as a live agency section", () => {
-    expect(agencyNavigationItems).toEqual(expect.arrayContaining([expect.objectContaining({ href: "/projects", status: "live" })]));
+  it("keeps projects active for CRM workspaces", () => {
+    expect(getAgencyNavigationItems("growth").map((item) => item.href)).toContain("/projects");
     expect(isAgencyNavigationItemActive("/projects/the-riviera-wongamat", "/projects")).toBe(true);
   });
 
-  it("keeps Starter navigation focused on knowledge, listings, projects, widget demo, and widget setup", () => {
+  it("keeps Starter navigation focused on setup, knowledge, widget demo, and settings", () => {
     const starterItems = getAgencyNavigationItems("starter").map((item) => item.href);
     const starterQuickLinks = getAgencyTopbarQuickLinks("starter").map((item) => item.href);
 
-    expect(starterItems).toEqual(["/dashboard", "/setup", "/knowledge", "/listings", "/projects", "/widget-demo", "/settings"]);
-    expect(starterQuickLinks).toEqual(["/setup", "/knowledge", "/listings", "/projects", "/widget-demo", "/settings"]);
+    expect(starterItems).toEqual(["/setup", "/knowledge", "/widget-demo", "/settings"]);
+    expect(starterQuickLinks).toEqual(["/setup", "/knowledge", "/widget-demo", "/settings"]);
+    expect(starterItems).not.toContain("/dashboard");
+    expect(starterItems).not.toContain("/listings");
+    expect(starterItems).not.toContain("/projects");
     expect(starterItems).not.toContain("/leads");
     expect(starterItems).not.toContain("/analytics");
   });
 
   it("keeps CRM navigation available for Growth and Enterprise plans", () => {
     expect(getAgencyNavigationItems("growth").map((item) => item.href)).toEqual(
-      expect.arrayContaining(["/leads", "/saved-searches", "/ai-tools", "/analytics"])
+      expect.arrayContaining(["/dashboard", "/listings", "/projects", "/leads", "/saved-searches", "/ai-tools", "/analytics"])
     );
     expect(getAgencyNavigationItems("enterprise").map((item) => item.href)).toEqual(
-      expect.arrayContaining(["/leads", "/saved-searches", "/ai-tools", "/analytics"])
+      expect.arrayContaining(["/dashboard", "/listings", "/projects", "/leads", "/saved-searches", "/ai-tools", "/analytics"])
     );
   });
 

@@ -86,41 +86,27 @@
 .navItem {
   display: grid;
   min-height: 42px;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   border: 1px solid transparent;
   color: rgb(255 255 255 / 72%);
   font-size: 0.84rem;
   font-weight: 850;
+  padding: 0 10px;
+  text-decoration: none;
 }
 
 .navItemActive {
   border-color: rgb(255 255 255 / 16%);
   background: rgb(255 255 255 / 9%);
   color: #fff;
-  padding: 0 10px;
 }
 
-.navItemLive {
-  padding: 0 10px;
-}
-
-.navItemLive:hover {
+.navItemLink:hover {
   border-color: rgb(255 255 255 / 14%);
   background: rgb(255 255 255 / 6%);
   color: #fff;
-}
-
-.navItemMuted {
-  padding: 0 10px;
-}
-
-.navBadge {
-  color: #ffb199;
-  font-size: 0.68rem;
-  font-weight: 900;
-  text-transform: uppercase;
 }
 
 .upgradeCard {

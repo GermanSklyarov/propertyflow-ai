@@ -12,6 +12,8 @@ interface ListingBulkImportPanelProps {
     error?: "empty";
     jobId?: string;
   };
+  returnTo?: "/knowledge" | "/listings";
+  variant?: "crm" | "starter";
 }
 
 const csvTemplate = [
@@ -50,7 +52,22 @@ const csvTemplate = [
 ].join("\n");
 const csvTemplateHref = `data:text/csv;charset=utf-8,${encodeURIComponent(csvTemplate)}`;
 
-export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelProps) {
+const copyByVariant = {
+  crm: {
+    description: "Move an agency database from CSV into PropertyFlow without manual listing creation.",
+    intro:
+      "Upload a CSV exported from an old CRM, spreadsheet, or partner system. Use it as CRM inventory, as an AI-only Concierge source, or both. Files are stored in object storage and processed by a BullMQ worker in the background."
+  },
+  starter: {
+    description: "Import listing exports as Concierge knowledge without forcing CRM migration.",
+    intro:
+      "Upload a CSV exported from an old CRM, spreadsheet, or partner site. In Starter, listing rows become AI Concierge retrieval context first; CRM drafts can be enabled later on Growth."
+  }
+} as const;
+
+export function ListingBulkImportPanel({ jobs, result, returnTo = "/listings", variant = "crm" }: ListingBulkImportPanelProps) {
+  const copy = copyByVariant[variant];
+  const importMode = variant === "starter" ? "concierge_index_only" : "hybrid";
   const shouldOpen = Boolean(result?.jobId || result?.error || jobs.some((job) => job.state === "active" || job.state === "waiting"));
 
   return (
@@ -61,7 +78,7 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
             <FileSpreadsheet size={18} />
             Import existing inventory
           </span>
-          <small>Move an agency database from CSV into PropertyFlow without manual listing creation.</small>
+          <small>{copy.description}</small>
           <Upload size={18} />
         </summary>
 
@@ -69,10 +86,7 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
           <div className={styles.copy}>
             <p className="section-kicker">Agency onboarding</p>
             <h2>Bulk listing import</h2>
-            <p>
-              Upload a CSV exported from an old CRM, spreadsheet, or partner system. Use it as CRM inventory, as an AI-only
-              Concierge source, or both. Files are stored in object storage and processed by a BullMQ worker in the background.
-            </p>
+            <p>{copy.intro}</p>
           </div>
 
           {result?.jobId ? (
@@ -93,7 +107,10 @@ export function ListingBulkImportPanel({ jobs, result }: ListingBulkImportPanelP
           <ListingBulkImportForm
             action={importPropertiesCsvAction}
             csvTemplateHref={csvTemplateHref}
+            importMode={importMode}
+            returnTo={returnTo}
             templateColumns={[...listingImportTemplateColumns]}
+            variant={variant}
           />
 
           <ListingImportJobsPanel initialJobs={jobs} queuedJobId={result?.jobId} />

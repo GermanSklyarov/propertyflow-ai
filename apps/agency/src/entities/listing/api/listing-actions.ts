@@ -196,10 +196,11 @@ export async function importPropertiesCsvAction(formData: FormData) {
   const { tenantId } = await requireAgencySession();
   const csvFile = formData.get("listingsCsv");
   const pastedCsv = getOptionalString(formData, "csvText");
+  const returnTo = getImportReturnTo(formData);
   const hasCsvFile = csvFile instanceof File && csvFile.size > 0;
 
   if (!hasCsvFile && !pastedCsv) {
-    redirect("/listings?importError=empty#import-listings");
+    redirect(`${returnTo}?importError=empty#import-listings`);
   }
 
   const objectUrl = hasCsvFile
@@ -214,10 +215,21 @@ export async function importPropertiesCsvAction(formData: FormData) {
   }, { tenantId });
 
   revalidatePath("/listings");
+  revalidatePath("/knowledge");
 
   const params = new URLSearchParams({ importJob: job.id });
 
-  redirect(`/listings?${params.toString()}#import-listings`);
+  redirect(`${returnTo}?${params.toString()}#import-listings`);
+}
+
+function getImportReturnTo(formData: FormData) {
+  const value = getOptionalString(formData, "returnTo");
+
+  if (value === "/knowledge" || value === "/listings") {
+    return value;
+  }
+
+  return "/listings";
 }
 
 function getImportMode(formData: FormData) {

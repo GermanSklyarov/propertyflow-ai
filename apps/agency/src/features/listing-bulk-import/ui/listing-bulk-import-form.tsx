@@ -9,6 +9,7 @@ import {
   parseListingImportHeaderRow,
   type ListingImportColumnImportance
 } from "@entities/listing/lib/listing-import-mapping";
+import type { ListingSourceImportMode } from "@propertyflow/contracts";
 import { FileDropField } from "@shared/ui/file-drop-field";
 import styles from "./listing-bulk-import-panel.module.css";
 
@@ -17,7 +18,10 @@ type ImportAction = (formData: FormData) => void | Promise<void>;
 interface ListingBulkImportFormProps {
   action: ImportAction;
   csvTemplateHref: string;
+  importMode?: ListingSourceImportMode;
+  returnTo?: "/knowledge" | "/listings";
   templateColumns: string[];
+  variant?: "crm" | "starter";
 }
 
 const importanceClassByValue: Record<ListingImportColumnImportance, string> = {
@@ -26,10 +30,31 @@ const importanceClassByValue: Record<ListingImportColumnImportance, string> = {
   required: styles.mappingImportanceRequired
 };
 
-export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns }: ListingBulkImportFormProps) {
+const modeNoticeByVariant = {
+  crm: {
+    title: "CRM import",
+    description:
+      "Rows become listing drafts and can also be indexed for Concierge when AI indexing is enabled for this import."
+  },
+  starter: {
+    title: "Starter import",
+    description:
+      "Listings become searchable by the AI Concierge without forcing the agency to migrate into PropertyFlow CRM."
+  }
+} as const;
+
+export function ListingBulkImportForm({
+  action,
+  csvTemplateHref,
+  importMode = "hybrid",
+  returnTo = "/listings",
+  templateColumns,
+  variant = "crm"
+}: ListingBulkImportFormProps) {
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const mappingJson = useMemo(() => JSON.stringify(mapping), [mapping]);
+  const modeNotice = modeNoticeByVariant[variant];
   const requiredColumns = useMemo(
     () => templateColumns.filter((column) => getListingImportColumnImportance(column) === "required"),
     [templateColumns]
@@ -175,15 +200,14 @@ export function ListingBulkImportForm({ action, csvTemplateHref, templateColumns
       ) : null}
 
       <input name="columnMapping" type="hidden" value={mappingJson} />
-      <input name="importMode" type="hidden" value="concierge_index_only" />
+      <input name="importMode" type="hidden" value={importMode} />
+      <input name="returnTo" type="hidden" value={returnTo} />
 
       <div className={styles.starterModeNotice}>
         <Info size={17} />
         <div>
-          <strong>Starter import</strong>
-          <span>
-            Listings become searchable by the AI Concierge without forcing the agency to migrate into PropertyFlow CRM.
-          </span>
+          <strong>{modeNotice.title}</strong>
+          <span>{modeNotice.description}</span>
         </div>
       </div>
 

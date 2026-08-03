@@ -41,8 +41,8 @@ describe("knowledge sources model", () => {
       actionLabel: "Add document"
     });
     expect(propertySources?.connectors[0]).toMatchObject({
-      actionHref: "/listings#import-listings",
-      actionLabel: "Open importer"
+      actionHref: "#import-listings",
+      actionLabel: "Open CSV import"
     });
   });
 
@@ -55,8 +55,8 @@ describe("knowledge sources model", () => {
       label: "Add document"
     });
     expect(propertySources ? buildKnowledgeSourceGroupAction(propertySources) : undefined).toEqual({
-      href: "/listings#import-listings",
-      label: "Open importer"
+      href: "#import-listings",
+      label: "Open CSV import"
     });
   });
 
@@ -121,8 +121,8 @@ describe("knowledge sources model", () => {
         }),
         expect.objectContaining({
           action: {
-            href: "/listings#import-listings",
-            label: "Open importer"
+            href: "#import-listings",
+            label: "Open CSV import"
           },
           connected: 1,
           description: "1/3 sources feeding AI",

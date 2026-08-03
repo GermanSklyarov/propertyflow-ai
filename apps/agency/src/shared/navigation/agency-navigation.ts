@@ -18,7 +18,6 @@ export interface AgencyNavigationItem {
   href: string;
   icon: LucideIcon;
   label: string;
-  status: "live" | "next";
   plans: readonly TenantSubscriptionPlan[];
 }
 
@@ -33,26 +32,26 @@ const allPlans: readonly TenantSubscriptionPlan[] = ["starter", "growth", "enter
 const crmPlans: readonly TenantSubscriptionPlan[] = ["growth", "enterprise"];
 
 export const agencyNavigationItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", plans: allPlans, status: "live" },
-  { href: "/setup", icon: Rocket, label: "Starter setup", plans: allPlans, status: "live" },
-  { href: "/knowledge", icon: BookOpenText, label: "Knowledge", plans: allPlans, status: "live" },
-  { href: "/listings", icon: Building2, label: "Listings", plans: allPlans, status: "live" },
-  { href: "/projects", icon: MapPinned, label: "Projects", plans: allPlans, status: "live" },
-  { href: "/widget-demo", icon: MessageCircle, label: "Widget demo", plans: allPlans, status: "live" },
-  { href: "/settings", icon: Settings, label: "Settings", plans: allPlans, status: "live" },
-  { href: "/leads", icon: Users, label: "Leads", plans: crmPlans, status: "live" },
-  { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", plans: crmPlans, status: "live" },
-  { href: "/ai-tools", icon: Bot, label: "AI tools", plans: crmPlans, status: "live" },
-  { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", plans: crmPlans, status: "live" }
+  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", plans: crmPlans },
+  { href: "/setup", icon: Rocket, label: "Starter setup", plans: allPlans },
+  { href: "/knowledge", icon: BookOpenText, label: "Knowledge", plans: allPlans },
+  { href: "/listings", icon: Building2, label: "Listings", plans: crmPlans },
+  { href: "/projects", icon: MapPinned, label: "Projects", plans: crmPlans },
+  { href: "/widget-demo", icon: MessageCircle, label: "Widget demo", plans: allPlans },
+  { href: "/settings", icon: Settings, label: "Settings", plans: allPlans },
+  { href: "/leads", icon: Users, label: "Leads", plans: crmPlans },
+  { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", plans: crmPlans },
+  { href: "/ai-tools", icon: Bot, label: "AI tools", plans: crmPlans },
+  { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", plans: crmPlans }
 ] satisfies AgencyNavigationItem[];
 
 const agencyTopbarQuickLinks = [
   { href: "/setup", label: "Starter setup", plans: allPlans },
   { href: "/knowledge", label: "Knowledge", plans: allPlans },
-  { href: "/listings", label: "Inventory", plans: allPlans },
-  { href: "/projects", label: "Projects", plans: allPlans },
   { href: "/widget-demo", label: "Preview widget", plans: allPlans },
   { href: "/settings", label: "Widget setup", plans: allPlans },
+  { href: "/listings", label: "Inventory", plans: crmPlans },
+  { href: "/projects", label: "Projects", plans: crmPlans },
   { href: "/leads", label: "Lead queue", plans: crmPlans },
   { href: "/saved-searches", label: "Saved demand", plans: crmPlans },
   { href: "/ai-tools", label: "AI tools", plans: crmPlans }

@@ -107,8 +107,8 @@ export const knowledgeSourceGroups: KnowledgeSourceGroup[] = [
   {
     connectors: [
       {
-        actionHref: "/listings#import-listings",
-        actionLabel: "Open importer",
+        actionHref: "#import-listings",
+        actionLabel: "Open CSV import",
         label: "CSV upload with field mapping",
         mode: "concierge_index_only",
         status: "ready"
