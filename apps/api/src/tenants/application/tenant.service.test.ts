@@ -775,6 +775,7 @@ describe("TenantService", () => {
           ru: "wizard" as never,
           zh: "neutral"
         },
+        listingUrlTemplate: " /catalog/:propertyId?from=concierge ",
         tone: "luxury",
         welcomeMessage: " Welcome ",
         welcomeMessages: {
@@ -794,6 +795,7 @@ describe("TenantService", () => {
         },
         allowedOrigins: ["https://agency.example.com"],
         languages: ["en", "ru"],
+        listingUrlTemplate: "/catalog/:propertyId?from=concierge",
         personaGenders: {
           en: "feminine",
           zh: "neutral"

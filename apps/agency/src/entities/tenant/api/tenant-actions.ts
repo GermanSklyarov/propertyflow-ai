@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import type { TenantWidgetLanguage, TenantWidgetTone } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
+import { normalizeWidgetListingUrlTemplate } from "@entities/tenant/model/widget-listing-links";
 import { updateTenantSettings } from "@shared/api/agency-client";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 
@@ -58,13 +59,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
 }
 
 function getListingUrlTemplate(formData: FormData): string | undefined {
-  const value = getOptionalString(formData, "listingUrlTemplate");
-
-  if (!value || !value.startsWith("/") || value.startsWith("//") || !value.includes(":propertyId")) {
-    return undefined;
-  }
-
-  return value;
+  return normalizeWidgetListingUrlTemplate(getOptionalString(formData, "listingUrlTemplate"));
 }
 
 function getAllowedOrigins(formData: FormData): string[] | undefined {

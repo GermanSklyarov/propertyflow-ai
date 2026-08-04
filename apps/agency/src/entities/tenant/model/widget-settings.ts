@@ -1,4 +1,5 @@
 import type { TenantSnapshot, TenantWidgetLanguage } from "@propertyflow/contracts";
+import { defaultWidgetListingUrlTemplate } from "./widget-listing-links";
 
 export const supportedTenantWidgetLanguageOptions: Array<{ label: string; value: TenantWidgetLanguage }> = [
   { label: "English", value: "en" },
@@ -17,7 +18,7 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   },
   allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
-  listingUrlTemplate: "/listings/:propertyId",
+  listingUrlTemplate: defaultWidgetListingUrlTemplate,
   personaGenders: {
     en: "feminine",
     ru: "feminine",
