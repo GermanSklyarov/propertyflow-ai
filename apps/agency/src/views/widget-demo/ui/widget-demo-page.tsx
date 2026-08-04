@@ -44,7 +44,7 @@ export function WidgetDemoPage({ tenant }: { tenant: TenantSnapshot }) {
             <div className={styles.fakeHero}>
               <p>Thailand property search</p>
               <h2>Find the right condo with an AI consultant that knows this agency.</h2>
-              <a href="#live-widget-demo">
+              <a data-widget-demo-open="true" href="#live-widget-demo">
                 Ask {primaryProfile.aiName}
                 <MessageCircle size={17} />
               </a>

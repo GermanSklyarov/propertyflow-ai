@@ -355,6 +355,36 @@
   border-color: rgb(165 60 50 / 24%);
 }
 
+.runtimeLocaleControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.runtimeLocaleControls button {
+  min-height: 38px;
+  cursor: pointer;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.runtimeLocaleControls button[aria-pressed="true"] {
+  background: var(--teal);
+  color: #fff;
+}
+
+.runtimeLocaleControls button:hover,
+.runtimeLocaleControls button:focus-visible {
+  border-color: rgb(15 118 110 / 34%);
+  outline: none;
+}
+
 .runtimeFacts {
   display: grid;
   gap: 8px;
