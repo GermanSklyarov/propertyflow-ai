@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Param } from "@nestjs/common";
+import { Controller, Get, Headers, Inject, Param } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import type { PublicWidgetConfigResponse } from "@propertyflow/contracts";
 import { TenantService } from "../../application/tenant.service.js";
@@ -75,7 +75,11 @@ export class PublicWidgetConfigController {
       }
     }
   })
-  getConfig(@Param("tenantSlug") tenantSlug: string): Promise<PublicWidgetConfigResponse> {
-    return this.tenants.getPublicWidgetConfig(tenantSlug);
+  getConfig(
+    @Param("tenantSlug") tenantSlug: string,
+    @Headers("origin") origin?: string,
+    @Headers("referer") referer?: string
+  ): Promise<PublicWidgetConfigResponse> {
+    return this.tenants.getPublicWidgetConfig(tenantSlug, { origin, referer });
   }
 }

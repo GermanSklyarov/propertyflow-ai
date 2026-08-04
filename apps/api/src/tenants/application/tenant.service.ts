@@ -307,8 +307,12 @@ export class TenantService {
     return tenant;
   }
 
-  async getPublicWidgetConfig(slug: string): Promise<PublicWidgetConfigResponse> {
+  async getPublicWidgetConfig(
+    slug: string,
+    requestOrigin: { origin?: string; referer?: string } = {}
+  ): Promise<PublicWidgetConfigResponse> {
     const tenant = await this.getActiveTenantBySlugOrThrow(slug, "Widget tenant not found");
+    this.assertPublicWidgetOriginAllowed(tenant, requestOrigin.origin, requestOrigin.referer);
 
     return {
       aiName: tenant.widget.aiName,

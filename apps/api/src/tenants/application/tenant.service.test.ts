@@ -142,7 +142,7 @@ describe("TenantService", () => {
       })
     );
 
-    await expect(service.getPublicWidgetConfig("demo-agency")).resolves.toMatchObject({
+    await expect(service.getPublicWidgetConfig("demo-agency", { origin: "https://agency.example.com" })).resolves.toMatchObject({
       capabilities: {
         knowledgeAnswers: true,
         leadCapture: true,
@@ -178,6 +178,27 @@ describe("TenantService", () => {
       },
       conciergeMode: "enterprise"
     });
+  });
+
+  it("enforces widget origin allowlist before returning public config", async () => {
+    const service = new TenantService(
+      repository({
+        findBySlug: async () =>
+          tenant({
+            widget: {
+              ...tenant().widget,
+              allowedOrigins: ["https://agency.example.com"]
+            }
+          })
+      })
+    );
+
+    await expect(service.getPublicWidgetConfig("demo-agency", { referer: "https://agency.example.com/listings" })).resolves.toMatchObject({
+      tenantSlug: "demo-agency"
+    });
+    await expect(service.getPublicWidgetConfig("demo-agency", { origin: "https://evil.example.com" })).rejects.toBeInstanceOf(
+      ForbiddenException
+    );
   });
 
   it("provisions a new agency workspace from signup intent", async () => {
