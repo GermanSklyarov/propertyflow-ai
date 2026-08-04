@@ -38,10 +38,9 @@ import {
   summarizeWidgetInstallSteps,
   summarizeWidgetLaunchReadiness
 } from "../model/widget-install";
-import { ConciergeAnswerCheckForm } from "./concierge-answer-check-form";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
-import { WidgetInstallCheckForm } from "./widget-install-check-form";
+import { WidgetProductionCheckPanel } from "./widget-production-check-panel";
 
 export function TenantSettingsPanel({
   knowledgeDocuments,
@@ -283,12 +282,7 @@ export function TenantSettingsPanel({
                   </div>
                 </div>
               </details>
-              <WidgetInstallCheckForm defaultUrl={defaultWidgetPageUrl} />
-              <ConciergeAnswerCheckForm
-                defaultWidgetPageUrl={defaultWidgetPageUrl}
-                locale={conciergeCheckLocale}
-                tenantSlug={tenant.slug}
-              />
+              <WidgetProductionCheckPanel defaultWidgetPageUrl={defaultWidgetPageUrl} locale={conciergeCheckLocale} tenantSlug={tenant.slug} />
               <details className={styles.widgetReadinessDetails}>
                 <summary>
                   Install prerequisites

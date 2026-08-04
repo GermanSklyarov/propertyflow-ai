@@ -800,6 +800,109 @@
   color: #9a5d0a;
 }
 
+.productionCheckPanel {
+  display: grid;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #f7fbfa;
+  padding: 10px;
+}
+
+.productionCheckStatus {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 9px;
+}
+
+.productionCheckStatus strong,
+.productionCheckStatus span,
+.productionCheckStatus em {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.productionCheckStatus strong {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.productionCheckStatus span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.productionCheckStatus em {
+  margin-top: 5px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.productionCheckPanel[data-status="verified"] .productionCheckStatus {
+  background: #ecfdf3;
+  border-color: rgb(21 128 61 / 20%);
+}
+
+.productionCheckPanel[data-status="blocked"] .productionCheckStatus {
+  background: #fff1f0;
+  border-color: rgb(185 28 28 / 22%);
+}
+
+.productionCheckPanel[data-status="review"] .productionCheckStatus {
+  background: #fff7ed;
+  border-color: rgb(180 83 9 / 20%);
+}
+
+.productionCheckList {
+  display: grid;
+  gap: 8px;
+}
+
+.productionCheckItem {
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 8px;
+}
+
+.productionCheckItem[data-ready="true"] {
+  background: #f0fdf4;
+  border-color: rgb(22 163 74 / 20%);
+}
+
+.productionCheckItem strong,
+.productionCheckItem small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.productionCheckItem strong {
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.productionCheckItem small {
+  color: var(--muted);
+  font-size: 0.71rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .conciergeAnswerCheck {
   display: grid;
   gap: 8px;

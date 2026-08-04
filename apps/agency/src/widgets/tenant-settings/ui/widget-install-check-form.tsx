@@ -1,16 +1,44 @@
 "use client";
 
 import { CheckCircle2, SearchCheck, ShieldAlert } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useEffect, useState, useTransition } from "react";
 import type { TenantWidgetInstallCheckResponse } from "@propertyflow/contracts";
 import { formatWidgetInstallCheckStatus, isWidgetInstallVerified } from "../model/widget-install-check";
 import styles from "./tenant-settings-panel.module.css";
 
-export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) {
-  const [url, setUrl] = useState(defaultUrl ?? "");
+export function WidgetInstallCheckForm({
+  defaultUrl,
+  onResultChange,
+  onUrlChange,
+  url: controlledUrl
+}: {
+  defaultUrl?: string;
+  onResultChange?: (result: TenantWidgetInstallCheckResponse | null) => void;
+  onUrlChange?: (url: string) => void;
+  url?: string;
+}) {
+  const [uncontrolledUrl, setUncontrolledUrl] = useState(defaultUrl ?? "");
   const [result, setResult] = useState<TenantWidgetInstallCheckResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const url = controlledUrl ?? uncontrolledUrl;
+
+  useEffect(() => {
+    if (controlledUrl === undefined) {
+      return;
+    }
+
+    setError(null);
+    setResult(null);
+  }, [controlledUrl]);
+
+  const updateUrl = (nextUrl: string) => {
+    if (controlledUrl === undefined) {
+      setUncontrolledUrl(nextUrl);
+    }
+
+    onUrlChange?.(nextUrl);
+  };
 
   const verify = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -31,7 +59,9 @@ export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) 
           throw new Error(`Check failed with HTTP ${response.status}`);
         }
 
-        setResult((await response.json()) as TenantWidgetInstallCheckResponse);
+        const nextResult = (await response.json()) as TenantWidgetInstallCheckResponse;
+        setResult(nextResult);
+        onResultChange?.(nextResult);
       } catch (_error) {
         setError("Could not run the install check. Confirm the URL and try again.");
       }
@@ -48,9 +78,10 @@ export function WidgetInstallCheckForm({ defaultUrl }: { defaultUrl?: string }) 
         <input
           id="widget-install-url"
           onChange={(event) => {
-            setUrl(event.target.value);
+            updateUrl(event.target.value);
             setError(null);
             setResult(null);
+            onResultChange?.(null);
           }}
           placeholder="https://agency.example.com"
           type="url"

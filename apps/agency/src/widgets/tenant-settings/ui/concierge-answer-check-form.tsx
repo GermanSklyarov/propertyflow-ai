@@ -1,7 +1,7 @@
 "use client";
 
 import { Bot, CheckCircle2, MessageCircle, ShieldAlert } from "lucide-react";
-import { type FormEvent, useState, useTransition } from "react";
+import { type FormEvent, useEffect, useState, useTransition } from "react";
 import type { TenantWidgetLanguage } from "@propertyflow/contracts";
 import { getDefaultConciergeAnswerCheckMessage, type ConciergeAnswerCheckResult } from "../model/concierge-answer-check";
 import styles from "./tenant-settings-panel.module.css";
@@ -9,17 +9,41 @@ import styles from "./tenant-settings-panel.module.css";
 export function ConciergeAnswerCheckForm({
   defaultWidgetPageUrl,
   locale,
-  tenantSlug
+  onResultChange,
+  onWidgetPageUrlChange,
+  tenantSlug,
+  widgetPageUrl: controlledWidgetPageUrl
 }: {
   defaultWidgetPageUrl?: string;
   locale: TenantWidgetLanguage;
+  onResultChange?: (result: ConciergeAnswerCheckResult | null) => void;
+  onWidgetPageUrlChange?: (url: string) => void;
   tenantSlug: string;
+  widgetPageUrl?: string;
 }) {
   const [message, setMessage] = useState(getDefaultConciergeAnswerCheckMessage(locale));
-  const [widgetPageUrl, setWidgetPageUrl] = useState(defaultWidgetPageUrl ?? "");
+  const [uncontrolledWidgetPageUrl, setUncontrolledWidgetPageUrl] = useState(defaultWidgetPageUrl ?? "");
   const [result, setResult] = useState<ConciergeAnswerCheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const widgetPageUrl = controlledWidgetPageUrl ?? uncontrolledWidgetPageUrl;
+
+  useEffect(() => {
+    if (controlledWidgetPageUrl === undefined) {
+      return;
+    }
+
+    setError(null);
+    setResult(null);
+  }, [controlledWidgetPageUrl]);
+
+  const updateWidgetPageUrl = (nextUrl: string) => {
+    if (controlledWidgetPageUrl === undefined) {
+      setUncontrolledWidgetPageUrl(nextUrl);
+    }
+
+    onWidgetPageUrlChange?.(nextUrl);
+  };
 
   const verify = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -45,7 +69,9 @@ export function ConciergeAnswerCheckForm({
           throw new Error(`Concierge check failed with HTTP ${response.status}`);
         }
 
-        setResult((await response.json()) as ConciergeAnswerCheckResult);
+        const nextResult = (await response.json()) as ConciergeAnswerCheckResult;
+        setResult(nextResult);
+        onResultChange?.(nextResult);
       } catch (_error) {
         setError("Could not ask the live Concierge. Check the page URL, allowed origins, AI provider credentials, and API availability.");
       }
@@ -69,9 +95,10 @@ export function ConciergeAnswerCheckForm({
           aria-label="Widget page URL"
           id="concierge-answer-check-page-url"
           onChange={(event) => {
-            setWidgetPageUrl(event.target.value);
+            updateWidgetPageUrl(event.target.value);
             setError(null);
             setResult(null);
+            onResultChange?.(null);
           }}
           placeholder="https://agency.example.com"
           type="url"
@@ -84,6 +111,7 @@ export function ConciergeAnswerCheckForm({
             setMessage(event.target.value);
             setError(null);
             setResult(null);
+            onResultChange?.(null);
           }}
           value={message}
         />
