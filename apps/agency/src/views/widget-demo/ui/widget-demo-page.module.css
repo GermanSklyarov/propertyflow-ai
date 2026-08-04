@@ -15,6 +15,7 @@
 .header,
 .fakeSite,
 .chatPanel,
+.runtimePanel,
 .installPanel {
   border: 1px solid var(--line);
   background: var(--panel);
@@ -304,6 +305,79 @@
 
 .chatForm button:disabled:hover {
   background: var(--teal);
+}
+
+.runtimePanel {
+  display: grid;
+  min-width: 0;
+  gap: 14px;
+  padding: 18px;
+}
+
+.runtimeStatus {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  padding: 14px;
+}
+
+.runtimeStatus strong,
+.runtimeStatus span {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.runtimeStatus strong {
+  color: var(--teal-dark);
+  font-size: 0.78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.runtimeStatus span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 820;
+  line-height: 1.4;
+}
+
+.runtimePanel[data-status="ready"] .runtimeStatus {
+  background: #ecfdf3;
+  border-color: rgb(21 128 61 / 20%);
+}
+
+.runtimePanel[data-status="error"] .runtimeStatus {
+  background: #fff8f5;
+  border-color: rgb(165 60 50 / 24%);
+}
+
+.runtimeFacts {
+  display: grid;
+  gap: 8px;
+}
+
+.runtimeFacts span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #fff;
+  padding: 10px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.runtimeFacts strong {
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
 }
 
 .spinIcon {

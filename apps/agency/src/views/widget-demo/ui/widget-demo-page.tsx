@@ -2,16 +2,18 @@ import { ArrowRight, Building2, CheckCircle2, Code2, Globe2, MessageCircle, Shie
 import type { TenantSnapshot } from "@propertyflow/contracts";
 import { buildWidgetInstallPackage } from "@widgets/tenant-settings/model/widget-install";
 import { CopyWidgetSnippetButton } from "@widgets/tenant-settings/ui/copy-widget-snippet-button";
-import { buildWidgetDemoProfiles, buildWidgetDemoPrompts, buildWidgetDemoSummary, getPrimaryWidgetDemoProfile } from "../model/widget-demo";
-import { WidgetDemoChat } from "./widget-demo-chat";
+import { buildWidgetDemoRuntime, buildWidgetDemoSummary, getPrimaryWidgetDemoProfile } from "../model/widget-demo";
 import styles from "./widget-demo-page.module.css";
+import { WidgetRuntimePreview } from "./widget-runtime-preview";
 
 export function WidgetDemoPage({ tenant }: { tenant: TenantSnapshot }) {
   const install = buildWidgetInstallPackage(tenant);
-  const profiles = buildWidgetDemoProfiles(tenant);
-  const prompts = buildWidgetDemoPrompts(tenant);
   const primaryProfile = getPrimaryWidgetDemoProfile(tenant);
   const summary = buildWidgetDemoSummary(tenant);
+  const runtime = buildWidgetDemoRuntime({
+    apiBaseUrl: process.env.NEXT_PUBLIC_PROPERTYFLOW_API_URL ?? process.env.PROPERTYFLOW_API_URL,
+    scriptSrc: process.env.NEXT_PUBLIC_PROPERTYFLOW_WIDGET_SCRIPT_URL
+  });
 
   return (
     <main className={styles.page}>
@@ -59,12 +61,7 @@ export function WidgetDemoPage({ tenant }: { tenant: TenantSnapshot }) {
           </article>
 
           <div id="live-widget-demo">
-            <WidgetDemoChat
-              initialLocale={primaryProfile.locale}
-              profiles={profiles}
-              prompts={prompts}
-              tenantSlug={tenant.slug}
-            />
+            <WidgetRuntimePreview apiBaseUrl={runtime.apiBaseUrl} config={install.config} scriptSrc={runtime.scriptSrc} />
           </div>
         </section>
 

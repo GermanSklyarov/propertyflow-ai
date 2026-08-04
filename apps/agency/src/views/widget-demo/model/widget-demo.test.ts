@@ -1,6 +1,12 @@
 import type { TenantSnapshot } from "@propertyflow/contracts";
 import { describe, expect, it } from "vitest";
-import { buildWidgetDemoProfiles, buildWidgetDemoPrompts, buildWidgetDemoSummary, getPrimaryWidgetDemoProfile } from "./widget-demo";
+import {
+  buildWidgetDemoProfiles,
+  buildWidgetDemoPrompts,
+  buildWidgetDemoRuntime,
+  buildWidgetDemoSummary,
+  getPrimaryWidgetDemoProfile
+} from "./widget-demo";
 
 const tenant = {
   branding: {
@@ -72,6 +78,17 @@ describe("widget demo model", () => {
       originMode: "test",
       originNote: "No production origin is required for this internal demo host.",
       tenantSlug: "demo-agency"
+    });
+  });
+
+  it("builds local widget runtime defaults for the demo host", () => {
+    expect(buildWidgetDemoRuntime()).toEqual({
+      apiBaseUrl: "http://127.0.0.1:3001",
+      scriptSrc: "/api/widget-runtime"
+    });
+    expect(buildWidgetDemoRuntime({ apiBaseUrl: "https://api.example.com", scriptSrc: "https://cdn.example.com/widget.js" })).toEqual({
+      apiBaseUrl: "https://api.example.com",
+      scriptSrc: "https://cdn.example.com/widget.js"
     });
   });
 

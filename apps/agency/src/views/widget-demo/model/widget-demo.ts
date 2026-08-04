@@ -21,6 +21,11 @@ export interface WidgetDemoSummary {
   tenantSlug: string;
 }
 
+export interface WidgetDemoRuntime {
+  apiBaseUrl: string;
+  scriptSrc: string;
+}
+
 export function buildWidgetDemoProfiles(tenant: TenantSnapshot): WidgetDemoProfile[] {
   const widget = getTenantWidgetSettings(tenant);
 
@@ -52,6 +57,13 @@ export function buildWidgetDemoSummary(tenant: TenantSnapshot): WidgetDemoSummar
       ? `${widget.allowedOrigins.length} allowed origin${widget.allowedOrigins.length === 1 ? "" : "s"} configured.`
       : "No production origin is required for this internal demo host.",
     tenantSlug: tenant.slug
+  };
+}
+
+export function buildWidgetDemoRuntime(input: { apiBaseUrl?: string; scriptSrc?: string } = {}): WidgetDemoRuntime {
+  return {
+    apiBaseUrl: input.apiBaseUrl ?? "http://127.0.0.1:3001",
+    scriptSrc: input.scriptSrc ?? "/api/widget-runtime"
   };
 }
 
