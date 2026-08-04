@@ -57,7 +57,8 @@
     isReady: false,
     isSending: false,
     locale: requestedLocale,
-    messages: []
+    messages: [],
+    runtimeError: ""
   };
 
   var host = document.createElement("div");
@@ -75,6 +76,7 @@
       state.config = mergeConfig(fallbackConfig, config);
       state.locale = pickLocale(requestedLocale, state.config.languages);
       state.isReady = true;
+      state.runtimeError = "";
       state.messages = loadStoredMessages();
       if (!state.messages.length) {
         state.messages = [assistantMessage(getWelcomeMessage(state.config, state.locale))];
@@ -82,19 +84,20 @@
       }
       render();
     })
-    .catch(function () {
+    .catch(function (error) {
       state.locale = pickLocale(requestedLocale, state.config.languages);
       state.messages = loadStoredMessages();
       if (!state.messages.length) {
         state.messages = [assistantMessage(getWelcomeMessage(state.config, state.locale))];
         persistMessages();
       }
-      render("The concierge is running from embedded settings. Live knowledge answers are unavailable right now.");
+      state.runtimeError = getConfigFailureMessage(error);
+      render();
     });
 
   render();
 
-  function render(errorMessage) {
+  function render() {
     var config = state.config;
     var primaryColor = sanitizeColor(config.branding.primaryColor || "#0f766e");
     var displayName = escapeText(config.branding.displayName || "PropertyFlowAI");
@@ -134,7 +137,7 @@
           " · " +
           languageLabel +
           '</span></div><div class="pf-header-actions"><button class="pf-reset" type="button">Start over</button><button class="pf-close" type="button" aria-label="Close">×</button></div></header>' +
-          (errorMessage ? '<p class="pf-error">' + escapeText(errorMessage) + "</p>" : "") +
+          (state.runtimeError ? '<p class="pf-error">' + escapeText(state.runtimeError) + "</p>" : "") +
           '<div class="pf-thread">' +
           messages +
           (state.isSending ? '<div class="pf-message pf-message-assistant">Thinking...</div>' : "") +
@@ -250,11 +253,21 @@
       headers: { accept: "application/json" }
     }).then(function (response) {
       if (!response.ok) {
-        throw new Error("Widget config failed");
+        var error = new Error("Widget config failed");
+        error.status = response.status;
+        throw error;
       }
 
       return response.json();
     });
+  }
+
+  function getConfigFailureMessage(error) {
+    if (error && error.status === 403) {
+      return "This page origin is not allowed for the AI Concierge widget. Add this website origin in PropertyFlowAI settings, then reload the page.";
+    }
+
+    return "The concierge could not load live tenant configuration. Live knowledge answers are unavailable right now.";
   }
 
   function ask(message) {
