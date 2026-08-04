@@ -270,6 +270,12 @@
     return "The concierge could not load live tenant configuration. Live knowledge answers are unavailable right now.";
   }
 
+  function throwWidgetHttpError(message, response) {
+    var error = new Error(message);
+    error.status = response.status;
+    throw error;
+  }
+
   function ask(message) {
     var trimmed = String(message || "").trim();
 
@@ -295,7 +301,7 @@
     })
       .then(function (response) {
         if (!response.ok) {
-          throw new Error("Widget ask failed");
+          throwWidgetHttpError("Widget ask failed", response);
         }
 
         return response.json();
@@ -304,8 +310,8 @@
         state.messages.push(assistantMessage(response.answer || "I could not produce an answer yet."));
         persistMessages();
       })
-      .catch(function () {
-        state.messages.push(assistantMessage("I cannot reach the agency knowledge base right now. Please try again in a minute."));
+      .catch(function (error) {
+        state.messages.push(assistantMessage(getAskFailureMessage(state.locale, error)));
         persistMessages();
       })
       .finally(function () {
@@ -352,7 +358,7 @@
     })
       .then(function (response) {
         if (!response.ok) {
-          throw new Error("Widget lead failed");
+          throwWidgetHttpError("Widget lead failed", response);
         }
 
         return response.json();
@@ -369,8 +375,8 @@
         state.isHandoffOpen = false;
         persistMessages();
       })
-      .catch(function () {
-        state.handoff.error = getHandoffFailureMessage(state.locale);
+      .catch(function (error) {
+        state.handoff.error = getHandoffFailureMessage(state.locale, error);
       })
       .finally(function () {
         state.isHandoffSending = false;
@@ -550,6 +556,28 @@
     return placeholders[locale] || placeholders.en;
   }
 
+  function getAskFailureMessage(locale, error) {
+    if (error && error.status === 403) {
+      var blocked = {
+        en: "This page is not allowed to use the AI Concierge yet. Ask the agency to add this website origin in PropertyFlowAI settings.",
+        ru: "Эта страница пока не разрешена для AI-консьержа. Попросите агентство добавить origin сайта в настройках PropertyFlowAI.",
+        th: "หน้านี้ยังไม่ได้รับอนุญาตให้ใช้ AI Concierge กรุณาให้เอเจนซี่เพิ่ม origin ของเว็บไซต์ใน PropertyFlowAI settings",
+        zh: "此页面尚未被允许使用 AI Concierge。请让机构在 PropertyFlowAI 设置中添加该网站 origin。"
+      };
+
+      return blocked[locale] || blocked.en;
+    }
+
+    var labels = {
+      en: "I cannot reach the agency knowledge base right now. Please try again in a minute.",
+      ru: "Сейчас я не могу подключиться к базе знаний агентства. Попробуйте еще раз через минуту.",
+      th: "ตอนนี้ยังเชื่อมต่อฐานความรู้ของเอเจนซี่ไม่ได้ กรุณาลองใหม่อีกครั้ง",
+      zh: "我现在无法连接机构知识库，请稍后再试。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
   function getHandoffCta(locale) {
     var labels = {
       en: "Ask an agent to contact me",
@@ -627,7 +655,18 @@
     return labels[locale] || labels.en;
   }
 
-  function getHandoffFailureMessage(locale) {
+  function getHandoffFailureMessage(locale, error) {
+    if (error && error.status === 403) {
+      var blocked = {
+        en: "This page is not allowed to send Concierge handoff requests yet. Ask the agency to add this website origin in PropertyFlowAI settings.",
+        ru: "Эта страница пока не может отправлять заявки консьержа. Попросите агентство добавить origin сайта в настройках PropertyFlowAI.",
+        th: "หน้านี้ยังไม่ได้รับอนุญาตให้ส่งคำขอจาก Concierge กรุณาให้เอเจนซี่เพิ่ม origin ของเว็บไซต์ใน PropertyFlowAI settings",
+        zh: "此页面尚未被允许发送 Concierge 转交请求。请让机构在 PropertyFlowAI 设置中添加该网站 origin。"
+      };
+
+      return blocked[locale] || blocked.en;
+    }
+
     var labels = {
       en: "I could not send the request right now. Please try again in a minute.",
       ru: "Не удалось отправить запрос. Попробуйте еще раз через минуту.",
