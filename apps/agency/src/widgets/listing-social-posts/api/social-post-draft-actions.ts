@@ -14,21 +14,21 @@ import {
   savePropertySocialPostDraft
 } from "@shared/api/agency-client";
 
-export function recordPropertySocialPostPublicationAction(
+export async function recordPropertySocialPostPublicationAction(
   propertyId: string,
   request: RecordPropertySocialPostPublicationRequest
 ): Promise<RecordPropertySocialPostPublicationResponse> {
   return recordPropertySocialPostPublication(propertyId, request);
 }
 
-export function recordPropertySocialPostReviewAction(
+export async function recordPropertySocialPostReviewAction(
   propertyId: string,
   request: RecordPropertySocialPostReviewRequest
 ): Promise<RecordPropertySocialPostReviewResponse> {
   return recordPropertySocialPostReview(propertyId, request);
 }
 
-export function savePropertySocialPostDraftAction(
+export async function savePropertySocialPostDraftAction(
   propertyId: string,
   request: SavePropertySocialPostDraftRequest
 ): Promise<SavePropertySocialPostDraftResponse> {
