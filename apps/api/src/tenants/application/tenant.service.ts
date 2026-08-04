@@ -313,6 +313,7 @@ export class TenantService {
   ): Promise<PublicWidgetConfigResponse> {
     const tenant = await this.getActiveTenantBySlugOrThrow(slug, "Widget tenant not found");
     this.assertPublicWidgetOriginAllowed(tenant, requestOrigin.origin, requestOrigin.referer);
+    const listingUrlTemplate = normalizeListingUrlTemplate(tenant.widget.listingUrlTemplate) ?? defaultWidgetListingUrlTemplate;
 
     return {
       aiName: tenant.widget.aiName,
@@ -322,9 +323,9 @@ export class TenantService {
       capabilities: buildPublicWidgetCapabilities(tenant),
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
-      listingUrlTemplate: tenant.widget.listingUrlTemplate,
+      listingUrlTemplate,
       personaGenders: tenant.widget.personaGenders,
-      readiness: buildPublicWidgetReadiness(tenant),
+      readiness: buildPublicWidgetReadiness({ ...tenant, widget: { ...tenant.widget, listingUrlTemplate } }),
       tenantSlug: tenant.slug,
       tone: tenant.widget.tone,
       welcomeMessage: tenant.widget.welcomeMessage,
@@ -663,6 +664,7 @@ const supportedWidgetLanguages: TenantWidgetLanguage[] = ["en", "ru", "th", "zh"
 const supportedPersonaGenders = ["feminine", "masculine", "neutral"] as const;
 const supportedWidgetTones: TenantWidgetTone[] = ["friendly", "professional", "luxury", "concise"];
 const supportedSubscriptionPlans: TenantSubscriptionPlan[] = ["starter", "growth", "enterprise"];
+const defaultWidgetListingUrlTemplate = "/listings/:propertyId";
 
 function normalizeRequiredText(value: string | undefined): string {
   return value?.trim().replace(/\s+/g, " ") ?? "";

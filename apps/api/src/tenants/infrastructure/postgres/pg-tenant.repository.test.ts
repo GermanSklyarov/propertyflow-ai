@@ -101,6 +101,7 @@ describe("PgTenantRepository", () => {
         zh: "neutral"
       },
       ["https://sunset.example"],
+      "/listings/:propertyId",
       "friendly",
       ["en", "ru", "th", "zh"],
       expect.any(String)
@@ -173,5 +174,45 @@ describe("PgTenantRepository", () => {
       ...starterPlan.limits,
       publicApiRequestsMonthly: 25_000
     });
+  });
+
+  it("falls back to a safe listing URL template for legacy invalid tenant rows", async () => {
+    const createdAt = new Date("2026-07-24T08:00:00.000Z");
+    const pool = {
+      query: vi.fn().mockResolvedValue({
+        rows: [
+          {
+            branding_display_name: "Demo Starter",
+            branding_logo_url: null,
+            branding_primary_color: null,
+            created_at: createdAt,
+            custom_domain: null,
+            domain_status: "not-configured",
+            id: "starter-tenant",
+            limits: getTenantPlanDefinition("starter").limits,
+            name: "Demo Starter",
+            primary_market: "pattaya",
+            slug: "demo-starter",
+            status: "active",
+            subscription_plan: "starter",
+            updated_at: createdAt,
+            widget_ai_name: "Anna",
+            widget_ai_names: null,
+            widget_allowed_origins: ["https://demo.example.com"],
+            widget_languages: ["en"],
+            widget_listing_url_template: "https://evil.example.com/listings/:propertyId",
+            widget_persona_genders: null,
+            widget_tone: null,
+            widget_welcome_message: "Hi! I'm Anna, your AI property consultant.",
+            widget_welcome_messages: null
+          }
+        ]
+      })
+    } as unknown as Pool;
+    const repository = new PgTenantRepository(pool);
+
+    const tenant = await repository.findById("starter-tenant");
+
+    expect(tenant?.widget.listingUrlTemplate).toBe("/listings/:propertyId");
   });
 });

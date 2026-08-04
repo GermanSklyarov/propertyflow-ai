@@ -164,6 +164,27 @@ describe("TenantService", () => {
     });
   });
 
+  it("falls back to the default public listing route when tenant config contains an unsafe template", async () => {
+    const service = new TenantService(
+      repository({
+        findBySlug: async () =>
+          tenant({
+            widget: {
+              ...tenant().widget,
+              listingUrlTemplate: "https://evil.example.com/listings/:propertyId"
+            }
+          })
+      })
+    );
+
+    await expect(service.getPublicWidgetConfig("demo-agency")).resolves.toMatchObject({
+      listingUrlTemplate: "/listings/:propertyId",
+      readiness: {
+        status: "test-mode"
+      }
+    });
+  });
+
   it("uses the shared plan catalog for public widget capabilities", async () => {
     expect(getTenantPlanDefinition("starter").features.crmLeadCapture).toBe(false);
     expect(tenantPlanCatalog.growth.features.crmLeadCapture).toBe(true);

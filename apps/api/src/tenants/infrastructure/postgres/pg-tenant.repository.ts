@@ -376,7 +376,7 @@ export class PgTenantRepository implements TenantRepository {
         },
         allowedOrigins: filterAllowedOrigins(row.widget_allowed_origins),
         languages: filterSupportedLanguages(row.widget_languages),
-        listingUrlTemplate: row.widget_listing_url_template || defaultWidgetSettings.listingUrlTemplate,
+        listingUrlTemplate: normalizeListingUrlTemplate(row.widget_listing_url_template),
         personaGenders: {
           ...defaultWidgetSettings.personaGenders,
           ...(row.widget_persona_genders ?? {})
@@ -411,6 +411,16 @@ function filterSupportedLanguages(languages: string[] | null | undefined): Tenan
 
 function filterAllowedOrigins(origins: string[] | null | undefined): string[] {
   return (origins ?? []).map((origin) => origin.trim().toLowerCase()).filter(Boolean);
+}
+
+function normalizeListingUrlTemplate(value: string | null | undefined): string {
+  const template = value?.trim();
+
+  if (!template || !template.startsWith("/") || template.startsWith("//") || !template.includes(":propertyId")) {
+    return defaultWidgetSettings.listingUrlTemplate;
+  }
+
+  return template.slice(0, 160);
 }
 
 function resolveTenantLimits(
