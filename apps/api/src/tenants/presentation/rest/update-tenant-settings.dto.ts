@@ -55,6 +55,12 @@ export class UpdateTenantWidgetDto {
   @IsUrl({ require_tld: false, require_protocol: true }, { each: true })
   allowedOrigins?: string[];
 
+  @ApiProperty({ required: false, example: "/listings/:propertyId" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^\/(?!\/).*:propertyId.*$/)
+  listingUrlTemplate?: string;
+
   @ApiProperty({ required: false, example: "Hi! I'm Anna, your AI property consultant." })
   @IsOptional()
   @IsString()

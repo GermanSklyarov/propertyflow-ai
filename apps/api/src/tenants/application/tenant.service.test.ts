@@ -41,6 +41,7 @@ describe("TenantService", () => {
               },
               allowedOrigins: [],
               languages: ["en", "ru"],
+              listingUrlTemplate: "/listings/:propertyId",
               personaGenders: {
                 en: "feminine",
                 ru: "feminine"
@@ -75,6 +76,7 @@ describe("TenantService", () => {
       },
       conciergeMode: "starter",
       languages: ["en", "ru"],
+      listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",
         ru: "feminine"
@@ -97,6 +99,12 @@ describe("TenantService", () => {
             key: "localized-welcome",
             label: "Localized welcome",
             note: "Every enabled language has a welcome message.",
+            ready: true
+          },
+          {
+            key: "listing-url-template",
+            label: "Listing links",
+            note: "Recommended listings open with /listings/:propertyId.",
             ready: true
           }
         ],
@@ -127,6 +135,7 @@ describe("TenantService", () => {
               },
               allowedOrigins: ["https://agency.example.com"],
               languages: ["en", "th"],
+              listingUrlTemplate: "/catalog/:propertyId",
               personaGenders: {
                 en: "feminine",
                 th: "feminine"
@@ -894,6 +903,7 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
       },
       allowedOrigins: [],
       languages: ["en", "ru", "th", "zh"],
+      listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",
         ru: "feminine",

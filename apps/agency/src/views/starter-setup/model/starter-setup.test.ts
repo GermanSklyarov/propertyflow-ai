@@ -226,6 +226,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
       },
       allowedOrigins: [],
       languages: ["en", "ru", "th", "zh"],
+      listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",
         ru: "feminine",

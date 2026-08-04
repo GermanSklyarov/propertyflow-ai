@@ -3,10 +3,13 @@ import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger"
 import type {
   PublicWidgetAskResponse,
   PublicWidgetLeadResponse,
+  PublicWidgetRecommendedListing,
   TenantSnapshot,
   TenantWidgetLanguage
 } from "@propertyflow/contracts";
+import type { PropertySnapshot } from "@propertyflow/domain";
 import { LeadService } from "../../../leads/application/lead.service.js";
+import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../../properties/domain/property.repository.js";
 import { TenantService } from "../../../tenants/application/tenant.service.js";
 import type { AiConciergePersona } from "../../application/ai-text-generator.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
@@ -18,7 +21,8 @@ export class PublicWidgetChatController {
   constructor(
     @Inject(TenantService) private readonly tenants: TenantService,
     @Inject(AiChatService) private readonly chat: AiChatService,
-    @Inject(LeadService) private readonly leads: LeadService
+    @Inject(LeadService) private readonly leads: LeadService,
+    @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository
   ) {}
 
   @Post("ask/:tenantSlug")
@@ -75,11 +79,13 @@ export class PublicWidgetChatController {
       origin: origin ?? null,
       referer: referer ?? null
     });
+    const recommendedListings = await this.buildRecommendedListings(tenant, response.matchedPropertyIds, origin, referer);
 
     return {
       ...response,
       conciergeMode: tenant.subscriptionPlan,
       locale,
+      recommendedListings,
       tenantSlug: tenant.slug
     };
   }
@@ -139,6 +145,31 @@ export class PublicWidgetChatController {
       tenantSlug: tenant.slug
     };
   }
+
+  private async buildRecommendedListings(
+    tenant: TenantSnapshot,
+    propertyIds: string[],
+    origin?: string,
+    referer?: string
+  ): Promise<PublicWidgetRecommendedListing[]> {
+    const baseOrigin = resolveRequestOrigin(origin) ?? resolveRequestOrigin(referer);
+
+    if (!baseOrigin || !tenant.widget.listingUrlTemplate.includes(":propertyId")) {
+      return [];
+    }
+
+    const properties = await Promise.all(
+      propertyIds.slice(0, 3).map((propertyId) => this.properties.findById(tenant.id, propertyId))
+    );
+
+    return properties
+      .filter((property): property is PropertySnapshot => Boolean(property))
+      .map((property) => ({
+        propertyId: property.id,
+        title: property.title,
+        url: buildListingUrl(baseOrigin, tenant.widget.listingUrlTemplate, property.id)
+      }));
+  }
 }
 
 function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requestedLocale: TenantWidgetLanguage): TenantWidgetLanguage {
@@ -162,4 +193,23 @@ function normalizeOptional(value?: string): string | undefined {
   const trimmed = value?.trim();
 
   return trimmed ? trimmed : undefined;
+}
+
+function resolveRequestOrigin(value?: string): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  try {
+    return new URL(value).origin.toLowerCase();
+  } catch (_error) {
+    return undefined;
+  }
+}
+
+function buildListingUrl(origin: string, template: string, propertyId: string): string {
+  const path = template.startsWith("/") && !template.startsWith("//") ? template : "/listings/:propertyId";
+  const resolvedPath = path.replace(/:propertyId/g, encodeURIComponent(propertyId));
+
+  return new URL(resolvedPath, origin).toString();
 }

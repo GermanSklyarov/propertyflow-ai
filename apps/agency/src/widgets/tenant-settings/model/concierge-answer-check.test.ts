@@ -90,6 +90,7 @@ function responseFactory(overrides: Partial<PublicWidgetAskResponse> = {}): Publ
     locale: "en",
     matchedPropertyIds: [],
     message: "Find a Pattaya sea-view condo",
+    recommendedListings: [],
     suggestedActions: [],
     tenantSlug: "demo-agency",
     ...overrides

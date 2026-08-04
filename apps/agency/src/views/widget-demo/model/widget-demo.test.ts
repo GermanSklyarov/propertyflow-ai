@@ -34,6 +34,7 @@ const tenant = {
     },
     allowedOrigins: [],
     languages: ["en", "ru"],
+    listingUrlTemplate: "/listings/:propertyId",
     personaGenders: {
       en: "feminine",
       ru: "feminine"

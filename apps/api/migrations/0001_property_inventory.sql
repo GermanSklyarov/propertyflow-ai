@@ -19,6 +19,7 @@ create table if not exists tenants (
   widget_welcome_messages jsonb not null default '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是安娜，你的 AI 房产顾问。"}'::jsonb,
   widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
   widget_allowed_origins text[] not null default array[]::text[],
+  widget_listing_url_template text not null default '/listings/:propertyId',
   widget_tone text not null default 'friendly',
   widget_languages text[] not null default array['en','ru','th','zh'],
   created_at timestamptz not null,
@@ -43,6 +44,7 @@ set widget_welcome_messages = '{"en":"Hi! I''m Anna, your AI property consultant
 where widget_welcome_messages = '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ Anna ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是 Anna，你的 AI 房产顾问。"}'::jsonb;
 alter table tenants add column if not exists widget_persona_genders jsonb not null default '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb;
 alter table tenants add column if not exists widget_allowed_origins text[] not null default array[]::text[];
+alter table tenants add column if not exists widget_listing_url_template text not null default '/listings/:propertyId';
 alter table tenants add column if not exists widget_tone text not null default 'friendly';
 alter table tenants add column if not exists widget_languages text[] not null default array['en','ru','th','zh'];
 create unique index if not exists idx_tenants_custom_domain on tenants (custom_domain) where custom_domain is not null;
@@ -66,6 +68,7 @@ insert into tenants (
   widget_welcome_messages,
   widget_persona_genders,
   widget_allowed_origins,
+  widget_listing_url_template,
   widget_tone,
   widget_languages,
   created_at,
@@ -89,6 +92,7 @@ insert into tenants (
   '{"en":"Hi! I''m Anna, your AI property consultant.","ru":"Привет! Я Анна, ваш AI-консультант по недвижимости.","th":"สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ","zh":"你好！我是安娜，你的 AI 房产顾问。"}'::jsonb,
   '{"en":"feminine","ru":"feminine","th":"feminine","zh":"neutral"}'::jsonb,
   array['http://localhost:3000','http://localhost:3002'],
+  '/listings/:propertyId',
   'friendly',
   array['en','ru','th','zh'],
   now(),

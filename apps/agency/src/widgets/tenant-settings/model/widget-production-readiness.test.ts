@@ -104,6 +104,7 @@ function widgetAskResponseFactory(overrides: Partial<PublicWidgetAskResponse> = 
     locale: "en",
     matchedPropertyIds: [],
     message: "Find a Pattaya sea-view condo",
+    recommendedListings: [],
     suggestedActions: [],
     tenantSlug: "demo-agency",
     ...overrides

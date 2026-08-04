@@ -19,6 +19,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const logoUrl = getOptionalString(formData, "logoUrl");
   const customDomain = getOptionalString(formData, "customDomain");
   const allowedOrigins = getAllowedOrigins(formData);
+  const listingUrlTemplate = getListingUrlTemplate(formData);
   const primaryMarket = getOptionalMarket(formData);
   const languages = getLanguageCodes(formData);
   const aiNames = getLocalizedStrings(formData, "aiName");
@@ -42,6 +43,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
         ...(Object.keys(aiNames).length ? { aiNames } : {}),
         ...(allowedOrigins ? { allowedOrigins } : {}),
         ...(languages.length ? { languages } : {}),
+        ...(listingUrlTemplate ? { listingUrlTemplate } : {}),
         ...(Object.keys(personaGenders).length ? { personaGenders } : {}),
         ...(tone ? { tone } : {}),
         ...(welcomeMessage ? { welcomeMessage } : {}),
@@ -53,6 +55,16 @@ export async function updateTenantSettingsAction(formData: FormData) {
 
   revalidatePath("/settings");
   redirect("/settings?updated=tenant-settings#tenant-settings-form");
+}
+
+function getListingUrlTemplate(formData: FormData): string | undefined {
+  const value = getOptionalString(formData, "listingUrlTemplate");
+
+  if (!value || !value.startsWith("/") || value.startsWith("//") || !value.includes(":propertyId")) {
+    return undefined;
+  }
+
+  return value;
 }
 
 function getAllowedOrigins(formData: FormData): string[] | undefined {

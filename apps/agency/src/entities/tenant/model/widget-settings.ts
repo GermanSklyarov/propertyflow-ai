@@ -17,6 +17,7 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   },
   allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
+  listingUrlTemplate: "/listings/:propertyId",
   personaGenders: {
     en: "feminine",
     ru: "feminine",
@@ -48,6 +49,7 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
     aiNames,
     allowedOrigins: tenant.widget?.allowedOrigins ?? defaultTenantWidgetSettings.allowedOrigins,
     languages: tenant.widget?.languages?.length ? tenant.widget.languages : defaultTenantWidgetSettings.languages,
+    listingUrlTemplate: tenant.widget?.listingUrlTemplate ?? defaultTenantWidgetSettings.listingUrlTemplate,
     personaGenders: {
       ...defaultTenantWidgetSettings.personaGenders,
       ...tenant.widget?.personaGenders

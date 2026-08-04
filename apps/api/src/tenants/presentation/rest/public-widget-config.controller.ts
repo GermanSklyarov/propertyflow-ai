@@ -33,6 +33,7 @@ export class PublicWidgetConfigController {
         },
         conciergeMode: "starter",
         languages: ["en", "ru", "th", "zh"],
+        listingUrlTemplate: "/listings/:propertyId",
         personaGenders: {
           en: "feminine",
           ru: "feminine",

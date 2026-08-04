@@ -30,6 +30,7 @@
     },
     conciergeMode: embedMode,
     languages: readAttribute(script, "languages", "en").split(",").filter(Boolean),
+    listingUrlTemplate: readAttribute(script, "listing-url-template", "/listings/:propertyId"),
     personaGenders: readJsonAttribute(script, "persona-genders", {}),
     readiness: {
       checks: [],
@@ -109,7 +110,14 @@
     var readinessNotice = buildReadinessNotice(config.readiness);
     var messages = state.messages
       .map(function (message) {
-        return '<div class="pf-message pf-message-' + message.role + '">' + escapeText(message.text) + "</div>";
+        return (
+          '<div class="pf-message pf-message-' +
+          message.role +
+          '">' +
+          escapeText(message.text) +
+          buildRecommendationsHtml(message.recommendations) +
+          "</div>"
+        );
       })
       .join("");
 
@@ -283,6 +291,64 @@
     };
   }
 
+  function buildRecommendationsHtml(recommendations) {
+    var listings = normalizeRecommendedListings(recommendations);
+
+    if (!listings.length) {
+      return "";
+    }
+
+    return (
+      '<div class="pf-recommendations">' +
+      listings
+        .map(function (listing) {
+          return (
+            '<a href="' +
+            escapeText(listing.url) +
+            '" target="_blank" rel="noopener noreferrer">' +
+            '<span>' +
+            escapeText(listing.title) +
+            '</span><small>' +
+            escapeText(getViewListingLabel(state.locale)) +
+            "</small></a>"
+          );
+        })
+        .join("") +
+      "</div>"
+    );
+  }
+
+  function normalizeRecommendedListings(recommendations) {
+    if (!Array.isArray(recommendations)) {
+      return [];
+    }
+
+    return recommendations
+      .filter(function (listing) {
+        return listing && typeof listing.title === "string" && isSafeListingUrl(listing.url);
+      })
+      .map(function (listing) {
+        return {
+          title: listing.title.trim().slice(0, 120),
+          url: String(listing.url)
+        };
+      })
+      .filter(function (listing) {
+        return listing.title;
+      })
+      .slice(0, 3);
+  }
+
+  function isSafeListingUrl(value) {
+    try {
+      var url = new URL(String(value));
+
+      return url.protocol === "https:" || url.hostname === "localhost" || url.hostname === "127.0.0.1";
+    } catch (_error) {
+      return false;
+    }
+  }
+
   function throwWidgetHttpError(message, response) {
     var error = new Error(message);
     error.status = response.status;
@@ -320,7 +386,9 @@
         return response.json();
       })
       .then(function (response) {
-        state.messages.push(assistantMessage(response.answer || "I could not produce an answer yet."));
+        state.messages.push(
+          assistantMessage(response.answer || "I could not produce an answer yet.", response.recommendedListings)
+        );
         persistMessages();
       })
       .catch(function (error) {
@@ -417,8 +485,8 @@
     return lines.join("\n\n").slice(0, 3000);
   }
 
-  function assistantMessage(text) {
-    return { role: "assistant", text: text };
+  function assistantMessage(text, recommendations) {
+    return { recommendations: normalizeRecommendedListings(recommendations), role: "assistant", text: text };
   }
 
   function resetConversation() {
@@ -447,6 +515,7 @@
         })
         .map(function (message) {
           return {
+            recommendations: normalizeRecommendedListings(message.recommendations),
             role: message.role,
             text: message.text.slice(0, 2000)
           };
@@ -477,6 +546,7 @@
       capabilities: Object.assign({}, fallback.capabilities, remote.capabilities || {}),
       conciergeMode: remote.conciergeMode || fallback.conciergeMode,
       languages: Array.isArray(remote.languages) && remote.languages.length ? remote.languages : fallback.languages,
+      listingUrlTemplate: remote.listingUrlTemplate || fallback.listingUrlTemplate,
       personaGenders: Object.assign({}, fallback.personaGenders, remote.personaGenders || {}),
       readiness: remote.readiness || fallback.readiness,
       tenantSlug: remote.tenantSlug || fallback.tenantSlug,
@@ -597,6 +667,17 @@
       ru: "Попросить агента связаться",
       th: "ให้เอเจนต์ติดต่อกลับ",
       zh: "让经纪人联系我"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getViewListingLabel(locale) {
+    var labels = {
+      en: "View listing",
+      ru: "Открыть объект",
+      th: "ดูประกาศ",
+      zh: "查看房源"
     };
 
     return labels[locale] || labels.en;
@@ -737,6 +818,11 @@
       ".pf-message{border:1px solid #d9e7e3;font-size:14px;font-weight:750;line-height:1.45;padding:10px;white-space:pre-wrap}",
       ".pf-message-assistant{background:#edf8f4;color:#0b4f49}",
       ".pf-message-user{justify-self:end;background:#0b4f49;color:#fff;max-width:88%}",
+      ".pf-recommendations{display:grid;gap:7px;margin-top:9px;white-space:normal}",
+      ".pf-recommendations a{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid color-mix(in srgb,var(--pf-primary),white 58%);background:#fff;color:#0b4f49;padding:8px;text-decoration:none}",
+      ".pf-recommendations a:hover{background:#f7fffc}",
+      ".pf-recommendations span{font-size:12px;font-weight:900;line-height:1.25}",
+      ".pf-recommendations small{flex:0 0 auto;color:var(--pf-primary);font-size:10px;font-weight:950;text-transform:uppercase}",
       ".pf-form{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:8px;border-top:1px solid #d9e7e3;padding:12px}",
       ".pf-form textarea{min-width:0;resize:none;border:1px solid #d9e7e3;color:#12211f;font:inherit;font-size:13px;font-weight:750;padding:9px}",
       ".pf-form textarea:focus{border-color:var(--pf-primary);outline:none}",

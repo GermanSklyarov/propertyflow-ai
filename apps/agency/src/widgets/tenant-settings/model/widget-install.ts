@@ -17,6 +17,7 @@ export interface WidgetInstallConfig {
   allowedOrigins: string[];
   capabilities: PublicWidgetCapabilities;
   languageCodes: string[];
+  listingUrlTemplate: string;
   mode: "starter" | "growth" | "enterprise";
   personaGenders: Record<string, string | undefined>;
   tenantSlug: string;
@@ -100,6 +101,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
     allowedOrigins: widget.allowedOrigins,
     capabilities,
     languageCodes: widget.languages,
+    listingUrlTemplate: widget.listingUrlTemplate,
     mode: tenant.subscriptionPlan,
     personaGenders: widget.personaGenders,
     tenantSlug: tenant.slug,
@@ -117,6 +119,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
       { label: "AI name", value: config.aiName },
       { label: "Allowed origins", value: config.allowedOrigins.length ? String(config.allowedOrigins.length) : "Open while testing" },
       { label: "Languages", value: config.languageCodes.join(", ") },
+      { label: "Listing route", value: config.listingUrlTemplate },
       { label: "Tone", value: config.tone }
     ],
     localeOptions: buildWidgetLocaleOptions(config),
@@ -178,7 +181,7 @@ export function summarizeWidgetInstallSteps(steps: WidgetInstallStep[]): WidgetL
 export function buildWidgetSnippet(config: WidgetInstallConfig, options: { locale?: string } = {}): string {
   const locale = options.locale ?? "auto";
 
-  return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="${escapeAttribute(locale)}" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}"></script>`;
+  return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="${escapeAttribute(locale)}" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}" data-listing-url-template="${escapeAttribute(config.listingUrlTemplate)}"></script>`;
 }
 
 export function buildWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetCapabilities {
@@ -353,6 +356,10 @@ function getRuntimeReadinessAction(key: PublicWidgetReadinessCheck["key"]): Pick
     "origin-policy": {
       actionHref: "#widget-origin-settings",
       actionLabel: "Add origins"
+    },
+    "listing-url-template": {
+      actionHref: "#widget-origin-settings",
+      actionLabel: "Edit route"
     }
   };
 
@@ -408,6 +415,14 @@ export function buildWidgetRuntimeReadiness(config: WidgetInstallConfig): Public
         ? "Every enabled language has a welcome message."
         : "Add a welcome message for every enabled language.",
       ready: config.languageCodes.length > 0 && hasLocalizedWelcome
+    },
+    {
+      key: "listing-url-template",
+      label: "Listing links",
+      note: config.listingUrlTemplate.includes(":propertyId")
+        ? `Recommended listings open with ${config.listingUrlTemplate}.`
+        : "Add a listing URL route with :propertyId.",
+      ready: config.listingUrlTemplate.includes(":propertyId")
     }
   ];
   const status: PublicWidgetReadiness["status"] = checks.some((check) => check.key !== "origin-policy" && !check.ready)

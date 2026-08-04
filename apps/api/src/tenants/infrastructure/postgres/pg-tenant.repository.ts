@@ -38,6 +38,7 @@ interface TenantRow {
   widget_welcome_messages: Partial<Record<TenantWidgetLanguage, string>> | null;
   widget_persona_genders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>> | null;
   widget_allowed_origins: string[] | null;
+  widget_listing_url_template: string | null;
   widget_tone: TenantWidgetTone | null;
   widget_languages: string[];
   created_at: Date;
@@ -58,6 +59,7 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
   },
   allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
+  listingUrlTemplate: "/listings/:propertyId",
   personaGenders: {
     en: "feminine",
     ru: "feminine",
@@ -207,6 +209,7 @@ export class PgTenantRepository implements TenantRepository {
             widget_welcome_messages,
             widget_persona_genders,
             widget_allowed_origins,
+            widget_listing_url_template,
             widget_tone,
             widget_languages,
             created_at,
@@ -233,7 +236,8 @@ export class PgTenantRepository implements TenantRepository {
             $13,
             $14,
             $15,
-            $15
+            $16,
+            $16
           )
           returning *
         `,
@@ -250,6 +254,7 @@ export class PgTenantRepository implements TenantRepository {
           defaultWidgetSettings.welcomeMessages,
           defaultWidgetSettings.personaGenders,
           input.website ? [input.website] : defaultWidgetSettings.allowedOrigins,
+          defaultWidgetSettings.listingUrlTemplate,
           defaultWidgetSettings.tone,
           defaultWidgetSettings.languages,
           now
@@ -315,9 +320,10 @@ export class PgTenantRepository implements TenantRepository {
           widget_welcome_messages = $11,
           widget_persona_genders = $12,
           widget_allowed_origins = $13,
-          widget_tone = $14,
-          widget_languages = $15,
-          updated_at = $16
+          widget_listing_url_template = $14,
+          widget_tone = $15,
+          widget_languages = $16,
+          updated_at = $17
         where id = $1
         returning *
       `,
@@ -335,6 +341,7 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.welcomeMessages ?? current.widget.welcomeMessages,
         request.widget?.personaGenders ?? current.widget.personaGenders,
         request.widget?.allowedOrigins ?? current.widget.allowedOrigins,
+        request.widget?.listingUrlTemplate ?? current.widget.listingUrlTemplate,
         request.widget?.tone ?? current.widget.tone,
         request.widget?.languages?.length ? request.widget.languages : current.widget.languages,
         new Date().toISOString()
@@ -369,6 +376,7 @@ export class PgTenantRepository implements TenantRepository {
         },
         allowedOrigins: filterAllowedOrigins(row.widget_allowed_origins),
         languages: filterSupportedLanguages(row.widget_languages),
+        listingUrlTemplate: row.widget_listing_url_template || defaultWidgetSettings.listingUrlTemplate,
         personaGenders: {
           ...defaultWidgetSettings.personaGenders,
           ...(row.widget_persona_genders ?? {})

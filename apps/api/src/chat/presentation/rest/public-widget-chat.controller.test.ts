@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import type { AiChatResponse, LeadSnapshot, TenantSnapshot } from "@propertyflow/contracts";
 import { LeadService } from "../../../leads/application/lead.service.js";
+import type { PropertyRepository } from "../../../properties/domain/property.repository.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
 import { TenantService } from "../../../tenants/application/tenant.service.js";
 import { PublicWidgetChatController } from "./public-widget-chat.controller.js";
@@ -27,7 +28,8 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn()
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads);
+    const properties = propertyRepository();
+    const controller = new PublicWidgetChatController(tenants, chat, leads, properties);
 
     await expect(
       controller.ask(
@@ -69,6 +71,60 @@ describe("PublicWidgetChatController", () => {
     });
   });
 
+  it("returns clickable recommended listing links for matched widget properties", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"],
+        listingUrlTemplate: "/catalog/:propertyId"
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(chatResponse({ matchedPropertyIds: ["property-1", "missing-property"] }))
+    } as unknown as AiChatService;
+    const leads = {
+      create: vi.fn()
+    } as unknown as LeadService;
+    const properties = propertyRepository({
+      findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+        propertyId === "property-1"
+          ? Promise.resolve({
+              id: "property-1",
+              title: "Wongamat Sea View Residence"
+            })
+          : Promise.resolve(null)
+      )
+    });
+    const controller = new PublicWidgetChatController(tenants, chat, leads, properties);
+
+    await expect(
+      controller.ask(
+        "demo-agency",
+        {
+          locale: "en",
+          message: "Show me sea view condos"
+        },
+        "https://agency.example.com",
+        "https://agency.example.com/listings"
+      )
+    ).resolves.toMatchObject({
+      recommendedListings: [
+        {
+          propertyId: "property-1",
+          title: "Wongamat Sea View Residence",
+          url: "https://agency.example.com/catalog/property-1"
+        }
+      ]
+    });
+    expect(properties.findById).toHaveBeenCalledWith("tenant-rag", "property-1");
+  });
+
   it("falls back to the first enabled tenant widget language", async () => {
     const tenants = {
       assertPublicWidgetOriginAllowed: vi.fn(),
@@ -88,7 +144,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn()
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads);
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
 
     const response = await controller.ask("demo-agency", {
       locale: "zh",
@@ -134,7 +190,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn().mockResolvedValue(leadFactory({ id: "lead-widget-1", tenantId: tenant.id }))
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads);
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
 
     await expect(
       controller.createLead(
@@ -186,7 +242,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn()
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads);
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
 
     await expect(
       controller.createLead(
@@ -220,7 +276,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn()
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads);
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
 
     await expect(
       controller.createLead("demo-agency", {
@@ -291,6 +347,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
       },
       allowedOrigins: [],
       languages: ["en", "ru"],
+      listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",
         ru: "feminine"
@@ -304,4 +361,27 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
     },
     ...overrides
   };
+}
+
+function propertyRepository(overrides: Partial<PropertyRepository> = {}): PropertyRepository {
+  return {
+    addPriceHistoryPoint: vi.fn(),
+    createProject: vi.fn(),
+    findById: vi.fn().mockResolvedValue(null),
+    findProjectById: vi.fn(),
+    list: vi.fn(),
+    listPriceHistory: vi.fn(),
+    save: vi.fn(),
+    search: vi.fn(),
+    searchAmenities: vi.fn(),
+    searchPage: vi.fn(),
+    searchProjects: vi.fn(),
+    updateAmenities: vi.fn(),
+    updateListingText: vi.fn(),
+    updatePrice: vi.fn(),
+    updateProject: vi.fn(),
+    updateProjectRecord: vi.fn(),
+    updateStatus: vi.fn(),
+    ...overrides
+  } as unknown as PropertyRepository;
 }

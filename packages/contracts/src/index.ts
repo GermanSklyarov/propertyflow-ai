@@ -226,6 +226,7 @@ export interface TenantWidgetSettings {
   aiNames: Partial<Record<TenantWidgetLanguage, string>>;
   allowedOrigins: string[];
   languages: TenantWidgetLanguage[];
+  listingUrlTemplate: string;
   personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
   tone: TenantWidgetTone;
   welcomeMessage: string;
@@ -245,7 +246,7 @@ export interface UpdateTenantSettingsRequest {
 
 export type PublicWidgetReadinessStatus = "ready" | "test-mode" | "needs-setup";
 
-export type PublicWidgetReadinessCheckKey = "origin-policy" | "languages" | "localized-welcome";
+export type PublicWidgetReadinessCheckKey = "origin-policy" | "languages" | "localized-welcome" | "listing-url-template";
 
 export interface PublicWidgetReadinessCheck {
   key: PublicWidgetReadinessCheckKey;
@@ -278,6 +279,7 @@ export interface PublicWidgetConfigResponse {
   capabilities: PublicWidgetCapabilities;
   conciergeMode: TenantSnapshot["subscriptionPlan"];
   languages: TenantWidgetSettings["languages"];
+  listingUrlTemplate: TenantWidgetSettings["listingUrlTemplate"];
   personaGenders: TenantWidgetSettings["personaGenders"];
   readiness: PublicWidgetReadiness;
   tenantSlug: string;
@@ -291,7 +293,14 @@ export interface PublicWidgetAskRequest extends AiChatRequest {}
 export interface PublicWidgetAskResponse extends AiChatResponse {
   conciergeMode: TenantSnapshot["subscriptionPlan"];
   locale: TenantWidgetLanguage;
+  recommendedListings: PublicWidgetRecommendedListing[];
   tenantSlug: string;
+}
+
+export interface PublicWidgetRecommendedListing {
+  propertyId: string;
+  title: string;
+  url: string;
 }
 
 export interface PublicWidgetLeadRequest {

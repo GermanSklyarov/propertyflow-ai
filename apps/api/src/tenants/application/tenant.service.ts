@@ -322,6 +322,7 @@ export class TenantService {
       capabilities: buildPublicWidgetCapabilities(tenant),
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
+      listingUrlTemplate: tenant.widget.listingUrlTemplate,
       personaGenders: tenant.widget.personaGenders,
       readiness: buildPublicWidgetReadiness(tenant),
       tenantSlug: tenant.slug,
@@ -532,6 +533,14 @@ function buildPublicWidgetReadiness(tenant: TenantSnapshot): PublicWidgetReadine
         ? "Every enabled language has a welcome message."
         : "Add a welcome message for every enabled language.",
       ready: enabledLanguages.length > 0 && hasLocalizedWelcome
+    },
+    {
+      key: "listing-url-template",
+      label: "Listing links",
+      note: tenant.widget.listingUrlTemplate.includes(":propertyId")
+        ? `Recommended listings open with ${tenant.widget.listingUrlTemplate}.`
+        : "Add a listing URL route with :propertyId.",
+      ready: tenant.widget.listingUrlTemplate.includes(":propertyId")
     }
   ];
   const status: PublicWidgetReadiness["status"] = checks.some((check) => check.key !== "origin-policy" && !check.ready)
@@ -807,6 +816,7 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
   const welcomeMessages = normalizeLocalizedStrings(request.widget?.welcomeMessages);
   const personaGenders = normalizePersonaGenders(request.widget?.personaGenders);
   const allowedOrigins = normalizeAllowedOrigins(request.widget?.allowedOrigins);
+  const listingUrlTemplate = normalizeListingUrlTemplate(request.widget?.listingUrlTemplate);
 
   return {
     ...request,
@@ -817,6 +827,7 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
           aiNames,
           allowedOrigins,
           languages: languages?.length ? languages : undefined,
+          listingUrlTemplate,
           personaGenders,
           tone: normalizeWidgetTone(request.widget.tone),
           welcomeMessage: request.widget.welcomeMessage?.trim() || welcomeMessages?.en || undefined,
@@ -834,6 +845,20 @@ function normalizeAllowedOrigins(origins: string[] | undefined) {
   return origins
     .map((origin) => normalizeRequestOrigin(origin))
     .filter((origin, index, values): origin is string => Boolean(origin) && values.indexOf(origin) === index);
+}
+
+function normalizeListingUrlTemplate(value: string | undefined): string | undefined {
+  const template = value?.trim();
+
+  if (!template) {
+    return undefined;
+  }
+
+  if (!template.startsWith("/") || template.startsWith("//") || !template.includes(":propertyId")) {
+    return undefined;
+  }
+
+  return template.slice(0, 160);
 }
 
 function normalizeRequestOrigin(value: string | undefined): string | undefined {

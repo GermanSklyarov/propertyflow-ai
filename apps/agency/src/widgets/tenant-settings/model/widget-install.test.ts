@@ -24,6 +24,7 @@ describe("widget install model", () => {
           },
           allowedOrigins: ["https://pattaya-demo.example.com"],
           languages: ["en", "th"],
+          listingUrlTemplate: "/listings/:propertyId",
           personaGenders: {
             en: "feminine",
             th: "feminine"
@@ -47,6 +48,7 @@ describe("widget install model", () => {
     expect(install.snippet).toContain("data-persona-genders=");
     expect(install.snippet).toContain('data-tone="friendly"');
     expect(install.snippet).toContain('data-languages="en,th"');
+    expect(install.snippet).toContain('data-listing-url-template="/listings/:propertyId"');
     expect(install.snippet).toContain("&quot;en&quot;:&quot;Sawadee");
     expect(install.localeOptions).toMatchObject([
       {
@@ -83,6 +85,7 @@ describe("widget install model", () => {
       },
       allowedOrigins: [],
       languageCodes: ["en", "ru"],
+      listingUrlTemplate: "/listings/:propertyId",
       mode: "growth",
       personaGenders: {
         en: "feminine",
@@ -137,6 +140,7 @@ describe("widget install model", () => {
         propertySearch: true
       },
       languageCodes: ["en"],
+      listingUrlTemplate: "/listings/:propertyId",
       mode: "starter",
       personaGenders: {
         en: "feminine"
@@ -166,6 +170,7 @@ describe("widget install model", () => {
         propertySearch: true
       },
       languageCodes: ["en", "ru"],
+      listingUrlTemplate: "/listings/:propertyId",
       mode: "starter",
       personaGenders: {
         en: "feminine",
@@ -265,7 +270,7 @@ describe("widget install model", () => {
         hasTenantSlug: true,
         runtimeReadiness: install.readiness
       })
-    ).toEqual({ completed: 6, total: 6 });
+    ).toEqual({ completed: 7, total: 7 });
   });
 
   it("keeps launch readiness blocked until starter knowledge is launch-ready", () => {
@@ -291,7 +296,7 @@ describe("widget install model", () => {
         hasTenantSlug: true,
         runtimeReadiness: install.readiness
       })
-    ).toEqual({ completed: 4, total: 6 });
+    ).toEqual({ completed: 5, total: 7 });
   });
 
   it("keeps the indexing gate open while knowledge jobs run", () => {
@@ -304,7 +309,7 @@ describe("widget install model", () => {
         hasTenantSlug: true,
         runtimeReadiness: install.readiness
       })
-    ).toEqual({ completed: 4, total: 6 });
+    ).toEqual({ completed: 5, total: 7 });
   });
 
   it("builds launch readiness cards from runtime and starter gates", () => {
@@ -375,6 +380,7 @@ describe("widget install model", () => {
         propertySearch: true
       },
       languageCodes: ["en", "ru"],
+      listingUrlTemplate: "/listings/:propertyId",
       mode: "starter",
       personaGenders: {
         en: "feminine",
@@ -449,6 +455,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
       },
       allowedOrigins: [],
       languages: ["en", "ru", "th", "zh"],
+      listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",
         ru: "feminine",

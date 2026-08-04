@@ -84,8 +84,19 @@ export function UpdateTenantSettingsForm({
           Widget install origins
         </div>
         <TenantWidgetOriginFields customDomain={tenant.customDomain} origins={widgetSettings.allowedOrigins} />
+        <label className={styles.field}>
+          <span>Listing URL route</span>
+          <input
+            defaultValue={widgetSettings.listingUrlTemplate}
+            name="listingUrlTemplate"
+            pattern="^/(?!/).*:propertyId.*$"
+            placeholder="/listings/:propertyId"
+            required
+          />
+        </label>
         <p className={styles.hint}>
-          Add only origins, not full listing URLs. The backend normalizes duplicates and blocks widget calls from unknown websites.
+          Add only origins, not full listing URLs. Use `:propertyId` in the route so Concierge recommendations can link
+          visitors directly to matching listings.
         </p>
       </section>
 
