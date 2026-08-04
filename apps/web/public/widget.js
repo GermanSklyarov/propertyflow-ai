@@ -106,6 +106,7 @@
     var canCreateLead = config.capabilities && config.capabilities.leadCapture === true;
     var languageLabel = escapeText(state.locale.toUpperCase());
     var handoff = state.handoff;
+    var readinessNotice = buildReadinessNotice(config.readiness);
     var messages = state.messages
       .map(function (message) {
         return '<div class="pf-message pf-message-' + message.role + '">' + escapeText(message.text) + "</div>";
@@ -137,6 +138,7 @@
           " · " +
           languageLabel +
           '</span></div><div class="pf-header-actions"><button class="pf-reset" type="button">Start over</button><button class="pf-close" type="button" aria-label="Close">×</button></div></header>' +
+          (readinessNotice ? '<p class="pf-readiness pf-readiness-' + readinessNotice.status + '">' + escapeText(readinessNotice.message) + "</p>" : "") +
           (state.runtimeError ? '<p class="pf-error">' + escapeText(state.runtimeError) + "</p>" : "") +
           '<div class="pf-thread">' +
           messages +
@@ -268,6 +270,17 @@
     }
 
     return "The concierge could not load live tenant configuration. Live knowledge answers are unavailable right now.";
+  }
+
+  function buildReadinessNotice(readiness) {
+    if (!readiness || readiness.status === "ready") {
+      return null;
+    }
+
+    return {
+      message: readiness.nextAction || "Finish widget setup in PropertyFlowAI before sharing this assistant with live visitors.",
+      status: readiness.status === "needs-setup" ? "needs-setup" : "test-mode"
+    };
   }
 
   function throwWidgetHttpError(message, response) {
@@ -717,6 +730,8 @@
       ".pf-reset{height:32px;padding:0 9px;font-size:11px;font-weight:900;text-transform:uppercase}",
       ".pf-close{font-size:22px;line-height:1;width:32px;height:32px}",
       ".pf-reset:hover,.pf-close:hover{background:rgba(255,255,255,.12)}",
+      ".pf-readiness{margin:12px 12px 0;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4d8f;font-size:12px;font-weight:850;line-height:1.4;padding:10px}",
+      ".pf-readiness-needs-setup{border-color:#fed7aa;background:#fff7ed;color:#7c4a05}",
       ".pf-error{margin:12px 12px 0;border:1px solid #fed7aa;background:#fff7ed;color:#7c4a05;font-size:12px;font-weight:800;line-height:1.4;padding:10px}",
       ".pf-thread{display:grid;gap:10px;max-height:310px;overflow:auto;padding:12px}",
       ".pf-message{border:1px solid #d9e7e3;font-size:14px;font-weight:750;line-height:1.45;padding:10px;white-space:pre-wrap}",

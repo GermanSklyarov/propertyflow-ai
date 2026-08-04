@@ -1,13 +1,30 @@
-import type { PublicWidgetAskResponse, TenantWidgetLanguage } from "@propertyflow/contracts";
+import type { PublicWidgetAskResponse, PublicWidgetConfigResponse, TenantWidgetLanguage } from "@propertyflow/contracts";
 
 const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:3001";
 const tenantSlug = process.env.SMOKE_WIDGET_TENANT_SLUG ?? "demo-agency";
 const locale = parseLocale(process.env.SMOKE_CONCIERGE_LOCALE ?? "en");
+const widgetOrigin = normalizeOptionalUrl(process.env.SMOKE_WIDGET_ORIGIN ?? "http://localhost:3002");
+const widgetReferer = process.env.SMOKE_WIDGET_REFERER ?? (widgetOrigin ? `${widgetOrigin}/propertyflow-widget-smoke` : undefined);
 const message =
   process.env.SMOKE_CONCIERGE_MESSAGE ??
   "I need a sea-view condo in Pattaya under 5M THB. Explain why it fits and mention any risks.";
 const expectedProvider = process.env.SMOKE_CONCIERGE_EXPECT_PROVIDER;
 const expectLlm = process.env.SMOKE_CONCIERGE_EXPECT_LLM !== "false";
+
+const config = await requestJson<PublicWidgetConfigResponse>(`/public/v1/widget/config/${tenantSlug}`, {
+  method: "GET"
+});
+
+assert(config.tenantSlug === tenantSlug, `Expected config tenantSlug ${tenantSlug}, got ${config.tenantSlug}`);
+assert(config.conciergeMode === "starter", `Expected Starter widget mode, got ${config.conciergeMode}`);
+assert(config.capabilities.knowledgeAnswers, "Expected public widget knowledge answers to be enabled");
+assert(config.capabilities.propertySearch, "Expected public widget property search to be enabled");
+assert(config.languages.includes(locale), `Expected config languages to include ${locale}`);
+assert(config.readiness.checks.length > 0, "Expected widget readiness checks");
+assert(
+  config.readiness.status !== "needs-setup",
+  `Widget config still needs setup before production smoke: ${config.readiness.nextAction}`
+);
 
 const response = await requestJson<PublicWidgetAskResponse>(`/public/v1/widget/ask/${tenantSlug}`, {
   method: "POST",
@@ -54,6 +71,12 @@ assert(!/\[\d+\]/.test(response.answer), "Answer should not print bracketed cita
 console.log("[smoke:concierge] OK");
 console.log(`[smoke:concierge] tenant=${response.tenantSlug} locale=${response.locale}`);
 console.log(
+  `[smoke:concierge] config readiness=${config.readiness.status} origins=${
+    config.allowedOriginsConfigured ? "configured" : "test-mode"
+  }`
+);
+console.log(`[smoke:concierge] requestOrigin=${widgetOrigin ?? "none"}`);
+console.log(
   `[smoke:concierge] generation=${response.generation?.mode ?? "none"} provider=${
     response.generation?.provider ?? "none"
   } model=${response.generation?.model ?? "none"}`
@@ -69,9 +92,7 @@ console.log(`[smoke:concierge] preview=${response.answer.slice(0, 220).replace(/
 async function requestJson<TResponse>(path: string, init: RequestInit): Promise<TResponse> {
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
-    headers: {
-      "content-type": "application/json"
-    }
+    headers: buildRequestHeaders()
   });
   const body = await response.text();
 
@@ -80,6 +101,24 @@ async function requestJson<TResponse>(path: string, init: RequestInit): Promise<
   }
 
   return JSON.parse(body) as TResponse;
+}
+
+function buildRequestHeaders(): HeadersInit {
+  return {
+    ...(widgetOrigin ? { origin: widgetOrigin } : {}),
+    ...(widgetReferer ? { referer: widgetReferer } : {}),
+    "content-type": "application/json"
+  };
+}
+
+function normalizeOptionalUrl(value?: string) {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  return trimmed.replace(/\/$/, "");
 }
 
 function parseLocale(value: string): TenantWidgetLanguage {

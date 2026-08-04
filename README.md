@@ -92,13 +92,14 @@ Use this path when preparing a local sales demo or validating the Starter plan e
 1. Configure AI for the demo. For Gemini, set `AI_DEFAULT_PROVIDER=gemini`, `GEMINI_API_KEY`, `GEMINI_CHAT_MODEL=gemini-2.5-flash`, and leave `AI_EMBEDDING_PROVIDER` blank or set it to `gemini`.
 2. Run `npm run infra:up`, `npm run migrate`, `npm run seed:demo`, and `npm run dev`.
 3. In another terminal, run `npm run seed:demo-embeddings` so the Starter knowledge base is refreshed with the active embedding model. If no remote embedding key is configured, the script uses the deterministic `local-hash` dev fallback.
-4. Run `npm run smoke:concierge` to verify the public AI Concierge returns an LLM answer grounded in tenant listings and knowledge citations.
+4. Run `npm run smoke:concierge` to verify the public AI Concierge config and chat path from the local agency origin. For a real agency website, run `SMOKE_WIDGET_ORIGIN=https://agency.example.com npm run smoke:concierge` after adding that origin in widget settings.
 5. Open `http://localhost:3002/` to review the agency plan entry page, then continue to `http://localhost:3002/setup` and confirm the setup wizard shows plan confirmation, Knowledge Sources, AI personality, website origins, and widget install readiness.
 6. Open `http://localhost:3002/knowledge?create=source#create-knowledge-document` to add or review AI-ready knowledge sources.
 7. Open `http://localhost:3002/settings#concierge-personality-settings` to review localized Concierge names, tone, and welcome messages.
 8. Open `http://localhost:3002/settings#widget-origin-settings` and add the agency website origin before using the widget outside test mode.
 9. Open `http://localhost:3002/settings#widget-install`, copy the widget snippet, and run the installed widget check against a test page.
-10. Keep CRM routes optional for Starter; Growth unlocks lead handoff, assignment, pipeline, SLA, and analytics.
+10. Open `http://localhost:3002/widget-demo` to test the real embeddable `widget.js` runtime without a client website. Use the locale controls to force English, Russian, Thai, or Chinese, then use the Ask Anna CTA to confirm it opens the same launcher agencies embed on their site.
+11. Keep CRM routes optional for Starter; Growth unlocks lead handoff, assignment, pipeline, SLA, and analytics.
 
 The API starts with a tenant-aware property inventory slice:
 
@@ -268,7 +269,7 @@ With API running and AI configured, verify the public Starter Concierge path wit
 npm run smoke:concierge
 ```
 
-The Concierge smoke test calls `POST /public/v1/widget/ask/:tenantSlug` and expects real LLM generation, at least one matched listing, at least one property citation, and at least one knowledge citation. Override `SMOKE_WIDGET_TENANT_SLUG`, `SMOKE_CONCIERGE_LOCALE`, `SMOKE_CONCIERGE_MESSAGE`, or `SMOKE_CONCIERGE_EXPECT_PROVIDER` when checking a different tenant, locale, prompt, or provider. Set `SMOKE_CONCIERGE_EXPECT_LLM=false` only for local deterministic fallback demos.
+The Concierge smoke test first calls `GET /public/v1/widget/config/:tenantSlug` with browser-like `Origin` and `Referer` headers, then calls `POST /public/v1/widget/ask/:tenantSlug`. It expects widget readiness to be at least test mode, the requested locale to be enabled, real LLM generation, at least one matched listing, at least one property citation, and at least one knowledge citation. Override `SMOKE_WIDGET_TENANT_SLUG`, `SMOKE_WIDGET_ORIGIN`, `SMOKE_WIDGET_REFERER`, `SMOKE_CONCIERGE_LOCALE`, `SMOKE_CONCIERGE_MESSAGE`, or `SMOKE_CONCIERGE_EXPECT_PROVIDER` when checking a different tenant, website origin, locale, prompt, or provider. Set `SMOKE_CONCIERGE_EXPECT_LLM=false` only for local deterministic fallback demos.
 
 All tenant-aware routes require the `x-tenant-id` header. The API validates it against an active tenant record. Local development seeds `demo-agency`.
 
