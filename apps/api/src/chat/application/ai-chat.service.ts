@@ -4,8 +4,7 @@ import type {
   AiChatCitation,
   AiChatInsight,
   AiChatRequest,
-  AiChatResponse,
-  KnowledgeDocumentChunkSnapshot
+  AiChatResponse
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
@@ -13,6 +12,16 @@ import { AiPropertyAdvisorService } from "../../properties/application/services/
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
+import {
+  buildAiChatContext,
+  buildConversationContext,
+  buildListingEvidence,
+  describeProperty,
+  knowledgeCitation,
+  knowledgeLine,
+  propertyCitation,
+  shortPropertyLine
+} from "./ai-chat-context.js";
 import { classifyAiChatIntent, type AiChatIntent } from "./ai-chat-intent.js";
 import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
@@ -65,8 +74,8 @@ export class AiChatService {
       throw new NotFoundException("Property not found");
     }
 
-    const citations: AiChatCitation[] = [this.propertyCitation(property)];
-    const answerParts = [this.describeProperty(property)];
+    const citations: AiChatCitation[] = [propertyCitation(property)];
+    const answerParts = [describeProperty(property)];
     const knowledge = await this.retrieveKnowledge(tenantId, request);
     const dueDiligence = await this.buildDueDiligencePayload(tenantId, [property]);
 
@@ -97,8 +106,8 @@ export class AiChatService {
     }
 
     if (knowledge.length) {
-      citations.push(...knowledge.map((chunk) => this.knowledgeCitation(chunk)));
-      answerParts.push(`Relevant knowledge: ${knowledge.map((chunk) => this.knowledgeLine(chunk)).join(" ")}`);
+      citations.push(...knowledge.map((chunk) => knowledgeCitation(chunk)));
+      answerParts.push(`Relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`);
     }
 
     return this.buildResponse(
@@ -108,7 +117,7 @@ export class AiChatService {
       citations,
       dueDiligence.insights,
       ["compare-similar-properties", "open-investment-calculator", "create-lead"],
-      this.buildContext([...answerParts, ...this.buildListingEvidence([property]), ...dueDiligence.contextLines], citations),
+      buildAiChatContext([...answerParts, ...buildListingEvidence([property]), ...dueDiligence.contextLines], citations),
       options
     );
   }
@@ -160,22 +169,22 @@ export class AiChatService {
       return this.buildResponse(
         request,
         knowledge.length
-          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((chunk) => this.knowledgeLine(chunk)).join(" ")}`
+          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
           : "I could not find matching listings in this tenant workspace yet. Try broadening the market, budget, or beach-distance requirements.",
         [],
         [
           { source: "search", label: search.rankingExplanation },
-          ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
+          ...knowledge.map((chunk) => knowledgeCitation(chunk))
         ],
         noMatchInsights,
         ["relax-filters", "ask-agent-for-off-market-options"],
-        this.buildContext(
+        buildAiChatContext(
           knowledge.length
-            ? ["No matching listings were found.", ...knowledge.map((chunk) => this.knowledgeLine(chunk))]
+            ? ["No matching listings were found.", ...knowledge.map((chunk) => knowledgeLine(chunk))]
             : ["No matching listings or knowledge chunks were found."],
           [
             { source: "search", label: search.rankingExplanation },
-            ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
+            ...knowledge.map((chunk) => knowledgeCitation(chunk))
           ]
         ),
         options
@@ -184,12 +193,12 @@ export class AiChatService {
 
     const answer = [
       `I found ${items.length} matching listing${items.length === 1 ? "" : "s"}.`,
-      `Top matches: ${matches.map((property) => this.shortPropertyLine(property)).join(" ")}`,
+      `Top matches: ${matches.map((property) => shortPropertyLine(property)).join(" ")}`,
       search.items.length
         ? search.rankingExplanation
         : "The indexed search returned no hits, so I used the structured PostgreSQL filters as a fallback.",
       knowledge.length
-        ? `Relevant knowledge: ${knowledge.map((chunk) => this.knowledgeLine(chunk)).join(" ")}`
+        ? `Relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
         : ""
     ].join(" ");
 
@@ -199,17 +208,17 @@ export class AiChatService {
       matches.map((property) => property.id),
       [
         { source: "search", label: search.interpretedIntent },
-        ...matches.map((property) => this.propertyCitation(property)),
-        ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
+        ...matches.map((property) => propertyCitation(property)),
+        ...knowledge.map((chunk) => knowledgeCitation(chunk))
       ],
       dueDiligence.insights,
       ["compare-results", "open-map", "save-search"],
-      this.buildContext(
-        [answer, ...this.buildListingEvidence(matches), ...dueDiligence.contextLines],
+      buildAiChatContext(
+        [answer, ...buildListingEvidence(matches), ...dueDiligence.contextLines],
         [
           { source: "search", label: search.interpretedIntent },
-          ...matches.map((property) => this.propertyCitation(property)),
-          ...knowledge.map((chunk) => this.knowledgeCitation(chunk))
+          ...matches.map((property) => propertyCitation(property)),
+          ...knowledge.map((chunk) => knowledgeCitation(chunk))
         ]
       ),
       options
@@ -306,7 +315,7 @@ export class AiChatService {
     context: string,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
-    const conversationContext = this.buildConversationContext(request);
+    const conversationContext = buildConversationContext(request);
     const generated = await this.textGenerator.generate({
       locale: request.locale,
       message: request.message,
@@ -330,78 +339,6 @@ export class AiChatService {
       },
       createdAt: new Date().toISOString()
     };
-  }
-
-  private buildContext(lines: string[] | string, citations: AiChatCitation[]): string {
-    const contextLines = Array.isArray(lines) ? lines : [lines];
-
-    return [
-      ...contextLines,
-      "",
-      "Source labels available through the separate citations API field:",
-      ...citations.map((citation) => `- ${citation.label}`)
-    ].join("\n");
-  }
-
-  private buildListingEvidence(properties: PropertySnapshot[]): string[] {
-    if (!properties.length) {
-      return [];
-    }
-
-    return [
-      "Structured listing evidence for the property recommendation. Treat these as authoritative tenant listing facts:",
-      ...properties.map((property) => this.propertyEvidenceLine(property))
-    ];
-  }
-
-  private propertyEvidenceLine(property: PropertySnapshot): string {
-    const fields = [
-      `id=${property.id}`,
-      `title=${property.title}`,
-      `market=${property.market}`,
-      `kind=${property.kind}`,
-      `listingType=${property.listingType}`,
-      `status=${property.status}`,
-      `salePrice=${this.formatMoney(property.price)}`,
-      property.rentalPriceMonthly ? `rentalAsk=${this.formatMoney(property.rentalPriceMonthly)}/mo` : undefined,
-      property.monthlyRentEstimate ? `rentEstimate=${this.formatMoney(property.monthlyRentEstimate)}/mo` : undefined,
-      property.maintenanceFeeMonthly ? `maintenanceFee=${this.formatMoney(property.maintenanceFeeMonthly)}/mo` : undefined,
-      `area=${property.areaSqm}sqm`,
-      `bedrooms=${property.bedrooms}`,
-      `bathrooms=${property.bathrooms}`,
-      property.floor !== undefined ? `floor=${property.floor}` : undefined,
-      property.beachDistanceMeters !== undefined ? `beachDistance=${property.beachDistanceMeters}m` : undefined,
-      property.address ? `address=${property.address}` : undefined,
-      property.amenities.length ? `amenities=${property.amenities.join(", ")}` : "amenities=not specified",
-      property.project ? this.projectEvidence(property) : undefined,
-      property.description ? `description=${this.truncate(property.description, 260)}` : undefined
-    ].filter(Boolean);
-
-    return `- ${fields.join("; ")}`;
-  }
-
-  private projectEvidence(property: PropertySnapshot): string {
-    const project = property.project!;
-    const fields = [
-      `project=${project.name}`,
-      `projectStatus=${project.status}`,
-      project.developer ? `developer=${project.developer}` : undefined,
-      project.completionYear ? `completionYear=${project.completionYear}` : undefined,
-      project.address ? `projectAddress=${project.address}` : undefined,
-      project.amenities.length ? `projectAmenities=${project.amenities.join(", ")}` : undefined
-    ].filter(Boolean);
-
-    return fields.join("; ");
-  }
-
-  private formatMoney(money: PropertySnapshot["price"]): string {
-    return `${money.amount} ${money.currency}`;
-  }
-
-  private truncate(value: string, maxLength: number): string {
-    const normalized = value.replace(/\s+/g, " ").trim();
-
-    return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized;
   }
 
   private async buildDueDiligencePayload(tenantId: string, properties: PropertySnapshot[]): Promise<DueDiligencePayload> {
@@ -474,69 +411,4 @@ export class AiChatService {
   private allowDeterministicFallback(): boolean {
     return process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true";
   }
-
-  private propertyCitation(property: PropertySnapshot): AiChatCitation {
-    return {
-      source: "property",
-      propertyId: property.id,
-      title: property.title,
-      label: `${property.title}, ${property.market}, ${property.price.amount} ${property.price.currency}`
-    };
-  }
-
-  private knowledgeCitation(chunk: KnowledgeDocumentChunkSnapshot): AiChatCitation {
-    return {
-      source: "knowledge",
-      documentId: chunk.documentId,
-      title: chunk.title,
-      label: `${chunk.title} (${chunk.kind}, chunk ${chunk.chunkIndex + 1}, score ${chunk.score})`
-    };
-  }
-
-  private knowledgeLine(chunk: KnowledgeDocumentChunkSnapshot): string {
-    const excerpt = chunk.content.length > 180 ? `${chunk.content.slice(0, 177)}...` : chunk.content;
-    return `${chunk.title}: ${excerpt}`;
-  }
-
-  private describeProperty(property: PropertySnapshot): string {
-    const beach = property.beachDistanceMeters
-      ? `${property.beachDistanceMeters}m from the beach`
-      : "beach distance is not specified";
-
-    const rentalPrice = property.rentalPriceMonthly
-      ? ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`
-      : "";
-
-    return `${property.title} is a ${property.bedrooms}-bedroom ${property.kind} in ${property.market}, ${beach}, listed for ${property.listingType}, priced at ${property.price.amount} ${property.price.currency}.${rentalPrice}`;
-  }
-
-  private shortPropertyLine(property: PropertySnapshot): string {
-    const rentalAsk = property.rentalPriceMonthly
-      ? `rental ask ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo`
-      : undefined;
-    const rent = property.monthlyRentEstimate
-      ? `estimated rent ${property.monthlyRentEstimate.amount} ${property.monthlyRentEstimate.currency}/mo`
-      : "rent estimate missing";
-
-    return `${property.title} (${property.market}, ${property.listingType}, ${property.price.amount} ${property.price.currency}, ${rentalAsk ?? rent}).`;
-  }
-
-  private buildConversationContext(request: AiChatRequest): string {
-    const turns = (request.conversation ?? [])
-      .filter((turn) => (turn.role === "assistant" || turn.role === "user") && turn.text.trim())
-      .slice(-8)
-      .map((turn) => {
-        const listings = (turn.recommendedListings ?? [])
-          .slice(0, 3)
-          .map((listing, index) => `${index + 1}. ${listing.title} (${listing.propertyId})`);
-        const suffix = listings.length ? `\nRecommended listings shown:\n${listings.join("\n")}` : "";
-
-        return `${turn.role}: ${turn.text.trim().slice(0, 800)}${suffix}`;
-      });
-
-    return turns.length
-      ? ["Recent conversation. Use it to resolve follow-up references and avoid repeating the greeting:", ...turns, ""].join("\n")
-      : "";
-  }
-
 }
