@@ -14,6 +14,7 @@ import { NaturalLanguagePropertySearchService } from "../../properties/applicati
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
 import { classifyAiChatIntent, type AiChatIntent } from "./ai-chat-intent.js";
+import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
 
 export interface AiChatAskOptions {
@@ -39,8 +40,14 @@ export class AiChatService {
   ) {}
 
   async ask(tenantId: string, request: AiChatRequest, options: AiChatAskOptions = {}): Promise<AiChatResponse> {
-    if (request.propertyId) {
-      return this.answerAboutProperty(tenantId, request, options);
+    const plan = planAiChatRetrieval(request);
+
+    if (plan.mode === "property-detail") {
+      return this.answerAboutProperty(tenantId, { ...request, propertyId: plan.propertyId }, options, plan.intent);
+    }
+
+    if (plan.mode === "clarify-reference") {
+      return this.answerClarifyPropertyReference(request);
     }
 
     return this.answerWithSearch(tenantId, request, options);
@@ -49,7 +56,8 @@ export class AiChatService {
   private async answerAboutProperty(
     tenantId: string,
     request: AiChatRequest,
-    options: AiChatAskOptions
+    options: AiChatAskOptions,
+    intent = classifyAiChatIntent(request.message)
   ): Promise<AiChatResponse> {
     const property = await this.properties.findById(tenantId, request.propertyId!);
 
@@ -57,7 +65,6 @@ export class AiChatService {
       throw new NotFoundException("Property not found");
     }
 
-    const intent = classifyAiChatIntent(request.message);
     const citations: AiChatCitation[] = [this.propertyCitation(property)];
     const answerParts = [this.describeProperty(property)];
     const knowledge = await this.retrieveKnowledge(tenantId, request);
@@ -111,13 +118,6 @@ export class AiChatService {
     request: AiChatRequest,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
-    const intent = classifyAiChatIntent(request.message);
-    const referencedPropertyId = this.resolveFollowUpPropertyId(request, intent);
-
-    if (referencedPropertyId) {
-      return this.answerAboutProperty(tenantId, { ...request, propertyId: referencedPropertyId }, options);
-    }
-
     const search = await this.naturalLanguageSearch.search(tenantId, {
       locale: request.locale,
       query: request.message,
@@ -214,6 +214,31 @@ export class AiChatService {
       ),
       options
     );
+  }
+
+  private answerClarifyPropertyReference(request: AiChatRequest): AiChatResponse {
+    return {
+      id: crypto.randomUUID(),
+      message: request.message,
+      answer:
+        "Which listing would you like to view? Please send the listing name or choose one of the property cards above, and I can help arrange the next step.",
+      matchedPropertyIds: [],
+      citations: [],
+      insights: [
+        {
+          kind: "handoff",
+          title: "Listing reference needed",
+          detail: "The visitor asked to view a property, but no previous recommendation was available in the conversation context.",
+          severity: "info"
+        }
+      ],
+      suggestedActions: ["ask-visitor-to-pick-listing", "create-lead"],
+      generation: {
+        mode: "deterministic-fallback",
+        reason: "Clarification is required before property-specific retrieval."
+      },
+      createdAt: new Date().toISOString()
+    };
   }
 
   private async retrieveKnowledge(tenantId: string, request: AiChatRequest) {
@@ -514,20 +539,4 @@ export class AiChatService {
       : "";
   }
 
-  private resolveFollowUpPropertyId(request: AiChatRequest, intent: AiChatIntent): string | undefined {
-    if (intent.route !== "property-follow-up") {
-      return undefined;
-    }
-
-    const recommendations = [...(request.conversation ?? [])]
-      .reverse()
-      .flatMap((turn) => turn.recommendedListings ?? [])
-      .filter((listing) => listing.propertyId);
-
-    if (!recommendations.length) {
-      return undefined;
-    }
-
-    return recommendations[intent.referencedListingIndex ?? 0]?.propertyId ?? recommendations[0]?.propertyId;
-  }
 }

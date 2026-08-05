@@ -254,6 +254,30 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("New Search Result Condo");
   });
 
+  it("asks to clarify the listing when a viewing follow-up has no previous recommendation context", async () => {
+    const service = serviceFactory({
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      },
+      searchItems: [
+        propertyFactory({
+          id: "property-new-search",
+          title: "New Search Result Condo"
+        })
+      ]
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      message: "May I see it?"
+    });
+
+    expect(response.answer).toContain("Which listing would you like to view?");
+    expect(response.matchedPropertyIds).toEqual([]);
+    expect(response.suggestedActions).toContain("ask-visitor-to-pick-listing");
+  });
+
   it("generates through Gemini when Gemini is selected as the provider", async () => {
     process.env.AI_DEFAULT_PROVIDER = "gemini";
     process.env.GEMINI_API_KEY = "gemini-key";
