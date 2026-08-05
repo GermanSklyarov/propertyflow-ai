@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
+import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import type { AiChatCitation, AiChatInsight, AiChatRequest, AiChatResponse } from "@propertyflow/contracts";
 import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
 import { AiPropertyAdvisorService } from "../../properties/application/services/ai-property-advisor.service.js";
@@ -7,7 +7,6 @@ import { NeighborhoodIntelligenceService } from "../../properties/application/se
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
 import {
   buildAiChatContext,
-  buildConversationContext,
   buildListingEvidence,
   describeProperty,
   knowledgeCitation,
@@ -18,6 +17,7 @@ import {
 import { buildAiChatDueDiligencePayload } from "./ai-chat-due-diligence.js";
 import { classifyAiChatIntent } from "./ai-chat-intent.js";
 import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
+import { buildAiChatResponse, buildClarifyPropertyReferenceResponse } from "./ai-chat-response.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
 
 export interface AiChatAskOptions {
@@ -45,7 +45,7 @@ export class AiChatService {
     }
 
     if (plan.mode === "clarify-reference") {
-      return this.answerClarifyPropertyReference(request);
+      return buildClarifyPropertyReferenceResponse(request);
     }
 
     return this.answerWithSearch(tenantId, request, options);
@@ -99,16 +99,16 @@ export class AiChatService {
       answerParts.push(`Relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`);
     }
 
-    return this.buildResponse(
-      request,
-      answerParts.join(" "),
-      [property.id],
+    return this.buildResponse({
       citations,
-      dueDiligence.insights,
-      ["compare-similar-properties", "open-investment-calculator", "create-lead"],
-      buildAiChatContext([...answerParts, ...buildListingEvidence([property]), ...dueDiligence.contextLines], citations),
-      options
-    );
+      context: buildAiChatContext([...answerParts, ...buildListingEvidence([property]), ...dueDiligence.contextLines], citations),
+      deterministicDraft: answerParts.join(" "),
+      insights: dueDiligence.insights,
+      matchedPropertyIds: [property.id],
+      request,
+      suggestedActions: ["compare-similar-properties", "open-investment-calculator", "create-lead"],
+      ...options
+    });
   }
 
   private async answerWithSearch(
@@ -155,19 +155,12 @@ export class AiChatService {
         });
       }
 
-      return this.buildResponse(
-        request,
-        knowledge.length
-          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
-          : "I could not find matching listings in this tenant workspace yet. Try broadening the market, budget, or beach-distance requirements.",
-        [],
-        [
+      return this.buildResponse({
+        citations: [
           { source: "search", label: search.rankingExplanation },
           ...knowledge.map((chunk) => knowledgeCitation(chunk))
         ],
-        noMatchInsights,
-        ["relax-filters", "ask-agent-for-off-market-options"],
-        buildAiChatContext(
+        context: buildAiChatContext(
           knowledge.length
             ? ["No matching listings were found.", ...knowledge.map((chunk) => knowledgeLine(chunk))]
             : ["No matching listings or knowledge chunks were found."],
@@ -176,8 +169,15 @@ export class AiChatService {
             ...knowledge.map((chunk) => knowledgeCitation(chunk))
           ]
         ),
-        options
-      );
+        deterministicDraft: knowledge.length
+          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
+          : "I could not find matching listings in this tenant workspace yet. Try broadening the market, budget, or beach-distance requirements.",
+        insights: noMatchInsights,
+        matchedPropertyIds: [],
+        request,
+        suggestedActions: ["relax-filters", "ask-agent-for-off-market-options"],
+        ...options
+      });
     }
 
     const answer = [
@@ -191,52 +191,22 @@ export class AiChatService {
         : ""
     ].join(" ");
 
-    return this.buildResponse(
-      request,
-      answer,
-      matches.map((property) => property.id),
-      [
-        { source: "search", label: search.interpretedIntent },
-        ...matches.map((property) => propertyCitation(property)),
-        ...knowledge.map((chunk) => knowledgeCitation(chunk))
-      ],
-      dueDiligence.insights,
-      ["compare-results", "open-map", "save-search"],
-      buildAiChatContext(
-        [answer, ...buildListingEvidence(matches), ...dueDiligence.contextLines],
-        [
-          { source: "search", label: search.interpretedIntent },
-          ...matches.map((property) => propertyCitation(property)),
-          ...knowledge.map((chunk) => knowledgeCitation(chunk))
-        ]
-      ),
-      options
-    );
-  }
+    const citations: AiChatCitation[] = [
+      { source: "search", label: search.interpretedIntent },
+      ...matches.map((property) => propertyCitation(property)),
+      ...knowledge.map((chunk) => knowledgeCitation(chunk))
+    ];
 
-  private answerClarifyPropertyReference(request: AiChatRequest): AiChatResponse {
-    return {
-      id: crypto.randomUUID(),
-      message: request.message,
-      answer:
-        "Which listing would you like to view? Please send the listing name or choose one of the property cards above, and I can help arrange the next step.",
-      matchedPropertyIds: [],
-      citations: [],
-      insights: [
-        {
-          kind: "handoff",
-          title: "Listing reference needed",
-          detail: "The visitor asked to view a property, but no previous recommendation was available in the conversation context.",
-          severity: "info"
-        }
-      ],
-      suggestedActions: ["ask-visitor-to-pick-listing", "create-lead"],
-      generation: {
-        mode: "deterministic-fallback",
-        reason: "Clarification is required before property-specific retrieval."
-      },
-      createdAt: new Date().toISOString()
-    };
+    return this.buildResponse({
+      citations,
+      context: buildAiChatContext([answer, ...buildListingEvidence(matches), ...dueDiligence.contextLines], citations),
+      deterministicDraft: answer,
+      insights: dueDiligence.insights,
+      matchedPropertyIds: matches.map((property) => property.id),
+      request,
+      suggestedActions: ["compare-results", "open-map", "save-search"],
+      ...options
+    });
   }
 
   private async retrieveKnowledge(tenantId: string, request: AiChatRequest) {
@@ -249,88 +219,21 @@ export class AiChatService {
     return result.items;
   }
 
-  private async buildResponse(
-    request: AiChatRequest,
-    answer: string,
-    matchedPropertyIds: string[],
-    citations: AiChatCitation[],
-    insights: AiChatInsight[],
-    suggestedActions: string[],
-    context: string,
-    options: AiChatAskOptions = {}
-  ): Promise<AiChatResponse> {
-    if (this.textGenerator.isConfigured()) {
-      return this.buildGeneratedResponse(
-        request,
-        answer,
-        matchedPropertyIds,
-        citations,
-        insights,
-        suggestedActions,
-        context,
-        options
-      );
+  private buildResponse(
+    options: AiChatAskOptions & {
+      citations: AiChatCitation[];
+      context: string;
+      deterministicDraft: string;
+      insights: AiChatInsight[];
+      matchedPropertyIds: string[];
+      request: AiChatRequest;
+      suggestedActions: string[];
     }
-
-    if (!this.allowDeterministicFallback()) {
-      throw new ServiceUnavailableException(
-        "AI provider is not configured. Set OPENAI_API_KEY and AI_CHAT_MODEL, or explicitly enable AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK for local demos."
-      );
-    }
-
-    return {
-      id: crypto.randomUUID(),
-      message: request.message,
-      answer,
-      matchedPropertyIds,
-      citations,
-      insights,
-      suggestedActions,
-      generation: {
-        mode: "deterministic-fallback",
-        reason: "AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK is enabled"
-      },
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  private async buildGeneratedResponse(
-    request: AiChatRequest,
-    deterministicDraft: string,
-    matchedPropertyIds: string[],
-    citations: AiChatCitation[],
-    insights: AiChatInsight[],
-    suggestedActions: string[],
-    context: string,
-    options: AiChatAskOptions
   ): Promise<AiChatResponse> {
-    const conversationContext = buildConversationContext(request);
-    const generated = await this.textGenerator.generate({
-      locale: request.locale,
-      message: request.message,
-      context: [conversationContext, context, "", "Deterministic retrieval draft:", deterministicDraft].filter(Boolean).join("\n"),
-      citations,
-      persona: options.persona
+    return buildAiChatResponse({
+      ...options,
+      textGenerator: this.textGenerator,
+      useDeterministicFallback: process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true"
     });
-
-    return {
-      id: crypto.randomUUID(),
-      message: request.message,
-      answer: generated.answer,
-      matchedPropertyIds,
-      citations,
-      insights,
-      suggestedActions,
-      generation: {
-        mode: "llm",
-        provider: generated.provider,
-        model: generated.model
-      },
-      createdAt: new Date().toISOString()
-    };
-  }
-
-  private allowDeterministicFallback(): boolean {
-    return process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true";
   }
 }
