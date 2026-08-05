@@ -41,6 +41,7 @@ describe("TenantService", () => {
               },
               allowedOrigins: [],
               languages: ["en", "ru"],
+              leadQualificationFields: ["budget", "preferredArea", "email", "phone"],
               listingUrlTemplate: "/listings/:propertyId",
               personaGenders: {
                 en: "feminine",
@@ -78,6 +79,7 @@ describe("TenantService", () => {
       },
       conciergeMode: "starter",
       languages: ["en", "ru"],
+      leadQualificationFields: ["budget", "preferredArea", "email", "phone"],
       listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",
@@ -137,6 +139,7 @@ describe("TenantService", () => {
               },
               allowedOrigins: ["https://agency.example.com"],
               languages: ["en", "th"],
+              leadQualificationFields: ["budget", "bedrooms", "whatsapp"],
               listingUrlTemplate: "/catalog/:propertyId",
               personaGenders: {
                 en: "feminine",
@@ -935,6 +938,7 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
       },
       allowedOrigins: [],
       languages: ["en", "ru", "th", "zh"],
+      leadQualificationFields: ["budget", "preferredArea", "bedrooms", "investmentPurpose", "moveInDate", "financing", "whatsapp", "email", "phone"],
       listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",

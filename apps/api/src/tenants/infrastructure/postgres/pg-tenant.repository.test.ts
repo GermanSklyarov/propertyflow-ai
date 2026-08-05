@@ -101,6 +101,7 @@ describe("PgTenantRepository", () => {
         zh: "neutral"
       },
       ["https://sunset.example"],
+      ["budget", "preferredArea", "bedrooms", "investmentPurpose", "moveInDate", "financing", "whatsapp", "email", "phone"],
       "/listings/:propertyId",
       "friendly",
       ["en", "ru", "th", "zh"],
@@ -123,6 +124,7 @@ describe("PgTenantRepository", () => {
       subscriptionPlan: "starter",
       widget: {
         allowedOrigins: ["https://sunset.example"],
+        leadQualificationFields: ["budget", "preferredArea", "bedrooms", "investmentPurpose", "moveInDate", "financing", "whatsapp", "email", "phone"],
         welcomeMessages: {
           th: "สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",
           zh: "你好！我是安娜，你的 AI 房产顾问。"

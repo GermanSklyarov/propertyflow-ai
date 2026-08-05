@@ -2,6 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
 import { IsArray, IsIn, IsObject, IsOptional, IsString, IsUrl, Matches, ValidateNested } from "class-validator";
 import type {
+  TenantLeadQualificationField,
   TenantWidgetLanguage,
   TenantWidgetPersonaGender,
   TenantWidgetTone,
@@ -12,6 +13,18 @@ import type { ThailandMarket } from "@propertyflow/domain";
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const widgetLanguages = ["en", "ru", "th", "zh"];
 const widgetTones = ["friendly", "professional", "luxury", "concise"];
+const leadQualificationFields: TenantLeadQualificationField[] = [
+  "budget",
+  "preferredArea",
+  "bedrooms",
+  "investmentPurpose",
+  "moveInDate",
+  "nationality",
+  "financing",
+  "whatsapp",
+  "email",
+  "phone"
+];
 
 export class UpdateTenantBrandingDto {
   @ApiProperty({ required: false })
@@ -71,6 +84,12 @@ export class UpdateTenantWidgetDto {
   @IsArray()
   @IsIn(widgetLanguages, { each: true })
   languages?: TenantWidgetLanguage[];
+
+  @ApiProperty({ required: false, enum: leadQualificationFields, isArray: true })
+  @IsOptional()
+  @IsArray()
+  @IsIn(leadQualificationFields, { each: true })
+  leadQualificationFields?: TenantLeadQualificationField[];
 
   @ApiProperty({
     required: false,

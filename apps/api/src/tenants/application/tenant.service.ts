@@ -24,6 +24,7 @@ import type {
   RefreshAgencySessionResponse,
   RequestAgencyMagicLinkRequest,
   RequestAgencyMagicLinkResponse,
+  TenantLeadQualificationField,
   TenantSnapshot,
   TenantSubscriptionPlan,
   TenantWidgetInstallCheckItem,
@@ -34,7 +35,7 @@ import type {
   TenantUsageResponse,
   UpdateTenantSettingsRequest
 } from "@propertyflow/contracts";
-import { getTenantPlanDefinition } from "@propertyflow/contracts";
+import { getTenantPlanDefinition, supportedLeadQualificationFields } from "@propertyflow/contracts";
 import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
 import { UserService } from "../../users/application/user.service.js";
 import { AgencyEmailTokenService } from "./agency-email-token.service.js";
@@ -323,6 +324,7 @@ export class TenantService {
       capabilities: buildPublicWidgetCapabilities(tenant),
       conciergeMode: tenant.subscriptionPlan,
       languages: tenant.widget.languages,
+      leadQualificationFields: tenant.widget.leadQualificationFields,
       listingUrlTemplate,
       personaGenders: tenant.widget.personaGenders,
       readiness: buildPublicWidgetReadiness({ ...tenant, widget: { ...tenant.widget, listingUrlTemplate } }),
@@ -820,6 +822,7 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
   const welcomeMessages = normalizeLocalizedStrings(request.widget?.welcomeMessages);
   const personaGenders = normalizePersonaGenders(request.widget?.personaGenders);
   const allowedOrigins = normalizeAllowedOrigins(request.widget?.allowedOrigins);
+  const leadQualificationFields = normalizeLeadQualificationFields(request.widget?.leadQualificationFields);
   const listingUrlTemplate = normalizeListingUrlTemplate(request.widget?.listingUrlTemplate);
 
   return {
@@ -831,6 +834,7 @@ function normalizeUpdateTenantSettingsRequest(request: UpdateTenantSettingsReque
           aiNames,
           allowedOrigins,
           languages: languages?.length ? languages : undefined,
+          leadQualificationFields,
           listingUrlTemplate,
           personaGenders,
           tone: normalizeWidgetTone(request.widget.tone),
@@ -849,6 +853,14 @@ function normalizeAllowedOrigins(origins: string[] | undefined) {
   return origins
     .map((origin) => normalizeRequestOrigin(origin))
     .filter((origin, index, values): origin is string => Boolean(origin) && values.indexOf(origin) === index);
+}
+
+function normalizeLeadQualificationFields(fields: TenantLeadQualificationField[] | undefined) {
+  if (!fields) {
+    return undefined;
+  }
+
+  return fields.filter((field, index, values) => supportedLeadQualificationFields.includes(field) && values.indexOf(field) === index);
 }
 
 function normalizeListingUrlTemplate(value: string | undefined): string | undefined {

@@ -24,6 +24,7 @@ describe("widget install model", () => {
           },
           allowedOrigins: ["https://pattaya-demo.example.com"],
           languages: ["en", "th"],
+          leadQualificationFields: ["budget", "bedrooms", "whatsapp"],
           listingUrlTemplate: "/listings/:propertyId",
           personaGenders: {
             en: "feminine",
@@ -85,6 +86,7 @@ describe("widget install model", () => {
       },
       allowedOrigins: [],
       languageCodes: ["en", "ru"],
+      leadQualificationFields: ["budget", "email"],
       listingUrlTemplate: "/listings/:propertyId",
       mode: "growth",
       personaGenders: {
@@ -109,6 +111,7 @@ describe("widget install model", () => {
 
     expect(snippet).toContain('data-tenant="demo&lt;script&gt;"');
     expect(snippet).toContain('data-ai-name="Anna &quot;AI&quot;"');
+    expect(snippet).toContain('data-lead-qualification-fields="budget,email"');
     expect(snippet).toContain('data-welcome-message="Hi &lt;buyer&gt; &amp; family"');
   });
 
@@ -144,6 +147,7 @@ describe("widget install model", () => {
         propertySearch: true
       },
       languageCodes: ["en"],
+      leadQualificationFields: ["budget", "email"],
       listingUrlTemplate: "/listings/:propertyId",
       mode: "starter",
       personaGenders: {
@@ -176,6 +180,7 @@ describe("widget install model", () => {
         propertySearch: true
       },
       languageCodes: ["en", "ru"],
+      leadQualificationFields: ["budget", "email"],
       listingUrlTemplate: "/listings/:propertyId",
       mode: "starter",
       personaGenders: {
@@ -394,6 +399,7 @@ describe("widget install model", () => {
         propertySearch: true
       },
       languageCodes: ["en", "ru"],
+      leadQualificationFields: ["budget", "email"],
       listingUrlTemplate: "/listings/:propertyId",
       mode: "starter",
       personaGenders: {
@@ -469,6 +475,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
       },
       allowedOrigins: [],
       languages: ["en", "ru", "th", "zh"],
+      leadQualificationFields: ["budget", "preferredArea", "bedrooms", "investmentPurpose", "moveInDate", "financing", "whatsapp", "email", "phone"],
       listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",

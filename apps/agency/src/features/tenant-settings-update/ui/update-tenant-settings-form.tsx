@@ -1,6 +1,6 @@
-import { Bot, CheckCircle2, Globe2, Palette, Save, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Bot, CheckCircle2, Globe2, Palette, Save, ShieldCheck } from "lucide-react";
 import { updateTenantSettingsAction } from "@entities/tenant/api/tenant-actions";
-import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
+import { getTenantWidgetSettings, leadQualificationFieldOptions } from "@entities/tenant/model/widget-settings";
 import type { TenantSnapshot } from "@propertyflow/contracts";
 import { TenantWidgetOriginFields } from "./tenant-widget-origin-fields";
 import { TenantWidgetPersonaFields } from "./tenant-widget-persona-fields";
@@ -106,6 +106,31 @@ export function UpdateTenantSettingsForm({
           AI Concierge personality
         </div>
         <TenantWidgetPersonaFields widgetSettings={widgetSettings} />
+      </section>
+
+      <section className={styles.section} id="lead-qualification-settings">
+        <div className={styles.sectionTitle}>
+          <BadgeCheck size={16} />
+          Lead qualification
+        </div>
+        <input name="leadQualificationFieldsIntent" type="hidden" value="1" />
+        <div className={styles.qualificationOptions}>
+          {leadQualificationFieldOptions.map((field) => (
+            <label className={styles.qualificationOption} key={field.value}>
+              <input
+                defaultChecked={widgetSettings.leadQualificationFields.includes(field.value)}
+                name="leadQualificationFields"
+                type="checkbox"
+                value={field.value}
+              />
+              <span>
+                <strong>{field.label}</strong>
+                <small>{field.description}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className={styles.hint}>Concierge uses these as natural follow-up prompts and still recommends listings when there is enough context.</p>
       </section>
 
       <div className={styles.actions}>

@@ -17,6 +17,7 @@ export interface WidgetInstallConfig {
   allowedOrigins: string[];
   capabilities: PublicWidgetCapabilities;
   languageCodes: string[];
+  leadQualificationFields: string[];
   listingUrlTemplate: string;
   mode: "starter" | "growth" | "enterprise";
   personaGenders: Record<string, string | undefined>;
@@ -101,6 +102,7 @@ export function buildWidgetInstallPackage(tenant: TenantSnapshot): WidgetInstall
     allowedOrigins: widget.allowedOrigins,
     capabilities,
     languageCodes: widget.languages,
+    leadQualificationFields: widget.leadQualificationFields,
     listingUrlTemplate: widget.listingUrlTemplate,
     mode: tenant.subscriptionPlan,
     personaGenders: widget.personaGenders,
@@ -181,7 +183,7 @@ export function summarizeWidgetInstallSteps(steps: WidgetInstallStep[]): WidgetL
 export function buildWidgetSnippet(config: WidgetInstallConfig, options: { locale?: string } = {}): string {
   const locale = options.locale ?? "auto";
 
-  return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="${escapeAttribute(locale)}" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}" data-listing-url-template="${escapeAttribute(config.listingUrlTemplate)}"></script>`;
+  return `<script src="https://cdn.propertyflow.ai/widget.js" data-api-base="${escapeAttribute(config.apiBaseUrl ?? "https://api.propertyflow.ai")}" data-tenant="${escapeAttribute(config.tenantSlug)}" data-mode="${escapeAttribute(config.mode)}" data-locale="${escapeAttribute(locale)}" data-ai-name="${escapeAttribute(config.aiName)}" data-ai-names="${escapeAttribute(JSON.stringify(config.aiNames))}" data-persona-genders="${escapeAttribute(JSON.stringify(config.personaGenders))}" data-tone="${escapeAttribute(config.tone)}" data-welcome-message="${escapeAttribute(config.welcomeMessage)}" data-welcome-messages="${escapeAttribute(JSON.stringify(config.welcomeMessages))}" data-languages="${escapeAttribute(config.languageCodes.join(","))}" data-lead-qualification-fields="${escapeAttribute(config.leadQualificationFields.join(","))}" data-listing-url-template="${escapeAttribute(config.listingUrlTemplate)}"></script>`;
 }
 
 export function buildWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetCapabilities {

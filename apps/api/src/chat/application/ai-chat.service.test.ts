@@ -230,6 +230,7 @@ describe("AiChatService", () => {
       message: "Подбери кондо с видом на море",
       persona: {
         gender: "feminine",
+        leadQualificationFields: ["budget", "preferredArea", "financing", "whatsapp"],
         name: "Anna",
         tone: "friendly",
         welcomeMessage: "Hi! I'm Anna, your AI property consultant."
@@ -254,6 +255,8 @@ describe("AiChatService", () => {
     const prompt = body.contents[0]?.parts[0]?.text ?? "";
     expect(prompt).toContain('Your public concierge name is "Anna".');
     expect(prompt).toContain("Use a friendly tone.");
+    expect(prompt).toContain("Lead qualification fields to collect naturally when relevant: budget, preferred area, financing or mortgage needs, WhatsApp.");
+    expect(prompt).toContain("Ask at most one concise follow-up question at a time");
     expect(prompt).toContain("Use feminine first-person wording");
     expect(prompt).toContain('use first-person feminine forms such as "я нашла", "я подобрала", "я проверила"');
     expect(prompt).toContain('never use masculine forms such as "я нашел" or "я подобрал"');

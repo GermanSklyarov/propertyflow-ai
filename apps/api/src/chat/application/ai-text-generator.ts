@@ -1,9 +1,15 @@
 import { Injectable, ServiceUnavailableException } from "@nestjs/common";
-import type { AiChatCitation, TenantWidgetPersonaGender, TenantWidgetTone } from "@propertyflow/contracts";
+import type {
+  AiChatCitation,
+  TenantLeadQualificationField,
+  TenantWidgetPersonaGender,
+  TenantWidgetTone
+} from "@propertyflow/contracts";
 
 export const AI_TEXT_GENERATOR = Symbol("AI_TEXT_GENERATOR");
 
 export interface AiConciergePersona {
+  leadQualificationFields?: TenantLeadQualificationField[];
   name?: string;
   tone?: TenantWidgetTone;
   gender?: TenantWidgetPersonaGender;
@@ -182,7 +188,10 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       persona?.name ? `Your public concierge name is "${persona.name}".` : undefined,
       persona?.tone ? `Use a ${persona.tone} tone.` : undefined,
       persona?.gender ? this.genderInstruction(persona.gender, request.locale) : undefined,
-      persona?.welcomeMessage ? `Tenant-configured welcome message for this locale: "${persona.welcomeMessage}".` : undefined
+      persona?.welcomeMessage ? `Tenant-configured welcome message for this locale: "${persona.welcomeMessage}".` : undefined,
+      persona?.leadQualificationFields?.length
+        ? `Lead qualification fields to collect naturally when relevant: ${persona.leadQualificationFields.map((field) => leadQualificationFieldLabels[field]).join(", ")}. Ask at most one concise follow-up question at a time; do not block listing recommendations while gathering missing fields.`
+        : undefined
     ].filter(Boolean);
 
     return [
@@ -249,3 +258,16 @@ export class OpenAiTextGenerator implements AiTextGenerator {
     );
   }
 }
+
+const leadQualificationFieldLabels: Record<TenantLeadQualificationField, string> = {
+  bedrooms: "bedrooms",
+  budget: "budget",
+  email: "email",
+  financing: "financing or mortgage needs",
+  investmentPurpose: "purchase or investment purpose",
+  moveInDate: "move-in or visit timing",
+  nationality: "nationality when relevant",
+  phone: "phone",
+  preferredArea: "preferred area",
+  whatsapp: "WhatsApp"
+};

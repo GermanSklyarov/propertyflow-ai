@@ -183,6 +183,7 @@ function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requested
 function resolveWidgetPersona(tenant: TenantSnapshot, locale: TenantWidgetLanguage): AiConciergePersona {
   return {
     gender: tenant.widget.personaGenders[locale] ?? "neutral",
+    leadQualificationFields: tenant.widget.leadQualificationFields,
     name: tenant.widget.aiNames[locale] ?? tenant.widget.aiName,
     tone: tenant.widget.tone,
     welcomeMessage: tenant.widget.welcomeMessages[locale] ?? tenant.widget.welcomeMessage

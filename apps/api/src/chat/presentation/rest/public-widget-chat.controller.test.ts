@@ -57,6 +57,7 @@ describe("PublicWidgetChatController", () => {
       {
         persona: {
           gender: "feminine",
+          leadQualificationFields: ["budget", "preferredArea", "email", "phone"],
           name: "Анна",
           tone: "friendly",
           welcomeMessage: "Привет! Я Анна, ваш AI-консультант по недвижимости."
@@ -209,6 +210,7 @@ describe("PublicWidgetChatController", () => {
       {
         persona: {
           gender: "feminine",
+          leadQualificationFields: ["budget", "preferredArea", "email", "phone"],
           name: "Анна",
           tone: "friendly",
           welcomeMessage: "Привет! Я Анна, ваш AI-консультант по недвижимости."
@@ -407,6 +409,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
       },
       allowedOrigins: [],
       languages: ["en", "ru"],
+      leadQualificationFields: ["budget", "preferredArea", "email", "phone"],
       listingUrlTemplate: "/listings/:propertyId",
       personaGenders: {
         en: "feminine",

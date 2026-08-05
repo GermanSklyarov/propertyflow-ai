@@ -29,6 +29,7 @@ Starter is launch-ready only when all items below are true:
 - Knowledge Sources support documents and property listings as first-class AI inputs.
 - Imported listings can feed Concierge search without forcing CRM inventory adoption.
 - Starter can turn a widget conversation into a qualified lead without exposing pipeline, tasks, roles, or full CRM surfaces.
+- Agencies can choose which qualification fields the AI should collect, including budget, preferred area, bedrooms, purpose, move-in timing, financing, WhatsApp, email, and phone.
 - Widget install readiness has actionable blockers and no dead links.
 - Public widget config and chat endpoints are tenant-scoped, origin-aware, localized, and covered by tests.
 - A Concierge smoke test proves the public widget path returns real LLM generation with listing and knowledge citations.

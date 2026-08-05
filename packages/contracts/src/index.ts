@@ -225,11 +225,27 @@ export type TenantWidgetPersonaGender = "feminine" | "masculine" | "neutral";
 
 export type TenantWidgetTone = "friendly" | "professional" | "luxury" | "concise";
 
+export const supportedLeadQualificationFields = [
+  "budget",
+  "preferredArea",
+  "bedrooms",
+  "investmentPurpose",
+  "moveInDate",
+  "nationality",
+  "financing",
+  "whatsapp",
+  "email",
+  "phone"
+] as const;
+
+export type TenantLeadQualificationField = (typeof supportedLeadQualificationFields)[number];
+
 export interface TenantWidgetSettings {
   aiName: string;
   aiNames: Partial<Record<TenantWidgetLanguage, string>>;
   allowedOrigins: string[];
   languages: TenantWidgetLanguage[];
+  leadQualificationFields: TenantLeadQualificationField[];
   listingUrlTemplate: string;
   personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
   tone: TenantWidgetTone;
@@ -285,6 +301,7 @@ export interface PublicWidgetConfigResponse {
   capabilities: PublicWidgetCapabilities;
   conciergeMode: TenantSnapshot["subscriptionPlan"];
   languages: TenantWidgetSettings["languages"];
+  leadQualificationFields: TenantWidgetSettings["leadQualificationFields"];
   listingUrlTemplate: TenantWidgetSettings["listingUrlTemplate"];
   personaGenders: TenantWidgetSettings["personaGenders"];
   readiness: PublicWidgetReadiness;

@@ -241,6 +241,21 @@
   line-height: 1.45;
 }
 
+.qualificationSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.qualificationSummary span {
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #edf8f4;
+  color: var(--teal-dark);
+  padding: 7px 9px;
+  font-size: 0.74rem;
+  font-weight: 950;
+}
+
 .knowledgeCoverage {
   display: grid;
   gap: 4px;

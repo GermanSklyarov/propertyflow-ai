@@ -32,6 +32,13 @@
     },
     conciergeMode: embedMode,
     languages: readAttribute(script, "languages", "en").split(",").filter(Boolean),
+    leadQualificationFields: readAttribute(
+      script,
+      "lead-qualification-fields",
+      "budget,preferredArea,bedrooms,investmentPurpose,moveInDate,financing,whatsapp,email,phone"
+    )
+      .split(",")
+      .filter(Boolean),
     listingUrlTemplate: readAttribute(script, "listing-url-template", "/listings/:propertyId"),
     personaGenders: readJsonAttribute(script, "persona-genders", {}),
     readiness: {

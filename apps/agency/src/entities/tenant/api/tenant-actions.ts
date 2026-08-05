@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { TenantWidgetLanguage, TenantWidgetTone } from "@propertyflow/contracts";
+import type { TenantLeadQualificationField, TenantWidgetLanguage, TenantWidgetTone } from "@propertyflow/contracts";
+import { supportedLeadQualificationFields } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { normalizeWidgetListingUrlTemplate } from "@entities/tenant/model/widget-listing-links";
 import { updateTenantSettings } from "@shared/api/agency-client";
@@ -23,6 +24,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const listingUrlTemplate = getListingUrlTemplate(formData);
   const primaryMarket = getOptionalMarket(formData);
   const languages = getLanguageCodes(formData);
+  const leadQualificationFields = getLeadQualificationFields(formData);
   const aiNames = getLocalizedStrings(formData, "aiName");
   const aiName = aiNames.en;
   const personaGenders = getPersonaGenders(formData);
@@ -44,6 +46,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
         ...(Object.keys(aiNames).length ? { aiNames } : {}),
         ...(allowedOrigins ? { allowedOrigins } : {}),
         ...(languages.length ? { languages } : {}),
+        ...(leadQualificationFields ? { leadQualificationFields } : {}),
         ...(listingUrlTemplate ? { listingUrlTemplate } : {}),
         ...(Object.keys(personaGenders).length ? { personaGenders } : {}),
         ...(tone ? { tone } : {}),
@@ -103,6 +106,16 @@ function getLanguageCodes(formData: FormData): TenantWidgetLanguage[] {
   const selected = formData.getAll("languages").map((language) => String(language).trim().toLowerCase());
 
   return widgetLanguages.filter((language) => selected.includes(language));
+}
+
+function getLeadQualificationFields(formData: FormData): TenantLeadQualificationField[] | undefined {
+  if (!formData.has("leadQualificationFieldsIntent")) {
+    return undefined;
+  }
+
+  const selected = formData.getAll("leadQualificationFields").map((field) => String(field).trim());
+
+  return supportedLeadQualificationFields.filter((field) => selected.includes(field));
 }
 
 function getWelcomeMessages(formData: FormData): Partial<Record<TenantWidgetLanguage, string>> {

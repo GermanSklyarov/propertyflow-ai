@@ -34,6 +34,7 @@ const tenant = {
     },
     allowedOrigins: [],
     languages: ["en", "ru"],
+    leadQualificationFields: ["budget", "preferredArea", "email", "phone"],
     listingUrlTemplate: "/listings/:propertyId",
     personaGenders: {
       en: "feminine",

@@ -29,7 +29,7 @@ import type {
   TenantUsageMetric,
   TenantUsageResponse
 } from "@propertyflow/contracts";
-import { getTenantWidgetSettings } from "@entities/tenant/model/widget-settings";
+import { getTenantWidgetSettings, leadQualificationFieldOptions } from "@entities/tenant/model/widget-settings";
 import { formatDate, formatNumber, formatPercent } from "@shared/lib/formatters";
 import {
   buildWidgetInstallPackage,
@@ -81,6 +81,9 @@ export function TenantSettingsPanel({
   const localizedWidgetSnippets = widgetInstall.localeOptions.filter((option) => option.value !== 'data-locale="auto"');
   const conciergeCheckLocale = widgetSettings.languages[0] ?? "en";
   const defaultWidgetPageUrl = tenant.customDomain ? `https://${tenant.customDomain}` : widgetSettings.allowedOrigins[0];
+  const leadQualificationLabels = leadQualificationFieldOptions
+    .filter((field) => widgetSettings.leadQualificationFields.includes(field.value))
+    .map((field) => field.label);
 
   return (
     <>
@@ -168,6 +171,29 @@ export function TenantSettingsPanel({
                 <CircleDot size={15} />
                 {activeKnowledgeJobs ? "AI is indexing your knowledge from background jobs." : "Upload documents from Knowledge Base to improve Concierge answers."}
               </div>
+            </section>
+
+            <section className={styles.starterCard}>
+              <div className={styles.cardTitleRow}>
+                <div>
+                  <p className="section-kicker">Lead qualification</p>
+                  <h3>AI collects the right details</h3>
+                </div>
+                <a className={styles.inlineAction} href="#lead-qualification-settings">
+                  <Pencil size={15} />
+                  Edit
+                </a>
+              </div>
+              <div className={styles.qualificationSummary}>
+                {leadQualificationLabels.map((label) => (
+                  <span key={label}>{label}</span>
+                ))}
+              </div>
+              <small>
+                {leadQualificationLabels.length
+                  ? `${leadQualificationLabels.length} fields are enabled for natural follow-up prompts.`
+                  : "No lead qualification fields are enabled yet."}
+              </small>
             </section>
 
             <section className={styles.starterCard}>

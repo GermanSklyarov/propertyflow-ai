@@ -1,4 +1,5 @@
-import type { TenantSnapshot, TenantWidgetLanguage } from "@propertyflow/contracts";
+import type { TenantLeadQualificationField, TenantSnapshot, TenantWidgetLanguage } from "@propertyflow/contracts";
+import { supportedLeadQualificationFields } from "@propertyflow/contracts";
 import { defaultWidgetListingUrlTemplate } from "./widget-listing-links";
 
 export const supportedTenantWidgetLanguageOptions: Array<{ label: string; value: TenantWidgetLanguage }> = [
@@ -7,6 +8,27 @@ export const supportedTenantWidgetLanguageOptions: Array<{ label: string; value:
   { label: "ไทย", value: "th" },
   { label: "中文", value: "zh" }
 ];
+
+export const leadQualificationFieldOptions: Array<{
+  description: string;
+  label: string;
+  value: TenantLeadQualificationField;
+}> = [
+  { description: "Target price range or maximum budget.", label: "Budget", value: "budget" },
+  { description: "Neighborhood, city, or project area.", label: "Preferred area", value: "preferredArea" },
+  { description: "Desired bedroom count.", label: "Bedrooms", value: "bedrooms" },
+  { description: "Investment, relocation, holiday home, or rental purpose.", label: "Investment purpose", value: "investmentPurpose" },
+  { description: "Expected visit, purchase, rental, or move-in timing.", label: "Move-in date", value: "moveInDate" },
+  { description: "Buyer nationality when relevant for process guidance.", label: "Nationality", value: "nationality" },
+  { description: "Mortgage, cash purchase, or other financing needs.", label: "Financing", value: "financing" },
+  { description: "WhatsApp contact for agent follow-up.", label: "WhatsApp", value: "whatsapp" },
+  { description: "Email contact for the lead handoff.", label: "Email", value: "email" },
+  { description: "Phone contact for the lead handoff.", label: "Phone", value: "phone" }
+];
+
+export const defaultLeadQualificationFields: TenantLeadQualificationField[] = supportedLeadQualificationFields.filter(
+  (field) => field !== "nationality"
+);
 
 export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   aiName: "Anna",
@@ -18,6 +40,7 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   },
   allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
+  leadQualificationFields: defaultLeadQualificationFields,
   listingUrlTemplate: defaultWidgetListingUrlTemplate,
   personaGenders: {
     en: "feminine",
@@ -50,6 +73,9 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
     aiNames,
     allowedOrigins: tenant.widget?.allowedOrigins ?? defaultTenantWidgetSettings.allowedOrigins,
     languages: tenant.widget?.languages?.length ? tenant.widget.languages : defaultTenantWidgetSettings.languages,
+    leadQualificationFields: tenant.widget?.leadQualificationFields?.length
+      ? tenant.widget.leadQualificationFields
+      : defaultTenantWidgetSettings.leadQualificationFields,
     listingUrlTemplate: tenant.widget?.listingUrlTemplate ?? defaultTenantWidgetSettings.listingUrlTemplate,
     personaGenders: {
       ...defaultTenantWidgetSettings.personaGenders,
