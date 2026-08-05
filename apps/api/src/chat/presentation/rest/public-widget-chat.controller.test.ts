@@ -125,6 +125,54 @@ describe("PublicWidgetChatController", () => {
     expect(properties.findById).toHaveBeenCalledWith("tenant-rag", "property-1");
   });
 
+  it("keeps recommended listing links on the widget origin when tenant route config is unsafe", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"],
+        listingUrlTemplate: "https://evil.example.com/listings/:propertyId"
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(chatResponse({ matchedPropertyIds: ["property-1"] }))
+    } as unknown as AiChatService;
+    const leads = {
+      create: vi.fn()
+    } as unknown as LeadService;
+    const properties = propertyRepository({
+      findById: vi.fn().mockResolvedValue({
+        id: "property-1",
+        title: "Wongamat Sea View Residence"
+      })
+    });
+    const controller = new PublicWidgetChatController(tenants, chat, leads, properties);
+
+    await expect(
+      controller.ask(
+        "demo-agency",
+        {
+          locale: "en",
+          message: "Show me sea view condos"
+        },
+        "https://agency.example.com"
+      )
+    ).resolves.toMatchObject({
+      recommendedListings: [
+        {
+          propertyId: "property-1",
+          title: "Wongamat Sea View Residence",
+          url: "https://agency.example.com/listings/property-1"
+        }
+      ]
+    });
+  });
+
   it("falls back to the first enabled tenant widget language", async () => {
     const tenants = {
       assertPublicWidgetOriginAllowed: vi.fn(),

@@ -153,8 +153,9 @@ export class PublicWidgetChatController {
     referer?: string
   ): Promise<PublicWidgetRecommendedListing[]> {
     const baseOrigin = resolveRequestOrigin(origin) ?? resolveRequestOrigin(referer);
+    const listingUrlTemplate = normalizeListingUrlTemplate(tenant.widget.listingUrlTemplate);
 
-    if (!baseOrigin || !tenant.widget.listingUrlTemplate.includes(":propertyId")) {
+    if (!baseOrigin) {
       return [];
     }
 
@@ -167,7 +168,7 @@ export class PublicWidgetChatController {
       .map((property) => ({
         propertyId: property.id,
         title: property.title,
-        url: buildListingUrl(baseOrigin, tenant.widget.listingUrlTemplate, property.id)
+        url: buildListingUrl(baseOrigin, listingUrlTemplate, property.id)
       }));
   }
 }
@@ -208,8 +209,17 @@ function resolveRequestOrigin(value?: string): string | undefined {
 }
 
 function buildListingUrl(origin: string, template: string, propertyId: string): string {
-  const path = template.startsWith("/") && !template.startsWith("//") ? template : "/listings/:propertyId";
-  const resolvedPath = path.replace(/:propertyId/g, encodeURIComponent(propertyId));
+  const resolvedPath = template.replace(/:propertyId/g, encodeURIComponent(propertyId));
 
   return new URL(resolvedPath, origin).toString();
+}
+
+function normalizeListingUrlTemplate(template: string): string {
+  const trimmed = template.trim();
+
+  if (!trimmed.startsWith("/") || trimmed.startsWith("//") || !trimmed.includes(":propertyId")) {
+    return "/listings/:propertyId";
+  }
+
+  return trimmed.slice(0, 160);
 }
