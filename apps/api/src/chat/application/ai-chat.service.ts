@@ -13,6 +13,7 @@ import { AiPropertyAdvisorService } from "../../properties/application/services/
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
+import { classifyAiChatIntent, type AiChatIntent } from "./ai-chat-intent.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
 
 export interface AiChatAskOptions {
@@ -56,13 +57,13 @@ export class AiChatService {
       throw new NotFoundException("Property not found");
     }
 
-    const normalized = this.normalize(request.message);
+    const intent = classifyAiChatIntent(request.message);
     const citations: AiChatCitation[] = [this.propertyCitation(property)];
     const answerParts = [this.describeProperty(property)];
     const knowledge = await this.retrieveKnowledge(tenantId, request);
     const dueDiligence = await this.buildDueDiligencePayload(tenantId, [property]);
 
-    if (this.isNeighborhoodQuestion(normalized)) {
+    if (intent.includeNeighborhood) {
       const neighborhood = await this.neighborhoodIntelligence.analyze(tenantId, property.id);
       citations.push({
         source: "neighborhood",
@@ -73,7 +74,7 @@ export class AiChatService {
       answerParts.push(neighborhood.summary);
     }
 
-    if (this.isAdviceQuestion(normalized)) {
+    if (intent.includeAdvice) {
       const summary = await this.advisor.summarize(tenantId, property.id);
       citations.push({
         source: "advisor",
@@ -110,7 +111,8 @@ export class AiChatService {
     request: AiChatRequest,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
-    const referencedPropertyId = this.resolveFollowUpPropertyId(request);
+    const intent = classifyAiChatIntent(request.message);
+    const referencedPropertyId = this.resolveFollowUpPropertyId(request, intent);
 
     if (referencedPropertyId) {
       return this.answerAboutProperty(tenantId, { ...request, propertyId: referencedPropertyId }, options);
@@ -494,10 +496,6 @@ export class AiChatService {
     return `${property.title} (${property.market}, ${property.listingType}, ${property.price.amount} ${property.price.currency}, ${rentalAsk ?? rent}).`;
   }
 
-  private normalize(message: string): string {
-    return message.toLowerCase().replaceAll("ё", "е").replace(/\s+/g, " ").trim();
-  }
-
   private buildConversationContext(request: AiChatRequest): string {
     const turns = (request.conversation ?? [])
       .filter((turn) => (turn.role === "assistant" || turn.role === "user") && turn.text.trim())
@@ -516,10 +514,8 @@ export class AiChatService {
       : "";
   }
 
-  private resolveFollowUpPropertyId(request: AiChatRequest): string | undefined {
-    const message = this.normalize(request.message);
-
-    if (!this.isPropertyFollowUpIntent(message)) {
+  private resolveFollowUpPropertyId(request: AiChatRequest, intent: AiChatIntent): string | undefined {
+    if (intent.route !== "property-follow-up") {
       return undefined;
     }
 
@@ -532,32 +528,6 @@ export class AiChatService {
       return undefined;
     }
 
-    return recommendations[this.resolveOrdinalIndex(message)]?.propertyId ?? recommendations[0]?.propertyId;
-  }
-
-  private resolveOrdinalIndex(message: string): number {
-    if (/(3|third|трет|สาม|第三|第3|三)/i.test(message)) {
-      return 2;
-    }
-
-    if (/(2|second|втор|สอง|第二|第2|二)/i.test(message)) {
-      return 1;
-    }
-
-    return 0;
-  }
-
-  private isPropertyFollowUpIntent(message: string): boolean {
-    return /(first option|second option|third option|see it|view it|visit|viewing|schedule|book|перв|втор|трет|посмотр|просмотр|запис|นัดดู|ดูห้อง|ดูคอนโด|ตัวเลือก|第[123]|第一|第二|第三|看房|预约|預約)/i.test(
-      message
-    );
-  }
-
-  private isNeighborhoodQuestion(message: string): boolean {
-    return /(рядом|around|near|neighborhood|район|пляж|beach|кафе|cafe|школ|school|hospital|больниц)/.test(message);
-  }
-
-  private isAdviceQuestion(message: string): boolean {
-    return /(почему|why|better|лучше|плюс|минус|risk|риск|investment|инвест|yield|доходн)/.test(message);
+    return recommendations[intent.referencedListingIndex ?? 0]?.propertyId ?? recommendations[0]?.propertyId;
   }
 }
