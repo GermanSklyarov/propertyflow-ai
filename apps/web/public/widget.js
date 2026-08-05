@@ -70,6 +70,18 @@
     messages: [],
     runtimeError: ""
   };
+  var handoffIntentPatterns = [
+    /(просмотр|посмотр|запис|связ|позвон|телефон|ватсап|вотсап|почт|контакт|агент|заявк)/i,
+    /(viewing|schedule|book|contact|call|phone|agent|email|handoff|whatsapp)/i,
+    /(นัดดู|ดูห้อง|ดูคอนโด|ติดต่อ|โทร|เบอร์|อีเมล|อีเมล์|เอเจนต์|นายหน้า|ไลน์|line|whatsapp)/i,
+    /(看房|预约|預約|联系|聯繫|电话|電話|手机|手機|微信|邮箱|郵箱|邮件|郵件|经纪人|經紀人|中介|whatsapp)/i
+  ];
+  var searchIntentPatterns = [
+    /(найд|подбер|покаж|посовет|вариант|кондо|квартир|дом|студи|район|инвест|аренд|снять|купить)/i,
+    /(listing|property|condo|apartment|house|rent|buy|recommend|suggest|area|investment|budget|bedroom)/i,
+    /(หา|ค้นหา|แนะนำ|ตัวเลือก|คอนโด|อพาร์ตเมนต์|บ้าน|เช่า|ซื้อ|ทำเล|ย่าน|ลงทุน|งบ|ห้องนอน)/i,
+    /(找|寻找|搜尋|搜索|推荐|推薦|房源|公寓|共管公寓|房子|住宅|租|买|買|区域|區域|地段|投资|投資|预算|預算|卧室|臥室)/i
+  ];
 
   var host = document.createElement("div");
   host.setAttribute("data-propertyflow-widget-root", "true");
@@ -116,7 +128,13 @@
     var canCreateLead = config.capabilities && config.capabilities.leadCapture === true;
     var languageLabel = escapeText(state.locale.toUpperCase());
     var handoff = state.handoff;
-    var readinessNotice = buildReadinessNotice(config.readiness);
+    var readinessNotice = buildReadinessNotice(config.readiness, state.locale);
+    var resetLabel = escapeText(getResetLabel(state.locale));
+    var askLabel = escapeText(getAskLabel(state.locale));
+    var thinkingLabel = escapeText(getThinkingLabel(state.locale));
+    var noteLabel = escapeText(getWidgetNote(state.locale));
+    var launcherSubtitle = escapeText(getLauncherSubtitle(state.locale));
+    var askColumn = escapeText(getAskColumnSize(state.locale));
     var messages = state.messages
       .map(function (message) {
         return (
@@ -142,7 +160,9 @@
       "</span>" +
       '<span><strong>' +
       aiName +
-      '</strong><small>AI property concierge</small></span>' +
+      '</strong><small>' +
+      launcherSubtitle +
+      "</small></span>" +
       "</button>" +
       (state.isOpen
         ? '<section class="pf-panel" aria-label="PropertyFlow AI Concierge">' +
@@ -154,17 +174,21 @@
           mode +
           " · " +
           languageLabel +
-          '</span></div><div class="pf-header-actions"><button class="pf-reset" type="button">Start over</button><button class="pf-close" type="button" aria-label="Close">×</button></div></header>' +
+          '</span></div><div class="pf-header-actions"><button class="pf-reset" type="button">' +
+          resetLabel +
+          '</button><button class="pf-close" type="button" aria-label="Close">×</button></div></header>' +
           (readinessNotice ? '<p class="pf-readiness pf-readiness-' + readinessNotice.status + '">' + escapeText(readinessNotice.message) + "</p>" : "") +
           (state.runtimeError ? '<p class="pf-error">' + escapeText(state.runtimeError) + "</p>" : "") +
           '<div class="pf-thread">' +
           messages +
-          (state.isSending ? '<div class="pf-message pf-message-assistant">Thinking...</div>' : "") +
+          (state.isSending ? '<div class="pf-message pf-message-assistant">' + thinkingLabel + "</div>" : "") +
           "</div>" +
           '<div class="pf-footer' +
           (state.isHandoffOpen ? " pf-footer-expanded" : "") +
           '">' +
-          '<form class="pf-form">' +
+          '<form class="pf-form" style="--pf-ask-column:' +
+          askColumn +
+          '">' +
           '<textarea name="message" rows="2" placeholder="' +
           escapeText(getPlaceholder(state.locale)) +
           '"' +
@@ -172,7 +196,9 @@
           "></textarea>" +
           '<button type="submit"' +
           (state.isReady && !state.isSending ? "" : " disabled") +
-          ">Ask</button>" +
+          ">" +
+          askLabel +
+          "</button>" +
           "</form>" +
           (canCreateLead
             ? '<div class="pf-handoff">' +
@@ -221,7 +247,9 @@
                 : "") +
               "</div>"
             : "") +
-          '<small class="pf-note">Answers use this agency knowledge base and listings. CRM is not required for Starter mode.</small>' +
+          '<small class="pf-note">' +
+          noteLabel +
+          "</small>" +
           "</div>" +
           "</section>"
         : "") +
@@ -306,13 +334,13 @@
     return "The concierge could not load live tenant configuration. Live knowledge answers are unavailable right now.";
   }
 
-  function buildReadinessNotice(readiness) {
+  function buildReadinessNotice(readiness, locale) {
     if (!readiness || readiness.status === "ready") {
       return null;
     }
 
     return {
-      message: readiness.nextAction || "Finish widget setup in PropertyFlowAI before sharing this assistant with live visitors.",
+      message: localizeReadinessMessage(readiness, locale),
       status: readiness.status === "needs-setup" ? "needs-setup" : "test-mode"
     };
   }
@@ -414,8 +442,9 @@
         return response.json();
       })
       .then(function (response) {
+        var recommendations = shouldShowRecommendations(trimmed) ? response.recommendedListings : [];
         state.messages.push(
-          assistantMessage(response.answer || "I could not produce an answer yet.", response.recommendedListings)
+          assistantMessage(response.answer || getEmptyAnswerMessage(state.locale), recommendations)
         );
         persistMessages();
       })
@@ -447,6 +476,29 @@
           text: message.text.slice(0, 1000)
         };
       });
+  }
+
+  function shouldShowRecommendations(message) {
+    var normalized = String(message || "")
+      .toLowerCase()
+      .replaceAll("ё", "е")
+      .trim();
+
+    if (!normalized) {
+      return false;
+    }
+
+    if (matchesIntent(normalized, handoffIntentPatterns)) {
+      return false;
+    }
+
+    return matchesIntent(normalized, searchIntentPatterns);
+  }
+
+  function matchesIntent(message, patterns) {
+    return patterns.some(function (pattern) {
+      return pattern.test(message);
+    });
   }
 
   function submitHandoff(form) {
@@ -687,6 +739,109 @@
     return placeholders[locale] || placeholders.en;
   }
 
+  function getLauncherSubtitle(locale) {
+    var labels = {
+      en: "AI property concierge",
+      ru: "AI-консьерж по недвижимости",
+      th: "AI Concierge อสังหา",
+      zh: "AI 房产礼宾"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getResetLabel(locale) {
+    var labels = {
+      en: "Start over",
+      ru: "Начать заново",
+      th: "เริ่มใหม่",
+      zh: "重新开始"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getAskLabel(locale) {
+    var labels = {
+      en: "Ask",
+      ru: "Спросить",
+      th: "ถาม",
+      zh: "提问"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getAskColumnSize(locale) {
+    var sizes = {
+      en: "74px",
+      ru: "minmax(96px,max-content)",
+      th: "74px",
+      zh: "64px"
+    };
+
+    return sizes[locale] || sizes.en;
+  }
+
+  function getThinkingLabel(locale) {
+    var labels = {
+      en: "Thinking...",
+      ru: "Думаю...",
+      th: "กำลังคิด...",
+      zh: "思考中..."
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getEmptyAnswerMessage(locale) {
+    var labels = {
+      en: "I could not produce an answer yet.",
+      ru: "Пока не получилось подготовить ответ.",
+      th: "ตอนนี้ยังสร้างคำตอบไม่ได้",
+      zh: "暂时无法生成回答。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getWidgetNote(locale) {
+    var labels = {
+      en: "Answers use this agency knowledge base and listings. CRM is not required for Starter mode.",
+      ru: "Ответы используют базу знаний и объекты агентства. CRM не требуется для Starter.",
+      th: "คำตอบใช้ฐานความรู้และประกาศของเอเจนซี่ โหมด Starter ไม่ต้องใช้ CRM",
+      zh: "回答基于机构知识库和房源。Starter 模式不需要 CRM。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function localizeReadinessMessage(readiness, locale) {
+    var labels = {
+      ready: {
+        en: "Widget configuration is ready for production installation.",
+        ru: "Виджет готов к установке на сайт.",
+        th: "วิดเจ็ตพร้อมติดตั้งบนเว็บไซต์จริงแล้ว",
+        zh: "小组件已准备好上线安装。"
+      },
+      "needs-setup": {
+        en: "Finish widget setup in PropertyFlowAI before sharing this assistant with live visitors.",
+        ru: "Завершите настройку виджета в PropertyFlowAI перед запуском для посетителей.",
+        th: "ตั้งค่าวิดเจ็ตใน PropertyFlowAI ให้เสร็จก่อนเปิดให้ผู้เข้าชมใช้งานจริง",
+        zh: "请先在 PropertyFlowAI 中完成小组件设置，再开放给访客使用。"
+      },
+      "test-mode": {
+        en: "Add production website origins before sharing the widget with live visitors.",
+        ru: "Добавьте origin боевого сайта перед запуском виджета для посетителей.",
+        th: "เพิ่ม origin ของเว็บไซต์จริงก่อนเปิดวิดเจ็ตให้ผู้เข้าชมใช้งาน",
+        zh: "请先添加正式网站 origin，再开放小组件给访客使用。"
+      }
+    };
+    var status = readiness && readiness.status === "needs-setup" ? "needs-setup" : readiness && readiness.status === "ready" ? "ready" : "test-mode";
+
+    return labels[status][locale] || labels[status].en;
+  }
+
   function getAskFailureMessage(locale, error) {
     if (error && error.status === 403) {
       var blocked = {
@@ -873,10 +1028,10 @@
       ".pf-recommendations small{flex:0 0 auto;color:var(--pf-primary);font-size:10px;font-weight:950;text-transform:uppercase}",
       ".pf-footer{grid-row:5;display:grid;gap:8px;border-top:1px solid #d9e7e3;background:#fff;padding:12px}",
       ".pf-footer-expanded{max-height:min(320px,48vh);overflow:auto}",
-      ".pf-form{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:8px}",
+      ".pf-form{display:grid;grid-template-columns:minmax(0,1fr) var(--pf-ask-column,74px);gap:8px}",
       ".pf-form textarea{min-width:0;resize:none;border:1px solid #d9e7e3;color:#12211f;font:inherit;font-size:13px;font-weight:750;padding:9px}",
       ".pf-form textarea:focus{border-color:var(--pf-primary);outline:none}",
-      ".pf-form button{border:0;background:var(--pf-primary);color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:900;text-transform:uppercase}",
+      ".pf-form button{min-width:0;border:0;background:var(--pf-primary);color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:900;line-height:1.15;overflow-wrap:anywhere;padding:0 10px;text-transform:uppercase;white-space:normal}",
       ".pf-form button:disabled,.pf-form textarea:disabled{cursor:not-allowed;opacity:.6}",
       ".pf-note{display:block;color:#66736f;font-size:11px;font-weight:800;line-height:1.4}",
       ".pf-handoff{display:grid;gap:8px}",
