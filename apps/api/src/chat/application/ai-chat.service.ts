@@ -1,12 +1,5 @@
 import { Inject, Injectable, NotFoundException, ServiceUnavailableException } from "@nestjs/common";
-import type {
-  AiAdvisorSummary,
-  AiChatCitation,
-  AiChatInsight,
-  AiChatRequest,
-  AiChatResponse
-} from "@propertyflow/contracts";
-import type { PropertySnapshot } from "@propertyflow/domain";
+import type { AiChatCitation, AiChatInsight, AiChatRequest, AiChatResponse } from "@propertyflow/contracts";
 import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
 import { AiPropertyAdvisorService } from "../../properties/application/services/ai-property-advisor.service.js";
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
@@ -22,17 +15,13 @@ import {
   propertyCitation,
   shortPropertyLine
 } from "./ai-chat-context.js";
-import { classifyAiChatIntent, type AiChatIntent } from "./ai-chat-intent.js";
+import { buildAiChatDueDiligencePayload } from "./ai-chat-due-diligence.js";
+import { classifyAiChatIntent } from "./ai-chat-intent.js";
 import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
 
 export interface AiChatAskOptions {
   persona?: AiConciergePersona;
-}
-
-interface DueDiligencePayload {
-  contextLines: string[];
-  insights: AiChatInsight[];
 }
 
 @Injectable()
@@ -77,7 +66,7 @@ export class AiChatService {
     const citations: AiChatCitation[] = [propertyCitation(property)];
     const answerParts = [describeProperty(property)];
     const knowledge = await this.retrieveKnowledge(tenantId, request);
-    const dueDiligence = await this.buildDueDiligencePayload(tenantId, [property]);
+    const dueDiligence = await buildAiChatDueDiligencePayload(tenantId, [property], this.advisor);
 
     if (intent.includeNeighborhood) {
       const neighborhood = await this.neighborhoodIntelligence.analyze(tenantId, property.id);
@@ -145,7 +134,7 @@ export class AiChatService {
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
     const knowledge = await this.retrieveKnowledge(tenantId, request);
-    const dueDiligence = await this.buildDueDiligencePayload(tenantId, matches);
+    const dueDiligence = await buildAiChatDueDiligencePayload(tenantId, matches, this.advisor);
 
     if (!matches.length) {
       const noMatchInsights: AiChatInsight[] = [
@@ -339,73 +328,6 @@ export class AiChatService {
       },
       createdAt: new Date().toISOString()
     };
-  }
-
-  private async buildDueDiligencePayload(tenantId: string, properties: PropertySnapshot[]): Promise<DueDiligencePayload> {
-    if (!properties.length) {
-      return { contextLines: [], insights: [] };
-    }
-
-    const summaries = await Promise.all(
-      properties.map(async (property) => ({
-        property,
-        summary: await this.advisor.summarize(tenantId, property.id)
-      }))
-    );
-
-    return {
-      contextLines: [
-        "Structured due diligence context for risks and watch-outs. Treat these as tenant-data-backed signals or checks to verify, not as legal advice or confirmed defects:",
-        ...summaries.map(({ property, summary }) => {
-          const signals = [
-            summary.cons.length ? `watch-outs: ${summary.cons.join(" ")}` : undefined,
-            summary.risks.length ? `data gaps/risks: ${summary.risks.join(" ")}` : undefined,
-            summary.questionsToAskAgent.length
-              ? `verification questions: ${summary.questionsToAskAgent.join(" ")}`
-              : undefined
-          ].filter(Boolean);
-
-          return `${property.title}: ${signals.length ? signals.join(" ") : "no material watch-outs were detected from structured fields."}`;
-        })
-      ],
-      insights: summaries.flatMap(({ property, summary }) => this.buildPropertyInsights(property, summary))
-    };
-  }
-
-  private buildPropertyInsights(property: PropertySnapshot, summary: AiAdvisorSummary): AiChatInsight[] {
-    const insights: AiChatInsight[] = [];
-
-    if (summary.bestFor.length) {
-      insights.push({
-        kind: "fit",
-        title: `${property.title} fit`,
-        detail: `Best suited for ${summary.bestFor.join(", ")} based on current listing signals.`,
-        propertyId: property.id,
-        severity: "info"
-      });
-    }
-
-    for (const risk of summary.risks.slice(0, 2)) {
-      insights.push({
-        kind: "risk",
-        title: `${property.title} risk check`,
-        detail: risk,
-        propertyId: property.id,
-        severity: "warning"
-      });
-    }
-
-    for (const question of summary.questionsToAskAgent.slice(0, 2)) {
-      insights.push({
-        kind: "due_diligence",
-        title: "Ask before recommending",
-        detail: question,
-        propertyId: property.id,
-        severity: "info"
-      });
-    }
-
-    return insights;
   }
 
   private allowDeterministicFallback(): boolean {
