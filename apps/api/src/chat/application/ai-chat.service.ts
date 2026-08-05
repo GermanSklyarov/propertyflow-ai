@@ -11,13 +11,13 @@ import {
   describeProperty,
   knowledgeCitation,
   knowledgeLine,
-  propertyCitation,
-  shortPropertyLine
+  propertyCitation
 } from "./ai-chat-context.js";
 import { buildAiChatDueDiligencePayload } from "./ai-chat-due-diligence.js";
 import { classifyAiChatIntent } from "./ai-chat-intent.js";
 import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
 import { buildAiChatResponse, buildClarifyPropertyReferenceResponse } from "./ai-chat-response.js";
+import { buildAiChatSearchResponseDraft } from "./ai-chat-search-response.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
 
 export interface AiChatAskOptions {
@@ -135,76 +135,17 @@ export class AiChatService {
     const matches = items.slice(0, 3);
     const knowledge = await this.retrieveKnowledge(tenantId, request);
     const dueDiligence = await buildAiChatDueDiligencePayload(tenantId, matches, this.advisor);
-
-    if (!matches.length) {
-      const noMatchInsights: AiChatInsight[] = [
-        {
-          kind: "handoff",
-          title: "No exact listing match",
-          detail: "Offer to broaden filters or hand the request to an agent for off-market options.",
-          severity: "warning"
-        }
-      ];
-
-      if (knowledge.length) {
-        noMatchInsights.push({
-          kind: "knowledge",
-          title: "Knowledge context available",
-          detail: "Use the cited knowledge sources to answer the client while listing inventory is missing.",
-          severity: "info"
-        });
-      }
-
-      return this.buildResponse({
-        citations: [
-          { source: "search", label: search.rankingExplanation },
-          ...knowledge.map((chunk) => knowledgeCitation(chunk))
-        ],
-        context: buildAiChatContext(
-          knowledge.length
-            ? ["No matching listings were found.", ...knowledge.map((chunk) => knowledgeLine(chunk))]
-            : ["No matching listings or knowledge chunks were found."],
-          [
-            { source: "search", label: search.rankingExplanation },
-            ...knowledge.map((chunk) => knowledgeCitation(chunk))
-          ]
-        ),
-        deterministicDraft: knowledge.length
-          ? `I could not find matching listings yet, but I found relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
-          : "I could not find matching listings in this tenant workspace yet. Try broadening the market, budget, or beach-distance requirements.",
-        insights: noMatchInsights,
-        matchedPropertyIds: [],
-        request,
-        suggestedActions: ["relax-filters", "ask-agent-for-off-market-options"],
-        ...options
-      });
-    }
-
-    const answer = [
-      `I found ${items.length} matching listing${items.length === 1 ? "" : "s"}.`,
-      `Top matches: ${matches.map((property) => shortPropertyLine(property)).join(" ")}`,
-      search.items.length
-        ? search.rankingExplanation
-        : "The indexed search returned no hits, so I used the structured PostgreSQL filters as a fallback.",
-      knowledge.length
-        ? `Relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
-        : ""
-    ].join(" ");
-
-    const citations: AiChatCitation[] = [
-      { source: "search", label: search.interpretedIntent },
-      ...matches.map((property) => propertyCitation(property)),
-      ...knowledge.map((chunk) => knowledgeCitation(chunk))
-    ];
+    const draft = buildAiChatSearchResponseDraft({
+      dueDiligence,
+      items,
+      knowledge,
+      matches,
+      search
+    });
 
     return this.buildResponse({
-      citations,
-      context: buildAiChatContext([answer, ...buildListingEvidence(matches), ...dueDiligence.contextLines], citations),
-      deterministicDraft: answer,
-      insights: dueDiligence.insights,
-      matchedPropertyIds: matches.map((property) => property.id),
+      ...draft,
       request,
-      suggestedActions: ["compare-results", "open-map", "save-search"],
       ...options
     });
   }
