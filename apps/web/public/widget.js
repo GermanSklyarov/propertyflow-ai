@@ -161,6 +161,9 @@
           messages +
           (state.isSending ? '<div class="pf-message pf-message-assistant">Thinking...</div>' : "") +
           "</div>" +
+          '<div class="pf-footer' +
+          (state.isHandoffOpen ? " pf-footer-expanded" : "") +
+          '">' +
           '<form class="pf-form">' +
           '<textarea name="message" rows="2" placeholder="' +
           escapeText(getPlaceholder(state.locale)) +
@@ -171,7 +174,6 @@
           (state.isReady && !state.isSending ? "" : " disabled") +
           ">Ask</button>" +
           "</form>" +
-          '<small class="pf-note">Answers use this agency knowledge base and listings. CRM is not required for Starter mode.</small>' +
           (canCreateLead
             ? '<div class="pf-handoff">' +
               '<button class="pf-handoff-toggle" type="button" aria-expanded="' +
@@ -219,6 +221,8 @@
                 : "") +
               "</div>"
             : "") +
+          '<small class="pf-note">Answers use this agency knowledge base and listings. CRM is not required for Starter mode.</small>' +
+          "</div>" +
           "</section>"
         : "") +
       "</div>";
@@ -846,8 +850,8 @@
       ".pf-launcher-mark{display:grid;width:36px;height:36px;place-items:center;background:var(--pf-primary);color:#fff;font-weight:900}",
       ".pf-launcher strong{display:block;font-size:14px;line-height:1.1}",
       ".pf-launcher small{display:block;color:#66736f;font-size:11px;font-weight:800;text-transform:uppercase}",
-      ".pf-panel{position:absolute;right:0;bottom:64px;display:grid;width:min(360px,calc(100vw - 32px));max-height:min(620px,calc(100vh - 104px));border:1px solid color-mix(in srgb,var(--pf-primary),white 55%);background:#fff;box-shadow:0 22px 60px rgba(15,34,30,.22);overflow:hidden}",
-      ".pf-panel header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#0b211d;color:#fff;padding:14px}",
+      ".pf-panel{position:absolute;right:0;bottom:64px;display:grid;grid-template-rows:auto auto auto minmax(0,1fr) auto;width:min(360px,calc(100vw - 32px));height:min(620px,calc(100vh - 104px));border:1px solid color-mix(in srgb,var(--pf-primary),white 55%);background:#fff;box-shadow:0 22px 60px rgba(15,34,30,.22);overflow:hidden}",
+      ".pf-panel header{grid-row:1;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:#0b211d;color:#fff;padding:14px}",
       ".pf-panel header strong{display:block;font-size:16px}",
       ".pf-panel header span{display:block;color:#d8e8e3;font-size:12px;font-weight:800;margin-top:3px}",
       ".pf-header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}",
@@ -855,10 +859,10 @@
       ".pf-reset{height:32px;padding:0 9px;font-size:11px;font-weight:900;text-transform:uppercase}",
       ".pf-close{font-size:22px;line-height:1;width:32px;height:32px}",
       ".pf-reset:hover,.pf-close:hover{background:rgba(255,255,255,.12)}",
-      ".pf-readiness{margin:12px 12px 0;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4d8f;font-size:12px;font-weight:850;line-height:1.4;padding:10px}",
+      ".pf-readiness{grid-row:2;margin:12px 12px 0;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4d8f;font-size:12px;font-weight:850;line-height:1.4;padding:10px}",
       ".pf-readiness-needs-setup{border-color:#fed7aa;background:#fff7ed;color:#7c4a05}",
-      ".pf-error{margin:12px 12px 0;border:1px solid #fed7aa;background:#fff7ed;color:#7c4a05;font-size:12px;font-weight:800;line-height:1.4;padding:10px}",
-      ".pf-thread{display:grid;gap:10px;max-height:310px;overflow:auto;padding:12px}",
+      ".pf-error{grid-row:3;margin:12px 12px 0;border:1px solid #fed7aa;background:#fff7ed;color:#7c4a05;font-size:12px;font-weight:800;line-height:1.4;padding:10px}",
+      ".pf-thread{grid-row:4;display:grid;align-content:start;gap:10px;min-height:0;overflow:auto;padding:12px}",
       ".pf-message{border:1px solid #d9e7e3;font-size:14px;font-weight:750;line-height:1.45;padding:10px;white-space:pre-wrap}",
       ".pf-message-assistant{background:#edf8f4;color:#0b4f49}",
       ".pf-message-user{justify-self:end;background:#0b4f49;color:#fff;max-width:88%}",
@@ -867,13 +871,15 @@
       ".pf-recommendations a:hover{background:#f7fffc}",
       ".pf-recommendations span{font-size:12px;font-weight:900;line-height:1.25}",
       ".pf-recommendations small{flex:0 0 auto;color:var(--pf-primary);font-size:10px;font-weight:950;text-transform:uppercase}",
-      ".pf-form{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:8px;border-top:1px solid #d9e7e3;padding:12px}",
+      ".pf-footer{grid-row:5;display:grid;gap:8px;border-top:1px solid #d9e7e3;background:#fff;padding:12px}",
+      ".pf-footer-expanded{max-height:min(320px,48vh);overflow:auto}",
+      ".pf-form{display:grid;grid-template-columns:minmax(0,1fr) 74px;gap:8px}",
       ".pf-form textarea{min-width:0;resize:none;border:1px solid #d9e7e3;color:#12211f;font:inherit;font-size:13px;font-weight:750;padding:9px}",
       ".pf-form textarea:focus{border-color:var(--pf-primary);outline:none}",
       ".pf-form button{border:0;background:var(--pf-primary);color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:900;text-transform:uppercase}",
       ".pf-form button:disabled,.pf-form textarea:disabled{cursor:not-allowed;opacity:.6}",
-      ".pf-note{display:block;color:#66736f;font-size:11px;font-weight:800;line-height:1.4;padding:0 12px 12px}",
-      ".pf-handoff{border-top:1px solid #d9e7e3;padding:12px}",
+      ".pf-note{display:block;color:#66736f;font-size:11px;font-weight:800;line-height:1.4}",
+      ".pf-handoff{display:grid;gap:8px}",
       ".pf-handoff-toggle{width:100%;border:1px solid color-mix(in srgb,var(--pf-primary),white 62%);background:#edf8f4;color:#0b4f49;cursor:pointer;font:inherit;font-size:12px;font-weight:900;padding:10px;text-align:center;text-transform:uppercase}",
       ".pf-handoff-toggle:hover{background:#def1eb}",
       ".pf-handoff-form{display:grid;gap:8px;margin-top:10px}",
