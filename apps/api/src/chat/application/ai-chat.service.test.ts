@@ -58,6 +58,11 @@ describe("AiChatService", () => {
     const response = await service.ask(
       "tenant-1",
       {
+        conversation: [
+          { role: "user", text: "find me a condo in pattaya under 3m" },
+          { role: "assistant", text: "I found Central Pattaya condos under 3M." },
+          { role: "user", text: "i am going to live alone and work remotely" }
+        ],
         locale: "en",
         message: "I need a sea-view condo under 5M in Pattaya"
       },
@@ -103,6 +108,16 @@ describe("AiChatService", () => {
           tone: "friendly",
           welcomeMessage: "Hi! I'm Anna, your AI property consultant."
         }
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("Recent conversation. Use it to resolve follow-up references")
+      })
+    );
+    expect(textGenerator.generate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.stringContaining("i am going to live alone and work remotely")
       })
     );
     expect(textGenerator.generate).toHaveBeenCalledWith(
@@ -257,6 +272,7 @@ describe("AiChatService", () => {
     expect(prompt).toContain("Use a friendly tone.");
     expect(prompt).toContain("Lead qualification fields to collect naturally when relevant: budget, preferred area, financing or mortgage needs, WhatsApp.");
     expect(prompt).toContain("Ask at most one concise follow-up question at a time");
+    expect(prompt).toContain("Do not repeat the tenant welcome message or reintroduce yourself after the first greeting");
     expect(prompt).toContain("Use feminine first-person wording");
     expect(prompt).toContain('use first-person feminine forms such as "я нашла", "я подобрала", "я проверила"');
     expect(prompt).toContain('never use masculine forms such as "я нашел" or "я подобрал"');

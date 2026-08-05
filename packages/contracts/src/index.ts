@@ -1046,11 +1046,17 @@ export interface SavedPropertySearchRecommendationsResponse {
 }
 
 export interface AiChatRequest {
+  conversation?: AiChatTurn[];
   locale: "en" | "ru" | "th" | "zh";
   message: string;
   propertyId?: string;
   market?: ThailandMarket;
   purpose?: PropertyPurpose;
+}
+
+export interface AiChatTurn {
+  role: "user" | "assistant";
+  text: string;
 }
 
 export interface AiChatCitation {

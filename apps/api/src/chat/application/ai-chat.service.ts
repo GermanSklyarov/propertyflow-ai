@@ -273,10 +273,11 @@ export class AiChatService {
     context: string,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
+    const conversationContext = this.buildConversationContext(request);
     const generated = await this.textGenerator.generate({
       locale: request.locale,
       message: request.message,
-      context: [context, "", "Deterministic retrieval draft:", deterministicDraft].join("\n"),
+      context: [conversationContext, context, "", "Deterministic retrieval draft:", deterministicDraft].filter(Boolean).join("\n"),
       citations,
       persona: options.persona
     });
@@ -489,6 +490,17 @@ export class AiChatService {
 
   private normalize(message: string): string {
     return message.toLowerCase().replaceAll("ё", "е").replace(/\s+/g, " ").trim();
+  }
+
+  private buildConversationContext(request: AiChatRequest): string {
+    const turns = (request.conversation ?? [])
+      .filter((turn) => (turn.role === "assistant" || turn.role === "user") && turn.text.trim())
+      .slice(-8)
+      .map((turn) => `${turn.role}: ${turn.text.trim().slice(0, 800)}`);
+
+    return turns.length
+      ? ["Recent conversation. Use it to resolve follow-up references and avoid repeating the greeting:", ...turns, ""].join("\n")
+      : "";
   }
 
   private isNeighborhoodQuestion(message: string): boolean {

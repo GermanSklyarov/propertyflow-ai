@@ -35,6 +35,10 @@ describe("PublicWidgetChatController", () => {
       controller.ask(
         "demo-agency",
         {
+          conversation: [
+            { role: "user", text: "find me a condo in pattaya under 3m" },
+            { role: "assistant", text: "I found condos in Central Pattaya under 3M." }
+          ],
           locale: "ru",
           message: "Квартира в Паттайе до 5 млн",
           market: "pattaya"
@@ -50,6 +54,10 @@ describe("PublicWidgetChatController", () => {
     expect(chat.ask).toHaveBeenCalledWith(
       "tenant-rag",
       {
+        conversation: [
+          { role: "user", text: "find me a condo in pattaya under 3m" },
+          { role: "assistant", text: "I found condos in Central Pattaya under 3M." }
+        ],
         locale: "ru",
         market: "pattaya",
         message: "Квартира в Паттайе до 5 млн"

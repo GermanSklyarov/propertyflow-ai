@@ -265,6 +265,19 @@
         submitHandoff(handoffForm);
       });
     }
+
+    scrollThreadToBottom();
+  }
+
+  function scrollThreadToBottom() {
+    if (!state.isOpen) {
+      return;
+    }
+
+    var thread = app.querySelector(".pf-thread");
+    if (thread) {
+      thread.scrollTop = thread.scrollHeight;
+    }
   }
 
   function fetchConfig() {
@@ -371,6 +384,7 @@
       return;
     }
 
+    var conversation = buildConversationHistory(trimmed);
     state.messages.push({ role: "user", text: trimmed });
     persistMessages();
     state.isSending = true;
@@ -378,6 +392,7 @@
 
     fetch(apiBase.replace(/\/$/, "") + "/public/v1/widget/ask/" + encodeURIComponent(tenantSlug), {
       body: JSON.stringify({
+        conversation: conversation,
         locale: state.locale,
         message: trimmed
       }),
@@ -407,6 +422,26 @@
       .finally(function () {
         state.isSending = false;
         render();
+      });
+  }
+
+  function buildConversationHistory(nextMessage) {
+    return state.messages
+      .filter(function (message) {
+        return (
+          message &&
+          (message.role === "assistant" || message.role === "user") &&
+          typeof message.text === "string" &&
+          message.text.trim()
+        );
+      })
+      .concat([{ role: "user", text: nextMessage }])
+      .slice(-10)
+      .map(function (message) {
+        return {
+          role: message.role,
+          text: message.text.slice(0, 1000)
+        };
       });
   }
 
