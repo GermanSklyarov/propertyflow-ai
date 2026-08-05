@@ -218,6 +218,42 @@ describe("AiChatService", () => {
     });
   });
 
+  it("uses previous recommendations for viewing follow-ups instead of running a fresh listing search", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const service = serviceFactory({
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      },
+      searchItems: [
+        propertyFactory({
+          id: "property-new-search",
+          title: "New Search Result Condo"
+        })
+      ]
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Price Comparable A" },
+            { propertyId: "property-2", title: "Pricing Metadata Smoke Condo" },
+            { propertyId: "property-3", title: "Price Recommendation Target Condo" }
+          ],
+          role: "assistant",
+          text: "I found 6 matching listings. Top matches: Price Comparable A, Pricing Metadata Smoke Condo, Price Recommendation Target Condo."
+        }
+      ],
+      locale: "en",
+      message: "I like the first option, may I see it?"
+    });
+
+    expect(response.matchedPropertyIds).toEqual(["property-1"]);
+    expect(response.answer).toContain("Wongamat Sea View Residence");
+    expect(response.answer).not.toContain("New Search Result Condo");
+  });
+
   it("generates through Gemini when Gemini is selected as the provider", async () => {
     process.env.AI_DEFAULT_PROVIDER = "gemini";
     process.env.GEMINI_API_KEY = "gemini-key";

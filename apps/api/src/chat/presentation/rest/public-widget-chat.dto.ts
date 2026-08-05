@@ -7,7 +7,27 @@ const locales: PublicWidgetAskRequest["locale"][] = ["en", "ru", "th", "zh"];
 const purposes: PropertyPurpose[] = ["living", "investment", "relocation", "family"];
 const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 
+class PublicWidgetConversationListingDto {
+  @IsString()
+  @MinLength(1)
+  propertyId!: string;
+
+  @IsString()
+  @MinLength(1)
+  title!: string;
+}
+
 class PublicWidgetConversationTurnDto {
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PublicWidgetConversationListingDto)
+  recommendedListings?: PublicWidgetAskRequest["conversation"] extends Array<infer Turn>
+    ? Turn extends { recommendedListings?: infer Listings }
+      ? Listings
+      : never
+    : never;
+
   @IsIn(["user", "assistant"])
   role!: "user" | "assistant";
 

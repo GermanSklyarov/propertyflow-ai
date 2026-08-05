@@ -1055,8 +1055,14 @@ export interface AiChatRequest {
 }
 
 export interface AiChatTurn {
+  recommendedListings?: AiChatReferencedListing[];
   role: "user" | "assistant";
   text: string;
+}
+
+export interface AiChatReferencedListing {
+  propertyId: string;
+  title: string;
 }
 
 export interface AiChatCitation {

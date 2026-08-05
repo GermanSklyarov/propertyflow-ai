@@ -110,6 +110,12 @@ export class AiChatService {
     request: AiChatRequest,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
+    const referencedPropertyId = this.resolveFollowUpPropertyId(request);
+
+    if (referencedPropertyId) {
+      return this.answerAboutProperty(tenantId, { ...request, propertyId: referencedPropertyId }, options);
+    }
+
     const search = await this.naturalLanguageSearch.search(tenantId, {
       locale: request.locale,
       query: request.message,
@@ -496,11 +502,55 @@ export class AiChatService {
     const turns = (request.conversation ?? [])
       .filter((turn) => (turn.role === "assistant" || turn.role === "user") && turn.text.trim())
       .slice(-8)
-      .map((turn) => `${turn.role}: ${turn.text.trim().slice(0, 800)}`);
+      .map((turn) => {
+        const listings = (turn.recommendedListings ?? [])
+          .slice(0, 3)
+          .map((listing, index) => `${index + 1}. ${listing.title} (${listing.propertyId})`);
+        const suffix = listings.length ? `\nRecommended listings shown:\n${listings.join("\n")}` : "";
+
+        return `${turn.role}: ${turn.text.trim().slice(0, 800)}${suffix}`;
+      });
 
     return turns.length
       ? ["Recent conversation. Use it to resolve follow-up references and avoid repeating the greeting:", ...turns, ""].join("\n")
       : "";
+  }
+
+  private resolveFollowUpPropertyId(request: AiChatRequest): string | undefined {
+    const message = this.normalize(request.message);
+
+    if (!this.isPropertyFollowUpIntent(message)) {
+      return undefined;
+    }
+
+    const recommendations = [...(request.conversation ?? [])]
+      .reverse()
+      .flatMap((turn) => turn.recommendedListings ?? [])
+      .filter((listing) => listing.propertyId);
+
+    if (!recommendations.length) {
+      return undefined;
+    }
+
+    return recommendations[this.resolveOrdinalIndex(message)]?.propertyId ?? recommendations[0]?.propertyId;
+  }
+
+  private resolveOrdinalIndex(message: string): number {
+    if (/(3|third|трет|สาม|第三|第3|三)/i.test(message)) {
+      return 2;
+    }
+
+    if (/(2|second|втор|สอง|第二|第2|二)/i.test(message)) {
+      return 1;
+    }
+
+    return 0;
+  }
+
+  private isPropertyFollowUpIntent(message: string): boolean {
+    return /(first option|second option|third option|see it|view it|visit|viewing|schedule|book|перв|втор|трет|посмотр|просмотр|запис|นัดดู|ดูห้อง|ดูคอนโด|ตัวเลือก|第[123]|第一|第二|第三|看房|预约|預約)/i.test(
+      message
+    );
   }
 
   private isNeighborhoodQuestion(message: string): boolean {

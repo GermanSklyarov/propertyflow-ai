@@ -472,6 +472,12 @@
       .slice(-10)
       .map(function (message) {
         return {
+          recommendedListings: normalizeRecommendedListings(message.recommendations).map(function (listing) {
+            return {
+              propertyId: listing.propertyId,
+              title: listing.title
+            };
+          }),
           role: message.role,
           text: message.text.slice(0, 1000)
         };
