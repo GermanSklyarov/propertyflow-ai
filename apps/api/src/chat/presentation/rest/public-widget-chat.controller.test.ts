@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException } from "@nestjs/common";
+import { BadRequestException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import type { AiChatResponse, LeadSnapshot, TenantSnapshot } from "@propertyflow/contracts";
 import { LeadService } from "../../../leads/application/lead.service.js";
@@ -275,7 +275,7 @@ describe("PublicWidgetChatController", () => {
     });
   });
 
-  it("keeps Starter widget handoff out of CRM", async () => {
+  it("creates a Starter qualified lead without CRM handoff copy", async () => {
     const tenant = tenantFactory({
       subscriptionPlan: "starter"
     });
@@ -288,7 +288,7 @@ describe("PublicWidgetChatController", () => {
       ask: vi.fn()
     } as unknown as AiChatService;
     const leads = {
-      create: vi.fn()
+      create: vi.fn().mockResolvedValue(leadFactory({ tenantId: tenant.id }))
     } as unknown as LeadService;
     const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
 
@@ -303,10 +303,22 @@ describe("PublicWidgetChatController", () => {
         },
         "https://agency.example.com"
       )
-    ).rejects.toBeInstanceOf(ForbiddenException);
+    ).resolves.toMatchObject({
+      conciergeMode: "starter",
+      message: "Thanks. The agency has your qualified request and can follow up.",
+      status: "new",
+      tenantSlug: "demo-agency"
+    });
 
     expect(tenants.assertPublicWidgetOriginAllowed).toHaveBeenCalledWith(tenant, "https://agency.example.com", undefined);
-    expect(leads.create).not.toHaveBeenCalled();
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, {
+      contactEmail: "buyer@example.com",
+      contactName: "Buyer",
+      contactPhone: undefined,
+      message: "Please contact me.",
+      preferredLocale: "en",
+      source: "ai-concierge"
+    });
   });
 
   it("rejects widget handoff without email or phone", async () => {

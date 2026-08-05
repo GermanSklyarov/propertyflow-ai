@@ -19,7 +19,7 @@ describe("agency entry", () => {
     expect(cards.find((card) => card.id === "starter")).toMatchObject({
       ctaHref: "/signup?plan=starter",
       featured: true,
-      primaryUseCase: "Launch an AI Concierge without replacing the agency CRM."
+      primaryUseCase: "Qualify website visitors with an AI Sales Assistant before agents step in."
     });
   });
 
@@ -33,7 +33,7 @@ describe("agency entry", () => {
     expect(buildAgencySignupSummary("starter")).toMatchObject({
       planId: "starter",
       planName: "Starter",
-      nextSteps: ["Create workspace", "Upload knowledge sources", "Install the AI Concierge widget"]
+      nextSteps: ["Create workspace", "Upload knowledge sources", "Configure lead qualification"]
     });
     expect(buildAgencySignupSummary("growth").nextSteps).toContain("Configure CRM handoff");
   });

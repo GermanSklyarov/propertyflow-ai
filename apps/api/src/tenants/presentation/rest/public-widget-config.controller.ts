@@ -27,8 +27,10 @@ export class PublicWidgetConfigController {
           primaryColor: "#0f766e"
         },
         capabilities: {
+          crmLeadCapture: false,
           knowledgeAnswers: true,
-          leadCapture: false,
+          leadCapture: true,
+          leadQualification: true,
           propertySearch: true
         },
         conciergeMode: "starter",

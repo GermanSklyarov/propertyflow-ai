@@ -185,10 +185,14 @@ export function buildWidgetSnippet(config: WidgetInstallConfig, options: { local
 }
 
 export function buildWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetCapabilities {
+  const plan = getTenantPlanDefinition(tenant.subscriptionPlan);
+
   return {
-    knowledgeAnswers: true,
-    leadCapture: tenant.subscriptionPlan === "growth" || tenant.subscriptionPlan === "enterprise",
-    propertySearch: true
+    crmLeadCapture: plan.features.crmLeadCapture,
+    knowledgeAnswers: plan.features.knowledgeBase,
+    leadCapture: plan.features.leadQualification || plan.features.crmLeadCapture,
+    leadQualification: plan.features.leadQualification,
+    propertySearch: plan.features.propertySearch
   };
 }
 
@@ -206,10 +210,12 @@ export function buildWidgetCapabilityItems(capabilities: PublicWidgetCapabilitie
     },
     {
       enabled: capabilities.leadCapture,
-      label: "CRM lead capture",
+      label: "Lead qualification",
       note: capabilities.leadCapture
-        ? "Growth and Enterprise handoff can create CRM leads."
-        : "Starter keeps visitor conversations as AI answers until Growth is enabled."
+        ? capabilities.crmLeadCapture
+          ? "Growth and Enterprise can route qualified leads into CRM follow-up."
+          : "Starter collects visitor details as qualified leads without pipeline or CRM migration."
+        : "Enable lead qualification before sending live visitors to the Concierge."
     }
   ];
 }
@@ -227,8 +233,8 @@ export function buildWidgetPlanUpgradePath(plan: TenantSubscriptionPlan): Widget
       currentPlanName: currentPlan.name,
       features: [
         {
-          label: "Lead handoff",
-          note: "Conversations become CRM leads only when visitors ask for viewings, callbacks, or follow-up."
+          label: "CRM lead capture",
+          note: "Qualified Starter leads can move into CRM records when the agency is ready to process volume."
         },
         {
           label: "Agent assignment",
@@ -242,7 +248,7 @@ export function buildWidgetPlanUpgradePath(plan: TenantSubscriptionPlan): Widget
       nextPlan: "growth",
       nextPlanName: nextPlan.name,
       note: currentPlan.positioning,
-      title: "Starter keeps CRM optional",
+      title: "Starter qualifies leads first",
       trigger: currentPlan.upgradePrompt
     };
   }

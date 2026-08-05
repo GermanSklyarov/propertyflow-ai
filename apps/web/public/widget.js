@@ -24,8 +24,10 @@
       primaryColor: "#0f766e"
     },
     capabilities: {
+      crmLeadCapture: embedMode === "growth" || embedMode === "enterprise",
       knowledgeAnswers: true,
-      leadCapture: embedMode === "growth" || embedMode === "enterprise",
+      leadCapture: true,
+      leadQualification: true,
       propertySearch: true
     },
     conciergeMode: embedMode,
@@ -773,7 +775,7 @@
 
   function getHandoffSuccessMessage(locale) {
     var labels = {
-      en: "Thanks. The agency has your request and can follow up from CRM.",
+      en: "Thanks. The agency has your qualified request and can follow up.",
       ru: "Спасибо. Агентство получило запрос и сможет связаться с вами.",
       th: "ขอบคุณค่ะ เอเจนซี่ได้รับคำขอของคุณแล้วและจะติดต่อกลับ",
       zh: "谢谢。机构已收到您的请求，并会跟进。"

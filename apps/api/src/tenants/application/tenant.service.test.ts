@@ -70,8 +70,10 @@ describe("TenantService", () => {
         primaryColor: "#0f766e"
       },
       capabilities: {
+        crmLeadCapture: false,
         knowledgeAnswers: true,
-        leadCapture: false,
+        leadCapture: true,
+        leadQualification: true,
         propertySearch: true
       },
       conciergeMode: "starter",
@@ -153,8 +155,10 @@ describe("TenantService", () => {
 
     await expect(service.getPublicWidgetConfig("demo-agency", { origin: "https://agency.example.com" })).resolves.toMatchObject({
       capabilities: {
+        crmLeadCapture: true,
         knowledgeAnswers: true,
         leadCapture: true,
+        leadQualification: true,
         propertySearch: true
       },
       readiness: {
@@ -187,6 +191,7 @@ describe("TenantService", () => {
 
   it("uses the shared plan catalog for public widget capabilities", async () => {
     expect(getTenantPlanDefinition("starter").features.crmLeadCapture).toBe(false);
+    expect(getTenantPlanDefinition("starter").features.leadQualification).toBe(true);
     expect(tenantPlanCatalog.growth.features.crmLeadCapture).toBe(true);
     expect(tenantPlanCatalog.enterprise.features.automations).toBe(true);
 
@@ -198,13 +203,17 @@ describe("TenantService", () => {
 
     await expect(service.getPublicWidgetConfig("starter-agency")).resolves.toMatchObject({
       capabilities: {
-        leadCapture: false
+        crmLeadCapture: false,
+        leadCapture: true,
+        leadQualification: true
       },
       conciergeMode: "starter"
     });
     await expect(service.getPublicWidgetConfig("enterprise-agency")).resolves.toMatchObject({
       capabilities: {
-        leadCapture: true
+        crmLeadCapture: true,
+        leadCapture: true,
+        leadQualification: true
       },
       conciergeMode: "enterprise"
     });

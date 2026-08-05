@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, ForbiddenException, Headers, Inject, Param, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Headers, Inject, Param, Post } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import type {
   PublicWidgetAskResponse,
@@ -91,16 +91,16 @@ export class PublicWidgetChatController {
   }
 
   @Post("leads/:tenantSlug")
-  @ApiOperation({ summary: "Create a tenant-scoped Growth or Enterprise lead from the public AI Concierge widget" })
+  @ApiOperation({ summary: "Create a tenant-scoped qualified lead from the public AI Concierge widget" })
   @ApiParam({ name: "tenantSlug", example: "demo-agency" })
   @ApiOkResponse({
-    description: "Lead captured from a Growth or Enterprise public widget handoff without exposing a public API key",
+    description: "Qualified lead captured from a public widget handoff without exposing a public API key",
     schema: {
       example: {
         conciergeMode: "growth",
         leadId: "lead-1",
         locale: "en",
-        message: "Thanks. The agency has your request and can follow up from CRM.",
+        message: "Thanks. The agency has your qualified request and can follow up.",
         status: "new",
         tenantSlug: "demo-agency"
       }
@@ -114,10 +114,6 @@ export class PublicWidgetChatController {
   ): Promise<PublicWidgetLeadResponse> {
     const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
     this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
-
-    if (tenant.subscriptionPlan === "starter") {
-      throw new ForbiddenException("Widget CRM handoff requires Growth or Enterprise mode");
-    }
 
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
     const contactEmail = normalizeOptional(payload.contactEmail);
@@ -140,7 +136,10 @@ export class PublicWidgetChatController {
       conciergeMode: tenant.subscriptionPlan,
       leadId: lead.id,
       locale,
-      message: "Thanks. The agency has your request and can follow up from CRM.",
+      message:
+        tenant.subscriptionPlan === "starter"
+          ? "Thanks. The agency has your qualified request and can follow up."
+          : "Thanks. The agency has your request and can follow up from CRM.",
       status: lead.status,
       tenantSlug: tenant.slug
     };

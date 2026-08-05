@@ -99,8 +99,10 @@ describe("widget install model", () => {
         ru: "Привет"
       },
       capabilities: {
+        crmLeadCapture: true,
         knowledgeAnswers: true,
         leadCapture: true,
+        leadQualification: true,
         propertySearch: true
       }
     });
@@ -135,8 +137,10 @@ describe("widget install model", () => {
       },
       allowedOrigins: [],
       capabilities: {
+        crmLeadCapture: false,
         knowledgeAnswers: true,
-        leadCapture: false,
+        leadCapture: true,
+        leadQualification: true,
         propertySearch: true
       },
       languageCodes: ["en"],
@@ -165,8 +169,10 @@ describe("widget install model", () => {
       },
       allowedOrigins: ["https://demo.example.com"],
       capabilities: {
+        crmLeadCapture: false,
         knowledgeAnswers: true,
-        leadCapture: false,
+        leadCapture: true,
+        leadQualification: true,
         propertySearch: true
       },
       languageCodes: ["en", "ru"],
@@ -193,18 +199,20 @@ describe("widget install model", () => {
     });
   });
 
-  it("describes starter widget capabilities without CRM lead capture", () => {
+  it("describes starter widget capabilities with lead qualification but without CRM capture", () => {
     const install = buildWidgetInstallPackage(tenantFactory({ subscriptionPlan: "starter" }));
 
     expect(install.config.capabilities).toEqual({
+      crmLeadCapture: false,
       knowledgeAnswers: true,
-      leadCapture: false,
+      leadCapture: true,
+      leadQualification: true,
       propertySearch: true
     });
     expect(install.capabilities).toContainEqual({
-      enabled: false,
-      label: "CRM lead capture",
-      note: "Starter keeps visitor conversations as AI answers until Growth is enabled."
+      enabled: true,
+      label: "Lead qualification",
+      note: "Starter collects visitor details as qualified leads without pipeline or CRM migration."
     });
   });
 
@@ -214,12 +222,12 @@ describe("widget install model", () => {
     expect(install.config.capabilities.leadCapture).toBe(true);
     expect(install.capabilities).toContainEqual({
       enabled: true,
-      label: "CRM lead capture",
-      note: "Growth and Enterprise handoff can create CRM leads."
+      label: "Lead qualification",
+      note: "Growth and Enterprise can route qualified leads into CRM follow-up."
     });
   });
 
-  it("describes the starter upgrade path as optional CRM handoff", () => {
+  it("describes the starter upgrade path as CRM follow-up after qualification", () => {
     const upgradePath = buildWidgetPlanUpgradePath("starter");
 
     expect(upgradePath).toMatchObject({
@@ -228,12 +236,16 @@ describe("widget install model", () => {
       nextPlan: "growth",
       nextPlanName: "Growth",
       actionLabel: "Request Growth",
-      title: "Starter keeps CRM optional",
-      trigger: "Upgrade to Growth when widget conversations should become assigned CRM leads."
+      title: "Starter qualifies leads first",
+      trigger: "Upgrade to Growth when qualified leads need assignment, pipeline, and CRM follow-up."
     });
     expect(upgradePath.actionHref).toContain(`mailto:${propertyFlowUpgradeRequestEmail}`);
     expect(upgradePath.actionHref).toContain("Plan%20target%3A%20growth");
-    expect(upgradePath.features.map((feature) => feature.label)).toEqual(["Lead handoff", "Agent assignment", "Pipeline follow-up"]);
+    expect(upgradePath.features.map((feature) => feature.label)).toEqual([
+      "CRM lead capture",
+      "Agent assignment",
+      "Pipeline follow-up"
+    ]);
   });
 
   it("marks enterprise as the terminal plan path", () => {
@@ -375,8 +387,10 @@ describe("widget install model", () => {
       },
       allowedOrigins: ["https://demo.example.com"],
       capabilities: {
+        crmLeadCapture: false,
         knowledgeAnswers: true,
-        leadCapture: false,
+        leadCapture: true,
+        leadQualification: true,
         propertySearch: true
       },
       languageCodes: ["en", "ru"],

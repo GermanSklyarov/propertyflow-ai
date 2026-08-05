@@ -41,6 +41,7 @@ export type TenantPlanFeatureKey =
   | "publicWidget"
   | "propertySearch"
   | "propertyListingSources"
+  | "leadQualification"
   | "crmLeadCapture"
   | "crmPipeline"
   | "teamRoles"
@@ -63,14 +64,15 @@ export const tenantPlanCatalog = {
   starter: {
     id: "starter",
     name: "Starter",
-    positioning: "AI Concierge, knowledge sources, listing search, and website widget without CRM migration.",
-    upgradePrompt: "Upgrade to Growth when widget conversations should become assigned CRM leads.",
+    positioning: "AI Sales Assistant with Concierge, knowledge sources, listing search, and lead qualification without CRM migration.",
+    upgradePrompt: "Upgrade to Growth when qualified leads need assignment, pipeline, and CRM follow-up.",
     features: {
       analytics: false,
       automations: false,
       crmLeadCapture: false,
       crmPipeline: false,
       knowledgeBase: true,
+      leadQualification: true,
       propertyListingSources: true,
       propertySearch: true,
       publicApi: false,
@@ -87,7 +89,7 @@ export const tenantPlanCatalog = {
   growth: {
     id: "growth",
     name: "Growth",
-    positioning: "AI Concierge plus lead handoff, assignment, pipeline, and agency CRM workflows.",
+    positioning: "AI Sales Assistant plus CRM lead capture, assignment, pipeline, and agency follow-up workflows.",
     upgradePrompt: "Upgrade to Enterprise for deeper roles, automation, analytics, and integration limits.",
     features: {
       analytics: true,
@@ -95,6 +97,7 @@ export const tenantPlanCatalog = {
       crmLeadCapture: true,
       crmPipeline: true,
       knowledgeBase: true,
+      leadQualification: true,
       propertyListingSources: true,
       propertySearch: true,
       publicApi: true,
@@ -119,6 +122,7 @@ export const tenantPlanCatalog = {
       crmLeadCapture: true,
       crmPipeline: true,
       knowledgeBase: true,
+      leadQualification: true,
       propertyListingSources: true,
       propertySearch: true,
       publicApi: true,
@@ -262,8 +266,10 @@ export interface PublicWidgetReadiness {
 }
 
 export interface PublicWidgetCapabilities {
+  crmLeadCapture: boolean;
   knowledgeAnswers: boolean;
   leadCapture: boolean;
+  leadQualification: boolean;
   propertySearch: boolean;
 }
 

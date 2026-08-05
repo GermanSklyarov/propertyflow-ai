@@ -566,8 +566,10 @@ function buildPublicWidgetCapabilities(tenant: TenantSnapshot): PublicWidgetConf
   const plan = getTenantPlanDefinition(tenant.subscriptionPlan);
 
   return {
+    crmLeadCapture: plan.features.crmLeadCapture,
     knowledgeAnswers: plan.features.knowledgeBase,
-    leadCapture: plan.features.crmLeadCapture,
+    leadCapture: plan.features.leadQualification || plan.features.crmLeadCapture,
+    leadQualification: plan.features.leadQualification,
     propertySearch: plan.features.propertySearch
   };
 }

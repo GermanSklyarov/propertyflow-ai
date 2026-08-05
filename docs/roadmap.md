@@ -69,7 +69,7 @@
 - Replace bootstrap-only login with one-time email magic links, invitation tokens, refresh-token rotation, logout, and safe non-enumerating responses.
 - Generate agency magic-link URLs on the API from `AGENCY_APP_BASE_URL` so web UI and future email adapters share one trusted link builder.
 - Keep bootstrap session codes as an explicit local-development fallback only, not the normal agency login path.
-- Reframe the first tenant experience around Knowledge -> AI -> Widget, with CRM hidden until leads are actually created.
+- Reframe the first tenant experience around Knowledge -> AI -> Qualified Lead, with CRM hidden until the agency needs pipeline follow-up.
 - Add a setup wizard for new agencies: upload FAQ, buying/selling guides, company information, condo brochures, developer PDFs, tax information, visa guides, and internal instructions.
 - Show knowledge indexing progress immediately after upload, using background jobs as the source of truth.
 - Generate a copy-paste website widget snippet tied to the tenant workspace and public AI assistant.
@@ -82,8 +82,8 @@
 - Treat property listings as AI sources for agencies that want a website Concierge before migrating to PropertyFlowAI CRM.
 - Route every source through the same pipeline: Source -> Ingestion -> Parsing/Chunking -> Embeddings -> Vector Search -> AI Concierge.
 - Support three product modes:
-  - Starter: knowledge base, documents, AI answers, and website widget.
-  - Growth: conversations become leads when the visitor asks for a viewing, agent callback, WhatsApp follow-up, or saved search.
+  - Starter: AI Concierge, knowledge base, listing search, lead qualification, conversation history, and basic analytics.
+  - Growth: qualified leads move into CRM capture, assignment, pipeline follow-up, agent callbacks, WhatsApp follow-up, or saved searches.
   - Enterprise: CRM, analytics, automations, employees, roles, SLA, pipeline, reminders, and integrations.
 - Keep CRM as downstream infrastructure for conversations, not the primary onboarding surface.
 

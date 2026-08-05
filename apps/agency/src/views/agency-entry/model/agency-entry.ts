@@ -42,14 +42,14 @@ export interface AgencySigninFormValues {
 }
 
 const planUseCases: Record<TenantSubscriptionPlan, string> = {
-  starter: "Launch an AI Concierge without replacing the agency CRM.",
-  growth: "Turn qualified Concierge conversations into assigned lead work.",
+  starter: "Qualify website visitors with an AI Sales Assistant before agents step in.",
+  growth: "Turn qualified AI conversations into assigned CRM follow-up.",
   enterprise: "Run multi-team CRM, automation, analytics, and integrations."
 };
 
 const planUnlocks: Record<TenantSubscriptionPlan, string[]> = {
-  starter: ["Knowledge Base", "Website widget", "Listing sources", "Localized AI"],
-  growth: ["Lead handoff", "Agent assignment", "Pipeline follow-up", "Public API"],
+  starter: ["AI Concierge", "Lead qualification", "Listing search", "Conversation history"],
+  growth: ["CRM lead capture", "Agent assignment", "Pipeline follow-up", "Public API"],
   enterprise: ["Advanced roles", "SLA controls", "Automation", "Custom limits"]
 };
 
@@ -85,7 +85,7 @@ export function buildAgencySignupSummary(planId: TenantSubscriptionPlan): Agency
     positioning: plan.positioning,
     nextSteps:
       plan.id === "starter"
-        ? ["Create workspace", "Upload knowledge sources", "Install the AI Concierge widget"]
+        ? ["Create workspace", "Upload knowledge sources", "Configure lead qualification"]
         : ["Create workspace", "Confirm upgrade scope", "Configure CRM handoff"]
   };
 }

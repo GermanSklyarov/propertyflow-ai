@@ -10,5 +10,5 @@ export function canAccessTenantPlan(
 }
 
 export function buildPlanAccessMessage(featureName: string, requiredPlanName = "Growth") {
-  return `${featureName} is available on ${requiredPlanName} and Enterprise. Starter stays focused on Knowledge Base, listing sources, and the AI Concierge widget.`;
+  return `${featureName} is available on ${requiredPlanName} and Enterprise. Starter stays focused on the AI Concierge, listing search, and lead qualification.`;
 }

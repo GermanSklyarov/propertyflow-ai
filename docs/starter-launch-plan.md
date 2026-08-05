@@ -1,10 +1,10 @@
 # Starter Launch Plan
 
-This plan keeps Starter focused on a sellable agency entry point: AI Concierge first, CRM later.
+This plan keeps Starter focused on a sellable agency entry point: AI Sales Assistant first, CRM later.
 
 ## Product Positioning
 
-Starter is not a lightweight CRM. It is the fastest path for an agency to add a knowledgeable AI property consultant to its existing website.
+Starter is not a lightweight CRM. It is the fastest path for an agency to add a knowledgeable AI Sales Assistant to its existing website, qualify visitors, and hand agents a useful lead summary before they join the conversation.
 
 The promised first-run outcome:
 
@@ -14,8 +14,9 @@ The promised first-run outcome:
 4. PropertyFlowAI indexes the sources.
 5. Agency copies one widget snippet to its website.
 6. Visitors can ask the AI Concierge questions grounded in agency-approved knowledge and listings.
+7. The AI collects configured qualification details and creates a qualified lead handoff.
 
-CRM remains optional in Starter. Growth and Enterprise unlock lead handoff, assignment, pipeline, SLA, automation, and analytics.
+CRM remains optional in Starter. Growth and Enterprise unlock CRM lead capture, assignment, pipeline, SLA, automation, and advanced analytics.
 
 ## Launch Gate
 
@@ -27,6 +28,7 @@ Starter is launch-ready only when all items below are true:
 - The first screen explains the setup path: Knowledge Sources, AI Concierge personality, website widget, readiness.
 - Knowledge Sources support documents and property listings as first-class AI inputs.
 - Imported listings can feed Concierge search without forcing CRM inventory adoption.
+- Starter can turn a widget conversation into a qualified lead without exposing pipeline, tasks, roles, or full CRM surfaces.
 - Widget install readiness has actionable blockers and no dead links.
 - Public widget config and chat endpoints are tenant-scoped, origin-aware, localized, and covered by tests.
 - A Concierge smoke test proves the public widget path returns real LLM generation with listing and knowledge citations.
@@ -54,6 +56,7 @@ Starter is launch-ready only when all items below are true:
   - plan confirmation;
   - Knowledge Sources;
   - AI personality and languages;
+  - lead qualification fields;
   - website origins;
   - widget snippet.
 - Persist progress so an agency can leave and continue later.
@@ -81,6 +84,7 @@ Starter is launch-ready only when all items below are true:
 
 - Make install snippet copyable and localized.
 - Support `data-locale="auto"` plus fixed locale for localized agency pages.
+- Support Starter lead qualification handoff without promising CRM assignment or pipeline.
 - Add origin allowlist checks and clear test/live mode labels.
 - Add a public widget smoke-check flow that validates script presence and tenant slug.
 - Add an AI Concierge smoke-check flow that validates LLM generation, tenant knowledge citations, and matched listings.
@@ -94,6 +98,7 @@ Starter is launch-ready only when all items below are true:
   - realistic knowledge documents;
   - indexing jobs/chunks where useful;
   - property sources and imported listing examples;
+  - qualified lead examples from AI Concierge conversations;
   - projects, amenities, media, and property gallery data;
   - optional Growth CRM leads for upgrade demos.
 - Keep demo data deterministic and resettable with `npm run seed:demo`.
@@ -114,4 +119,4 @@ Starter is launch-ready only when all items below are true:
 4. Build the first-run setup shell using existing Knowledge/Settings widgets.
 5. Tighten Knowledge Sources ingestion states and remove fallback demo UI.
 6. Add widget demo page plus install and Concierge smoke-check flows.
-7. Add CRM upgrade path indicators without exposing CRM as the Starter core.
+7. Add lead qualification and CRM upgrade path indicators without exposing CRM as the Starter core.
