@@ -23,6 +23,7 @@ import type {
   LeadStatusHistoryResponse,
   LeadTimelineResponse,
   RequestUser,
+  TenantSubscriptionPlan,
   TenantUserSnapshot
 } from "@propertyflow/contracts";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
@@ -47,12 +48,15 @@ import { ListLeadsDto } from "./list-leads.dto.js";
 import { UpdateLeadFollowUpDto } from "./update-lead-follow-up.dto.js";
 import { UpdateLeadStatusDto } from "./update-lead-status.dto.js";
 
+const starterLeadPlans: TenantSubscriptionPlan[] = ["starter", "growth", "enterprise"];
+const crmLeadPlans: TenantSubscriptionPlan[] = ["growth", "enterprise"];
+
 @ApiTags("leads")
 @ApiHeader({ name: "x-tenant-id", required: true })
 @ApiHeader({ name: "x-user-id", required: true })
 @ApiHeader({ name: "x-user-role", required: true })
 @Controller("leads")
-@TenantPlans("growth", "enterprise")
+@TenantPlans(...starterLeadPlans)
 @UseGuards(TenantGuard, UserContextGuard, TenantPlanGuard, RolesGuard)
 export class LeadsController {
   constructor(
@@ -61,6 +65,7 @@ export class LeadsController {
   ) {}
 
   @Post()
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   create(
     @TenantId() tenantId: string,
@@ -81,12 +86,14 @@ export class LeadsController {
   }
 
   @Get("unassigned")
+  @TenantPlans(...crmLeadPlans)
   @Roles("broker", "manager", "admin")
   listUnassigned(@TenantId() tenantId: string): Promise<LeadListResponse> {
     return this.leads.listUnassigned(tenantId);
   }
 
   @Get("agents")
+  @TenantPlans(...crmLeadPlans)
   @Roles("broker", "manager", "admin")
   listAgents(@TenantId() tenantId: string): Promise<TenantUserSnapshot[]> {
     return this.users.listAgents(tenantId);
@@ -103,6 +110,7 @@ export class LeadsController {
   }
 
   @Get("sla")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   getSlaSummary(
     @TenantId() tenantId: string,
@@ -113,6 +121,7 @@ export class LeadsController {
   }
 
   @Get("sla/breaches")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   listSlaBreaches(
     @TenantId() tenantId: string,
@@ -123,6 +132,7 @@ export class LeadsController {
   }
 
   @Get("sla/agents")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   getSlaAgentPerformance(
     @TenantId() tenantId: string,
@@ -133,6 +143,7 @@ export class LeadsController {
   }
 
   @Get("sla/sources")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   getSlaSourcePerformance(
     @TenantId() tenantId: string,
@@ -182,6 +193,7 @@ export class LeadsController {
     }
   })
   @Roles("agent", "broker", "manager", "admin")
+  @TenantPlans(...crmLeadPlans)
   getConversionAgentPerformance(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
@@ -234,6 +246,7 @@ export class LeadsController {
     }
   })
   @Roles("agent", "broker", "manager", "admin")
+  @TenantPlans(...crmLeadPlans)
   getConversionSourcePerformance(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
@@ -243,6 +256,7 @@ export class LeadsController {
   }
 
   @Get("quality")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   getQualitySignals(
     @TenantId() tenantId: string,
@@ -307,6 +321,7 @@ export class LeadsController {
     }
   })
   @Roles("agent", "broker", "manager", "admin")
+  @TenantPlans(...crmLeadPlans)
   getQualityAgentPerformance(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
@@ -372,6 +387,7 @@ export class LeadsController {
     }
   })
   @Roles("agent", "broker", "manager", "admin")
+  @TenantPlans(...crmLeadPlans)
   getQualitySourcePerformance(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
@@ -417,6 +433,7 @@ export class LeadsController {
     }
   })
   @Roles("agent", "broker", "manager", "admin")
+  @TenantPlans(...crmLeadPlans)
   listQualityActions(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
@@ -426,6 +443,7 @@ export class LeadsController {
   }
 
   @Post(":leadId/quality-actions/follow-up")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   applyQualityFollowUpAction(
     @TenantId() tenantId: string,
@@ -437,6 +455,7 @@ export class LeadsController {
   }
 
   @Post(":leadId/quality-actions/assign")
+  @TenantPlans(...crmLeadPlans)
   @Roles("broker", "manager", "admin")
   applyQualityAssignAction(
     @TenantId() tenantId: string,
@@ -460,6 +479,7 @@ export class LeadsController {
     }
   })
   @Roles("agent", "broker", "manager", "admin")
+  @TenantPlans(...crmLeadPlans)
   applyQualityContactAction(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
@@ -482,6 +502,7 @@ export class LeadsController {
     }
   })
   @Roles("agent", "broker", "manager", "admin")
+  @TenantPlans(...crmLeadPlans)
   applyQualityLinkPropertyAction(
     @TenantId() tenantId: string,
     @CurrentUser() user: RequestUser,
@@ -492,6 +513,7 @@ export class LeadsController {
   }
 
   @Post(":leadId/quality-actions/status")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   applyQualityStatusAction(
     @TenantId() tenantId: string,
@@ -512,6 +534,7 @@ export class LeadsController {
   }
 
   @Post(":leadId/notes")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   createNote(
     @TenantId() tenantId: string,
@@ -543,6 +566,7 @@ export class LeadsController {
   }
 
   @Patch(":leadId/follow-up")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   updateFollowUp(
     @TenantId() tenantId: string,
@@ -554,6 +578,7 @@ export class LeadsController {
   }
 
   @Patch(":leadId/assign")
+  @TenantPlans(...crmLeadPlans)
   @Roles("broker", "manager", "admin")
   assign(
     @TenantId() tenantId: string,
@@ -565,6 +590,7 @@ export class LeadsController {
   }
 
   @Patch(":leadId/status")
+  @TenantPlans(...crmLeadPlans)
   @Roles("agent", "broker", "manager", "admin")
   updateStatus(
     @TenantId() tenantId: string,

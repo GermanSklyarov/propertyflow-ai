@@ -363,6 +363,44 @@
   -webkit-line-clamp: 4;
 }
 
+.aiLeadPreview {
+  display: flex;
+  max-width: 760px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid rgb(15 118 110 / 16%);
+  background: #f3fbf8;
+  padding: 10px;
+  color: var(--teal-dark);
+}
+
+.aiLeadPreview span,
+.aiLeadPreview strong,
+.aiLeadPreview small {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+  font-weight: 950;
+}
+
+.aiLeadPreview span {
+  flex: 0 0 auto;
+  color: #0f766e;
+  text-transform: uppercase;
+}
+
+.aiLeadPreview strong {
+  flex: 1 1 220px;
+}
+
+.aiLeadPreview small {
+  color: var(--muted);
+}
+
 .contactRow {
   display: flex;
   flex-wrap: wrap;

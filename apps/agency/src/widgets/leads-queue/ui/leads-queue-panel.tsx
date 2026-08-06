@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bot, ChevronLeft, ChevronRight, CircleDot, Clock3, Mail, Phone, Search, SlidersHorizontal, Sparkles, UserRound, Users } from "lucide-react";
 import { buildLeadFollowUpState, formatLeadOwner } from "@entities/lead/lib/lead-queue";
+import { parseAiConciergeLeadContext, type AiConciergeLeadContext } from "@entities/lead/model/ai-concierge-lead";
 import {
   buildLeadQueueHref,
   formatLeadSort,
@@ -216,6 +217,9 @@ function isEmptyLeadFilter(filters: ListLeadsRequest) {
 
 function LeadRow({ lead }: { lead: LeadSnapshot }) {
   const followUpState = buildLeadFollowUpState(lead);
+  const aiContext = parseAiConciergeLeadContext(lead);
+  const displayMessage = buildLeadQueueMessage(lead, aiContext);
+  const primaryListing = aiContext?.recommendedListings[0];
 
   return (
     <Link className={styles.leadRow} href={`/leads/${lead.id}`}>
@@ -232,7 +236,18 @@ function LeadRow({ lead }: { lead: LeadSnapshot }) {
           </div>
         </div>
 
-        <p className={styles.message}>{lead.message ?? "No message yet. Review context and assign next action."}</p>
+        <p className={styles.message}>{displayMessage}</p>
+
+        {aiContext ? (
+          <div className={styles.aiLeadPreview}>
+            <span>
+              <Sparkles size={14} />
+              AI qualified lead
+            </span>
+            {primaryListing ? <strong>Selected: {primaryListing.title}</strong> : null}
+            <small>{formatAiLeadConversationCount(aiContext.conversation.length)}</small>
+          </div>
+        ) : null}
 
         <div className={styles.contactRow}>
           {lead.contactEmail ? (
@@ -265,6 +280,28 @@ function LeadRow({ lead }: { lead: LeadSnapshot }) {
       </div>
     </Link>
   );
+}
+
+function buildLeadQueueMessage(lead: LeadSnapshot, aiContext: AiConciergeLeadContext | null) {
+  if (!aiContext) {
+    return lead.message ?? "No message yet. Review context and assign next action.";
+  }
+
+  const latestUserTurn = [...aiContext.conversation].reverse().find((turn) => turn.role === "user");
+
+  return (
+    aiContext.visitorNote ??
+    latestUserTurn?.text ??
+    "AI Concierge captured this handoff from the widget conversation."
+  );
+}
+
+function formatAiLeadConversationCount(count: number) {
+  if (count === 0) {
+    return "Conversation context captured";
+  }
+
+  return `${count} chat turn${count === 1 ? "" : "s"} captured`;
 }
 
 function KpiCard({

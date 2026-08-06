@@ -39,7 +39,7 @@ export const agencyNavigationItems = [
   { href: "/projects", icon: MapPinned, label: "Projects", plans: crmPlans },
   { href: "/widget-demo", icon: MessageCircle, label: "Widget demo", plans: allPlans },
   { href: "/settings", icon: Settings, label: "Settings", plans: allPlans },
-  { href: "/leads", icon: Users, label: "Leads", plans: crmPlans },
+  { href: "/leads", icon: Users, label: "Leads", plans: allPlans },
   { href: "/saved-searches", icon: FolderSearch, label: "Saved searches", plans: crmPlans },
   { href: "/ai-tools", icon: Bot, label: "AI tools", plans: crmPlans },
   { href: "/analytics", icon: ChartNoAxesCombined, label: "Analytics", plans: crmPlans }
@@ -50,9 +50,9 @@ const agencyTopbarQuickLinks = [
   { href: "/knowledge", label: "Knowledge", plans: allPlans },
   { href: "/widget-demo", label: "Preview widget", plans: allPlans },
   { href: "/settings", label: "Widget setup", plans: allPlans },
+  { href: "/leads", label: "Lead queue", plans: allPlans },
   { href: "/listings", label: "Inventory", plans: crmPlans },
   { href: "/projects", label: "Projects", plans: crmPlans },
-  { href: "/leads", label: "Lead queue", plans: crmPlans },
   { href: "/saved-searches", label: "Saved demand", plans: crmPlans },
   { href: "/ai-tools", label: "AI tools", plans: crmPlans }
 ] as const;
@@ -71,10 +71,10 @@ export function getAgencyUpgradeCta(plan: TenantSubscriptionPlan): AgencyUpgrade
   }
 
   return {
-    description: "Growth unlocks lead handoff, assignment, and pipeline work.",
+    description: "Growth unlocks CRM pipeline work, richer automation, and team workflows.",
     href: "/setup?plan=growth",
     label: "Start Growth",
-    title: "Turn Concierge conversations into CRM leads"
+    title: "Turn qualified Concierge leads into a CRM pipeline"
   };
 }
 

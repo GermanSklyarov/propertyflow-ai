@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { leadAgentsQueryOptions, leadDetailQueryOptions, leadNotesQueryOptions, leadTimelineQueryOptions } from "@entities/lead/api/lead-queries";
 import { listingDetailQueryOptions, listingsQueryOptions } from "@entities/listing/api/listing-queries";
+import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
 import {
   parseLeadPropertyCandidateRequest,
   type LeadPropertyLinkSearchParams
@@ -22,11 +23,13 @@ export default async function AgencyLeadDetailRoute({
   const listingCandidateRequest = parseLeadPropertyCandidateRequest(query);
   const queryClient = createPropertyFlowQueryClient();
   const { tenantId } = await requireAgencySession();
+  const tenant = await queryClient.ensureQueryData(currentTenantQueryOptions(tenantId));
+  const isCrmWorkspace = tenant.subscriptionPlan !== "starter";
   const [leadResult, timelineResult, notesResult, agentsResult] = await Promise.allSettled([
     queryClient.ensureQueryData(leadDetailQueryOptions(leadId)),
     queryClient.ensureQueryData(leadTimelineQueryOptions(leadId)),
     queryClient.ensureQueryData(leadNotesQueryOptions(leadId)),
-    queryClient.ensureQueryData(leadAgentsQueryOptions())
+    isCrmWorkspace ? queryClient.ensureQueryData(leadAgentsQueryOptions()) : Promise.resolve([])
   ]);
 
   if (leadResult.status === "rejected") {
@@ -46,13 +49,13 @@ export default async function AgencyLeadDetailRoute({
     notFound();
   }
 
-  const linkedListingResult = lead.propertyId
+  const linkedListingResult = isCrmWorkspace && lead.propertyId
     ? await Promise.resolve(queryClient.ensureQueryData(listingDetailQueryOptions(lead.propertyId, tenantId))).then(
         (value) => ({ status: "fulfilled" as const, value }),
         (reason) => ({ reason, status: "rejected" as const })
       )
     : null;
-  const listingCandidatesResult = lead.propertyId
+  const listingCandidatesResult = !isCrmWorkspace || lead.propertyId
     ? null
     : await Promise.resolve(queryClient.ensureQueryData(listingsQueryOptions(listingCandidateRequest, tenantId))).then(
         (value) => ({ status: "fulfilled" as const, value }),
@@ -74,6 +77,7 @@ export default async function AgencyLeadDetailRoute({
       linkedListing={linkedListing}
       notes={notesResult.status === "fulfilled" ? notesResult.value : undefined}
       notesError={notesResult.status === "rejected" ? toErrorMessage(notesResult.reason) : undefined}
+      readOnly={tenant.subscriptionPlan === "starter"}
       timeline={timelineResult.status === "fulfilled" ? timelineResult.value : undefined}
       timelineError={timelineResult.status === "rejected" ? toErrorMessage(timelineResult.reason) : undefined}
     />

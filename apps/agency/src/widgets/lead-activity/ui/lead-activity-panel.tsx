@@ -7,10 +7,12 @@ import styles from "./lead-activity-panel.module.css";
 export function LeadActivityPanel({
   leadId,
   notes,
+  readOnly = false,
   timeline
 }: {
   leadId: string;
   notes: LeadNotesResponse;
+  readOnly?: boolean;
   timeline: LeadTimelineResponse;
 }) {
   return (
@@ -42,7 +44,7 @@ export function LeadActivityPanel({
           </div>
           <MessageSquareText size={20} />
         </div>
-        <AddLeadNoteForm leadId={leadId} />
+        {readOnly ? null : <AddLeadNoteForm leadId={leadId} />}
         <div className={styles.noteList}>
           {notes.items.length ? (
             notes.items.map((note) => (

@@ -20,6 +20,7 @@ export function LeadDetailPage({
   linkedListingError,
   notes,
   notesError,
+  readOnly = false,
   timeline,
   timelineError
 }: {
@@ -32,6 +33,7 @@ export function LeadDetailPage({
   linkedListingError?: string;
   notes?: LeadNotesResponse;
   notesError?: string;
+  readOnly?: boolean;
   timeline?: LeadTimelineResponse;
   timelineError?: string;
 }) {
@@ -55,6 +57,14 @@ export function LeadDetailPage({
 
         <LeadOverviewPanel lead={lead} linkedListing={linkedListing} />
 
+        {readOnly ? (
+          <LoadState
+            kicker="Starter lead"
+            message="Starter captures AI-qualified leads and conversation context. Upgrade to Growth when you need pipeline status, assignment, follow-up tasks, and CRM notes."
+            title="Read-only handoff view"
+          />
+        ) : null}
+
         {linkedListingError ? (
           <LoadState
             kicker="Linked listing unavailable"
@@ -63,9 +73,9 @@ export function LeadDetailPage({
           />
         ) : null}
 
-        {lead.propertyId || !listingCandidates ? null : <LeadPropertyLinkPanel leadId={lead.id} response={listingCandidates} />}
+        {readOnly || lead.propertyId || !listingCandidates ? null : <LeadPropertyLinkPanel leadId={lead.id} response={listingCandidates} />}
 
-        {!lead.propertyId && listingCandidatesError ? (
+        {!readOnly && !lead.propertyId && listingCandidatesError ? (
           <LoadState
             kicker="Property picker unavailable"
             message={listingCandidatesError}
@@ -73,11 +83,11 @@ export function LeadDetailPage({
           />
         ) : null}
 
-        {agentsError ? (
+        {!readOnly && agentsError ? (
           <LoadState kicker="Agent roster unavailable" message={agentsError} title="Assignment options could not load" />
         ) : null}
 
-        <LeadWorkflowPanel agents={agents} lead={lead} />
+        {readOnly ? null : <LeadWorkflowPanel agents={agents} lead={lead} />}
 
         {activityError || !notes || !timeline ? (
           <LoadState
@@ -86,7 +96,7 @@ export function LeadDetailPage({
             title="Could not load lead activity"
           />
         ) : (
-          <LeadActivityPanel leadId={lead.id} notes={notes} timeline={timeline} />
+          <LeadActivityPanel leadId={lead.id} notes={notes} readOnly={readOnly} timeline={timeline} />
         )}
       </div>
     </main>
