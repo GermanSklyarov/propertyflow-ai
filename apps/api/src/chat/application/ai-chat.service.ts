@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type { AiChatCitation, AiChatInsight, AiChatRequest, AiChatResponse } from "@propertyflow/contracts";
 import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
 import { AiPropertyAdvisorService } from "../../properties/application/services/ai-property-advisor.service.js";
@@ -19,6 +19,8 @@ export interface AiChatAskOptions {
 
 @Injectable()
 export class AiChatService {
+  private readonly logger = new Logger(AiChatService.name);
+
   constructor(
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(AiPropertyAdvisorService) private readonly advisor: AiPropertyAdvisorService,
@@ -114,13 +116,21 @@ export class AiChatService {
   }
 
   private async retrieveKnowledge(tenantId: string, request: AiChatRequest) {
-    const result = await this.knowledge.searchChunks(tenantId, {
-      query: request.message,
-      locale: request.locale,
-      limit: 3
-    });
+    try {
+      const result = await this.knowledge.searchChunks(tenantId, {
+        query: request.message,
+        locale: request.locale,
+        limit: 3
+      });
 
-    return result.items;
+      return result.items;
+    } catch (error) {
+      this.logger.warn(
+        `AI chat knowledge retrieval failed for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      return [];
+    }
   }
 
   private buildResponse(

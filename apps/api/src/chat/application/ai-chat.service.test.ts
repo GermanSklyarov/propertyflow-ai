@@ -1,4 +1,4 @@
-import { ServiceUnavailableException } from "@nestjs/common";
+import { Logger, ServiceUnavailableException } from "@nestjs/common";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import type { KnowledgeDocumentChunkSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -262,6 +262,40 @@ describe("AiChatService", () => {
     expect(response.answer).toContain("structured PostgreSQL filters as a fallback");
   });
 
+  it("continues from listing evidence when knowledge retrieval fails", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const property = propertyFactory();
+    const knowledge = {
+      searchChunks: vi.fn().mockRejectedValue(new Error("vector index unavailable"))
+    };
+    const service = serviceFactory({
+      knowledge,
+      searchItems: [property],
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      message: "Find condos in Pattaya"
+    });
+
+    expect(knowledge.searchChunks).toHaveBeenCalledWith("tenant-1", {
+      limit: 3,
+      locale: "en",
+      query: "Find condos in Pattaya"
+    });
+    expect(response.answer).toContain("I found 1 matching listing.");
+    expect(response.answer).toContain("Wongamat Sea View Residence");
+    expect(response.citations).toEqual(expect.not.arrayContaining([expect.objectContaining({ source: "knowledge" })]));
+    expect(warn).toHaveBeenCalledWith(
+      "AI chat knowledge retrieval failed for tenant tenant-1: vector index unavailable"
+    );
+  });
+
   it("uses previous recommendations for viewing follow-ups instead of running a fresh listing search", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const service = serviceFactory({
@@ -435,6 +469,9 @@ function serviceFactory(overrides: {
     interpret: ReturnType<typeof vi.fn>;
     search: ReturnType<typeof vi.fn>;
   };
+  knowledge?: {
+    searchChunks: ReturnType<typeof vi.fn>;
+  };
   properties?: {
     findById: ReturnType<typeof vi.fn>;
     search: ReturnType<typeof vi.fn>;
@@ -492,7 +529,7 @@ function serviceFactory(overrides: {
   const neighborhood = {
     analyze: vi.fn()
   };
-  const knowledge = {
+  const knowledge = overrides.knowledge ?? {
     searchChunks: vi.fn().mockResolvedValue({
       items: overrides.knowledgeItems ?? [],
       total: overrides.knowledgeItems?.length ?? 0
