@@ -1,4 +1,4 @@
-import { Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type { LeadSnapshot, TenantSnapshot } from "@propertyflow/contracts";
 import { TenantService } from "../../tenants/application/tenant.service.js";
 
@@ -29,7 +29,7 @@ interface LeadNotificationPayload {
 export class LeadNotificationService {
   private readonly logger = new Logger(LeadNotificationService.name);
 
-  constructor(private readonly tenants: TenantService) {}
+  constructor(@Inject(TenantService) private readonly tenants: TenantService) {}
 
   async notifyLeadCreated(tenantId: string, lead: LeadSnapshot): Promise<void> {
     const tenant = await this.findTenant(tenantId);
