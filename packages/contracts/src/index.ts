@@ -250,6 +250,7 @@ export interface TenantWidgetSettings {
   leadWebhookUrl?: string;
   leadLineRecipientIds?: string[];
   leadLineChannelAccessToken?: string;
+  leadLineChannelSecret?: string;
   leadQualificationFields: TenantLeadQualificationField[];
   leadTelegramChatIds?: string[];
   leadTelegramBotToken?: string;
@@ -273,6 +274,33 @@ export interface UpdateTenantSettingsRequest {
     logoUrl?: string;
   };
   widget?: Partial<TenantWidgetSettings>;
+}
+
+export type TenantNotificationProvider = "telegram" | "line" | "whatsapp";
+
+export type TenantNotificationProviderCheckStatus = "connected" | "failed" | "missing-credentials" | "missing-recipient";
+
+export interface TenantNotificationProviderVerifyRequest {
+  lineChannelAccessToken?: string;
+  provider: TenantNotificationProvider;
+  telegramBotToken?: string;
+  whatsappAccessToken?: string;
+  whatsappGraphApiVersion?: string;
+  whatsappPhoneNumberId?: string;
+}
+
+export interface TenantNotificationProviderTestRequest extends TenantNotificationProviderVerifyRequest {
+  lineRecipientIds?: string[];
+  telegramChatIds?: string[];
+  whatsappRecipients?: string[];
+}
+
+export interface TenantNotificationProviderCheckResponse {
+  checkedAt: string;
+  displayName?: string;
+  error?: string;
+  provider: TenantNotificationProvider;
+  status: TenantNotificationProviderCheckStatus;
 }
 
 export type PublicWidgetReadinessStatus = "ready" | "test-mode" | "needs-setup";

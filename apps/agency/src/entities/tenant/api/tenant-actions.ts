@@ -2,11 +2,17 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import type { TenantLeadQualificationField, TenantWidgetLanguage, TenantWidgetTone } from "@propertyflow/contracts";
+import type {
+  TenantLeadQualificationField,
+  TenantNotificationProvider,
+  TenantNotificationProviderCheckResponse,
+  TenantWidgetLanguage,
+  TenantWidgetTone
+} from "@propertyflow/contracts";
 import { supportedLeadQualificationFields } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { normalizeWidgetListingUrlTemplate } from "@entities/tenant/model/widget-listing-links";
-import { updateTenantSettings } from "@shared/api/agency-client";
+import { sendNotificationProviderTest, updateTenantSettings, verifyNotificationProvider } from "@shared/api/agency-client";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
@@ -28,6 +34,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const leadTelegramBotToken = getOptionalString(formData, "leadTelegramBotToken");
   const leadLineRecipientIds = getTextList(formData, "leadLineRecipientIds");
   const leadLineChannelAccessToken = getOptionalString(formData, "leadLineChannelAccessToken");
+  const leadLineChannelSecret = getOptionalString(formData, "leadLineChannelSecret");
   const leadWhatsappRecipients = getPhoneList(formData, "leadWhatsappRecipients");
   const leadWhatsappAccessToken = getOptionalString(formData, "leadWhatsappAccessToken");
   const leadWhatsappPhoneNumberId = getOptionalString(formData, "leadWhatsappPhoneNumberId");
@@ -63,6 +70,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
         ...(leadTelegramBotToken ? { leadTelegramBotToken } : {}),
         ...(leadLineRecipientIds ? { leadLineRecipientIds } : {}),
         ...(leadLineChannelAccessToken ? { leadLineChannelAccessToken } : {}),
+        ...(leadLineChannelSecret ? { leadLineChannelSecret } : {}),
         ...(leadWhatsappRecipients ? { leadWhatsappRecipients } : {}),
         ...(leadWhatsappAccessToken ? { leadWhatsappAccessToken } : {}),
         ...(leadWhatsappPhoneNumberId ? { leadWhatsappPhoneNumberId } : {}),
@@ -83,6 +91,20 @@ export async function updateTenantSettingsAction(formData: FormData) {
   redirect("/settings?updated=tenant-settings#tenant-settings-form");
 }
 
+export async function verifyNotificationProviderAction(formData: FormData) {
+  await requireAgencySession();
+  const result = await verifyNotificationProvider(getNotificationProviderPayload(formData));
+
+  redirect(buildNotificationResultUrl("verify", result));
+}
+
+export async function sendNotificationProviderTestAction(formData: FormData) {
+  await requireAgencySession();
+  const result = await sendNotificationProviderTest(getNotificationProviderPayload(formData));
+
+  redirect(buildNotificationResultUrl("test", result));
+}
+
 function getTextList(formData: FormData, key: string): string[] | undefined {
   if (!formData.has(key)) {
     return undefined;
@@ -91,6 +113,49 @@ function getTextList(formData: FormData, key: string): string[] | undefined {
   const raw = String(formData.get(key) ?? "");
 
   return Array.from(new Set(raw.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean))).slice(0, 10);
+}
+
+function getNotificationProviderPayload(formData: FormData) {
+  const provider = getNotificationProvider(formData);
+
+  return {
+    lineChannelAccessToken: getOptionalString(formData, "leadLineChannelAccessToken"),
+    lineRecipientIds: getTextList(formData, "leadLineRecipientIds"),
+    provider,
+    telegramBotToken: getOptionalString(formData, "leadTelegramBotToken"),
+    telegramChatIds: getTextList(formData, "leadTelegramChatIds"),
+    whatsappAccessToken: getOptionalString(formData, "leadWhatsappAccessToken"),
+    whatsappGraphApiVersion: getOptionalString(formData, "leadWhatsappGraphApiVersion"),
+    whatsappPhoneNumberId: getOptionalString(formData, "leadWhatsappPhoneNumberId"),
+    whatsappRecipients: getPhoneList(formData, "leadWhatsappRecipients")
+  };
+}
+
+function getNotificationProvider(formData: FormData): TenantNotificationProvider {
+  const value = String(formData.get("notificationProvider") ?? "");
+
+  return value === "telegram" || value === "line" || value === "whatsapp" ? value : "telegram";
+}
+
+function buildNotificationResultUrl(
+  action: "test" | "verify",
+  result: TenantNotificationProviderCheckResponse
+): string {
+  const params = new URLSearchParams({
+    notificationAction: action,
+    notificationProvider: result.provider,
+    notificationStatus: result.status
+  });
+
+  if (result.displayName) {
+    params.set("notificationName", result.displayName);
+  }
+
+  if (result.error) {
+    params.set("notificationError", result.error);
+  }
+
+  return `/settings?${params.toString()}#lead-notification-settings`;
 }
 
 function getPhoneList(formData: FormData, key: string): string[] | undefined {

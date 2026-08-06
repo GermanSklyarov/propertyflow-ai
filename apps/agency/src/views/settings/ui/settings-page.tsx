@@ -1,16 +1,19 @@
 import type { BackgroundJobMonitorItem, KnowledgeDocumentSnapshot, TenantSnapshot, TenantUsageResponse } from "@propertyflow/contracts";
+import type { NotificationActionResult } from "@features/tenant-settings-update/ui/tenant-lead-notification-fields";
 import { TenantSettingsPanel } from "@widgets/tenant-settings/ui/tenant-settings-panel";
 import styles from "./settings-page.module.css";
 
 export function SettingsPage({
   knowledgeDocuments,
   knowledgeJobs,
+  notificationResult,
   settingsSaved,
   tenant,
   usage
 }: {
   knowledgeDocuments?: KnowledgeDocumentSnapshot[];
   knowledgeJobs?: BackgroundJobMonitorItem[];
+  notificationResult?: NotificationActionResult;
   settingsSaved?: boolean;
   tenant: TenantSnapshot;
   usage: TenantUsageResponse;
@@ -32,6 +35,7 @@ export function SettingsPage({
         <TenantSettingsPanel
           knowledgeDocuments={knowledgeDocuments ?? []}
           knowledgeJobs={knowledgeJobs ?? []}
+          notificationResult={notificationResult}
           saved={settingsSaved}
           tenant={tenant}
           usage={usage}

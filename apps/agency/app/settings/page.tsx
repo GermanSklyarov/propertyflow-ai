@@ -6,11 +6,19 @@ import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
 import { SettingsPage } from "@views/settings/ui/settings-page";
+import type { NotificationActionResult } from "@features/tenant-settings-update/ui/tenant-lead-notification-fields";
 
 export default async function AgencySettingsPage({
   searchParams
 }: {
-  searchParams: Promise<{ updated?: string }>;
+  searchParams: Promise<{
+    notificationAction?: string;
+    notificationError?: string;
+    notificationName?: string;
+    notificationProvider?: string;
+    notificationStatus?: string;
+    updated?: string;
+  }>;
 }) {
   const query = await searchParams;
   const { tenantId } = await requireAgencySession();
@@ -31,6 +39,7 @@ export default async function AgencySettingsPage({
       <SettingsPage
         knowledgeDocuments={documentsResult.items}
         knowledgeJobs={knowledgeJobs}
+        notificationResult={parseNotificationResult(query)}
         settingsSaved={query.updated === "tenant-settings"}
         tenant={tenant}
         usage={usage}
@@ -46,4 +55,36 @@ export default async function AgencySettingsPage({
       />
     );
   }
+}
+
+function parseNotificationResult(query: {
+  notificationAction?: string;
+  notificationError?: string;
+  notificationName?: string;
+  notificationProvider?: string;
+  notificationStatus?: string;
+}): NotificationActionResult | undefined {
+  const action = query.notificationAction;
+  const provider = query.notificationProvider;
+  const status = query.notificationStatus;
+
+  if ((action !== "test" && action !== "verify") || !isNotificationProvider(provider) || !isNotificationStatus(status)) {
+    return undefined;
+  }
+
+  return {
+    action,
+    displayName: query.notificationName,
+    error: query.notificationError,
+    provider,
+    status
+  };
+}
+
+function isNotificationProvider(value: string | undefined): value is NotificationActionResult["provider"] {
+  return value === "telegram" || value === "line" || value === "whatsapp";
+}
+
+function isNotificationStatus(value: string | undefined): value is NotificationActionResult["status"] {
+  return value === "connected" || value === "failed" || value === "missing-credentials" || value === "missing-recipient";
 }

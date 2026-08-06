@@ -114,6 +114,7 @@ describe("PgTenantRepository", () => {
       null,
       [],
       null,
+      null,
       [],
       null,
       null,

@@ -19,6 +19,7 @@ import {
   Users
 } from "lucide-react";
 import type { ReactNode } from "react";
+import type { NotificationActionResult } from "@features/tenant-settings-update/ui/tenant-lead-notification-fields";
 import { UpdateTenantSettingsForm } from "@features/tenant-settings-update/ui/update-tenant-settings-form";
 import { countRunningKnowledgeJobs } from "@entities/jobs/model/background-jobs";
 import { buildKnowledgeStarterReadiness } from "@entities/knowledge/model/knowledge-starter-readiness";
@@ -45,12 +46,14 @@ import { WidgetProductionCheckPanel } from "./widget-production-check-panel";
 export function TenantSettingsPanel({
   knowledgeDocuments,
   knowledgeJobs,
+  notificationResult,
   saved,
   tenant,
   usage
 }: {
   knowledgeDocuments: KnowledgeDocumentSnapshot[];
   knowledgeJobs: BackgroundJobMonitorItem[];
+  notificationResult?: NotificationActionResult;
   saved?: boolean;
   tenant: TenantSnapshot;
   usage: TenantUsageResponse;
@@ -407,7 +410,7 @@ export function TenantSettingsPanel({
           <SlidersHorizontal size={20} />
         </div>
 
-        <UpdateTenantSettingsForm saved={saved} tenant={tenant} />
+        <UpdateTenantSettingsForm notificationResult={notificationResult} saved={saved} tenant={tenant} />
       </section>
 
       <section className={styles.panel}>

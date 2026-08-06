@@ -124,6 +124,11 @@ export class UpdateTenantWidgetDto {
   @IsString()
   leadLineChannelAccessToken?: string;
 
+  @ApiProperty({ required: false, example: "line-channel-secret" })
+  @IsOptional()
+  @IsString()
+  leadLineChannelSecret?: string;
+
   @ApiProperty({ required: false, example: ["+66812345678"], type: [String] })
   @IsOptional()
   @IsArray()

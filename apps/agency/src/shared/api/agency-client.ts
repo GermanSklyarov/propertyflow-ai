@@ -85,6 +85,9 @@ import type {
   SavedSearchAlertAnalyticsResponse,
   SavedSearchOpportunitiesResponse,
   TenantDashboardMetrics,
+  TenantNotificationProviderCheckResponse,
+  TenantNotificationProviderTestRequest,
+  TenantNotificationProviderVerifyRequest,
   TenantSnapshot,
   TenantWidgetInstallCheckRequest,
   TenantWidgetInstallCheckResponse,
@@ -1447,6 +1450,44 @@ export async function verifyWidgetInstall(
   }
 
   return (await response.json()) as TenantWidgetInstallCheckResponse;
+}
+
+export async function verifyNotificationProvider(
+  request: TenantNotificationProviderVerifyRequest
+): Promise<TenantNotificationProviderCheckResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/current/notifications/provider/verify`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(await agencyApiHeaders())
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to verify notification provider: ${response.status}`);
+  }
+
+  return (await response.json()) as TenantNotificationProviderCheckResponse;
+}
+
+export async function sendNotificationProviderTest(
+  request: TenantNotificationProviderTestRequest
+): Promise<TenantNotificationProviderCheckResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/current/notifications/provider/test`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(await agencyApiHeaders())
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to send notification provider test: ${response.status}`);
+  }
+
+  return (await response.json()) as TenantNotificationProviderCheckResponse;
 }
 
 function toQueryString(request: object) {

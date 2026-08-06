@@ -24,6 +24,9 @@ import type {
   RefreshAgencySessionResponse,
   RequestAgencyMagicLinkRequest,
   RequestAgencyMagicLinkResponse,
+  TenantNotificationProviderCheckResponse,
+  TenantNotificationProviderTestRequest,
+  TenantNotificationProviderVerifyRequest,
   TenantLeadQualificationField,
   TenantSnapshot,
   TenantSubscriptionPlan,
@@ -472,6 +475,53 @@ export class TenantService {
     }
   }
 
+  async verifyNotificationProvider(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderVerifyRequest
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const checkedAt = new Date().toISOString();
+
+    switch (request.provider) {
+      case "telegram":
+        return this.verifyTelegramProvider(tenant, request, checkedAt);
+      case "line":
+        return this.verifyLineProvider(tenant, request, checkedAt);
+      case "whatsapp":
+        return this.verifyWhatsappProvider(tenant, request, checkedAt);
+      default:
+        return {
+          checkedAt,
+          error: "Unsupported notification provider.",
+          provider: request.provider,
+          status: "failed"
+        };
+    }
+  }
+
+  async sendNotificationProviderTest(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderTestRequest
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const checkedAt = new Date().toISOString();
+    const text = `PropertyFlowAI test notification for ${tenant.branding.displayName || tenant.name}.`;
+
+    switch (request.provider) {
+      case "telegram":
+        return this.sendTelegramProviderTest(tenant, request, checkedAt, text);
+      case "line":
+        return this.sendLineProviderTest(tenant, request, checkedAt, text);
+      case "whatsapp":
+        return this.sendWhatsappProviderTest(tenant, request, checkedAt, text);
+      default:
+        return {
+          checkedAt,
+          error: "Unsupported notification provider.",
+          provider: request.provider,
+          status: "failed"
+        };
+    }
+  }
+
   private toUsageMetric(key: TenantUsageMetric["key"], used: number, limit: number): TenantUsageMetric {
     return {
       key,
@@ -494,6 +544,232 @@ export class TenantService {
     }
 
     throw new ForbiddenException("Agency session exchange is not configured");
+  }
+
+  private async verifyTelegramProvider(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderVerifyRequest,
+    checkedAt: string
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const token = normalizeSecretInput(request.telegramBotToken) ?? tenant.widget.leadTelegramBotToken;
+
+    if (!token) {
+      return missingCredentials("telegram", checkedAt, "Paste a Telegram bot token before verifying.");
+    }
+
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const body = (await response.json().catch(() => null)) as TelegramGetMeResponse | null;
+
+      if (!response.ok || !body?.ok) {
+        return failedProvider("telegram", checkedAt, "Telegram rejected this bot token.");
+      }
+
+      return {
+        checkedAt,
+        displayName: body.result.username ? `@${body.result.username}` : body.result.first_name,
+        provider: "telegram",
+        status: "connected"
+      };
+    } catch (error) {
+      return failedProvider("telegram", checkedAt, toErrorMessage(error));
+    }
+  }
+
+  private async verifyLineProvider(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderVerifyRequest,
+    checkedAt: string
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const token = normalizeSecretInput(request.lineChannelAccessToken) ?? tenant.widget.leadLineChannelAccessToken;
+
+    if (!token) {
+      return missingCredentials("line", checkedAt, "Paste a LINE channel access token before verifying.");
+    }
+
+    try {
+      const response = await fetch("https://api.line.me/v2/bot/info", {
+        headers: {
+          authorization: `Bearer ${token}`
+        }
+      });
+      const body = (await response.json().catch(() => null)) as LineBotInfoResponse | null;
+
+      if (!response.ok) {
+        return failedProvider("line", checkedAt, "LINE rejected this channel access token.");
+      }
+
+      return {
+        checkedAt,
+        displayName: body?.displayName,
+        provider: "line",
+        status: "connected"
+      };
+    } catch (error) {
+      return failedProvider("line", checkedAt, toErrorMessage(error));
+    }
+  }
+
+  private async verifyWhatsappProvider(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderVerifyRequest,
+    checkedAt: string
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const token = normalizeSecretInput(request.whatsappAccessToken) ?? tenant.widget.leadWhatsappAccessToken;
+    const phoneNumberId = normalizeSecretInput(request.whatsappPhoneNumberId) ?? tenant.widget.leadWhatsappPhoneNumberId;
+    const graphVersion = normalizeGraphApiVersionInput(request.whatsappGraphApiVersion ?? tenant.widget.leadWhatsappGraphApiVersion);
+
+    if (!token || !phoneNumberId) {
+      return missingCredentials("whatsapp", checkedAt, "Paste a WhatsApp access token and phone number ID before verifying.");
+    }
+
+    try {
+      const response = await fetch(
+        `https://graph.facebook.com/${graphVersion}/${phoneNumberId}?fields=display_phone_number,verified_name`,
+        {
+          headers: {
+            authorization: `Bearer ${token}`
+          }
+        }
+      );
+      const body = (await response.json().catch(() => null)) as WhatsappPhoneNumberInfoResponse | null;
+
+      if (!response.ok) {
+        return failedProvider("whatsapp", checkedAt, "WhatsApp Cloud API rejected these credentials.");
+      }
+
+      return {
+        checkedAt,
+        displayName: body?.verified_name ?? body?.display_phone_number,
+        provider: "whatsapp",
+        status: "connected"
+      };
+    } catch (error) {
+      return failedProvider("whatsapp", checkedAt, toErrorMessage(error));
+    }
+  }
+
+  private async sendTelegramProviderTest(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderTestRequest,
+    checkedAt: string,
+    text: string
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const token = normalizeSecretInput(request.telegramBotToken) ?? tenant.widget.leadTelegramBotToken;
+    const chatIds = request.telegramChatIds?.length ? request.telegramChatIds : tenant.widget.leadTelegramChatIds ?? [];
+
+    if (!token) {
+      return missingCredentials("telegram", checkedAt, "Paste a Telegram bot token before sending a test.");
+    }
+
+    if (!chatIds.length) {
+      return missingRecipient("telegram", checkedAt, "Add at least one Telegram chat ID before sending a test.");
+    }
+
+    return this.postProviderTest(
+      "telegram",
+      checkedAt,
+      chatIds.map((chatId) => ({
+        body: { chat_id: chatId, disable_web_page_preview: true, text },
+        headers: { "content-type": "application/json" },
+        url: `https://api.telegram.org/bot${token}/sendMessage`
+      }))
+    );
+  }
+
+  private async sendLineProviderTest(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderTestRequest,
+    checkedAt: string,
+    text: string
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const token = normalizeSecretInput(request.lineChannelAccessToken) ?? tenant.widget.leadLineChannelAccessToken;
+    const recipientIds = request.lineRecipientIds?.length ? request.lineRecipientIds : tenant.widget.leadLineRecipientIds ?? [];
+
+    if (!token) {
+      return missingCredentials("line", checkedAt, "Paste a LINE channel access token before sending a test.");
+    }
+
+    if (!recipientIds.length) {
+      return missingRecipient("line", checkedAt, "Add at least one LINE recipient ID before sending a test.");
+    }
+
+    return this.postProviderTest(
+      "line",
+      checkedAt,
+      recipientIds.map((recipientId) => ({
+        body: { messages: [{ text, type: "text" }], to: recipientId },
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        url: "https://api.line.me/v2/bot/message/push"
+      }))
+    );
+  }
+
+  private async sendWhatsappProviderTest(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderTestRequest,
+    checkedAt: string,
+    text: string
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const token = normalizeSecretInput(request.whatsappAccessToken) ?? tenant.widget.leadWhatsappAccessToken;
+    const phoneNumberId = normalizeSecretInput(request.whatsappPhoneNumberId) ?? tenant.widget.leadWhatsappPhoneNumberId;
+    const graphVersion = normalizeGraphApiVersionInput(request.whatsappGraphApiVersion ?? tenant.widget.leadWhatsappGraphApiVersion);
+    const recipients = request.whatsappRecipients?.length ? request.whatsappRecipients : tenant.widget.leadWhatsappRecipients ?? [];
+
+    if (!token || !phoneNumberId) {
+      return missingCredentials("whatsapp", checkedAt, "Paste WhatsApp Cloud API credentials before sending a test.");
+    }
+
+    if (!recipients.length) {
+      return missingRecipient("whatsapp", checkedAt, "Add at least one WhatsApp recipient before sending a test.");
+    }
+
+    return this.postProviderTest(
+      "whatsapp",
+      checkedAt,
+      recipients.map((recipient) => ({
+        body: {
+          messaging_product: "whatsapp",
+          recipient_type: "individual",
+          text: { body: text, preview_url: false },
+          to: recipient,
+          type: "text"
+        },
+        headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
+        url: `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`
+      }))
+    );
+  }
+
+  private async postProviderTest(
+    provider: TenantNotificationProviderTestRequest["provider"],
+    checkedAt: string,
+    requests: Array<{ body: unknown; headers: Record<string, string>; url: string }>
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    try {
+      const responses = await Promise.all(
+        requests.map((request) =>
+          fetch(request.url, {
+            method: "POST",
+            headers: request.headers,
+            body: JSON.stringify(request.body)
+          })
+        )
+      );
+      const failed = responses.find((response) => !response.ok);
+
+      if (failed) {
+        return failedProvider(provider, checkedAt, `Test message failed with HTTP ${failed.status}.`);
+      }
+
+      return {
+        checkedAt,
+        provider,
+        status: "connected"
+      };
+    } catch (error) {
+      return failedProvider(provider, checkedAt, toErrorMessage(error));
+    }
   }
 }
 
@@ -798,6 +1074,74 @@ function normalizeSubscriptionPlan(plan: TenantSubscriptionPlan | undefined): Te
   return plan && supportedSubscriptionPlans.includes(plan) ? plan : "starter";
 }
 
+interface TelegramGetMeResponse {
+  ok: boolean;
+  result: {
+    first_name?: string;
+    username?: string;
+  };
+}
+
+interface LineBotInfoResponse {
+  displayName?: string;
+}
+
+interface WhatsappPhoneNumberInfoResponse {
+  display_phone_number?: string;
+  verified_name?: string;
+}
+
+function missingCredentials(
+  provider: TenantNotificationProviderVerifyRequest["provider"],
+  checkedAt: string,
+  error: string
+): TenantNotificationProviderCheckResponse {
+  return {
+    checkedAt,
+    error,
+    provider,
+    status: "missing-credentials"
+  };
+}
+
+function missingRecipient(
+  provider: TenantNotificationProviderVerifyRequest["provider"],
+  checkedAt: string,
+  error: string
+): TenantNotificationProviderCheckResponse {
+  return {
+    checkedAt,
+    error,
+    provider,
+    status: "missing-recipient"
+  };
+}
+
+function failedProvider(
+  provider: TenantNotificationProviderVerifyRequest["provider"],
+  checkedAt: string,
+  error: string
+): TenantNotificationProviderCheckResponse {
+  return {
+    checkedAt,
+    error,
+    provider,
+    status: "failed"
+  };
+}
+
+function normalizeSecretInput(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+
+  return trimmed || undefined;
+}
+
+function normalizeGraphApiVersionInput(value: string | undefined): string {
+  const version = value?.trim();
+
+  return version && /^v\d+\.\d+$/.test(version) ? version : "v20.0";
+}
+
 function normalizeOptionalWebsite(value: string | undefined): string | undefined {
   const website = value?.trim();
 
@@ -929,4 +1273,8 @@ function normalizePersonaGenders(
     },
     {}
   );
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
 }

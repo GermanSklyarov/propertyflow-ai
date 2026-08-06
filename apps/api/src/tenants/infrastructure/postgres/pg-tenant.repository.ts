@@ -42,6 +42,7 @@ interface TenantRow {
   widget_lead_notification_emails: string[] | null;
   widget_lead_notifications_enabled: boolean | null;
   widget_lead_line_channel_access_token: string | null;
+  widget_lead_line_channel_secret: string | null;
   widget_lead_line_recipient_ids: string[] | null;
   widget_lead_telegram_bot_token: string | null;
   widget_lead_qualification_fields: string[] | null;
@@ -75,6 +76,7 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
   leadNotificationEmails: [],
   leadNotificationsEnabled: true,
   leadLineChannelAccessToken: undefined,
+  leadLineChannelSecret: undefined,
   leadLineRecipientIds: [],
   leadTelegramBotToken: undefined,
   leadTelegramChatIds: [],
@@ -241,6 +243,7 @@ export class PgTenantRepository implements TenantRepository {
             widget_lead_telegram_bot_token,
             widget_lead_line_recipient_ids,
             widget_lead_line_channel_access_token,
+            widget_lead_line_channel_secret,
             widget_lead_whatsapp_recipients,
             widget_lead_whatsapp_access_token,
             widget_lead_whatsapp_phone_number_id,
@@ -285,7 +288,9 @@ export class PgTenantRepository implements TenantRepository {
             $25,
             $26,
             $27,
-            $27
+            $28,
+            $29,
+            $29
           )
           returning *
         `,
@@ -309,6 +314,7 @@ export class PgTenantRepository implements TenantRepository {
           defaultWidgetSettings.leadTelegramBotToken ?? null,
           defaultWidgetSettings.leadLineRecipientIds,
           defaultWidgetSettings.leadLineChannelAccessToken ?? null,
+          defaultWidgetSettings.leadLineChannelSecret ?? null,
           defaultWidgetSettings.leadWhatsappRecipients,
           defaultWidgetSettings.leadWhatsappAccessToken ?? null,
           defaultWidgetSettings.leadWhatsappPhoneNumberId ?? null,
@@ -387,15 +393,16 @@ export class PgTenantRepository implements TenantRepository {
           widget_lead_telegram_bot_token = $18,
           widget_lead_line_recipient_ids = $19,
           widget_lead_line_channel_access_token = $20,
-          widget_lead_whatsapp_recipients = $21,
-          widget_lead_whatsapp_access_token = $22,
-          widget_lead_whatsapp_phone_number_id = $23,
-          widget_lead_whatsapp_graph_api_version = $24,
-          widget_lead_qualification_fields = $25,
-          widget_listing_url_template = $26,
-          widget_tone = $27,
-          widget_languages = $28,
-          updated_at = $29
+          widget_lead_line_channel_secret = $21,
+          widget_lead_whatsapp_recipients = $22,
+          widget_lead_whatsapp_access_token = $23,
+          widget_lead_whatsapp_phone_number_id = $24,
+          widget_lead_whatsapp_graph_api_version = $25,
+          widget_lead_qualification_fields = $26,
+          widget_listing_url_template = $27,
+          widget_tone = $28,
+          widget_languages = $29,
+          updated_at = $30
         where id = $1
         returning *
       `,
@@ -420,6 +427,7 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.leadTelegramBotToken || current.widget.leadTelegramBotToken || null,
         request.widget?.leadLineRecipientIds ?? current.widget.leadLineRecipientIds ?? [],
         request.widget?.leadLineChannelAccessToken || current.widget.leadLineChannelAccessToken || null,
+        request.widget?.leadLineChannelSecret || current.widget.leadLineChannelSecret || null,
         request.widget?.leadWhatsappRecipients ?? current.widget.leadWhatsappRecipients ?? [],
         request.widget?.leadWhatsappAccessToken || current.widget.leadWhatsappAccessToken || null,
         request.widget?.leadWhatsappPhoneNumberId || current.widget.leadWhatsappPhoneNumberId || null,
@@ -463,6 +471,7 @@ export class PgTenantRepository implements TenantRepository {
         leadNotificationEmails: filterEmails(row.widget_lead_notification_emails),
         leadNotificationsEnabled: row.widget_lead_notifications_enabled ?? defaultWidgetSettings.leadNotificationsEnabled,
         leadLineChannelAccessToken: normalizeSecret(row.widget_lead_line_channel_access_token),
+        leadLineChannelSecret: normalizeSecret(row.widget_lead_line_channel_secret),
         leadLineRecipientIds: filterTextList(row.widget_lead_line_recipient_ids),
         leadTelegramBotToken: normalizeSecret(row.widget_lead_telegram_bot_token),
         leadTelegramChatIds: filterTextList(row.widget_lead_telegram_chat_ids),

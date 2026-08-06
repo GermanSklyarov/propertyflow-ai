@@ -1,6 +1,12 @@
 import { Body, Controller, Get, Inject, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
-import type { RequestUser, TenantSnapshot, TenantUsageResponse, TenantWidgetInstallCheckResponse } from "@propertyflow/contracts";
+import type {
+  RequestUser,
+  TenantNotificationProviderCheckResponse,
+  TenantSnapshot,
+  TenantUsageResponse,
+  TenantWidgetInstallCheckResponse
+} from "@propertyflow/contracts";
 import { AuditService } from "../../../audit/application/audit.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -10,6 +16,7 @@ import { Tenant } from "../../../shared/presentation/tenant.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { TenantService } from "../../application/tenant.service.js";
 import { TenantWidgetInstallCheckDto } from "./tenant-widget-install-check.dto.js";
+import { TenantNotificationProviderTestDto, TenantNotificationProviderVerifyDto } from "./tenant-notification-provider.dto.js";
 import { UpdateTenantSettingsDto } from "./update-tenant-settings.dto.js";
 
 @Controller("tenants")
@@ -81,5 +88,23 @@ export class CurrentTenantController {
     @Body() payload: TenantWidgetInstallCheckDto
   ): Promise<TenantWidgetInstallCheckResponse> {
     return this.tenants.verifyWidgetInstall(tenant, payload.url);
+  }
+
+  @Post("current/notifications/provider/verify")
+  @Roles("manager", "admin")
+  verifyNotificationProvider(
+    @Tenant() tenant: TenantSnapshot,
+    @Body() payload: TenantNotificationProviderVerifyDto
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    return this.tenants.verifyNotificationProvider(tenant, payload);
+  }
+
+  @Post("current/notifications/provider/test")
+  @Roles("manager", "admin")
+  sendNotificationProviderTest(
+    @Tenant() tenant: TenantSnapshot,
+    @Body() payload: TenantNotificationProviderTestDto
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    return this.tenants.sendNotificationProviderTest(tenant, payload);
   }
 }

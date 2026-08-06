@@ -779,6 +779,63 @@ describe("TenantService", () => {
     });
   });
 
+  it("verifies LINE notification credentials with the Bot info endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ displayName: "Demo Agency LINE" }),
+      ok: true,
+      status: 200
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new TenantService(repository());
+
+    await expect(
+      service.verifyNotificationProvider(tenant(), {
+        lineChannelAccessToken: "line-token",
+        provider: "line"
+      })
+    ).resolves.toMatchObject({
+      displayName: "Demo Agency LINE",
+      provider: "line",
+      status: "connected"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.line.me/v2/bot/info",
+      expect.objectContaining({
+        headers: {
+          authorization: "Bearer line-token"
+        }
+      })
+    );
+  });
+
+  it("sends Telegram notification test messages to configured recipients", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new TenantService(repository());
+    const currentTenant = tenant({
+      widget: {
+        ...tenant().widget,
+        leadTelegramBotToken: "telegram-token",
+        leadTelegramChatIds: ["-100123"]
+      }
+    });
+
+    await expect(
+      service.sendNotificationProviderTest(currentTenant, {
+        provider: "telegram"
+      })
+    ).resolves.toMatchObject({
+      provider: "telegram",
+      status: "connected"
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.telegram.org/bottelegram-token/sendMessage",
+      expect.objectContaining({
+        body: expect.stringContaining('"chat_id":"-100123"')
+      })
+    );
+  });
+
   it("normalizes widget language updates before saving settings", async () => {
     let capturedRequest: UpdateTenantSettingsRequest | undefined;
     const service = new TenantService(

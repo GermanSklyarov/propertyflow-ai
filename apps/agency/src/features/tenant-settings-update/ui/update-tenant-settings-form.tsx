@@ -2,6 +2,7 @@ import { BadgeCheck, BellRing, Bot, CheckCircle2, Globe2, Palette, Save, ShieldC
 import { updateTenantSettingsAction } from "@entities/tenant/api/tenant-actions";
 import { getTenantWidgetSettings, leadQualificationFieldOptions } from "@entities/tenant/model/widget-settings";
 import type { TenantSnapshot } from "@propertyflow/contracts";
+import { TenantLeadNotificationFields, type NotificationActionResult } from "./tenant-lead-notification-fields";
 import { TenantWidgetOriginFields } from "./tenant-widget-origin-fields";
 import { TenantWidgetPersonaFields } from "./tenant-widget-persona-fields";
 import styles from "./update-tenant-settings-form.module.css";
@@ -15,9 +16,11 @@ const markets = [
 ];
 
 export function UpdateTenantSettingsForm({
+  notificationResult,
   saved,
   tenant
 }: {
+  notificationResult?: NotificationActionResult;
   saved?: boolean;
   tenant: TenantSnapshot;
 }) {
@@ -138,102 +141,7 @@ export function UpdateTenantSettingsForm({
           <BellRing size={16} />
           Lead notifications
         </div>
-        <label className={styles.toggleField}>
-          <input defaultChecked={widgetSettings.leadNotificationsEnabled} name="leadNotificationsEnabled" type="checkbox" />
-          <span>
-            <strong>Notify agency when Concierge creates a qualified lead</strong>
-            <small>Email uses PropertyFlowAI email delivery. Messenger channels use this agency workspace's own bot credentials.</small>
-          </span>
-        </label>
-        <div className={styles.fieldGrid}>
-          <label className={styles.field}>
-            <span>Email recipients</span>
-            <textarea
-              defaultValue={widgetSettings.leadNotificationEmails?.join("\n") ?? ""}
-              name="leadNotificationEmails"
-              placeholder="owner@agency.com"
-              rows={3}
-            />
-          </label>
-          <label className={styles.field}>
-            <span>Webhook URL</span>
-            <input
-              defaultValue={widgetSettings.leadWebhookUrl ?? ""}
-              name="leadWebhookUrl"
-              pattern="^$|^https://.+"
-              placeholder="https://agency.com/webhooks/propertyflow-leads"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>Telegram bot token</span>
-            <input
-              name="leadTelegramBotToken"
-              placeholder={widgetSettings.leadTelegramBotToken ? "Saved. Paste a new token to replace." : "Create a bot with BotFather and paste the token"}
-              type="password"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>Telegram chat IDs</span>
-            <textarea
-              defaultValue={widgetSettings.leadTelegramChatIds?.join("\n") ?? ""}
-              name="leadTelegramChatIds"
-              placeholder="-1001234567890"
-              rows={3}
-            />
-          </label>
-          <label className={styles.field}>
-            <span>LINE channel access token</span>
-            <input
-              name="leadLineChannelAccessToken"
-              placeholder={widgetSettings.leadLineChannelAccessToken ? "Saved. Paste a new token to replace." : "Paste this agency LINE channel access token"}
-              type="password"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>LINE recipient IDs</span>
-            <textarea
-              defaultValue={widgetSettings.leadLineRecipientIds?.join("\n") ?? ""}
-              name="leadLineRecipientIds"
-              placeholder="U4af4980629..."
-              rows={3}
-            />
-          </label>
-          <label className={styles.field}>
-            <span>WhatsApp access token</span>
-            <input
-              name="leadWhatsappAccessToken"
-              placeholder={widgetSettings.leadWhatsappAccessToken ? "Saved. Paste a new token to replace." : "Paste this agency WhatsApp Cloud API token"}
-              type="password"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>WhatsApp phone number ID</span>
-            <input
-              defaultValue={widgetSettings.leadWhatsappPhoneNumberId ?? ""}
-              name="leadWhatsappPhoneNumberId"
-              placeholder="123456789012345"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>WhatsApp Graph API version</span>
-            <input
-              defaultValue={widgetSettings.leadWhatsappGraphApiVersion ?? "v20.0"}
-              name="leadWhatsappGraphApiVersion"
-              pattern="^v[0-9]+[.][0-9]+$"
-              placeholder="v20.0"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>WhatsApp recipients</span>
-            <textarea
-              defaultValue={widgetSettings.leadWhatsappRecipients?.join("\n") ?? ""}
-              name="leadWhatsappRecipients"
-              placeholder="+66812345678"
-              rows={3}
-            />
-          </label>
-        </div>
-        <p className={styles.hint}>Create the agency's own Telegram bot, LINE channel, or WhatsApp Cloud API app, then paste credentials here. Blank secret fields keep the saved value.</p>
+        <TenantLeadNotificationFields result={notificationResult} widgetSettings={widgetSettings} />
       </section>
 
       <div className={styles.actions}>
