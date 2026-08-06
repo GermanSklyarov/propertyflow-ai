@@ -218,6 +218,50 @@ describe("AiChatService", () => {
     });
   });
 
+  it("uses search result filters for structured fallback without re-interpreting the request", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const fallbackProperty = propertyFactory({
+      id: "fallback-property",
+      title: "Structured Fallback Condo"
+    });
+    const properties = {
+      findById: vi.fn().mockResolvedValue(propertyFactory()),
+      search: vi.fn().mockResolvedValue([fallbackProperty])
+    };
+    const naturalLanguageSearch = {
+      interpret: vi.fn().mockReturnValue({
+        filters: { market: "bangkok" },
+        interpretedIntent: "Stale interpretation",
+        rankingExplanation: "This should not be used."
+      }),
+      search: vi.fn().mockResolvedValue({
+        filters: { market: "pattaya", maxPriceThb: 3_000_000 },
+        interpretedIntent: "Pattaya condo under 3M",
+        items: [],
+        rankingExplanation: "Indexed search returned no hits.",
+        total: 0
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      message: "Find a condo in Pattaya under 3M"
+    });
+
+    expect(naturalLanguageSearch.interpret).not.toHaveBeenCalled();
+    expect(properties.search).toHaveBeenCalledWith("tenant-1", { market: "pattaya", maxPriceThb: 3_000_000 });
+    expect(response.answer).toContain("Structured Fallback Condo");
+    expect(response.answer).toContain("structured PostgreSQL filters as a fallback");
+  });
+
   it("uses previous recommendations for viewing follow-ups instead of running a fresh listing search", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const service = serviceFactory({
@@ -387,11 +431,19 @@ function serviceFactory(overrides: {
   advisor?: {
     summarize: ReturnType<typeof vi.fn>;
   };
+  naturalLanguageSearch?: {
+    interpret: ReturnType<typeof vi.fn>;
+    search: ReturnType<typeof vi.fn>;
+  };
+  properties?: {
+    findById: ReturnType<typeof vi.fn>;
+    search: ReturnType<typeof vi.fn>;
+  };
   textGenerator: AiTextGenerator;
   searchItems?: PropertySnapshot[];
   knowledgeItems?: KnowledgeDocumentChunkSnapshot[];
 }): AiChatService {
-  const properties = {
+  const properties = overrides.properties ?? {
     findById: vi.fn().mockResolvedValue(propertyFactory()),
     search: vi.fn().mockResolvedValue(overrides.searchItems ?? [])
   };
@@ -423,13 +475,14 @@ function serviceFactory(overrides: {
       })
     )
   };
-  const naturalLanguageSearch = {
+  const naturalLanguageSearch = overrides.naturalLanguageSearch ?? {
     interpret: vi.fn().mockReturnValue({
       filters: {},
       interpretedIntent: "Pattaya condo search",
       rankingExplanation: "Indexed tenant listings ranked by relevance."
     }),
     search: vi.fn().mockResolvedValue({
+      filters: {},
       interpretedIntent: "Pattaya condo search",
       items: overrides.searchItems ?? [],
       rankingExplanation: "Indexed tenant listings ranked by relevance.",

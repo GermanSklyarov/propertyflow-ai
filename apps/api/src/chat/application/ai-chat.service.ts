@@ -91,15 +91,9 @@ export class AiChatService {
       market: request.market,
       purpose: request.purpose
     });
-    const interpretation = this.naturalLanguageSearch.interpret({
-      locale: request.locale,
-      query: request.message,
-      market: request.market,
-      purpose: request.purpose
-    });
     const fallbackItems = search.items.length
       ? []
-      : await this.properties.search(tenantId, interpretation.filters);
+      : await this.properties.search(tenantId, search.filters);
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
     const knowledge = await this.retrieveKnowledge(tenantId, request);
