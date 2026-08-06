@@ -426,6 +426,47 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("New Search Result Condo");
   });
 
+  it("returns a chat response when a referenced listing is no longer available", async () => {
+    const properties = {
+      findById: vi.fn().mockResolvedValue(null),
+      search: vi.fn()
+    };
+    const knowledge = {
+      searchChunks: vi.fn()
+    };
+    const advisor = {
+      summarize: vi.fn()
+    };
+    const service = serviceFactory({
+      advisor,
+      knowledge,
+      properties,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      message: "Can I see this listing?",
+      propertyId: "missing-property"
+    });
+
+    expect(response.answer).toContain("I cannot access that listing");
+    expect(response.matchedPropertyIds).toEqual([]);
+    expect(response.insights).toEqual([
+      expect.objectContaining({
+        kind: "handoff",
+        propertyId: "missing-property",
+        title: "Listing unavailable"
+      })
+    ]);
+    expect(knowledge.searchChunks).not.toHaveBeenCalled();
+    expect(advisor.summarize).not.toHaveBeenCalled();
+    expect(properties.search).not.toHaveBeenCalled();
+  });
+
   it("reuses the advisor summary for advice and due diligence on property detail answers", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const advisor = {

@@ -1,7 +1,12 @@
 import { ServiceUnavailableException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import type { AiChatCitation, AiChatRequest } from "@propertyflow/contracts";
-import { buildAiChatGenerationContext, buildAiChatResponse, buildClarifyPropertyReferenceResponse } from "./ai-chat-response.js";
+import {
+  buildAiChatGenerationContext,
+  buildAiChatResponse,
+  buildClarifyPropertyReferenceResponse,
+  buildUnavailablePropertyResponse
+} from "./ai-chat-response.js";
 import type { AiTextGenerator } from "./ai-text-generator.js";
 
 describe("ai-chat-response", () => {
@@ -124,6 +129,36 @@ describe("ai-chat-response", () => {
       reason: "Clarification is required before property-specific retrieval."
     });
     expect(response.suggestedActions).toContain("ask-visitor-to-pick-listing");
+  });
+
+  it("builds deterministic unavailable-listing responses for stale property references", () => {
+    const response = buildUnavailablePropertyResponse(
+      {
+        locale: "en",
+        message: "May I see this listing?",
+        propertyId: "missing-property"
+      },
+      {
+        idFactory: () => "response-unavailable",
+        now: () => new Date("2026-07-21T00:00:00.000Z")
+      }
+    );
+
+    expect(response.answer).toContain("I cannot access that listing");
+    expect(response.generation).toEqual({
+      mode: "deterministic-fallback",
+      reason: "Requested property was not found in this tenant workspace."
+    });
+    expect(response.insights).toEqual([
+      {
+        detail: "The visitor asked about a listing that is no longer available in the tenant workspace.",
+        kind: "handoff",
+        propertyId: "missing-property",
+        severity: "warning",
+        title: "Listing unavailable"
+      }
+    ]);
+    expect(response.suggestedActions).toContain("search-similar-listings");
   });
 
   it("builds the final generation context from conversation, evidence, and draft", () => {

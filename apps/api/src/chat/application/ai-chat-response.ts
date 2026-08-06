@@ -88,6 +88,32 @@ export function buildClarifyPropertyReferenceResponse(
   });
 }
 
+export function buildUnavailablePropertyResponse(
+  request: AiChatRequest,
+  options: { idFactory?: () => string; now?: () => Date } = {}
+): AiChatResponse {
+  return buildDeterministicAiChatResponse({
+    citations: [],
+    createdAt: timestamp(options),
+    id: responseId(options),
+    insights: [
+      {
+        kind: "handoff",
+        title: "Listing unavailable",
+        detail: "The visitor asked about a listing that is no longer available in the tenant workspace.",
+        propertyId: request.propertyId,
+        severity: "warning"
+      }
+    ],
+    matchedPropertyIds: [],
+    reason: "Requested property was not found in this tenant workspace.",
+    request,
+    suggestedActions: ["search-similar-listings", "ask-agent-for-current-availability", "create-lead"],
+    text:
+      "I cannot access that listing in the agency workspace right now. It may have been removed or become unavailable. I can look for similar current options, or ask an agent to confirm availability."
+  });
+}
+
 export function buildAiChatGenerationContext(
   request: AiChatRequest,
   context: string,

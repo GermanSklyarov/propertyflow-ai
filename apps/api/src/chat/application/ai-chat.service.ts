@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { Inject, Injectable, Logger } from "@nestjs/common";
 import type {
   AiAdvisorSummary,
   AiChatCitation,
@@ -23,7 +23,11 @@ import {
 import { classifyAiChatIntent } from "./ai-chat-intent.js";
 import { buildAiChatPropertyResponseDraft } from "./ai-chat-property-response.js";
 import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
-import { buildAiChatResponse, buildClarifyPropertyReferenceResponse } from "./ai-chat-response.js";
+import {
+  buildAiChatResponse,
+  buildClarifyPropertyReferenceResponse,
+  buildUnavailablePropertyResponse
+} from "./ai-chat-response.js";
 import { buildAiChatSearchResponseDraft } from "./ai-chat-search-response.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
 
@@ -69,7 +73,7 @@ export class AiChatService {
     const property = await this.properties.findById(tenantId, request.propertyId!);
 
     if (!property) {
-      throw new NotFoundException("Property not found");
+      return buildUnavailablePropertyResponse(request);
     }
 
     const knowledge = await this.retrieveKnowledge(tenantId, request);
