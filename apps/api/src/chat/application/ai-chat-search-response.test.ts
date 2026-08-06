@@ -55,6 +55,25 @@ describe("ai-chat-search-response", () => {
     );
   });
 
+  it("explains when structured fallback supplied matches after indexed search failed", () => {
+    const property = propertyFactory();
+    const draft = buildAiChatSearchResponseDraft({
+      dueDiligence: { contextLines: [], insights: [] },
+      items: [property],
+      knowledge: [],
+      matches: [property],
+      search: searchFactory({
+        items: [],
+        rankingExplanation:
+          "Indexed natural-language search was unavailable, so I used structured repository filters as a fallback."
+      })
+    });
+
+    expect(draft.deterministicDraft).toContain(
+      "Indexed natural-language search was unavailable, so I used structured repository filters as a fallback."
+    );
+  });
+
   it("builds no-match guidance with knowledge context when inventory is missing", () => {
     const draft = buildAiChatSearchResponseDraft({
       dueDiligence: { contextLines: [], insights: [] },

@@ -80,9 +80,7 @@ function buildMatchedSearchDraft(options: {
   const answer = [
     `I found ${options.items.length} matching listing${options.items.length === 1 ? "" : "s"}.`,
     `Top matches: ${options.matches.map((property) => shortPropertyLine(property)).join(" ")}`,
-    options.search.items.length
-      ? options.search.rankingExplanation
-      : "The indexed search returned no hits, so I used the structured PostgreSQL filters as a fallback.",
+    searchExplanation(options.search),
     options.knowledge.length
       ? `Relevant knowledge: ${options.knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
       : ""
@@ -104,4 +102,12 @@ function buildMatchedSearchDraft(options: {
     matchedPropertyIds: options.matches.map((property) => property.id),
     suggestedActions: ["compare-results", "open-map", "save-search"]
   };
+}
+
+function searchExplanation(search: NaturalLanguagePropertySearchResponse): string {
+  if (search.items.length || search.rankingExplanation.includes("unavailable")) {
+    return search.rankingExplanation;
+  }
+
+  return "The indexed search returned no hits, so I used the structured PostgreSQL filters as a fallback.";
 }

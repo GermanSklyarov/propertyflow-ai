@@ -5,7 +5,9 @@ import type {
   AiChatInsight,
   AiChatRequest,
   AiChatResponse,
-  NeighborhoodIntelligence
+  NaturalLanguagePropertySearchResponse,
+  NeighborhoodIntelligence,
+  PropertySearchRequest
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
@@ -99,12 +101,7 @@ export class AiChatService {
     request: AiChatRequest,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
-    const search = await this.naturalLanguageSearch.search(tenantId, {
-      locale: request.locale,
-      query: request.message,
-      market: request.market,
-      purpose: request.purpose
-    });
+    const search = await this.retrieveListingSearch(tenantId, request);
     const fallbackItems = search.items.length
       ? []
       : await this.properties.search(tenantId, search.filters);
@@ -142,6 +139,35 @@ export class AiChatService {
       );
 
       return [];
+    }
+  }
+
+  private async retrieveListingSearch(
+    tenantId: string,
+    request: AiChatRequest
+  ): Promise<NaturalLanguagePropertySearchResponse> {
+    try {
+      return await this.naturalLanguageSearch.search(tenantId, {
+        locale: request.locale,
+        query: request.message,
+        market: request.market,
+        purpose: request.purpose
+      });
+    } catch (error) {
+      const filters = buildStructuredFallbackFilters(request);
+
+      this.logger.warn(
+        `AI chat listing search failed for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      return {
+        filters,
+        interpretedIntent: `Structured fallback search for: "${request.message}"`,
+        items: [],
+        rankingExplanation:
+          "Indexed natural-language search was unavailable, so I used structured repository filters as a fallback.",
+        total: 0
+      };
     }
   }
 
@@ -211,4 +237,11 @@ export class AiChatService {
 
 function emptyDueDiligencePayload(): AiChatDueDiligencePayload {
   return { contextLines: [], insights: [] };
+}
+
+function buildStructuredFallbackFilters(request: AiChatRequest): PropertySearchRequest {
+  return {
+    market: request.market,
+    query: request.message
+  };
 }

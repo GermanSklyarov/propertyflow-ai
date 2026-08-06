@@ -262,6 +262,48 @@ describe("AiChatService", () => {
     expect(response.answer).toContain("structured PostgreSQL filters as a fallback");
   });
 
+  it("uses structured repository fallback when natural language listing search fails", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const fallbackProperty = propertyFactory({
+      id: "fallback-property",
+      title: "Search Failure Fallback Condo"
+    });
+    const properties = {
+      findById: vi.fn().mockResolvedValue(propertyFactory()),
+      search: vi.fn().mockResolvedValue([fallbackProperty])
+    };
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockRejectedValue(new Error("opensearch unavailable"))
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      market: "pattaya",
+      message: "Find a condo in Pattaya under 3M"
+    });
+
+    expect(properties.search).toHaveBeenCalledWith("tenant-1", {
+      market: "pattaya",
+      query: "Find a condo in Pattaya under 3M"
+    });
+    expect(naturalLanguageSearch.interpret).not.toHaveBeenCalled();
+    expect(response.answer).toContain("Search Failure Fallback Condo");
+    expect(response.answer).toContain("Indexed natural-language search was unavailable");
+    expect(warn).toHaveBeenCalledWith(
+      "AI chat listing search failed for tenant tenant-1: opensearch unavailable"
+    );
+  });
+
   it("continues from listing evidence when knowledge retrieval fails", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
