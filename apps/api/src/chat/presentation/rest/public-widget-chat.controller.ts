@@ -5,6 +5,8 @@ import type {
   PublicWidgetLeadResponse,
   PublicWidgetRecommendedListing,
   TenantSnapshot,
+  AiChatReferencedListing,
+  AiChatTurn,
   TenantWidgetLanguage
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -127,8 +129,9 @@ export class PublicWidgetChatController {
       contactEmail,
       contactName: payload.contactName.trim(),
       contactPhone,
-      message: normalizeOptional(payload.message),
+      message: buildQualifiedLeadMessage(payload),
       preferredLocale: locale,
+      propertyId: resolveLeadPropertyId(payload),
       source: "ai-concierge"
     });
 
@@ -194,6 +197,55 @@ function normalizeOptional(value?: string): string | undefined {
   const trimmed = value?.trim();
 
   return trimmed ? trimmed : undefined;
+}
+
+function resolveLeadPropertyId(payload: PublicWidgetLeadDto): string | undefined {
+  return payload.recommendedListings?.find((listing: AiChatReferencedListing) => listing.propertyId.trim())?.propertyId.trim();
+}
+
+function buildQualifiedLeadMessage(payload: PublicWidgetLeadDto): string | undefined {
+  const lines = ["Widget handoff request."];
+  const visitorNote = normalizeOptional(payload.message);
+  const recommendedListings: AiChatReferencedListing[] = (payload.recommendedListings ?? []).slice(0, 3);
+  const conversation = (payload.conversation ?? [])
+    .filter((turn: AiChatTurn) => turn.text.trim())
+    .slice(-8);
+
+  if (visitorNote) {
+    lines.push(`Visitor note: ${visitorNote}`);
+  }
+
+  if (recommendedListings.length) {
+    lines.push(
+      [
+        "Recommended listings:",
+        ...recommendedListings.map(
+          (listing: AiChatReferencedListing, index: number) => `${index + 1}. ${listing.title} (${listing.propertyId})`
+        )
+      ].join("\n")
+    );
+  }
+
+  if (conversation.length) {
+    lines.push(
+      [
+        "Recent widget conversation:",
+        ...conversation.map((turn: AiChatTurn) => {
+          const listings = (turn.recommendedListings ?? [])
+            .slice(0, 3)
+            .map(
+              (listing: AiChatReferencedListing, index: number) =>
+                `${index + 1}. ${listing.title} (${listing.propertyId})`
+            );
+          const suffix = listings.length ? `\nShown listings:\n${listings.join("\n")}` : "";
+
+          return `${turn.role}: ${turn.text.trim()}${suffix}`;
+        })
+      ].join("\n")
+    );
+  }
+
+  return lines.join("\n\n").slice(0, 3000);
 }
 
 function resolveRequestOrigin(value?: string): string | undefined {

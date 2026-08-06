@@ -76,10 +76,22 @@ export class PublicWidgetLeadDto implements PublicWidgetLeadRequest {
   @IsString()
   contactPhone?: string;
 
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PublicWidgetConversationTurnDto)
+  conversation?: PublicWidgetLeadRequest["conversation"];
+
   @IsIn(locales)
   locale!: PublicWidgetLeadRequest["locale"];
 
   @IsOptional()
   @IsString()
   message?: string;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PublicWidgetConversationListingDto)
+  recommendedListings?: PublicWidgetLeadRequest["recommendedListings"];
 }

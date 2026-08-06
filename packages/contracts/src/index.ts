@@ -330,8 +330,10 @@ export interface PublicWidgetLeadRequest {
   contactName: string;
   contactEmail?: string;
   contactPhone?: string;
+  conversation?: AiChatTurn[];
   locale: TenantWidgetLanguage;
   message?: string;
+  recommendedListings?: AiChatReferencedListing[];
 }
 
 export interface PublicWidgetLeadResponse {

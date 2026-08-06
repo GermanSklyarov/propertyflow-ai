@@ -279,8 +279,9 @@ describe("PublicWidgetChatController", () => {
       contactEmail: "buyer@example.com",
       contactName: "Buyer",
       contactPhone: undefined,
-      message: "I want a viewing next week.",
+      message: "Widget handoff request.\n\nVisitor note: I want a viewing next week.",
       preferredLocale: "ru",
+      propertyId: undefined,
       source: "ai-concierge"
     });
   });
@@ -325,8 +326,72 @@ describe("PublicWidgetChatController", () => {
       contactEmail: "buyer@example.com",
       contactName: "Buyer",
       contactPhone: undefined,
-      message: "Please contact me.",
+      message: "Widget handoff request.\n\nVisitor note: Please contact me.",
       preferredLocale: "en",
+      propertyId: undefined,
+      source: "ai-concierge"
+    });
+  });
+
+  it("creates a Starter qualified lead with conversation context and recommended listing", async () => {
+    const tenant = tenantFactory({
+      subscriptionPlan: "starter"
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn()
+    } as unknown as AiChatService;
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ propertyId: "property-1", tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
+
+    await controller.createLead(
+      "demo-agency",
+      {
+        contactEmail: "buyer@example.com",
+        contactName: "Buyer",
+        conversation: [
+          { role: "user", text: "I need a condo in Pattaya under 3M" },
+          {
+            recommendedListings: [{ propertyId: "property-1", title: "Wongamat Sea View Residence" }],
+            role: "assistant",
+            text: "I found a matching option."
+          },
+          { role: "user", text: "I want to view it next month." }
+        ],
+        locale: "en",
+        message: "Please use WhatsApp.",
+        recommendedListings: [{ propertyId: "property-1", title: "Wongamat Sea View Residence" }]
+      },
+      "https://agency.example.com"
+    );
+
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, {
+      contactEmail: "buyer@example.com",
+      contactName: "Buyer",
+      contactPhone: undefined,
+      message: [
+        "Widget handoff request.",
+        "",
+        "Visitor note: Please use WhatsApp.",
+        "",
+        "Recommended listings:",
+        "1. Wongamat Sea View Residence (property-1)",
+        "",
+        "Recent widget conversation:",
+        "user: I need a condo in Pattaya under 3M",
+        "assistant: I found a matching option.",
+        "Shown listings:",
+        "1. Wongamat Sea View Residence (property-1)",
+        "user: I want to view it next month."
+      ].join("\n"),
+      preferredLocale: "en",
+      propertyId: "property-1",
       source: "ai-concierge"
     });
   });

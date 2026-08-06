@@ -534,8 +534,10 @@
         contactEmail: state.handoff.contactEmail || undefined,
         contactName: state.handoff.contactName,
         contactPhone: state.handoff.contactPhone || undefined,
+        conversation: buildConversationHistory(""),
         locale: state.locale,
-        message: buildHandoffMessage(state.handoff.message)
+        message: state.handoff.message || undefined,
+        recommendedListings: getRecentRecommendedListings()
       }),
       headers: {
         accept: "application/json",
@@ -571,24 +573,25 @@
       });
   }
 
-  function buildHandoffMessage(customMessage) {
-    var recentConversation = state.messages
-      .slice(-6)
-      .map(function (message) {
-        return message.role + ": " + message.text;
+  function getRecentRecommendedListings() {
+    return state.messages
+      .slice()
+      .reverse()
+      .flatMap(function (message) {
+        return normalizeRecommendedListings(message.recommendations);
       })
-      .join("\n");
-    var lines = ["Widget handoff request."];
-
-    if (customMessage) {
-      lines.push("Visitor note: " + customMessage);
-    }
-
-    if (recentConversation) {
-      lines.push("Recent widget conversation:\n" + recentConversation);
-    }
-
-    return lines.join("\n\n").slice(0, 3000);
+      .filter(function (listing, index, listings) {
+        return listings.findIndex(function (candidate) {
+          return candidate.propertyId === listing.propertyId;
+        }) === index;
+      })
+      .slice(0, 3)
+      .map(function (listing) {
+        return {
+          propertyId: listing.propertyId,
+          title: listing.title
+        };
+      });
   }
 
   function assistantMessage(text, recommendations) {
