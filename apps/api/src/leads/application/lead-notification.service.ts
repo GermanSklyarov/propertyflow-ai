@@ -25,6 +25,13 @@ interface LeadNotificationPayload {
   };
 }
 
+interface AiConciergeNotificationContext {
+  clientTurns: string[];
+  recommendedListings: Array<{ propertyId: string; title: string }>;
+  selectedListing?: { propertyId: string; title: string };
+  visitorNote?: string;
+}
+
 @Injectable()
 export class LeadNotificationService {
   private readonly logger = new Logger(LeadNotificationService.name);
@@ -227,6 +234,8 @@ function buildLeadNotificationPayload(tenant: TenantSnapshot, lead: LeadSnapshot
 
 function buildEmailText(payload: LeadNotificationPayload): string {
   const lead = payload.lead;
+  const context = parseAiConciergeNotificationContext(payload);
+  const agencyBaseUrl = getAgencyBaseUrl();
   const lines = [
     `New qualified lead from ${payload.tenant.name}`,
     "",
@@ -237,9 +246,16 @@ function buildEmailText(payload: LeadNotificationPayload): string {
     lead.preferredLocale ? `Language: ${lead.preferredLocale}` : undefined,
     lead.contactEmail ? `Email: ${lead.contactEmail}` : undefined,
     lead.contactPhone ? `Phone: ${lead.contactPhone}` : undefined,
-    lead.propertyId ? `Property ID: ${lead.propertyId}` : undefined,
+    context.visitorNote ? `Request: ${context.visitorNote}` : undefined,
+    context.selectedListing ? `Selected listing: ${formatListing(context.selectedListing)}` : undefined,
+    !context.selectedListing && lead.propertyId ? `Property ID: ${lead.propertyId}` : undefined,
+    agencyBaseUrl ? `Lead queue: ${buildAgencyUrl(agencyBaseUrl, `/leads/${lead.id}`)}` : undefined,
+    agencyBaseUrl && lead.propertyId ? `Listing: ${buildAgencyUrl(agencyBaseUrl, `/listings/${lead.propertyId}`)}` : undefined,
     "",
-    lead.message ? `Conversation summary:\n${lead.message}` : "Open the lead queue for conversation context."
+    context.clientTurns.length
+      ? `Recent client messages:\n${context.clientTurns.map((turn) => `- ${trimText(turn, 240)}`).join("\n")}`
+      : "Open the lead queue for conversation context.",
+    lead.message && !context.visitorNote ? `\nConversation summary:\n${trimText(lead.message, 1800)}` : undefined
   ];
 
   return lines.filter((line): line is string => line !== undefined).join("\n");
@@ -247,19 +263,118 @@ function buildEmailText(payload: LeadNotificationPayload): string {
 
 function buildMessengerText(payload: LeadNotificationPayload): string {
   const lead = payload.lead;
+  const context = parseAiConciergeNotificationContext(payload);
+  const agencyBaseUrl = getAgencyBaseUrl();
   const lines = [
-    `New qualified lead: ${lead.contactName}`,
+    "New AI Concierge lead",
     `Agency: ${payload.tenant.name}`,
-    `Source: ${lead.source}`,
+    `Contact: ${lead.contactName}`,
     lead.preferredLocale ? `Language: ${lead.preferredLocale}` : undefined,
     lead.contactEmail ? `Email: ${lead.contactEmail}` : undefined,
     lead.contactPhone ? `Phone: ${lead.contactPhone}` : undefined,
-    lead.propertyId ? `Property ID: ${lead.propertyId}` : undefined,
+    context.visitorNote ? `Request: ${trimText(context.visitorNote, 280)}` : undefined,
+    context.selectedListing ? `Selected listing: ${formatListing(context.selectedListing)}` : undefined,
+    !context.selectedListing && lead.propertyId ? `Property ID: ${lead.propertyId}` : undefined,
+    agencyBaseUrl ? `Lead: ${buildAgencyUrl(agencyBaseUrl, `/leads/${lead.id}`)}` : undefined,
+    agencyBaseUrl && lead.propertyId ? `Listing: ${buildAgencyUrl(agencyBaseUrl, `/listings/${lead.propertyId}`)}` : undefined,
     "",
-    lead.message ? trimText(lead.message, 1200) : "Open the lead queue for conversation context."
+    context.clientTurns.length
+      ? ["Recent client messages:", ...context.clientTurns.map((turn) => `- ${trimText(turn, 180)}`)].join("\n")
+      : "Open the lead queue for conversation context."
   ];
 
-  return lines.filter((line): line is string => line !== undefined).join("\n");
+  return trimText(lines.filter((line): line is string => line !== undefined).join("\n"), 1800);
+}
+
+function parseAiConciergeNotificationContext(payload: LeadNotificationPayload): AiConciergeNotificationContext {
+  const message = payload.lead.message;
+
+  if (!message?.includes("Widget handoff request.")) {
+    return {
+      clientTurns: [],
+      recommendedListings: []
+    };
+  }
+
+  const sections = splitLeadSections(message);
+  const recommendedListings = parseRecommendedListings(sections);
+  const selectedListing =
+    recommendedListings.find((listing) => listing.propertyId === payload.lead.propertyId) ?? recommendedListings[0];
+
+  return {
+    clientTurns: parseClientTurns(sections),
+    recommendedListings,
+    selectedListing,
+    visitorNote: parseVisitorNote(sections)
+  };
+}
+
+function splitLeadSections(message: string): string[] {
+  return message
+    .split(/\n{2,}/)
+    .map((section) => section.trim())
+    .filter(Boolean);
+}
+
+function parseVisitorNote(sections: string[]): string | undefined {
+  const section = sections.find((item) => item.startsWith("Visitor note:"));
+  const value = section?.replace(/^Visitor note:\s*/, "").trim();
+
+  return value || undefined;
+}
+
+function parseRecommendedListings(sections: string[]): AiConciergeNotificationContext["recommendedListings"] {
+  const section = sections.find((item) => item.startsWith("Recommended listings:"));
+
+  if (!section) {
+    return [];
+  }
+
+  return section
+    .split("\n")
+    .slice(1)
+    .map(parseListingLine)
+    .filter((listing): listing is { propertyId: string; title: string } => Boolean(listing))
+    .slice(0, 3);
+}
+
+function parseClientTurns(sections: string[]): string[] {
+  const section = sections.find((item) => item.startsWith("Recent widget conversation:"));
+
+  if (!section) {
+    return [];
+  }
+
+  return section
+    .split("\n")
+    .map((line) => line.match(/^user:\s*(.+)$/)?.[1]?.trim())
+    .filter((text): text is string => Boolean(text))
+    .slice(-4);
+}
+
+function parseListingLine(line: string): { propertyId: string; title: string } | null {
+  const match = line.match(/^\d+\.\s+(.+?)\s+\(([^)]+)\)$/);
+
+  if (!match?.[1] || !match[2]) {
+    return null;
+  }
+
+  return {
+    propertyId: match[2].trim(),
+    title: match[1].trim()
+  };
+}
+
+function formatListing(listing: { propertyId: string; title: string }): string {
+  return `${listing.title} (${listing.propertyId})`;
+}
+
+function getAgencyBaseUrl(): string | undefined {
+  return process.env.AGENCY_APP_BASE_URL?.replace(/\/+$/, "");
+}
+
+function buildAgencyUrl(baseUrl: string, path: string): string {
+  return `${baseUrl}${path}`;
 }
 
 function trimText(value: string, maxLength: number): string {
