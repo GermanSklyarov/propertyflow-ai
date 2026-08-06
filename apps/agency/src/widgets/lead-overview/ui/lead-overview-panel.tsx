@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ArrowUpRight, Clock3, Home, Mail, MapPin, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { ArrowUpRight, Bot, Clock3, Home, Mail, MapPin, MessageSquareText, Phone, ShieldCheck, Sparkles, UserRound } from "lucide-react";
 import { buildLeadFollowUpSummary, formatLeadOwner } from "@entities/lead/lib/lead-queue";
+import { parseAiConciergeLeadContext } from "@entities/lead/model/ai-concierge-lead";
 import { UpdateLeadContactForm } from "@features/lead-contact-update/ui/update-lead-contact-form";
 import type { LeadSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -15,6 +16,7 @@ export function LeadOverviewPanel({
   linkedListing?: PropertySnapshot | null;
 }) {
   const followUpState = buildLeadFollowUpSummary(lead);
+  const aiContext = parseAiConciergeLeadContext(lead);
 
   return (
     <>
@@ -63,7 +65,62 @@ export function LeadOverviewPanel({
           </div>
         </section>
       </section>
+
+      {aiContext ? <AiConciergeLeadPanel context={aiContext} /> : null}
     </>
+  );
+}
+
+function AiConciergeLeadPanel({
+  context
+}: {
+  context: NonNullable<ReturnType<typeof parseAiConciergeLeadContext>>;
+}) {
+  return (
+    <section className={styles.aiPanel} aria-label="AI qualified lead context">
+      <div className={styles.panelHeader}>
+        <div>
+          <p className="section-kicker">AI qualified lead</p>
+          <h2 className={styles.panelTitle}>Conversation result</h2>
+        </div>
+        <Bot size={20} />
+      </div>
+
+      {context.visitorNote ? (
+        <div className={styles.aiNote}>
+          <MessageSquareText size={16} />
+          <span>{context.visitorNote}</span>
+        </div>
+      ) : null}
+
+      {context.recommendedListings.length ? (
+        <div className={styles.aiSection}>
+          <strong>Recommended listings</strong>
+          <div className={styles.aiListingGrid}>
+            {context.recommendedListings.map((listing) => (
+              <Link className={styles.aiListing} href={`/listings/${listing.propertyId}`} key={listing.propertyId}>
+                <span>{listing.title}</span>
+                <small>{listing.propertyId}</small>
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {context.conversation.length ? (
+        <div className={styles.aiSection}>
+          <strong>Recent conversation</strong>
+          <div className={styles.aiConversation}>
+            {context.conversation.map((turn, index) => (
+              <p data-role={turn.role} key={`${turn.role}-${index}`}>
+                <span>{turn.role}</span>
+                {turn.text}
+              </p>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </section>
   );
 }
 
