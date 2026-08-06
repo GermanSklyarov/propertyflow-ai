@@ -75,6 +75,48 @@
   line-height: 1.4;
 }
 
+.toggleField {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: #f7fbfa;
+  padding: 12px;
+}
+
+.toggleField:has(input:checked) {
+  border-color: rgb(15 118 110 / 28%);
+  background: #edf8f4;
+}
+
+.toggleField input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--teal);
+  cursor: pointer;
+}
+
+.toggleField span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.toggleField strong {
+  color: var(--teal-dark);
+  font-size: 0.82rem;
+  font-weight: 950;
+}
+
+.toggleField small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 760;
+  line-height: 1.35;
+}
+
 .languageOptions,
 .qualificationOptions,
 .localizedMessages {

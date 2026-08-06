@@ -39,6 +39,7 @@ import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/d
 import { RealtimePublisherService } from "../../realtime/application/realtime-publisher.service.js";
 import { UserService } from "../../users/application/user.service.js";
 import { LEAD_REPOSITORY, type LeadRepository } from "../domain/lead.repository.js";
+import { LeadNotificationService } from "./lead-notification.service.js";
 
 @Injectable()
 export class LeadService {
@@ -55,7 +56,8 @@ export class LeadService {
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(AuditService) private readonly audit: AuditService,
     @Inject(UserService) private readonly users: UserService,
-    @Inject(RealtimePublisherService) private readonly realtime: RealtimePublisherService
+    @Inject(RealtimePublisherService) private readonly realtime: RealtimePublisherService,
+    @Inject(LeadNotificationService) private readonly notifications: LeadNotificationService
   ) {}
 
   async create(tenantId: string, request: CreateLeadRequest, user?: RequestUser): Promise<LeadSnapshot> {
@@ -94,6 +96,8 @@ export class LeadService {
       status: lead.status,
       user
     });
+
+    await this.notifications.notifyLeadCreated(tenantId, lead);
 
     return lead;
   }

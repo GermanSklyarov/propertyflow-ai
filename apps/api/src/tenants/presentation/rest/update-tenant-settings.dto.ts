@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Type } from "class-transformer";
-import { IsArray, IsIn, IsObject, IsOptional, IsString, IsUrl, Matches, ValidateNested } from "class-validator";
+import { IsArray, IsBoolean, IsEmail, IsIn, IsObject, IsOptional, IsString, IsUrl, Matches, ValidateNested } from "class-validator";
 import type {
   TenantLeadQualificationField,
   TenantWidgetLanguage,
@@ -84,6 +84,23 @@ export class UpdateTenantWidgetDto {
   @IsArray()
   @IsIn(widgetLanguages, { each: true })
   languages?: TenantWidgetLanguage[];
+
+  @ApiProperty({ required: false, example: ["owner@agency.example"], type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsEmail({}, { each: true })
+  leadNotificationEmails?: string[];
+
+  @ApiProperty({ required: false, example: true })
+  @IsOptional()
+  @IsBoolean()
+  leadNotificationsEnabled?: boolean;
+
+  @ApiProperty({ required: false, example: "https://agency.example.com/webhooks/propertyflow-leads" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^$|^https:\/\/.+/)
+  leadWebhookUrl?: string;
 
   @ApiProperty({ required: false, enum: leadQualificationFields, isArray: true })
   @IsOptional()

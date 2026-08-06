@@ -245,6 +245,9 @@ export interface TenantWidgetSettings {
   aiNames: Partial<Record<TenantWidgetLanguage, string>>;
   allowedOrigins: string[];
   languages: TenantWidgetLanguage[];
+  leadNotificationEmails?: string[];
+  leadNotificationsEnabled?: boolean;
+  leadWebhookUrl?: string;
   leadQualificationFields: TenantLeadQualificationField[];
   listingUrlTemplate: string;
   personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;

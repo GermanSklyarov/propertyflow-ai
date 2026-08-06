@@ -5,6 +5,7 @@ import type { PropertyRepository } from "../../properties/domain/property.reposi
 import type { RealtimePublisherService } from "../../realtime/application/realtime-publisher.service.js";
 import type { UserService } from "../../users/application/user.service.js";
 import type { LeadRepository } from "../domain/lead.repository.js";
+import type { LeadNotificationService } from "./lead-notification.service.js";
 import { LeadService } from "./lead.service.js";
 
 const user = {
@@ -31,17 +32,22 @@ function createService(lead: LeadSnapshot) {
   const realtime = {
     publish: vi.fn()
   } as unknown as RealtimePublisherService;
+  const notifications = {
+    notifyLeadCreated: vi.fn().mockResolvedValue(undefined)
+  } as unknown as LeadNotificationService;
 
   return {
     audit,
     leads,
+    notifications,
     realtime,
     service: new LeadService(
       leads,
       {} as PropertyRepository,
       audit,
       {} as UserService,
-      realtime
+      realtime,
+      notifications
     )
   };
 }
@@ -72,7 +78,7 @@ describe("LeadService", () => {
       propertyId: "property-1",
       source: "social-post"
     } satisfies CreateLeadRequest;
-    const { audit, leads, realtime, service } = createService(lead);
+    const { audit, leads, notifications, realtime, service } = createService(lead);
 
     const response = await service.create("demo-agency", request, user);
 
@@ -109,6 +115,7 @@ describe("LeadService", () => {
       tenantId: "demo-agency",
       user
     });
+    expect(notifications.notifyLeadCreated).toHaveBeenCalledWith("demo-agency", lead);
   });
 
   it("lists social-post leads by property and tracking slug", async () => {

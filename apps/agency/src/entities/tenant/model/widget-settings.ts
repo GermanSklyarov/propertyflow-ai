@@ -40,6 +40,9 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   },
   allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
+  leadNotificationEmails: [],
+  leadNotificationsEnabled: true,
+  leadWebhookUrl: undefined,
   leadQualificationFields: defaultLeadQualificationFields,
   listingUrlTemplate: defaultWidgetListingUrlTemplate,
   personaGenders: {
@@ -73,6 +76,9 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
     aiNames,
     allowedOrigins: tenant.widget?.allowedOrigins ?? defaultTenantWidgetSettings.allowedOrigins,
     languages: tenant.widget?.languages?.length ? tenant.widget.languages : defaultTenantWidgetSettings.languages,
+    leadNotificationEmails: tenant.widget?.leadNotificationEmails ?? defaultTenantWidgetSettings.leadNotificationEmails,
+    leadNotificationsEnabled: tenant.widget?.leadNotificationsEnabled ?? defaultTenantWidgetSettings.leadNotificationsEnabled,
+    leadWebhookUrl: tenant.widget?.leadWebhookUrl ?? defaultTenantWidgetSettings.leadWebhookUrl,
     leadQualificationFields: tenant.widget?.leadQualificationFields?.length
       ? tenant.widget.leadQualificationFields
       : defaultTenantWidgetSettings.leadQualificationFields,

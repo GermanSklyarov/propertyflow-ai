@@ -1,4 +1,4 @@
-import { BadgeCheck, Bot, CheckCircle2, Globe2, Palette, Save, ShieldCheck } from "lucide-react";
+import { BadgeCheck, BellRing, Bot, CheckCircle2, Globe2, Palette, Save, ShieldCheck } from "lucide-react";
 import { updateTenantSettingsAction } from "@entities/tenant/api/tenant-actions";
 import { getTenantWidgetSettings, leadQualificationFieldOptions } from "@entities/tenant/model/widget-settings";
 import type { TenantSnapshot } from "@propertyflow/contracts";
@@ -131,6 +131,41 @@ export function UpdateTenantSettingsForm({
           ))}
         </div>
         <p className={styles.hint}>Concierge uses these as natural follow-up prompts and still recommends listings when there is enough context.</p>
+      </section>
+
+      <section className={styles.section} id="lead-notification-settings">
+        <div className={styles.sectionTitle}>
+          <BellRing size={16} />
+          Lead notifications
+        </div>
+        <label className={styles.toggleField}>
+          <input defaultChecked={widgetSettings.leadNotificationsEnabled} name="leadNotificationsEnabled" type="checkbox" />
+          <span>
+            <strong>Notify agency when Concierge creates a qualified lead</strong>
+            <small>Email uses the configured outbound provider; webhook delivery works independently.</small>
+          </span>
+        </label>
+        <div className={styles.fieldGrid}>
+          <label className={styles.field}>
+            <span>Email recipients</span>
+            <textarea
+              defaultValue={widgetSettings.leadNotificationEmails?.join("\n") ?? ""}
+              name="leadNotificationEmails"
+              placeholder="owner@agency.com"
+              rows={3}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Webhook URL</span>
+            <input
+              defaultValue={widgetSettings.leadWebhookUrl ?? ""}
+              name="leadWebhookUrl"
+              pattern="^$|^https://.+"
+              placeholder="https://agency.com/webhooks/propertyflow-leads"
+            />
+          </label>
+        </div>
+        <p className={styles.hint}>Use one email per line or comma-separated. Webhooks receive a compact JSON lead payload and should respond with a 2xx status.</p>
       </section>
 
       <div className={styles.actions}>

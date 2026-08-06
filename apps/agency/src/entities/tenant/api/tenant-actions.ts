@@ -21,6 +21,9 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const logoUrl = getOptionalString(formData, "logoUrl");
   const customDomain = getOptionalString(formData, "customDomain");
   const allowedOrigins = getAllowedOrigins(formData);
+  const leadNotificationEmails = getEmailList(formData, "leadNotificationEmails");
+  const leadNotificationsEnabled = formData.get("leadNotificationsEnabled") === "on";
+  const leadWebhookUrl = getOptionalString(formData, "leadWebhookUrl");
   const listingUrlTemplate = getListingUrlTemplate(formData);
   const primaryMarket = getOptionalMarket(formData);
   const languages = getLanguageCodes(formData);
@@ -45,6 +48,9 @@ export async function updateTenantSettingsAction(formData: FormData) {
         ...(aiName ? { aiName } : {}),
         ...(Object.keys(aiNames).length ? { aiNames } : {}),
         ...(allowedOrigins ? { allowedOrigins } : {}),
+        ...(leadNotificationEmails ? { leadNotificationEmails } : {}),
+        leadNotificationsEnabled,
+        leadWebhookUrl: leadWebhookUrl ?? "",
         ...(languages.length ? { languages } : {}),
         ...(leadQualificationFields ? { leadQualificationFields } : {}),
         ...(listingUrlTemplate ? { listingUrlTemplate } : {}),
@@ -59,6 +65,23 @@ export async function updateTenantSettingsAction(formData: FormData) {
 
   revalidatePath("/settings");
   redirect("/settings?updated=tenant-settings#tenant-settings-form");
+}
+
+function getEmailList(formData: FormData, key: string): string[] | undefined {
+  if (!formData.has(key)) {
+    return undefined;
+  }
+
+  const raw = String(formData.get(key) ?? "");
+
+  return Array.from(
+    new Set(
+      raw
+        .split(/\r?\n|,/)
+        .map((value) => value.trim().toLowerCase())
+        .filter((value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value))
+    )
+  ).slice(0, 5);
 }
 
 function getListingUrlTemplate(formData: FormData): string | undefined {

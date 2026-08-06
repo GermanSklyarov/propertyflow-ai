@@ -8,6 +8,7 @@ import { UsersModule } from "../users/users.module.js";
 import { PROPERTY_REPOSITORY } from "../properties/domain/property.repository.js";
 import { PgPropertyRepository } from "../properties/infrastructure/postgres/pg-property.repository.js";
 import { LeadService } from "./application/lead.service.js";
+import { LeadNotificationService } from "./application/lead-notification.service.js";
 import { LEAD_REPOSITORY } from "./domain/lead.repository.js";
 import { PgLeadRepository } from "./infrastructure/postgres/pg-lead.repository.js";
 import { LeadsController } from "./presentation/rest/leads.controller.js";
@@ -16,6 +17,7 @@ import { LeadsController } from "./presentation/rest/leads.controller.js";
   imports: [AuditModule, AuthModule, DatabaseModule, RealtimeModule, TenantsModule, UsersModule],
   controllers: [LeadsController],
   providers: [
+    LeadNotificationService,
     LeadService,
     {
       provide: LEAD_REPOSITORY,

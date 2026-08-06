@@ -34,6 +34,9 @@ describe("PgTenantRepository", () => {
           },
           widget_allowed_origins: ["https://sunset.example"],
           widget_languages: ["en", "ru", "th", "zh"],
+          widget_lead_notification_emails: ["owner@sunset.example"],
+          widget_lead_notifications_enabled: true,
+          widget_lead_webhook_url: null,
           widget_persona_genders: {
             en: "feminine",
             ru: "feminine",
@@ -101,6 +104,9 @@ describe("PgTenantRepository", () => {
         zh: "neutral"
       },
       ["https://sunset.example"],
+      ["owner@sunset.example"],
+      true,
+      null,
       ["budget", "preferredArea", "bedrooms", "investmentPurpose", "moveInDate", "financing", "whatsapp", "email", "phone"],
       "/listings/:propertyId",
       "friendly",
@@ -124,6 +130,8 @@ describe("PgTenantRepository", () => {
       subscriptionPlan: "starter",
       widget: {
         allowedOrigins: ["https://sunset.example"],
+        leadNotificationEmails: ["owner@sunset.example"],
+        leadNotificationsEnabled: true,
         leadQualificationFields: ["budget", "preferredArea", "bedrooms", "investmentPurpose", "moveInDate", "financing", "whatsapp", "email", "phone"],
         welcomeMessages: {
           th: "สวัสดีค่ะ ฉันชื่อ มาลี ผู้ช่วย AI ด้านอสังหาริมทรัพย์ของคุณ",

@@ -39,7 +39,10 @@ interface TenantRow {
   widget_welcome_messages: Partial<Record<TenantWidgetLanguage, string>> | null;
   widget_persona_genders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>> | null;
   widget_allowed_origins: string[] | null;
+  widget_lead_notification_emails: string[] | null;
+  widget_lead_notifications_enabled: boolean | null;
   widget_lead_qualification_fields: string[] | null;
+  widget_lead_webhook_url: string | null;
   widget_listing_url_template: string | null;
   widget_tone: TenantWidgetTone | null;
   widget_languages: string[];
@@ -61,6 +64,9 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
   },
   allowedOrigins: [],
   languages: ["en", "ru", "th", "zh"],
+  leadNotificationEmails: [],
+  leadNotificationsEnabled: true,
+  leadWebhookUrl: undefined,
   leadQualificationFields: supportedLeadQualificationFields.filter((field) => field !== "nationality"),
   listingUrlTemplate: "/listings/:propertyId",
   personaGenders: {
@@ -212,6 +218,9 @@ export class PgTenantRepository implements TenantRepository {
             widget_welcome_messages,
             widget_persona_genders,
             widget_allowed_origins,
+            widget_lead_notification_emails,
+            widget_lead_notifications_enabled,
+            widget_lead_webhook_url,
             widget_lead_qualification_fields,
             widget_listing_url_template,
             widget_tone,
@@ -242,7 +251,10 @@ export class PgTenantRepository implements TenantRepository {
             $15,
             $16,
             $17,
-            $17
+            $18,
+            $19,
+            $20,
+            $20
           )
           returning *
         `,
@@ -259,6 +271,9 @@ export class PgTenantRepository implements TenantRepository {
           defaultWidgetSettings.welcomeMessages,
           defaultWidgetSettings.personaGenders,
           input.website ? [input.website] : defaultWidgetSettings.allowedOrigins,
+          [input.ownerEmail],
+          defaultWidgetSettings.leadNotificationsEnabled,
+          defaultWidgetSettings.leadWebhookUrl ?? null,
           defaultWidgetSettings.leadQualificationFields,
           defaultWidgetSettings.listingUrlTemplate,
           defaultWidgetSettings.tone,
@@ -326,11 +341,14 @@ export class PgTenantRepository implements TenantRepository {
           widget_welcome_messages = $11,
           widget_persona_genders = $12,
           widget_allowed_origins = $13,
-          widget_lead_qualification_fields = $14,
-          widget_listing_url_template = $15,
-          widget_tone = $16,
-          widget_languages = $17,
-          updated_at = $18
+          widget_lead_notification_emails = $14,
+          widget_lead_notifications_enabled = $15,
+          widget_lead_webhook_url = $16,
+          widget_lead_qualification_fields = $17,
+          widget_listing_url_template = $18,
+          widget_tone = $19,
+          widget_languages = $20,
+          updated_at = $21
         where id = $1
         returning *
       `,
@@ -348,6 +366,9 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.welcomeMessages ?? current.widget.welcomeMessages,
         request.widget?.personaGenders ?? current.widget.personaGenders,
         request.widget?.allowedOrigins ?? current.widget.allowedOrigins,
+        request.widget?.leadNotificationEmails ?? current.widget.leadNotificationEmails ?? [],
+        request.widget?.leadNotificationsEnabled ?? current.widget.leadNotificationsEnabled ?? true,
+        request.widget?.leadWebhookUrl ?? current.widget.leadWebhookUrl ?? null,
         request.widget?.leadQualificationFields ?? current.widget.leadQualificationFields,
         request.widget?.listingUrlTemplate ?? current.widget.listingUrlTemplate,
         request.widget?.tone ?? current.widget.tone,
@@ -384,6 +405,9 @@ export class PgTenantRepository implements TenantRepository {
         },
         allowedOrigins: filterAllowedOrigins(row.widget_allowed_origins),
         languages: filterSupportedLanguages(row.widget_languages),
+        leadNotificationEmails: filterEmails(row.widget_lead_notification_emails),
+        leadNotificationsEnabled: row.widget_lead_notifications_enabled ?? defaultWidgetSettings.leadNotificationsEnabled,
+        leadWebhookUrl: normalizeWebhookUrl(row.widget_lead_webhook_url),
         leadQualificationFields: filterLeadQualificationFields(row.widget_lead_qualification_fields),
         listingUrlTemplate: normalizeListingUrlTemplate(row.widget_listing_url_template),
         personaGenders: {
@@ -422,12 +446,38 @@ function filterAllowedOrigins(origins: string[] | null | undefined): string[] {
   return (origins ?? []).map((origin) => origin.trim().toLowerCase()).filter(Boolean);
 }
 
+function filterEmails(emails: string[] | null | undefined): string[] {
+  return Array.from(
+    new Set(
+      (emails ?? [])
+        .map((email) => email.trim().toLowerCase())
+        .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+    )
+  ).slice(0, 5);
+}
+
 function filterLeadQualificationFields(fields: string[] | null | undefined): TenantLeadQualificationField[] {
   const filtered = (fields ?? []).filter((field): field is TenantLeadQualificationField =>
     supportedLeadQualificationFields.includes(field as TenantLeadQualificationField)
   );
 
   return filtered.length ? filtered : defaultWidgetSettings.leadQualificationFields;
+}
+
+function normalizeWebhookUrl(value: string | null | undefined): string | undefined {
+  const url = value?.trim();
+
+  if (!url) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(url);
+
+    return parsed.protocol === "https:" ? parsed.toString() : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function normalizeListingUrlTemplate(value: string | null | undefined): string {
