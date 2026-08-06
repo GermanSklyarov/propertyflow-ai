@@ -41,7 +41,10 @@ interface TenantRow {
   widget_allowed_origins: string[] | null;
   widget_lead_notification_emails: string[] | null;
   widget_lead_notifications_enabled: boolean | null;
+  widget_lead_line_recipient_ids: string[] | null;
   widget_lead_qualification_fields: string[] | null;
+  widget_lead_telegram_chat_ids: string[] | null;
+  widget_lead_whatsapp_recipients: string[] | null;
   widget_lead_webhook_url: string | null;
   widget_listing_url_template: string | null;
   widget_tone: TenantWidgetTone | null;
@@ -66,6 +69,9 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
   languages: ["en", "ru", "th", "zh"],
   leadNotificationEmails: [],
   leadNotificationsEnabled: true,
+  leadLineRecipientIds: [],
+  leadTelegramChatIds: [],
+  leadWhatsappRecipients: [],
   leadWebhookUrl: undefined,
   leadQualificationFields: supportedLeadQualificationFields.filter((field) => field !== "nationality"),
   listingUrlTemplate: "/listings/:propertyId",
@@ -221,6 +227,9 @@ export class PgTenantRepository implements TenantRepository {
             widget_lead_notification_emails,
             widget_lead_notifications_enabled,
             widget_lead_webhook_url,
+            widget_lead_telegram_chat_ids,
+            widget_lead_line_recipient_ids,
+            widget_lead_whatsapp_recipients,
             widget_lead_qualification_fields,
             widget_listing_url_template,
             widget_tone,
@@ -254,7 +263,10 @@ export class PgTenantRepository implements TenantRepository {
             $18,
             $19,
             $20,
-            $20
+            $21,
+            $22,
+            $23,
+            $23
           )
           returning *
         `,
@@ -274,6 +286,9 @@ export class PgTenantRepository implements TenantRepository {
           [input.ownerEmail],
           defaultWidgetSettings.leadNotificationsEnabled,
           defaultWidgetSettings.leadWebhookUrl ?? null,
+          defaultWidgetSettings.leadTelegramChatIds,
+          defaultWidgetSettings.leadLineRecipientIds,
+          defaultWidgetSettings.leadWhatsappRecipients,
           defaultWidgetSettings.leadQualificationFields,
           defaultWidgetSettings.listingUrlTemplate,
           defaultWidgetSettings.tone,
@@ -344,11 +359,14 @@ export class PgTenantRepository implements TenantRepository {
           widget_lead_notification_emails = $14,
           widget_lead_notifications_enabled = $15,
           widget_lead_webhook_url = $16,
-          widget_lead_qualification_fields = $17,
-          widget_listing_url_template = $18,
-          widget_tone = $19,
-          widget_languages = $20,
-          updated_at = $21
+          widget_lead_telegram_chat_ids = $17,
+          widget_lead_line_recipient_ids = $18,
+          widget_lead_whatsapp_recipients = $19,
+          widget_lead_qualification_fields = $20,
+          widget_listing_url_template = $21,
+          widget_tone = $22,
+          widget_languages = $23,
+          updated_at = $24
         where id = $1
         returning *
       `,
@@ -369,6 +387,9 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.leadNotificationEmails ?? current.widget.leadNotificationEmails ?? [],
         request.widget?.leadNotificationsEnabled ?? current.widget.leadNotificationsEnabled ?? true,
         request.widget?.leadWebhookUrl ?? current.widget.leadWebhookUrl ?? null,
+        request.widget?.leadTelegramChatIds ?? current.widget.leadTelegramChatIds ?? [],
+        request.widget?.leadLineRecipientIds ?? current.widget.leadLineRecipientIds ?? [],
+        request.widget?.leadWhatsappRecipients ?? current.widget.leadWhatsappRecipients ?? [],
         request.widget?.leadQualificationFields ?? current.widget.leadQualificationFields,
         request.widget?.listingUrlTemplate ?? current.widget.listingUrlTemplate,
         request.widget?.tone ?? current.widget.tone,
@@ -407,6 +428,9 @@ export class PgTenantRepository implements TenantRepository {
         languages: filterSupportedLanguages(row.widget_languages),
         leadNotificationEmails: filterEmails(row.widget_lead_notification_emails),
         leadNotificationsEnabled: row.widget_lead_notifications_enabled ?? defaultWidgetSettings.leadNotificationsEnabled,
+        leadLineRecipientIds: filterTextList(row.widget_lead_line_recipient_ids),
+        leadTelegramChatIds: filterTextList(row.widget_lead_telegram_chat_ids),
+        leadWhatsappRecipients: filterPhoneList(row.widget_lead_whatsapp_recipients),
         leadWebhookUrl: normalizeWebhookUrl(row.widget_lead_webhook_url),
         leadQualificationFields: filterLeadQualificationFields(row.widget_lead_qualification_fields),
         listingUrlTemplate: normalizeListingUrlTemplate(row.widget_listing_url_template),
@@ -454,6 +478,20 @@ function filterEmails(emails: string[] | null | undefined): string[] {
         .filter((email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
     )
   ).slice(0, 5);
+}
+
+function filterTextList(values: string[] | null | undefined): string[] {
+  return Array.from(new Set((values ?? []).map((value) => value.trim()).filter(Boolean))).slice(0, 10);
+}
+
+function filterPhoneList(values: string[] | null | undefined): string[] {
+  return Array.from(
+    new Set(
+      (values ?? [])
+        .map((value) => value.trim().replace(/[^\d+]/g, ""))
+        .filter((value) => /^\+?[1-9]\d{7,14}$/.test(value))
+    )
+  ).slice(0, 10);
 }
 
 function filterLeadQualificationFields(fields: string[] | null | undefined): TenantLeadQualificationField[] {

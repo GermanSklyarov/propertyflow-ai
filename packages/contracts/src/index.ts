@@ -248,7 +248,10 @@ export interface TenantWidgetSettings {
   leadNotificationEmails?: string[];
   leadNotificationsEnabled?: boolean;
   leadWebhookUrl?: string;
+  leadLineRecipientIds?: string[];
   leadQualificationFields: TenantLeadQualificationField[];
+  leadTelegramChatIds?: string[];
+  leadWhatsappRecipients?: string[];
   listingUrlTemplate: string;
   personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
   tone: TenantWidgetTone;

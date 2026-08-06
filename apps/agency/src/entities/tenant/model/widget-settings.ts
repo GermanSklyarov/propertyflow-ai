@@ -43,6 +43,9 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   leadNotificationEmails: [],
   leadNotificationsEnabled: true,
   leadWebhookUrl: undefined,
+  leadLineRecipientIds: [],
+  leadTelegramChatIds: [],
+  leadWhatsappRecipients: [],
   leadQualificationFields: defaultLeadQualificationFields,
   listingUrlTemplate: defaultWidgetListingUrlTemplate,
   personaGenders: {
@@ -79,6 +82,9 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
     leadNotificationEmails: tenant.widget?.leadNotificationEmails ?? defaultTenantWidgetSettings.leadNotificationEmails,
     leadNotificationsEnabled: tenant.widget?.leadNotificationsEnabled ?? defaultTenantWidgetSettings.leadNotificationsEnabled,
     leadWebhookUrl: tenant.widget?.leadWebhookUrl ?? defaultTenantWidgetSettings.leadWebhookUrl,
+    leadLineRecipientIds: tenant.widget?.leadLineRecipientIds ?? defaultTenantWidgetSettings.leadLineRecipientIds,
+    leadTelegramChatIds: tenant.widget?.leadTelegramChatIds ?? defaultTenantWidgetSettings.leadTelegramChatIds,
+    leadWhatsappRecipients: tenant.widget?.leadWhatsappRecipients ?? defaultTenantWidgetSettings.leadWhatsappRecipients,
     leadQualificationFields: tenant.widget?.leadQualificationFields?.length
       ? tenant.widget.leadQualificationFields
       : defaultTenantWidgetSettings.leadQualificationFields,

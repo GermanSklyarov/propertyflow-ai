@@ -102,6 +102,24 @@ export class UpdateTenantWidgetDto {
   @Matches(/^$|^https:\/\/.+/)
   leadWebhookUrl?: string;
 
+  @ApiProperty({ required: false, example: ["-1001234567890", "@agency_channel"], type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  leadTelegramChatIds?: string[];
+
+  @ApiProperty({ required: false, example: ["U4af4980629..."], type: [String] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  leadLineRecipientIds?: string[];
+
+  @ApiProperty({ required: false, example: ["+66812345678"], type: [String] })
+  @IsOptional()
+  @IsArray()
+  @Matches(/^\+?[1-9]\d{7,14}$/, { each: true })
+  leadWhatsappRecipients?: string[];
+
   @ApiProperty({ required: false, enum: leadQualificationFields, isArray: true })
   @IsOptional()
   @IsArray()

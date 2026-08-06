@@ -24,6 +24,9 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const leadNotificationEmails = getEmailList(formData, "leadNotificationEmails");
   const leadNotificationsEnabled = formData.get("leadNotificationsEnabled") === "on";
   const leadWebhookUrl = getOptionalString(formData, "leadWebhookUrl");
+  const leadTelegramChatIds = getTextList(formData, "leadTelegramChatIds");
+  const leadLineRecipientIds = getTextList(formData, "leadLineRecipientIds");
+  const leadWhatsappRecipients = getPhoneList(formData, "leadWhatsappRecipients");
   const listingUrlTemplate = getListingUrlTemplate(formData);
   const primaryMarket = getOptionalMarket(formData);
   const languages = getLanguageCodes(formData);
@@ -51,6 +54,9 @@ export async function updateTenantSettingsAction(formData: FormData) {
         ...(leadNotificationEmails ? { leadNotificationEmails } : {}),
         leadNotificationsEnabled,
         leadWebhookUrl: leadWebhookUrl ?? "",
+        ...(leadTelegramChatIds ? { leadTelegramChatIds } : {}),
+        ...(leadLineRecipientIds ? { leadLineRecipientIds } : {}),
+        ...(leadWhatsappRecipients ? { leadWhatsappRecipients } : {}),
         ...(languages.length ? { languages } : {}),
         ...(leadQualificationFields ? { leadQualificationFields } : {}),
         ...(listingUrlTemplate ? { listingUrlTemplate } : {}),
@@ -65,6 +71,26 @@ export async function updateTenantSettingsAction(formData: FormData) {
 
   revalidatePath("/settings");
   redirect("/settings?updated=tenant-settings#tenant-settings-form");
+}
+
+function getTextList(formData: FormData, key: string): string[] | undefined {
+  if (!formData.has(key)) {
+    return undefined;
+  }
+
+  const raw = String(formData.get(key) ?? "");
+
+  return Array.from(new Set(raw.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean))).slice(0, 10);
+}
+
+function getPhoneList(formData: FormData, key: string): string[] | undefined {
+  if (!formData.has(key)) {
+    return undefined;
+  }
+
+  return getTextList(formData, key)
+    ?.map((value) => value.replace(/[^\d+]/g, ""))
+    .filter((value) => /^\+?[1-9]\d{7,14}$/.test(value));
 }
 
 function getEmailList(formData: FormData, key: string): string[] | undefined {

@@ -164,8 +164,35 @@ export function UpdateTenantSettingsForm({
               placeholder="https://agency.com/webhooks/propertyflow-leads"
             />
           </label>
+          <label className={styles.field}>
+            <span>Telegram chat IDs</span>
+            <textarea
+              defaultValue={widgetSettings.leadTelegramChatIds?.join("\n") ?? ""}
+              name="leadTelegramChatIds"
+              placeholder="-1001234567890"
+              rows={3}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>LINE recipient IDs</span>
+            <textarea
+              defaultValue={widgetSettings.leadLineRecipientIds?.join("\n") ?? ""}
+              name="leadLineRecipientIds"
+              placeholder="U4af4980629..."
+              rows={3}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>WhatsApp recipients</span>
+            <textarea
+              defaultValue={widgetSettings.leadWhatsappRecipients?.join("\n") ?? ""}
+              name="leadWhatsappRecipients"
+              placeholder="+66812345678"
+              rows={3}
+            />
+          </label>
         </div>
-        <p className={styles.hint}>Use one email per line or comma-separated. Webhooks receive a compact JSON lead payload and should respond with a 2xx status.</p>
+        <p className={styles.hint}>Use one value per line or comma-separated. Messenger delivery requires provider credentials in the API environment.</p>
       </section>
 
       <div className={styles.actions}>

@@ -41,7 +41,10 @@ export class LeadNotificationService {
     const payload = buildLeadNotificationPayload(tenant, lead);
     const deliveries = [
       this.sendTenantWebhook(tenant, payload),
-      this.sendEmailNotification(tenant, payload)
+      this.sendEmailNotification(tenant, payload),
+      this.sendTelegramNotifications(tenant, payload),
+      this.sendLineNotifications(tenant, payload),
+      this.sendWhatsappNotifications(tenant, payload)
     ];
 
     await Promise.all(deliveries);
@@ -89,6 +92,94 @@ export class LeadNotificationService {
         authorization: `Bearer ${apiKey}`,
         "content-type": "application/json"
       }
+    );
+  }
+
+  private async sendTelegramNotifications(tenant: TenantSnapshot, payload: LeadNotificationPayload): Promise<void> {
+    const chatIds = tenant.widget.leadTelegramChatIds ?? [];
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+
+    if (!chatIds.length || !token) {
+      return;
+    }
+
+    await Promise.all(
+      chatIds.map((chatId) =>
+        this.postJson(
+          `https://api.telegram.org/bot${token}/sendMessage`,
+          {
+            chat_id: chatId,
+            disable_web_page_preview: true,
+            text: buildMessengerText(payload)
+          },
+          {
+            "content-type": "application/json"
+          }
+        )
+      )
+    );
+  }
+
+  private async sendLineNotifications(tenant: TenantSnapshot, payload: LeadNotificationPayload): Promise<void> {
+    const recipientIds = tenant.widget.leadLineRecipientIds ?? [];
+    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+
+    if (!recipientIds.length || !token) {
+      return;
+    }
+
+    await Promise.all(
+      recipientIds.map((recipientId) =>
+        this.postJson(
+          "https://api.line.me/v2/bot/message/push",
+          {
+            messages: [
+              {
+                text: buildMessengerText(payload),
+                type: "text"
+              }
+            ],
+            to: recipientId
+          },
+          {
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json"
+          }
+        )
+      )
+    );
+  }
+
+  private async sendWhatsappNotifications(tenant: TenantSnapshot, payload: LeadNotificationPayload): Promise<void> {
+    const recipients = tenant.widget.leadWhatsappRecipients ?? [];
+    const token = process.env.WHATSAPP_ACCESS_TOKEN;
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+    const graphVersion = process.env.WHATSAPP_GRAPH_API_VERSION ?? "v20.0";
+
+    if (!recipients.length || !token || !phoneNumberId) {
+      return;
+    }
+
+    await Promise.all(
+      recipients.map((recipient) =>
+        this.postJson(
+          `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`,
+          {
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            text: {
+              body: buildMessengerText(payload),
+              preview_url: false
+            },
+            to: recipient,
+            type: "text"
+          },
+          {
+            authorization: `Bearer ${token}`,
+            "content-type": "application/json"
+          }
+        )
+      )
     );
   }
 
@@ -152,6 +243,27 @@ function buildEmailText(payload: LeadNotificationPayload): string {
   ];
 
   return lines.filter((line): line is string => line !== undefined).join("\n");
+}
+
+function buildMessengerText(payload: LeadNotificationPayload): string {
+  const lead = payload.lead;
+  const lines = [
+    `New qualified lead: ${lead.contactName}`,
+    `Agency: ${payload.tenant.name}`,
+    `Source: ${lead.source}`,
+    lead.preferredLocale ? `Language: ${lead.preferredLocale}` : undefined,
+    lead.contactEmail ? `Email: ${lead.contactEmail}` : undefined,
+    lead.contactPhone ? `Phone: ${lead.contactPhone}` : undefined,
+    lead.propertyId ? `Property ID: ${lead.propertyId}` : undefined,
+    "",
+    lead.message ? trimText(lead.message, 1200) : "Open the lead queue for conversation context."
+  ];
+
+  return lines.filter((line): line is string => line !== undefined).join("\n");
+}
+
+function trimText(value: string, maxLength: number): string {
+  return value.length <= maxLength ? value : `${value.slice(0, maxLength - 1)}…`;
 }
 
 function toErrorMessage(error: unknown) {
