@@ -375,6 +375,73 @@ describe("AiChatService", () => {
     );
   });
 
+  it("continues property detail answers when optional enrichments fail", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const advisor = {
+      summarize: vi.fn().mockRejectedValue(new Error("advisor unavailable"))
+    };
+    const neighborhood = {
+      analyze: vi.fn().mockRejectedValue(new Error("neighborhood unavailable"))
+    };
+    const service = serviceFactory({
+      advisor,
+      neighborhood,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      message: "Is this a good investment near cafes?",
+      propertyId: "property-1"
+    });
+
+    expect(advisor.summarize).toHaveBeenCalledTimes(1);
+    expect(neighborhood.analyze).toHaveBeenCalledWith("tenant-1", "property-1");
+    expect(response.answer).toContain("Wongamat Sea View Residence is a 1-bedroom condo");
+    expect(response.citations).toEqual(expect.not.arrayContaining([expect.objectContaining({ source: "advisor" })]));
+    expect(response.citations).toEqual(expect.not.arrayContaining([expect.objectContaining({ source: "neighborhood" })]));
+    expect(warn).toHaveBeenCalledWith(
+      "AI chat advisor summary failed for tenant tenant-1, property property-1: advisor unavailable"
+    );
+    expect(warn).toHaveBeenCalledWith(
+      "AI chat neighborhood enrichment failed for tenant tenant-1, property property-1: neighborhood unavailable"
+    );
+  });
+
+  it("continues search answers when due diligence enrichment fails", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const advisor = {
+      summarize: vi.fn().mockRejectedValue(new Error("advisor unavailable"))
+    };
+    const property = propertyFactory();
+    const service = serviceFactory({
+      advisor,
+      searchItems: [property],
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      message: "Find condos in Pattaya"
+    });
+
+    expect(advisor.summarize).toHaveBeenCalledWith("tenant-1", "property-1");
+    expect(response.answer).toContain("I found 1 matching listing.");
+    expect(response.answer).toContain("Wongamat Sea View Residence");
+    expect(response.insights).toEqual([]);
+    expect(warn).toHaveBeenCalledWith(
+      "AI chat due diligence retrieval failed for tenant tenant-1: advisor unavailable"
+    );
+  });
+
   it("asks to clarify the listing when a viewing follow-up has no previous recommendation context", async () => {
     const service = serviceFactory({
       textGenerator: {
@@ -469,6 +536,9 @@ function serviceFactory(overrides: {
     interpret: ReturnType<typeof vi.fn>;
     search: ReturnType<typeof vi.fn>;
   };
+  neighborhood?: {
+    analyze: ReturnType<typeof vi.fn>;
+  };
   knowledge?: {
     searchChunks: ReturnType<typeof vi.fn>;
   };
@@ -526,7 +596,7 @@ function serviceFactory(overrides: {
       total: overrides.searchItems?.length ?? 0
     })
   };
-  const neighborhood = {
+  const neighborhood = overrides.neighborhood ?? {
     analyze: vi.fn()
   };
   const knowledge = overrides.knowledge ?? {

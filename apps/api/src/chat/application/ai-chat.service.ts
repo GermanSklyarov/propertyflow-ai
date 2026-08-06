@@ -1,11 +1,23 @@
 import { Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import type { AiChatCitation, AiChatInsight, AiChatRequest, AiChatResponse } from "@propertyflow/contracts";
+import type {
+  AiAdvisorSummary,
+  AiChatCitation,
+  AiChatInsight,
+  AiChatRequest,
+  AiChatResponse,
+  NeighborhoodIntelligence
+} from "@propertyflow/contracts";
+import type { PropertySnapshot } from "@propertyflow/domain";
 import { KnowledgeDocumentService } from "../../knowledge/application/knowledge-document.service.js";
 import { AiPropertyAdvisorService } from "../../properties/application/services/ai-property-advisor.service.js";
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
-import { buildAiChatDueDiligencePayload, buildAiChatDueDiligencePayloadFromSummaries } from "./ai-chat-due-diligence.js";
+import {
+  buildAiChatDueDiligencePayload,
+  buildAiChatDueDiligencePayloadFromSummaries,
+  type AiChatDueDiligencePayload
+} from "./ai-chat-due-diligence.js";
 import { classifyAiChatIntent } from "./ai-chat-intent.js";
 import { buildAiChatPropertyResponseDraft } from "./ai-chat-property-response.js";
 import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
@@ -59,13 +71,13 @@ export class AiChatService {
     }
 
     const knowledge = await this.retrieveKnowledge(tenantId, request);
-    const advisorSummary = intent.includeAdvice ? await this.advisor.summarize(tenantId, property.id) : undefined;
+    const advisorSummary = intent.includeAdvice ? await this.retrieveAdvisorSummary(tenantId, property) : undefined;
     const dueDiligence = advisorSummary
       ? buildAiChatDueDiligencePayloadFromSummaries([{ property, summary: advisorSummary }])
-      : await buildAiChatDueDiligencePayload(tenantId, [property], this.advisor);
-    const neighborhood = intent.includeNeighborhood
-      ? await this.neighborhoodIntelligence.analyze(tenantId, property.id)
-      : undefined;
+      : intent.includeAdvice
+        ? emptyDueDiligencePayload()
+        : await this.retrieveDueDiligence(tenantId, [property]);
+    const neighborhood = intent.includeNeighborhood ? await this.retrieveNeighborhood(tenantId, property) : undefined;
     const draft = buildAiChatPropertyResponseDraft({
       advisorSummary,
       dueDiligence,
@@ -99,7 +111,7 @@ export class AiChatService {
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
     const knowledge = await this.retrieveKnowledge(tenantId, request);
-    const dueDiligence = await buildAiChatDueDiligencePayload(tenantId, matches, this.advisor);
+    const dueDiligence = await this.retrieveDueDiligence(tenantId, matches);
     const draft = buildAiChatSearchResponseDraft({
       dueDiligence,
       items,
@@ -133,6 +145,51 @@ export class AiChatService {
     }
   }
 
+  private async retrieveDueDiligence(
+    tenantId: string,
+    properties: PropertySnapshot[]
+  ): Promise<AiChatDueDiligencePayload> {
+    try {
+      return await buildAiChatDueDiligencePayload(tenantId, properties, this.advisor);
+    } catch (error) {
+      this.logger.warn(
+        `AI chat due diligence retrieval failed for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      return emptyDueDiligencePayload();
+    }
+  }
+
+  private async retrieveAdvisorSummary(
+    tenantId: string,
+    property: PropertySnapshot
+  ): Promise<AiAdvisorSummary | undefined> {
+    try {
+      return await this.advisor.summarize(tenantId, property.id);
+    } catch (error) {
+      this.logger.warn(
+        `AI chat advisor summary failed for tenant ${tenantId}, property ${property.id}: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      return undefined;
+    }
+  }
+
+  private async retrieveNeighborhood(
+    tenantId: string,
+    property: PropertySnapshot
+  ): Promise<NeighborhoodIntelligence | undefined> {
+    try {
+      return await this.neighborhoodIntelligence.analyze(tenantId, property.id);
+    } catch (error) {
+      this.logger.warn(
+        `AI chat neighborhood enrichment failed for tenant ${tenantId}, property ${property.id}: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      return undefined;
+    }
+  }
+
   private buildResponse(
     options: AiChatAskOptions & {
       citations: AiChatCitation[];
@@ -150,4 +207,8 @@ export class AiChatService {
       useDeterministicFallback: process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true"
     });
   }
+}
+
+function emptyDueDiligencePayload(): AiChatDueDiligencePayload {
+  return { contextLines: [], insights: [] };
 }
