@@ -19,12 +19,22 @@ export async function buildAiChatDueDiligencePayload(
     return { contextLines: [], insights: [] };
   }
 
-  const summaries = await Promise.all(
-    properties.map(async (property) => ({
-      property,
-      summary: await advisor.summarize(tenantId, property.id)
-    }))
+  return buildAiChatDueDiligencePayloadFromSummaries(
+    await Promise.all(
+      properties.map(async (property) => ({
+        property,
+        summary: await advisor.summarize(tenantId, property.id)
+      }))
+    )
   );
+}
+
+export function buildAiChatDueDiligencePayloadFromSummaries(
+  summaries: Array<{ property: PropertySnapshot; summary: AiAdvisorSummary }>
+): AiChatDueDiligencePayload {
+  if (!summaries.length) {
+    return { contextLines: [], insights: [] };
+  }
 
   return {
     contextLines: [

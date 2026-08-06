@@ -5,16 +5,9 @@ import { AiPropertyAdvisorService } from "../../properties/application/services/
 import { NaturalLanguagePropertySearchService } from "../../properties/application/services/natural-language-property-search.service.js";
 import { NeighborhoodIntelligenceService } from "../../properties/application/services/neighborhood-intelligence.service.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../properties/domain/property.repository.js";
-import {
-  buildAiChatContext,
-  buildListingEvidence,
-  describeProperty,
-  knowledgeCitation,
-  knowledgeLine,
-  propertyCitation
-} from "./ai-chat-context.js";
-import { buildAiChatDueDiligencePayload } from "./ai-chat-due-diligence.js";
+import { buildAiChatDueDiligencePayload, buildAiChatDueDiligencePayloadFromSummaries } from "./ai-chat-due-diligence.js";
 import { classifyAiChatIntent } from "./ai-chat-intent.js";
+import { buildAiChatPropertyResponseDraft } from "./ai-chat-property-response.js";
 import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
 import { buildAiChatResponse, buildClarifyPropertyReferenceResponse } from "./ai-chat-response.js";
 import { buildAiChatSearchResponseDraft } from "./ai-chat-search-response.js";
@@ -63,50 +56,26 @@ export class AiChatService {
       throw new NotFoundException("Property not found");
     }
 
-    const citations: AiChatCitation[] = [propertyCitation(property)];
-    const answerParts = [describeProperty(property)];
     const knowledge = await this.retrieveKnowledge(tenantId, request);
-    const dueDiligence = await buildAiChatDueDiligencePayload(tenantId, [property], this.advisor);
-
-    if (intent.includeNeighborhood) {
-      const neighborhood = await this.neighborhoodIntelligence.analyze(tenantId, property.id);
-      citations.push({
-        source: "neighborhood",
-        propertyId: property.id,
-        title: property.title,
-        label: `Neighborhood intelligence, walkability ${neighborhood.walkabilityScore}/5`
-      });
-      answerParts.push(neighborhood.summary);
-    }
-
-    if (intent.includeAdvice) {
-      const summary = await this.advisor.summarize(tenantId, property.id);
-      citations.push({
-        source: "advisor",
-        propertyId: property.id,
-        title: property.title,
-        label: `AI advisor, confidence ${summary.confidence}`
-      });
-      answerParts.push(`Best for: ${summary.bestFor.join(", ")}.`);
-      answerParts.push(`Pros: ${summary.pros.slice(0, 3).join(" ")}`);
-      if (summary.cons.length) {
-        answerParts.push(`Watch-outs: ${summary.cons.slice(0, 2).join(" ")}`);
-      }
-    }
-
-    if (knowledge.length) {
-      citations.push(...knowledge.map((chunk) => knowledgeCitation(chunk)));
-      answerParts.push(`Relevant knowledge: ${knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`);
-    }
+    const advisorSummary = intent.includeAdvice ? await this.advisor.summarize(tenantId, property.id) : undefined;
+    const dueDiligence = advisorSummary
+      ? buildAiChatDueDiligencePayloadFromSummaries([{ property, summary: advisorSummary }])
+      : await buildAiChatDueDiligencePayload(tenantId, [property], this.advisor);
+    const neighborhood = intent.includeNeighborhood
+      ? await this.neighborhoodIntelligence.analyze(tenantId, property.id)
+      : undefined;
+    const draft = buildAiChatPropertyResponseDraft({
+      advisorSummary,
+      dueDiligence,
+      intent,
+      knowledge,
+      neighborhood,
+      property
+    });
 
     return this.buildResponse({
-      citations,
-      context: buildAiChatContext([...answerParts, ...buildListingEvidence([property]), ...dueDiligence.contextLines], citations),
-      deterministicDraft: answerParts.join(" "),
-      insights: dueDiligence.insights,
-      matchedPropertyIds: [property.id],
+      ...draft,
       request,
-      suggestedActions: ["compare-similar-properties", "open-investment-calculator", "create-lead"],
       ...options
     });
   }

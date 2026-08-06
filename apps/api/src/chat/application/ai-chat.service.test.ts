@@ -254,6 +254,49 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("New Search Result Condo");
   });
 
+  it("reuses the advisor summary for advice and due diligence on property detail answers", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const advisor = {
+      summarize: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+        Promise.resolve({
+          bestFor: ["living"],
+          confidence: "medium",
+          cons: ["Low floor may be less attractive for view-sensitive buyers."],
+          generatedFrom: ["property-price", "property-location"],
+          propertyId,
+          pros: ["Sea view can support stronger resale and rental positioning."],
+          questionsToAskAgent: ["What is the exact foreign quota status for this unit?"],
+          risks: ["Missing maintenance fee makes ownership cost incomplete."]
+        })
+      )
+    };
+    const service = serviceFactory({
+      advisor,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      message: "Is this listing a good investment?",
+      propertyId: "property-1"
+    });
+
+    expect(advisor.summarize).toHaveBeenCalledTimes(1);
+    expect(response.answer).toContain("Best for: living.");
+    expect(response.insights).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          detail: "Missing maintenance fee makes ownership cost incomplete.",
+          kind: "risk",
+          propertyId: "property-1"
+        })
+      ])
+    );
+  });
+
   it("asks to clarify the listing when a viewing follow-up has no previous recommendation context", async () => {
     const service = serviceFactory({
       textGenerator: {
@@ -341,6 +384,9 @@ describe("AiChatService", () => {
 });
 
 function serviceFactory(overrides: {
+  advisor?: {
+    summarize: ReturnType<typeof vi.fn>;
+  };
   textGenerator: AiTextGenerator;
   searchItems?: PropertySnapshot[];
   knowledgeItems?: KnowledgeDocumentChunkSnapshot[];
@@ -349,7 +395,7 @@ function serviceFactory(overrides: {
     findById: vi.fn().mockResolvedValue(propertyFactory()),
     search: vi.fn().mockResolvedValue(overrides.searchItems ?? [])
   };
-  const advisor = {
+  const advisor = overrides.advisor ?? {
     summarize: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
       Promise.resolve({
         bestFor: ["living"],
