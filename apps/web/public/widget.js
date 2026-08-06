@@ -68,7 +68,8 @@
     isSending: false,
     locale: requestedLocale,
     messages: [],
-    runtimeError: ""
+    runtimeError: "",
+    submittedLeadKeys: {}
   };
   var handoffIntentPatterns = [
     /(просмотр|посмотр|запис|связ|позвон|телефон|ватсап|вотсап|почт|контакт|агент|заявк)/i,
@@ -383,6 +384,7 @@
       })
       .map(function (listing) {
         return {
+          propertyId: typeof listing.propertyId === "string" ? listing.propertyId.trim().slice(0, 120) : "",
           title: listing.title.trim().slice(0, 120),
           url: String(listing.url)
         };
@@ -447,6 +449,7 @@
           assistantMessage(response.answer || getEmptyAnswerMessage(state.locale), recommendations)
         );
         persistMessages();
+        autoSubmitQualifiedLeadFromChat(trimmed);
       })
       .catch(function (error) {
         state.messages.push(assistantMessage(getAskFailureMessage(state.locale, error)));
@@ -460,6 +463,7 @@
 
   function buildConversationHistory(nextMessage) {
     return state.messages
+      .concat(nextMessage ? [{ role: "user", text: nextMessage }] : [])
       .filter(function (message) {
         return (
           message &&
@@ -468,7 +472,6 @@
           message.text.trim()
         );
       })
-      .concat([{ role: "user", text: nextMessage }])
       .slice(-10)
       .map(function (message) {
         return {
@@ -482,6 +485,97 @@
           text: message.text.slice(0, 1000)
         };
       });
+  }
+
+  function autoSubmitQualifiedLeadFromChat(triggerMessage) {
+    var contact = extractContactDetailsFromConversation();
+    var recommendations = getRecentRecommendedListings();
+    var leadProperty = resolveReferencedListingFromMessage(triggerMessage, recommendations) || recommendations[0];
+    var conversationText = state.messages
+      .map(function (message) {
+        return message.text || "";
+      })
+      .join(" ")
+      .toLowerCase();
+
+    if (
+      !state.config.capabilities ||
+      state.config.capabilities.leadCapture !== true ||
+      !leadProperty ||
+      !leadProperty.propertyId ||
+      (!contact.email && !contact.phone) ||
+      !matchesIntent((triggerMessage + " " + conversationText).toLowerCase(), handoffIntentPatterns)
+    ) {
+      return;
+    }
+
+    var leadKey = [leadProperty.propertyId, contact.email || "", contact.phone || ""].join(":");
+
+    if (state.submittedLeadKeys[leadKey]) {
+      return;
+    }
+
+    state.submittedLeadKeys[leadKey] = true;
+
+    fetch(apiBase.replace(/\/$/, "") + "/public/v1/widget/leads/" + encodeURIComponent(tenantSlug), {
+      body: JSON.stringify({
+        contactEmail: contact.email || undefined,
+        contactName: contact.name || "Website visitor",
+        contactPhone: contact.phone || undefined,
+        conversation: buildConversationHistory(""),
+        locale: state.locale,
+        message: triggerMessage,
+        recommendedListings: [leadProperty]
+      }),
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      method: "POST"
+    }).catch(function (_error) {
+      delete state.submittedLeadKeys[leadKey];
+    });
+  }
+
+  function extractContactDetailsFromConversation() {
+    var text = state.messages
+      .filter(function (message) {
+        return message.role === "user";
+      })
+      .map(function (message) {
+        return message.text || "";
+      })
+      .join(" ");
+    var emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+    var phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
+
+    return {
+      email: emailMatch ? emailMatch[0].trim() : "",
+      name: "",
+      phone: phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : ""
+    };
+  }
+
+  function resolveReferencedListingFromMessage(message, recommendations) {
+    var normalized = normalizeReferenceText(message);
+
+    if (!normalized) {
+      return null;
+    }
+
+    return (
+      recommendations.find(function (listing) {
+        return normalizeReferenceText(listing.title) && normalized.indexOf(normalizeReferenceText(listing.title)) >= 0;
+      }) || null
+    );
+  }
+
+  function normalizeReferenceText(value) {
+    return String(value || "")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   function shouldShowRecommendations(message) {

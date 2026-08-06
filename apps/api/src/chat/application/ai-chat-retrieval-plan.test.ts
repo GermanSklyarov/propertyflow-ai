@@ -39,6 +39,61 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("resolves named listings from prior recommendations even without ordinal wording", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Chat Smoke Fallback Condo" },
+              { propertyId: "property-2", title: "Chat Smoke Beach Condo" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "I want Chat Smoke Fallback Condo"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-1",
+      reason: "follow-up-reference"
+    });
+  });
+
+  it("uses the latest property-detail recommendation for later see-it requests", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Chat Smoke Fallback Condo" },
+              { propertyId: "property-2", title: "Chat Smoke Beach Condo" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          },
+          {
+            role: "user",
+            text: "I want Chat Smoke Fallback Condo"
+          },
+          {
+            recommendedListings: [{ propertyId: "property-1", title: "Chat Smoke Fallback Condo" }],
+            role: "assistant",
+            text: "Certainly, this is the first condo."
+          }
+        ],
+        locale: "en",
+        message: "Can I see it next week?"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-1",
+      reason: "follow-up-reference"
+    });
+  });
+
   it("asks for clarification instead of running a new search when a follow-up has no referenced listing", () => {
     expect(
       planAiChatRetrieval({
