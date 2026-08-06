@@ -108,17 +108,42 @@ export class UpdateTenantWidgetDto {
   @IsString({ each: true })
   leadTelegramChatIds?: string[];
 
+  @ApiProperty({ required: false, example: "123456:tenant-bot-token" })
+  @IsOptional()
+  @IsString()
+  leadTelegramBotToken?: string;
+
   @ApiProperty({ required: false, example: ["U4af4980629..."], type: [String] })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   leadLineRecipientIds?: string[];
 
+  @ApiProperty({ required: false, example: "line-channel-access-token" })
+  @IsOptional()
+  @IsString()
+  leadLineChannelAccessToken?: string;
+
   @ApiProperty({ required: false, example: ["+66812345678"], type: [String] })
   @IsOptional()
   @IsArray()
   @Matches(/^\+?[1-9]\d{7,14}$/, { each: true })
   leadWhatsappRecipients?: string[];
+
+  @ApiProperty({ required: false, example: "whatsapp-cloud-api-token" })
+  @IsOptional()
+  @IsString()
+  leadWhatsappAccessToken?: string;
+
+  @ApiProperty({ required: false, example: "123456789012345" })
+  @IsOptional()
+  @IsString()
+  leadWhatsappPhoneNumberId?: string;
+
+  @ApiProperty({ required: false, example: "v20.0" })
+  @IsOptional()
+  @Matches(/^v\d+\.\d+$/)
+  leadWhatsappGraphApiVersion?: string;
 
   @ApiProperty({ required: false, enum: leadQualificationFields, isArray: true })
   @IsOptional()

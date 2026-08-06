@@ -97,7 +97,7 @@ export class LeadNotificationService {
 
   private async sendTelegramNotifications(tenant: TenantSnapshot, payload: LeadNotificationPayload): Promise<void> {
     const chatIds = tenant.widget.leadTelegramChatIds ?? [];
-    const token = process.env.TELEGRAM_BOT_TOKEN;
+    const token = tenant.widget.leadTelegramBotToken;
 
     if (!chatIds.length || !token) {
       return;
@@ -122,7 +122,7 @@ export class LeadNotificationService {
 
   private async sendLineNotifications(tenant: TenantSnapshot, payload: LeadNotificationPayload): Promise<void> {
     const recipientIds = tenant.widget.leadLineRecipientIds ?? [];
-    const token = process.env.LINE_CHANNEL_ACCESS_TOKEN;
+    const token = tenant.widget.leadLineChannelAccessToken;
 
     if (!recipientIds.length || !token) {
       return;
@@ -152,9 +152,9 @@ export class LeadNotificationService {
 
   private async sendWhatsappNotifications(tenant: TenantSnapshot, payload: LeadNotificationPayload): Promise<void> {
     const recipients = tenant.widget.leadWhatsappRecipients ?? [];
-    const token = process.env.WHATSAPP_ACCESS_TOKEN;
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const graphVersion = process.env.WHATSAPP_GRAPH_API_VERSION ?? "v20.0";
+    const token = tenant.widget.leadWhatsappAccessToken;
+    const phoneNumberId = tenant.widget.leadWhatsappPhoneNumberId;
+    const graphVersion = tenant.widget.leadWhatsappGraphApiVersion ?? "v20.0";
 
     if (!recipients.length || !token || !phoneNumberId) {
       return;

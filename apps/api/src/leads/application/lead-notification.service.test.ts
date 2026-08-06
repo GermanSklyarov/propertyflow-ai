@@ -45,11 +45,12 @@ describe("LeadNotificationService", () => {
     );
   });
 
-  it("sends Telegram messages when chat ids and bot token are configured", async () => {
+  it("sends Telegram messages with the tenant bot token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("TELEGRAM_BOT_TOKEN", "telegram-test-token");
-    const service = new LeadNotificationService(tenantService(tenant({ leadTelegramChatIds: ["-100123"] })));
+    const service = new LeadNotificationService(
+      tenantService(tenant({ leadTelegramBotToken: "telegram-test-token", leadTelegramChatIds: ["-100123"] }))
+    );
 
     await service.notifyLeadCreated("tenant-demo", lead());
 
@@ -61,11 +62,12 @@ describe("LeadNotificationService", () => {
     );
   });
 
-  it("sends LINE push messages when recipient ids and channel token are configured", async () => {
+  it("sends LINE push messages with the tenant channel token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("LINE_CHANNEL_ACCESS_TOKEN", "line-test-token");
-    const service = new LeadNotificationService(tenantService(tenant({ leadLineRecipientIds: ["U123"] })));
+    const service = new LeadNotificationService(
+      tenantService(tenant({ leadLineChannelAccessToken: "line-test-token", leadLineRecipientIds: ["U123"] }))
+    );
 
     await service.notifyLeadCreated("tenant-demo", lead());
 
@@ -80,12 +82,18 @@ describe("LeadNotificationService", () => {
     );
   });
 
-  it("sends WhatsApp text messages when recipients and Cloud API env are configured", async () => {
+  it("sends WhatsApp text messages with the tenant Cloud API credentials", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);
-    vi.stubEnv("WHATSAPP_ACCESS_TOKEN", "whatsapp-test-token");
-    vi.stubEnv("WHATSAPP_PHONE_NUMBER_ID", "phone-number-1");
-    const service = new LeadNotificationService(tenantService(tenant({ leadWhatsappRecipients: ["+66812345678"] })));
+    const service = new LeadNotificationService(
+      tenantService(
+        tenant({
+          leadWhatsappAccessToken: "whatsapp-test-token",
+          leadWhatsappPhoneNumberId: "phone-number-1",
+          leadWhatsappRecipients: ["+66812345678"]
+        })
+      )
+    );
 
     await service.notifyLeadCreated("tenant-demo", lead());
 
@@ -143,8 +151,13 @@ function tenant(widgetOverrides: Partial<TenantSnapshot["widget"]> = {}): Tenant
       languages: ["en"],
       leadNotificationEmails: [],
       leadNotificationsEnabled: true,
+      leadLineChannelAccessToken: undefined,
       leadLineRecipientIds: [],
+      leadTelegramBotToken: undefined,
       leadTelegramChatIds: [],
+      leadWhatsappAccessToken: undefined,
+      leadWhatsappGraphApiVersion: "v20.0",
+      leadWhatsappPhoneNumberId: undefined,
       leadWhatsappRecipients: [],
       leadQualificationFields: ["budget", "email", "phone"],
       listingUrlTemplate: "/listings/:propertyId",

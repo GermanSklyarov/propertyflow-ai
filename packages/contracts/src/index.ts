@@ -249,9 +249,14 @@ export interface TenantWidgetSettings {
   leadNotificationsEnabled?: boolean;
   leadWebhookUrl?: string;
   leadLineRecipientIds?: string[];
+  leadLineChannelAccessToken?: string;
   leadQualificationFields: TenantLeadQualificationField[];
   leadTelegramChatIds?: string[];
+  leadTelegramBotToken?: string;
   leadWhatsappRecipients?: string[];
+  leadWhatsappAccessToken?: string;
+  leadWhatsappGraphApiVersion?: string;
+  leadWhatsappPhoneNumberId?: string;
   listingUrlTemplate: string;
   personaGenders: Partial<Record<TenantWidgetLanguage, TenantWidgetPersonaGender>>;
   tone: TenantWidgetTone;

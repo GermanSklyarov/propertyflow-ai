@@ -142,7 +142,7 @@ export function UpdateTenantSettingsForm({
           <input defaultChecked={widgetSettings.leadNotificationsEnabled} name="leadNotificationsEnabled" type="checkbox" />
           <span>
             <strong>Notify agency when Concierge creates a qualified lead</strong>
-            <small>Email uses the configured outbound provider; webhook delivery works independently.</small>
+            <small>Email uses PropertyFlowAI email delivery. Messenger channels use this agency workspace's own bot credentials.</small>
           </span>
         </label>
         <div className={styles.fieldGrid}>
@@ -165,12 +165,28 @@ export function UpdateTenantSettingsForm({
             />
           </label>
           <label className={styles.field}>
+            <span>Telegram bot token</span>
+            <input
+              name="leadTelegramBotToken"
+              placeholder={widgetSettings.leadTelegramBotToken ? "Saved. Paste a new token to replace." : "Create a bot with BotFather and paste the token"}
+              type="password"
+            />
+          </label>
+          <label className={styles.field}>
             <span>Telegram chat IDs</span>
             <textarea
               defaultValue={widgetSettings.leadTelegramChatIds?.join("\n") ?? ""}
               name="leadTelegramChatIds"
               placeholder="-1001234567890"
               rows={3}
+            />
+          </label>
+          <label className={styles.field}>
+            <span>LINE channel access token</span>
+            <input
+              name="leadLineChannelAccessToken"
+              placeholder={widgetSettings.leadLineChannelAccessToken ? "Saved. Paste a new token to replace." : "Paste this agency LINE channel access token"}
+              type="password"
             />
           </label>
           <label className={styles.field}>
@@ -183,6 +199,31 @@ export function UpdateTenantSettingsForm({
             />
           </label>
           <label className={styles.field}>
+            <span>WhatsApp access token</span>
+            <input
+              name="leadWhatsappAccessToken"
+              placeholder={widgetSettings.leadWhatsappAccessToken ? "Saved. Paste a new token to replace." : "Paste this agency WhatsApp Cloud API token"}
+              type="password"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>WhatsApp phone number ID</span>
+            <input
+              defaultValue={widgetSettings.leadWhatsappPhoneNumberId ?? ""}
+              name="leadWhatsappPhoneNumberId"
+              placeholder="123456789012345"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>WhatsApp Graph API version</span>
+            <input
+              defaultValue={widgetSettings.leadWhatsappGraphApiVersion ?? "v20.0"}
+              name="leadWhatsappGraphApiVersion"
+              pattern="^v[0-9]+[.][0-9]+$"
+              placeholder="v20.0"
+            />
+          </label>
+          <label className={styles.field}>
             <span>WhatsApp recipients</span>
             <textarea
               defaultValue={widgetSettings.leadWhatsappRecipients?.join("\n") ?? ""}
@@ -192,7 +233,7 @@ export function UpdateTenantSettingsForm({
             />
           </label>
         </div>
-        <p className={styles.hint}>Use one value per line or comma-separated. Messenger delivery requires provider credentials in the API environment.</p>
+        <p className={styles.hint}>Create the agency's own Telegram bot, LINE channel, or WhatsApp Cloud API app, then paste credentials here. Blank secret fields keep the saved value.</p>
       </section>
 
       <div className={styles.actions}>

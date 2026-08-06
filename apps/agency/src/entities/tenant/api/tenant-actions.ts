@@ -25,8 +25,13 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const leadNotificationsEnabled = formData.get("leadNotificationsEnabled") === "on";
   const leadWebhookUrl = getOptionalString(formData, "leadWebhookUrl");
   const leadTelegramChatIds = getTextList(formData, "leadTelegramChatIds");
+  const leadTelegramBotToken = getOptionalString(formData, "leadTelegramBotToken");
   const leadLineRecipientIds = getTextList(formData, "leadLineRecipientIds");
+  const leadLineChannelAccessToken = getOptionalString(formData, "leadLineChannelAccessToken");
   const leadWhatsappRecipients = getPhoneList(formData, "leadWhatsappRecipients");
+  const leadWhatsappAccessToken = getOptionalString(formData, "leadWhatsappAccessToken");
+  const leadWhatsappPhoneNumberId = getOptionalString(formData, "leadWhatsappPhoneNumberId");
+  const leadWhatsappGraphApiVersion = getOptionalString(formData, "leadWhatsappGraphApiVersion");
   const listingUrlTemplate = getListingUrlTemplate(formData);
   const primaryMarket = getOptionalMarket(formData);
   const languages = getLanguageCodes(formData);
@@ -55,8 +60,13 @@ export async function updateTenantSettingsAction(formData: FormData) {
         leadNotificationsEnabled,
         leadWebhookUrl: leadWebhookUrl ?? "",
         ...(leadTelegramChatIds ? { leadTelegramChatIds } : {}),
+        ...(leadTelegramBotToken ? { leadTelegramBotToken } : {}),
         ...(leadLineRecipientIds ? { leadLineRecipientIds } : {}),
+        ...(leadLineChannelAccessToken ? { leadLineChannelAccessToken } : {}),
         ...(leadWhatsappRecipients ? { leadWhatsappRecipients } : {}),
+        ...(leadWhatsappAccessToken ? { leadWhatsappAccessToken } : {}),
+        ...(leadWhatsappPhoneNumberId ? { leadWhatsappPhoneNumberId } : {}),
+        ...(leadWhatsappGraphApiVersion ? { leadWhatsappGraphApiVersion } : {}),
         ...(languages.length ? { languages } : {}),
         ...(leadQualificationFields ? { leadQualificationFields } : {}),
         ...(listingUrlTemplate ? { listingUrlTemplate } : {}),
