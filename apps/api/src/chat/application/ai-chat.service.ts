@@ -154,19 +154,47 @@ export class AiChatService {
         purpose: request.purpose
       });
     } catch (error) {
-      const filters = buildStructuredFallbackFilters(request);
+      const fallback = this.interpretStructuredSearchFallback(request);
 
       this.logger.warn(
         `AI chat listing search failed for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`
       );
 
       return {
-        filters,
-        interpretedIntent: `Structured fallback search for: "${request.message}"`,
+        filters: fallback.filters,
+        interpretedIntent: fallback.interpretedIntent,
         items: [],
         rankingExplanation:
           "Indexed natural-language search was unavailable, so I used structured repository filters as a fallback.",
         total: 0
+      };
+    }
+  }
+
+  private interpretStructuredSearchFallback(request: AiChatRequest): {
+    filters: PropertySearchRequest;
+    interpretedIntent: string;
+  } {
+    try {
+      const interpretation = this.naturalLanguageSearch.interpret({
+        locale: request.locale,
+        query: request.message,
+        market: request.market,
+        purpose: request.purpose
+      });
+
+      return {
+        filters: interpretation.filters,
+        interpretedIntent: interpretation.interpretedIntent
+      };
+    } catch (error) {
+      this.logger.warn(
+        `AI chat structured fallback interpretation failed: ${error instanceof Error ? error.message : String(error)}`
+      );
+
+      return {
+        filters: buildStructuredFallbackFilters(request),
+        interpretedIntent: `Structured fallback search for: "${request.message}"`
       };
     }
   }

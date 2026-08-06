@@ -274,7 +274,61 @@ describe("AiChatService", () => {
       search: vi.fn().mockResolvedValue([fallbackProperty])
     };
     const naturalLanguageSearch = {
-      interpret: vi.fn(),
+      interpret: vi.fn().mockReturnValue({
+        filters: { listingType: "sale", market: "pattaya", maxPriceThb: 3_000_000 },
+        interpretedIntent: "Pattaya condo under 3M",
+        rankingExplanation: "Local interpreter extracted market and budget."
+      }),
+      search: vi.fn().mockRejectedValue(new Error("opensearch unavailable"))
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      locale: "en",
+      market: "pattaya",
+      message: "Find a condo in Pattaya under 3M"
+    });
+
+    expect(properties.search).toHaveBeenCalledWith("tenant-1", {
+      listingType: "sale",
+      market: "pattaya",
+      maxPriceThb: 3_000_000
+    });
+    expect(naturalLanguageSearch.interpret).toHaveBeenCalledWith({
+      locale: "en",
+      market: "pattaya",
+      purpose: undefined,
+      query: "Find a condo in Pattaya under 3M"
+    });
+    expect(response.answer).toContain("Search Failure Fallback Condo");
+    expect(response.answer).toContain("Indexed natural-language search was unavailable");
+    expect(warn).toHaveBeenCalledWith(
+      "AI chat listing search failed for tenant tenant-1: opensearch unavailable"
+    );
+  });
+
+  it("uses request filters when listing search and fallback interpretation both fail", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const warn = vi.spyOn(Logger.prototype, "warn").mockImplementation(() => undefined);
+    const fallbackProperty = propertyFactory({
+      id: "fallback-property",
+      title: "Basic Fallback Condo"
+    });
+    const properties = {
+      findById: vi.fn().mockResolvedValue(propertyFactory()),
+      search: vi.fn().mockResolvedValue([fallbackProperty])
+    };
+    const naturalLanguageSearch = {
+      interpret: vi.fn().mockImplementation(() => {
+        throw new Error("interpreter unavailable");
+      }),
       search: vi.fn().mockRejectedValue(new Error("opensearch unavailable"))
     };
     const service = serviceFactory({
@@ -296,11 +350,9 @@ describe("AiChatService", () => {
       market: "pattaya",
       query: "Find a condo in Pattaya under 3M"
     });
-    expect(naturalLanguageSearch.interpret).not.toHaveBeenCalled();
-    expect(response.answer).toContain("Search Failure Fallback Condo");
-    expect(response.answer).toContain("Indexed natural-language search was unavailable");
+    expect(response.answer).toContain("Basic Fallback Condo");
     expect(warn).toHaveBeenCalledWith(
-      "AI chat listing search failed for tenant tenant-1: opensearch unavailable"
+      "AI chat structured fallback interpretation failed: interpreter unavailable"
     );
   });
 
