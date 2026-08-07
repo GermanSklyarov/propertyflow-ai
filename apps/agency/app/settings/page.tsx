@@ -29,7 +29,7 @@ export default async function AgencySettingsPage({
 
   try {
     const [tenant, usage, documentsResult, jobsResult] = await Promise.all([
-      queryClient.ensureQueryData(currentTenantQueryOptions(tenantId)),
+      queryClient.ensureQueryData(currentTenantQueryOptions(tenantId, { revalidateSeconds: false })),
       queryClient.ensureQueryData(tenantUsageQueryOptions(tenantId)),
       queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 50 }, tenantId)),
       queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId))

@@ -1392,7 +1392,7 @@ export async function createPropertyImportUploadUrl(
 export async function getCurrentTenant(options: AgencyApiOptions = {}): Promise<TenantSnapshot> {
   const response = await fetch(`${apiBaseUrl}/tenants/current`, {
     headers: await tenantHeaders(options),
-    next: { revalidate: 30 }
+    ...(options.revalidateSeconds === false ? { cache: "no-store" as const } : { next: { revalidate: options.revalidateSeconds ?? 30 } })
   });
 
   if (!response.ok) {

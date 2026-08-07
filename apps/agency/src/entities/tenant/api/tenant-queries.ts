@@ -2,10 +2,15 @@ import { queryOptions } from "@tanstack/react-query";
 import { getCurrentTenant, getTenantUsage } from "@shared/api/agency-client";
 import { queryKeys } from "@shared/query/query-keys";
 
-export function currentTenantQueryOptions(tenantId?: string) {
+export function currentTenantQueryOptions(
+  tenantId?: string,
+  options: {
+    revalidateSeconds?: number | false;
+  } = {}
+) {
   return queryOptions({
     queryKey: queryKeys.tenant.current(tenantId),
-    queryFn: () => getCurrentTenant({ tenantId })
+    queryFn: () => getCurrentTenant({ ...options, tenantId })
   });
 }
 

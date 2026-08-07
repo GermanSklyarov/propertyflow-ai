@@ -71,6 +71,7 @@ export function TenantLeadNotificationFields({
         </section>
 
         <ProviderPanel
+          connected={Boolean(widgetSettings.leadTelegramChatIds?.length)}
           description="Create a bot with BotFather, paste this agency bot token, then verify it."
           docsUrl="https://t.me/BotFather"
           provider="telegram"
@@ -97,6 +98,7 @@ export function TenantLeadNotificationFields({
         </ProviderPanel>
 
         <ProviderPanel
+          connected={Boolean(widgetSettings.leadLineRecipientIds?.length)}
           description="Paste the Channel Access Token and Channel Secret from this agency's LINE Official Account."
           docsUrl="https://developers.line.biz/console/"
           provider="line"
@@ -131,6 +133,7 @@ export function TenantLeadNotificationFields({
         </ProviderPanel>
 
         <ProviderPanel
+          connected={Boolean(widgetSettings.leadWhatsappRecipients?.length)}
           description="Use this agency's WhatsApp Cloud API app and business phone number."
           docsUrl="https://developers.facebook.com/docs/whatsapp/cloud-api"
           provider="whatsapp"
@@ -183,6 +186,7 @@ export function TenantLeadNotificationFields({
 
 function ProviderPanel({
   children,
+  connected,
   description,
   docsUrl,
   provider,
@@ -190,6 +194,7 @@ function ProviderPanel({
   title
 }: {
   children: ReactNode;
+  connected?: boolean;
   description: string;
   docsUrl: string;
   provider: TenantNotificationProvider;
@@ -206,7 +211,7 @@ function ProviderPanel({
       <div className={styles.providerHeader}>
         <MessageCircle size={16} />
         <span>{title}</span>
-        {activeResult?.status === "connected" ? <CheckCircle2 size={16} /> : null}
+        {activeResult?.status === "connected" || connected ? <CheckCircle2 size={16} /> : null}
       </div>
       <p className={styles.providerDescription}>{description}</p>
       <a className={styles.providerLink} href={docsUrl} rel="noreferrer" target="_blank">
