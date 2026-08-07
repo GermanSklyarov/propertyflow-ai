@@ -3,6 +3,7 @@ import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   RequestUser,
   TenantNotificationProviderCheckResponse,
+  TenantNotificationProviderConnectResponse,
   TenantSnapshot,
   TenantUsageResponse,
   TenantWidgetInstallCheckResponse
@@ -16,7 +17,11 @@ import { Tenant } from "../../../shared/presentation/tenant.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { TenantService } from "../../application/tenant.service.js";
 import { TenantWidgetInstallCheckDto } from "./tenant-widget-install-check.dto.js";
-import { TenantNotificationProviderTestDto, TenantNotificationProviderVerifyDto } from "./tenant-notification-provider.dto.js";
+import {
+  TenantNotificationProviderConnectDto,
+  TenantNotificationProviderTestDto,
+  TenantNotificationProviderVerifyDto
+} from "./tenant-notification-provider.dto.js";
 import { UpdateTenantSettingsDto } from "./update-tenant-settings.dto.js";
 
 @Controller("tenants")
@@ -97,6 +102,15 @@ export class CurrentTenantController {
     @Body() payload: TenantNotificationProviderVerifyDto
   ): Promise<TenantNotificationProviderCheckResponse> {
     return this.tenants.verifyNotificationProvider(tenant, payload);
+  }
+
+  @Post("current/notifications/provider/connect")
+  @Roles("manager", "admin")
+  beginNotificationProviderConnection(
+    @Tenant() tenant: TenantSnapshot,
+    @Body() payload: TenantNotificationProviderConnectDto
+  ): Promise<TenantNotificationProviderConnectResponse> {
+    return this.tenants.beginNotificationProviderConnection(tenant, payload.provider);
   }
 
   @Post("current/notifications/provider/test")

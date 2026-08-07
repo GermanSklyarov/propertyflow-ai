@@ -1,6 +1,7 @@
-import { CheckCircle2, ExternalLink, MessageCircle, Send, ShieldCheck, TriangleAlert } from "lucide-react";
+import { CheckCircle2, ExternalLink, KeyRound, MessageCircle, Send, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { ReactNode } from "react";
 import {
+  beginNotificationProviderConnectionAction,
   sendNotificationProviderTestAction,
   verifyNotificationProviderAction
 } from "@entities/tenant/api/tenant-actions";
@@ -8,11 +9,14 @@ import type { TenantNotificationProvider, TenantNotificationProviderCheckStatus,
 import styles from "./update-tenant-settings-form.module.css";
 
 export interface NotificationActionResult {
-  action: "test" | "verify";
+  action: "connect" | "test" | "verify";
+  code?: string;
   displayName?: string;
   error?: string;
+  expiresAt?: string;
   provider: TenantNotificationProvider;
   status: TenantNotificationProviderCheckStatus;
+  webhookUrl?: string;
 }
 
 const providerLabels: Record<TenantNotificationProvider, string> = {
@@ -212,6 +216,10 @@ function ProviderPanel({
           <ShieldCheck size={15} />
           Verify
         </button>
+        <button formAction={beginNotificationProviderConnectionAction} formNoValidate name="notificationProvider" type="submit" value={provider}>
+          <KeyRound size={15} />
+          Connect recipient
+        </button>
         <button formAction={sendNotificationProviderTestAction} formNoValidate name="notificationProvider" type="submit" value={provider}>
           <Send size={15} />
           Send test
@@ -222,6 +230,10 @@ function ProviderPanel({
 }
 
 function NotificationResult({ result }: { result: NotificationActionResult }) {
+  if (result.action === "connect") {
+    return <NotificationConnectResult result={result} />;
+  }
+
   const connected = result.status === "connected";
   const actionLabel = result.action === "test" ? "Test message" : "Connection";
   const provider = providerLabels[result.provider];
@@ -234,6 +246,25 @@ function NotificationResult({ result }: { result: NotificationActionResult }) {
           {actionLabel}: {provider} {connected ? "connected" : "needs attention"}
         </strong>
         <small>{connected ? result.displayName || "Provider accepted the request." : result.error || result.status}</small>
+      </span>
+    </div>
+  );
+}
+
+function NotificationConnectResult({ result }: { result: NotificationActionResult }) {
+  const provider = providerLabels[result.provider];
+
+  return (
+    <div className={styles.notificationConnect} role="status">
+      <KeyRound size={16} />
+      <span>
+        <strong>
+          Connect {provider}: send {result.code} to the agency bot
+        </strong>
+        <small>
+          Webhook URL: {result.webhookUrl}
+          {result.expiresAt ? ` · Code expires ${new Date(result.expiresAt).toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })}` : ""}
+        </small>
       </span>
     </div>
   );

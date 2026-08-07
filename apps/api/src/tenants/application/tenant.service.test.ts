@@ -11,6 +11,12 @@ import type { TenantSnapshot, TenantUserSnapshot, UpdateTenantSettingsRequest } 
 import { AuthIdentityService } from "../../shared/auth/auth-identity.service.js";
 import type { UserService } from "../../users/application/user.service.js";
 import type { AgencyEmailTokenRecord } from "../domain/agency-email-token.repository.js";
+import type {
+  ConsumeNotificationConnectionTokenInput,
+  CreateNotificationConnectionTokenInput,
+  NotificationConnectionTokenRecord,
+  NotificationConnectionTokenRepository
+} from "../domain/notification-connection-token.repository.js";
 import type { TenantRepository } from "../domain/tenant.repository.js";
 import { AgencyEmailTokenService } from "./agency-email-token.service.js";
 import { TenantService } from "./tenant.service.js";
@@ -836,6 +842,60 @@ describe("TenantService", () => {
     );
   });
 
+  it("confirms notification connection codes and appends recipients to tenant settings", async () => {
+    let currentTenant = tenant({
+      widget: {
+        ...tenant().widget,
+        leadTelegramChatIds: ["-100-existing"]
+      }
+    });
+    let capturedRequest: UpdateTenantSettingsRequest | undefined;
+    const connectionTokens = notificationConnectionTokens();
+    const service = new TenantService(
+      repository({
+        findById: async () => currentTenant,
+        updateSettings: async (_tenantId, request) => {
+          capturedRequest = request;
+          currentTenant = {
+            ...currentTenant,
+            widget: {
+              ...currentTenant.widget,
+              ...request.widget
+            }
+          };
+
+          return currentTenant;
+        }
+      }),
+      new AuthIdentityService(),
+      undefined,
+      undefined,
+      undefined,
+      connectionTokens
+    );
+
+    const connection = await service.beginNotificationProviderConnection(currentTenant, "telegram");
+
+    await expect(
+      service.confirmNotificationProviderConnection({
+        code: connection.code,
+        consumedAt: new Date(),
+        provider: "telegram",
+        recipientId: "-100-new",
+        recipientLabel: "Sales chat"
+      })
+    ).resolves.toMatchObject({
+      displayName: "Sales chat",
+      provider: "telegram",
+      status: "connected"
+    });
+    expect(capturedRequest).toEqual({
+      widget: {
+        leadTelegramChatIds: ["-100-existing", "-100-new"]
+      }
+    });
+  });
+
   it("normalizes widget language updates before saving settings", async () => {
     let capturedRequest: UpdateTenantSettingsRequest | undefined;
     const service = new TenantService(
@@ -915,6 +975,50 @@ function repository(overrides: Partial<TenantRepository> = {}): TenantRepository
     recordUsage: async () => undefined,
     updateSettings: async () => null,
     ...overrides
+  };
+}
+
+function notificationConnectionTokens(): NotificationConnectionTokenRepository {
+  const records = new Map<string, NotificationConnectionTokenRecord>();
+
+  return {
+    create: async (input: CreateNotificationConnectionTokenInput) => {
+      const record: NotificationConnectionTokenRecord = {
+        code: input.code,
+        consumedAt: null,
+        createdAt: input.createdAt,
+        expiresAt: input.expiresAt,
+        id: input.id,
+        provider: input.provider,
+        recipientId: null,
+        recipientLabel: null,
+        tenantId: input.tenantId
+      };
+
+      records.set(record.id, record);
+
+      return record;
+    },
+    consume: async (input: ConsumeNotificationConnectionTokenInput) => {
+      const record = Array.from(records.values()).find(
+        (item) =>
+          item.code === input.code &&
+          item.provider === input.provider &&
+          !item.consumedAt &&
+          item.expiresAt > input.consumedAt
+      );
+
+      if (!record) {
+        return null;
+      }
+
+      record.consumedAt = input.consumedAt;
+      record.recipientId = input.recipientId;
+      record.recipientLabel = input.recipientLabel ?? null;
+
+      return record;
+    },
+    revokeActiveForTenantProvider: async () => 0
   };
 }
 

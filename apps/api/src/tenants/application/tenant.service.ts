@@ -25,6 +25,7 @@ import type {
   RequestAgencyMagicLinkRequest,
   RequestAgencyMagicLinkResponse,
   TenantNotificationProviderCheckResponse,
+  TenantNotificationProviderConnectResponse,
   TenantNotificationProviderTestRequest,
   TenantNotificationProviderVerifyRequest,
   TenantLeadQualificationField,
@@ -48,10 +49,18 @@ import {
   type AgencyRefreshTokenRepository,
   type CreateAgencyRefreshTokenInput
 } from "../domain/agency-refresh-token.repository.js";
+import {
+  NOTIFICATION_CONNECTION_TOKEN_REPOSITORY,
+  type ConsumeNotificationConnectionTokenInput,
+  type CreateNotificationConnectionTokenInput,
+  type NotificationConnectionTokenRecord,
+  type NotificationConnectionTokenRepository
+} from "../domain/notification-connection-token.repository.js";
 import { TENANT_REPOSITORY, type TenantRepository } from "../domain/tenant.repository.js";
 
 const agencyAccessTokenTtlSeconds = 15 * 60;
 const agencyRefreshTokenTtlDays = 30;
+const notificationConnectionTtlMinutes = 15;
 
 @Injectable()
 export class TenantService {
@@ -64,7 +73,10 @@ export class TenantService {
     private readonly refreshTokens: AgencyRefreshTokenRepository = new InMemoryAgencyRefreshTokenRepository(),
     @Optional()
     @Inject(AgencyEmailTokenService)
-    private readonly emailTokens?: AgencyEmailTokenService
+    private readonly emailTokens?: AgencyEmailTokenService,
+    @Optional()
+    @Inject(NOTIFICATION_CONNECTION_TOKEN_REPOSITORY)
+    private readonly notificationConnectionTokens: NotificationConnectionTokenRepository = new InMemoryNotificationConnectionTokenRepository()
   ) {}
 
   async provision(request: ProvisionTenantRequest): Promise<ProvisionTenantResponse> {
@@ -522,6 +534,59 @@ export class TenantService {
     }
   }
 
+  async beginNotificationProviderConnection(
+    tenant: TenantSnapshot,
+    provider: TenantNotificationProviderVerifyRequest["provider"]
+  ): Promise<TenantNotificationProviderConnectResponse> {
+    const now = new Date();
+    await this.notificationConnectionTokens.revokeActiveForTenantProvider(tenant.id, provider, now);
+    const expiresAt = addMinutes(now, notificationConnectionTtlMinutes);
+    const code = createNotificationConnectionCode();
+
+    await this.notificationConnectionTokens.create({
+      code,
+      createdAt: now,
+      expiresAt,
+      id: randomUUID(),
+      provider,
+      tenantId: tenant.id
+    });
+
+    return {
+      code,
+      expiresAt: expiresAt.toISOString(),
+      instructions: buildNotificationConnectionInstructions(provider, code),
+      provider,
+      webhookUrl: buildNotificationWebhookUrl(provider, tenant.slug)
+    };
+  }
+
+  async confirmNotificationProviderConnection(
+    input: ConsumeNotificationConnectionTokenInput
+  ): Promise<TenantNotificationProviderCheckResponse> {
+    const consumedAt = input.consumedAt;
+    const record = await this.notificationConnectionTokens.consume(input);
+
+    if (!record) {
+      return {
+        checkedAt: consumedAt.toISOString(),
+        error: "Connection code is expired, already used, or belongs to another provider.",
+        provider: input.provider,
+        status: "failed"
+      };
+    }
+
+    const tenant = await this.getActiveTenantOrThrow(record.tenantId);
+    await this.appendNotificationRecipient(tenant, record);
+
+    return {
+      checkedAt: consumedAt.toISOString(),
+      displayName: input.recipientLabel || input.recipientId,
+      provider: input.provider,
+      status: "connected"
+    };
+  }
+
   private toUsageMetric(key: TenantUsageMetric["key"], used: number, limit: number): TenantUsageMetric {
     return {
       key,
@@ -771,6 +836,41 @@ export class TenantService {
       return failedProvider(provider, checkedAt, toErrorMessage(error));
     }
   }
+
+  private async appendNotificationRecipient(
+    tenant: TenantSnapshot,
+    record: NotificationConnectionTokenRecord
+  ): Promise<void> {
+    const recipientId = record.recipientId?.trim();
+
+    if (!recipientId) {
+      return;
+    }
+
+    if (record.provider === "telegram") {
+      await this.updateSettings(tenant.id, {
+        widget: {
+          leadTelegramChatIds: appendUnique(tenant.widget.leadTelegramChatIds ?? [], recipientId)
+        }
+      });
+    }
+
+    if (record.provider === "line") {
+      await this.updateSettings(tenant.id, {
+        widget: {
+          leadLineRecipientIds: appendUnique(tenant.widget.leadLineRecipientIds ?? [], recipientId)
+        }
+      });
+    }
+
+    if (record.provider === "whatsapp") {
+      await this.updateSettings(tenant.id, {
+        widget: {
+          leadWhatsappRecipients: appendUnique(tenant.widget.leadWhatsappRecipients ?? [], recipientId)
+        }
+      });
+    }
+  }
 }
 
 function hasPropertyFlowWidgetScript(html: string) {
@@ -995,6 +1095,10 @@ function addSeconds(date: Date, seconds: number): Date {
   return new Date(date.getTime() + seconds * 1000);
 }
 
+function addMinutes(date: Date, minutes: number): Date {
+  return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
 function addDays(date: Date, days: number): Date {
   return new Date(date.getTime() + days * 24 * 60 * 60 * 1000);
 }
@@ -1047,6 +1151,65 @@ class InMemoryAgencyRefreshTokenRepository implements AgencyRefreshTokenReposito
   }
 }
 
+class InMemoryNotificationConnectionTokenRepository implements NotificationConnectionTokenRepository {
+  readonly records = new Map<string, NotificationConnectionTokenRecord>();
+
+  async create(input: CreateNotificationConnectionTokenInput): Promise<NotificationConnectionTokenRecord> {
+    const record: NotificationConnectionTokenRecord = {
+      code: input.code,
+      consumedAt: null,
+      createdAt: input.createdAt,
+      expiresAt: input.expiresAt,
+      id: input.id,
+      provider: input.provider,
+      recipientId: null,
+      recipientLabel: null,
+      tenantId: input.tenantId
+    };
+
+    this.records.set(record.id, record);
+
+    return record;
+  }
+
+  async consume(input: ConsumeNotificationConnectionTokenInput): Promise<NotificationConnectionTokenRecord | null> {
+    const record = Array.from(this.records.values()).find(
+      (item) =>
+        item.code === input.code &&
+        item.provider === input.provider &&
+        !item.consumedAt &&
+        item.expiresAt > input.consumedAt
+    );
+
+    if (!record) {
+      return null;
+    }
+
+    record.consumedAt = input.consumedAt;
+    record.recipientId = input.recipientId;
+    record.recipientLabel = input.recipientLabel ?? null;
+
+    return record;
+  }
+
+  async revokeActiveForTenantProvider(
+    tenantId: string,
+    provider: TenantNotificationProviderVerifyRequest["provider"],
+    revokedAt: Date
+  ): Promise<number> {
+    let count = 0;
+
+    this.records.forEach((record) => {
+      if (record.tenantId === tenantId && record.provider === provider && !record.consumedAt && record.expiresAt > revokedAt) {
+        record.consumedAt = revokedAt;
+        count += 1;
+      }
+    });
+
+    return count;
+  }
+}
+
 function toRefreshRecord(input: CreateAgencyRefreshTokenInput): AgencyRefreshTokenRecord {
   return {
     createdAt: input.createdAt,
@@ -1072,6 +1235,52 @@ function buildTenantSlug(value: string): string {
 
 function normalizeSubscriptionPlan(plan: TenantSubscriptionPlan | undefined): TenantSubscriptionPlan {
   return plan && supportedSubscriptionPlans.includes(plan) ? plan : "starter";
+}
+
+function createNotificationConnectionCode(): string {
+  const digits = String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+
+  return `PF-${digits}`;
+}
+
+function buildNotificationConnectionInstructions(
+  provider: TenantNotificationProviderVerifyRequest["provider"],
+  code: string
+): string[] {
+  const message = `Send ${code} to this agency ${providerLabel(provider)} bot.`;
+
+  if (provider === "telegram") {
+    return ["Open the agency Telegram bot.", message, "PropertyFlowAI will save the chat automatically after the bot receives the code."];
+  }
+
+  if (provider === "line") {
+    return ["Add the agency LINE Official Account as a friend.", message, "PropertyFlowAI will save the LINE user or group automatically after the bot receives the code."];
+  }
+
+  return ["Open a WhatsApp chat with the agency business number.", message, "PropertyFlowAI will save the WhatsApp recipient automatically after the business account receives the code."];
+}
+
+function buildNotificationWebhookUrl(provider: TenantNotificationProviderVerifyRequest["provider"], tenantSlug: string): string {
+  const baseUrl = (process.env.PROPERTYFLOW_API_PUBLIC_URL ?? process.env.PROPERTYFLOW_API_URL ?? "http://127.0.0.1:3001").replace(
+    /\/+$/,
+    ""
+  );
+
+  return `${baseUrl}/public/v1/notifications/${provider}/${tenantSlug}`;
+}
+
+function providerLabel(provider: TenantNotificationProviderVerifyRequest["provider"]): string {
+  const labels: Record<TenantNotificationProviderVerifyRequest["provider"], string> = {
+    line: "LINE",
+    telegram: "Telegram",
+    whatsapp: "WhatsApp"
+  };
+
+  return labels[provider];
+}
+
+function appendUnique(values: string[], value: string): string[] {
+  return Array.from(new Set([...values, value].map((item) => item.trim()).filter(Boolean))).slice(0, 10);
 }
 
 interface TelegramGetMeResponse {

@@ -358,6 +358,7 @@
 }
 
 .notificationSuccess,
+.notificationConnect,
 .notificationWarning {
   display: grid;
   min-width: 0;
@@ -374,8 +375,17 @@
   background: #fff7ed;
 }
 
+.notificationConnect {
+  border-color: rgb(15 118 110 / 20%);
+  background: #edf8f4;
+}
+
 .notificationSuccess svg {
   color: #176b3b;
+}
+
+.notificationConnect svg {
+  color: var(--teal);
 }
 
 .notificationWarning svg {
@@ -383,6 +393,7 @@
 }
 
 .notificationSuccess span,
+.notificationConnect span,
 .notificationWarning span {
   display: grid;
   min-width: 0;
@@ -390,6 +401,7 @@
 }
 
 .notificationSuccess strong,
+.notificationConnect strong,
 .notificationWarning strong {
   color: var(--teal-dark);
   font-size: 0.78rem;
@@ -397,6 +409,7 @@
 }
 
 .notificationSuccess small,
+.notificationConnect small,
 .notificationWarning small {
   color: var(--muted);
   font-size: 0.74rem;

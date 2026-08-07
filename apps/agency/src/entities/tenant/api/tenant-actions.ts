@@ -6,13 +6,19 @@ import type {
   TenantLeadQualificationField,
   TenantNotificationProvider,
   TenantNotificationProviderCheckResponse,
+  TenantNotificationProviderConnectResponse,
   TenantWidgetLanguage,
   TenantWidgetTone
 } from "@propertyflow/contracts";
 import { supportedLeadQualificationFields } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
 import { normalizeWidgetListingUrlTemplate } from "@entities/tenant/model/widget-listing-links";
-import { sendNotificationProviderTest, updateTenantSettings, verifyNotificationProvider } from "@shared/api/agency-client";
+import {
+  beginNotificationProviderConnection,
+  sendNotificationProviderTest,
+  updateTenantSettings,
+  verifyNotificationProvider
+} from "@shared/api/agency-client";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
@@ -98,6 +104,15 @@ export async function verifyNotificationProviderAction(formData: FormData) {
   redirect(buildNotificationResultUrl("verify", result));
 }
 
+export async function beginNotificationProviderConnectionAction(formData: FormData) {
+  await requireAgencySession();
+  const result = await beginNotificationProviderConnection({
+    provider: getNotificationProvider(formData)
+  });
+
+  redirect(buildNotificationConnectUrl(result));
+}
+
 export async function sendNotificationProviderTestAction(formData: FormData) {
   await requireAgencySession();
   const result = await sendNotificationProviderTest(getNotificationProviderPayload(formData));
@@ -154,6 +169,19 @@ function buildNotificationResultUrl(
   if (result.error) {
     params.set("notificationError", result.error);
   }
+
+  return `/settings?${params.toString()}#lead-notification-settings`;
+}
+
+function buildNotificationConnectUrl(result: TenantNotificationProviderConnectResponse): string {
+  const params = new URLSearchParams({
+    notificationAction: "connect",
+    notificationCode: result.code,
+    notificationExpiresAt: result.expiresAt,
+    notificationProvider: result.provider,
+    notificationStatus: "connected",
+    notificationWebhookUrl: result.webhookUrl
+  });
 
   return `/settings?${params.toString()}#lead-notification-settings`;
 }

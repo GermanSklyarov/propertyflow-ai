@@ -86,6 +86,8 @@ import type {
   SavedSearchOpportunitiesResponse,
   TenantDashboardMetrics,
   TenantNotificationProviderCheckResponse,
+  TenantNotificationProviderConnectRequest,
+  TenantNotificationProviderConnectResponse,
   TenantNotificationProviderTestRequest,
   TenantNotificationProviderVerifyRequest,
   TenantSnapshot,
@@ -1469,6 +1471,25 @@ export async function verifyNotificationProvider(
   }
 
   return (await response.json()) as TenantNotificationProviderCheckResponse;
+}
+
+export async function beginNotificationProviderConnection(
+  request: TenantNotificationProviderConnectRequest
+): Promise<TenantNotificationProviderConnectResponse> {
+  const response = await fetch(`${apiBaseUrl}/tenants/current/notifications/provider/connect`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      ...(await agencyApiHeaders())
+    },
+    body: JSON.stringify(request)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to begin notification provider connection: ${response.status}`);
+  }
+
+  return (await response.json()) as TenantNotificationProviderConnectResponse;
 }
 
 export async function sendNotificationProviderTest(

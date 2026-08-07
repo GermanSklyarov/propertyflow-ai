@@ -2,6 +2,7 @@ import { ApiProperty } from "@nestjs/swagger";
 import { IsArray, IsIn, IsOptional, IsString, Matches } from "class-validator";
 import type {
   TenantNotificationProvider,
+  TenantNotificationProviderConnectRequest,
   TenantNotificationProviderTestRequest,
   TenantNotificationProviderVerifyRequest
 } from "@propertyflow/contracts";
@@ -37,6 +38,12 @@ export class TenantNotificationProviderVerifyDto implements TenantNotificationPr
   @IsOptional()
   @Matches(/^v\d+\.\d+$/)
   whatsappGraphApiVersion?: string;
+}
+
+export class TenantNotificationProviderConnectDto implements TenantNotificationProviderConnectRequest {
+  @ApiProperty({ enum: providers })
+  @IsIn(providers)
+  provider!: TenantNotificationProvider;
 }
 
 export class TenantNotificationProviderTestDto

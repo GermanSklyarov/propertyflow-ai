@@ -295,6 +295,18 @@ export interface TenantNotificationProviderTestRequest extends TenantNotificatio
   whatsappRecipients?: string[];
 }
 
+export interface TenantNotificationProviderConnectRequest {
+  provider: TenantNotificationProvider;
+}
+
+export interface TenantNotificationProviderConnectResponse {
+  code: string;
+  expiresAt: string;
+  instructions: string[];
+  provider: TenantNotificationProvider;
+  webhookUrl: string;
+}
+
 export interface TenantNotificationProviderCheckResponse {
   checkedAt: string;
   displayName?: string;

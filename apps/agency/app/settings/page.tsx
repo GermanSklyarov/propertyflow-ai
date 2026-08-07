@@ -13,10 +13,13 @@ export default async function AgencySettingsPage({
 }: {
   searchParams: Promise<{
     notificationAction?: string;
+    notificationCode?: string;
     notificationError?: string;
+    notificationExpiresAt?: string;
     notificationName?: string;
     notificationProvider?: string;
     notificationStatus?: string;
+    notificationWebhookUrl?: string;
     updated?: string;
   }>;
 }) {
@@ -59,25 +62,31 @@ export default async function AgencySettingsPage({
 
 function parseNotificationResult(query: {
   notificationAction?: string;
+  notificationCode?: string;
   notificationError?: string;
+  notificationExpiresAt?: string;
   notificationName?: string;
   notificationProvider?: string;
   notificationStatus?: string;
+  notificationWebhookUrl?: string;
 }): NotificationActionResult | undefined {
   const action = query.notificationAction;
   const provider = query.notificationProvider;
   const status = query.notificationStatus;
 
-  if ((action !== "test" && action !== "verify") || !isNotificationProvider(provider) || !isNotificationStatus(status)) {
+  if ((action !== "connect" && action !== "test" && action !== "verify") || !isNotificationProvider(provider) || !isNotificationStatus(status)) {
     return undefined;
   }
 
   return {
     action,
+    code: query.notificationCode,
     displayName: query.notificationName,
     error: query.notificationError,
+    expiresAt: query.notificationExpiresAt,
     provider,
-    status
+    status,
+    webhookUrl: query.notificationWebhookUrl
   };
 }
 

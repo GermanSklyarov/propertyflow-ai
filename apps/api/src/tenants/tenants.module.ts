@@ -8,17 +8,20 @@ import { TenantService } from "./application/tenant.service.js";
 import { AgencyEmailTokenService } from "./application/agency-email-token.service.js";
 import { AGENCY_EMAIL_TOKEN_REPOSITORY } from "./domain/agency-email-token.repository.js";
 import { AGENCY_REFRESH_TOKEN_REPOSITORY } from "./domain/agency-refresh-token.repository.js";
+import { NOTIFICATION_CONNECTION_TOKEN_REPOSITORY } from "./domain/notification-connection-token.repository.js";
 import { TENANT_REPOSITORY } from "./domain/tenant.repository.js";
 import { PgAgencyEmailTokenRepository } from "./infrastructure/postgres/pg-agency-email-token.repository.js";
 import { PgAgencyRefreshTokenRepository } from "./infrastructure/postgres/pg-agency-refresh-token.repository.js";
+import { PgNotificationConnectionTokenRepository } from "./infrastructure/postgres/pg-notification-connection-token.repository.js";
 import { PgTenantRepository } from "./infrastructure/postgres/pg-tenant.repository.js";
 import { CurrentTenantController } from "./presentation/rest/current-tenant.controller.js";
+import { NotificationProviderWebhookController } from "./presentation/rest/notification-provider-webhook.controller.js";
 import { PublicWidgetConfigController } from "./presentation/rest/public-widget-config.controller.js";
 import { TenantProvisioningController } from "./presentation/rest/tenant-provisioning.controller.js";
 
 @Module({
   imports: [forwardRef(() => AuditModule), AuthModule, DatabaseModule, UsersModule],
-  controllers: [CurrentTenantController, PublicWidgetConfigController, TenantProvisioningController],
+  controllers: [CurrentTenantController, NotificationProviderWebhookController, PublicWidgetConfigController, TenantProvisioningController],
   providers: [
     AgencyEmailTokenService,
     TenantService,
@@ -34,6 +37,10 @@ import { TenantProvisioningController } from "./presentation/rest/tenant-provisi
     {
       provide: AGENCY_EMAIL_TOKEN_REPOSITORY,
       useClass: PgAgencyEmailTokenRepository
+    },
+    {
+      provide: NOTIFICATION_CONNECTION_TOKEN_REPOSITORY,
+      useClass: PgNotificationConnectionTokenRepository
     }
   ],
   exports: [AgencyEmailTokenService, TenantService, TenantGuard]
