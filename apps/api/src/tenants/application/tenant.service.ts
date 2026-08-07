@@ -577,9 +577,10 @@ export class TenantService {
     }
 
     const tenant = await this.getActiveTenantOrThrow(record.tenantId);
-    await this.appendNotificationRecipient(tenant, record);
+    const alreadyConnected = await this.appendNotificationRecipient(tenant, record);
 
     return {
+      alreadyConnected,
       checkedAt: consumedAt.toISOString(),
       displayName: input.recipientLabel || input.recipientId,
       provider: input.provider,
@@ -840,36 +841,53 @@ export class TenantService {
   private async appendNotificationRecipient(
     tenant: TenantSnapshot,
     record: NotificationConnectionTokenRecord
-  ): Promise<void> {
+  ): Promise<boolean> {
     const recipientId = record.recipientId?.trim();
 
     if (!recipientId) {
-      return;
+      return false;
     }
 
     if (record.provider === "telegram") {
+      const current = tenant.widget.leadTelegramChatIds ?? [];
+      const alreadyConnected = current.includes(recipientId);
+
       await this.updateSettings(tenant.id, {
         widget: {
-          leadTelegramChatIds: appendUnique(tenant.widget.leadTelegramChatIds ?? [], recipientId)
+          leadTelegramChatIds: appendUnique(current, recipientId)
         }
       });
+
+      return alreadyConnected;
     }
 
     if (record.provider === "line") {
+      const current = tenant.widget.leadLineRecipientIds ?? [];
+      const alreadyConnected = current.includes(recipientId);
+
       await this.updateSettings(tenant.id, {
         widget: {
-          leadLineRecipientIds: appendUnique(tenant.widget.leadLineRecipientIds ?? [], recipientId)
+          leadLineRecipientIds: appendUnique(current, recipientId)
         }
       });
+
+      return alreadyConnected;
     }
 
     if (record.provider === "whatsapp") {
+      const current = tenant.widget.leadWhatsappRecipients ?? [];
+      const alreadyConnected = current.includes(recipientId);
+
       await this.updateSettings(tenant.id, {
         widget: {
-          leadWhatsappRecipients: appendUnique(tenant.widget.leadWhatsappRecipients ?? [], recipientId)
+          leadWhatsappRecipients: appendUnique(current, recipientId)
         }
       });
+
+      return alreadyConnected;
     }
+
+    return false;
   }
 }
 

@@ -308,6 +308,7 @@ export interface TenantNotificationProviderConnectResponse {
 }
 
 export interface TenantNotificationProviderCheckResponse {
+  alreadyConnected?: boolean;
   checkedAt: string;
   displayName?: string;
   error?: string;
