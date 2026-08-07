@@ -97,25 +97,25 @@ export async function updateTenantSettingsAction(formData: FormData) {
   redirect("/settings?updated=tenant-settings#tenant-settings-form");
 }
 
-export async function verifyNotificationProviderAction(formData: FormData) {
+export async function verifyNotificationProviderAction(provider: TenantNotificationProvider, formData: FormData) {
   await requireAgencySession();
-  const result = await verifyNotificationProvider(getNotificationProviderPayload(formData));
+  const result = await verifyNotificationProvider(getNotificationProviderPayload(provider, formData));
 
   redirect(buildNotificationResultUrl("verify", result));
 }
 
-export async function beginNotificationProviderConnectionAction(formData: FormData) {
+export async function beginNotificationProviderConnectionAction(provider: TenantNotificationProvider, _formData: FormData) {
   await requireAgencySession();
   const result = await beginNotificationProviderConnection({
-    provider: getNotificationProvider(formData)
+    provider
   });
 
   redirect(buildNotificationConnectUrl(result));
 }
 
-export async function sendNotificationProviderTestAction(formData: FormData) {
+export async function sendNotificationProviderTestAction(provider: TenantNotificationProvider, formData: FormData) {
   await requireAgencySession();
-  const result = await sendNotificationProviderTest(getNotificationProviderPayload(formData));
+  const result = await sendNotificationProviderTest(getNotificationProviderPayload(provider, formData));
 
   redirect(buildNotificationResultUrl("test", result));
 }
@@ -130,9 +130,7 @@ function getTextList(formData: FormData, key: string): string[] | undefined {
   return Array.from(new Set(raw.split(/\r?\n|,/).map((value) => value.trim()).filter(Boolean))).slice(0, 10);
 }
 
-function getNotificationProviderPayload(formData: FormData) {
-  const provider = getNotificationProvider(formData);
-
+function getNotificationProviderPayload(provider: TenantNotificationProvider, formData: FormData) {
   return {
     lineChannelAccessToken: getOptionalString(formData, "leadLineChannelAccessToken"),
     lineRecipientIds: getTextList(formData, "leadLineRecipientIds"),
@@ -144,12 +142,6 @@ function getNotificationProviderPayload(formData: FormData) {
     whatsappPhoneNumberId: getOptionalString(formData, "leadWhatsappPhoneNumberId"),
     whatsappRecipients: getPhoneList(formData, "leadWhatsappRecipients")
   };
-}
-
-function getNotificationProvider(formData: FormData): TenantNotificationProvider {
-  const value = String(formData.get("notificationProvider") ?? "");
-
-  return value === "telegram" || value === "line" || value === "whatsapp" ? value : "telegram";
 }
 
 function buildNotificationResultUrl(

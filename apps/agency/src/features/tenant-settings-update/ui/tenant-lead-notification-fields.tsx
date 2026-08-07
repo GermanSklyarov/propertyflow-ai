@@ -197,6 +197,9 @@ function ProviderPanel({
   title: string;
 }) {
   const activeResult = result?.provider === provider ? result : undefined;
+  const connectAction = beginNotificationProviderConnectionAction.bind(null, provider);
+  const testAction = sendNotificationProviderTestAction.bind(null, provider);
+  const verifyAction = verifyNotificationProviderAction.bind(null, provider);
 
   return (
     <section className={styles.providerPanel}>
@@ -212,15 +215,15 @@ function ProviderPanel({
       </a>
       {children}
       <div className={styles.providerActions}>
-        <button formAction={verifyNotificationProviderAction} formNoValidate name="notificationProvider" type="submit" value={provider}>
+        <button formAction={verifyAction} formNoValidate type="submit">
           <ShieldCheck size={15} />
           Verify
         </button>
-        <button formAction={beginNotificationProviderConnectionAction} formNoValidate name="notificationProvider" type="submit" value={provider}>
+        <button formAction={connectAction} formNoValidate type="submit">
           <KeyRound size={15} />
           Connect recipient
         </button>
-        <button formAction={sendNotificationProviderTestAction} formNoValidate name="notificationProvider" type="submit" value={provider}>
+        <button formAction={testAction} formNoValidate type="submit">
           <Send size={15} />
           Send test
         </button>
