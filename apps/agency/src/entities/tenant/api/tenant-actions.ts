@@ -109,10 +109,7 @@ export async function verifyNotificationProviderAction(provider: TenantNotificat
 
 export async function beginNotificationProviderConnectionAction(provider: TenantNotificationProvider, formData: FormData) {
   await requireAgencySession();
-  const result = await beginNotificationProviderConnection({
-    provider,
-    telegramBotToken: getOptionalString(formData, "leadTelegramBotToken")
-  }).catch(
+  const result = await beginNotificationProviderConnection(getNotificationProviderPayload(provider, formData)).catch(
     (error): TenantNotificationProviderCheckResponse => ({
       checkedAt: new Date().toISOString(),
       error: getErrorMessage(error),
@@ -144,11 +141,13 @@ function getTextList(formData: FormData, key: string): string[] | undefined {
 function getNotificationProviderPayload(provider: TenantNotificationProvider, formData: FormData) {
   return {
     lineChannelAccessToken: getOptionalString(formData, "leadLineChannelAccessToken"),
+    lineChannelSecret: getOptionalString(formData, "leadLineChannelSecret"),
     lineRecipientIds: getTextList(formData, "leadLineRecipientIds"),
     provider,
     telegramBotToken: getOptionalString(formData, "leadTelegramBotToken"),
     telegramChatIds: getTextList(formData, "leadTelegramChatIds"),
     whatsappAccessToken: getOptionalString(formData, "leadWhatsappAccessToken"),
+    whatsappAppSecret: getOptionalString(formData, "leadWhatsappAppSecret"),
     whatsappGraphApiVersion: getOptionalString(formData, "leadWhatsappGraphApiVersion"),
     whatsappPhoneNumberId: getOptionalString(formData, "leadWhatsappPhoneNumberId"),
     whatsappRecipients: getPhoneList(formData, "leadWhatsappRecipients")

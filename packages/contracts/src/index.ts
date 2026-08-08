@@ -299,8 +299,14 @@ export interface TenantNotificationProviderTestRequest extends TenantNotificatio
 }
 
 export interface TenantNotificationProviderConnectRequest {
-  telegramBotToken?: string;
+  lineChannelAccessToken?: string;
+  lineChannelSecret?: string;
   provider: TenantNotificationProvider;
+  telegramBotToken?: string;
+  whatsappAccessToken?: string;
+  whatsappAppSecret?: string;
+  whatsappGraphApiVersion?: string;
+  whatsappPhoneNumberId?: string;
 }
 
 export interface TenantNotificationProviderConnectResponse {

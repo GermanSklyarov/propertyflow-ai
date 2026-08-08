@@ -933,6 +933,47 @@ describe("TenantService", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("stores fresh LINE credentials when starting recipient connection", async () => {
+    vi.stubEnv("PROPERTYFLOW_API_PUBLIC_URL", "https://api.example.com");
+    let currentTenant = tenant();
+    const capturedRequests: UpdateTenantSettingsRequest[] = [];
+    const service = new TenantService(
+      repository({
+        updateSettings: async (_tenantId, request) => {
+          capturedRequests.push(request);
+          currentTenant = {
+            ...currentTenant,
+            widget: {
+              ...currentTenant.widget,
+              ...request.widget
+            }
+          };
+
+          return currentTenant;
+        }
+      })
+    );
+
+    await expect(
+      service.beginNotificationProviderConnection(currentTenant, {
+        lineChannelAccessToken: "line-token",
+        lineChannelSecret: "line-secret",
+        provider: "line"
+      })
+    ).resolves.toMatchObject({
+      provider: "line",
+      webhookUrl: "https://api.example.com/public/v1/notifications/line/demo-agency"
+    });
+    expect(capturedRequests).toEqual([
+      {
+        widget: {
+          leadLineChannelAccessToken: "line-token",
+          leadLineChannelSecret: "line-secret"
+        }
+      }
+    ]);
+  });
+
   it("generates a WhatsApp webhook verify token when starting recipient connection", async () => {
     vi.stubEnv("PROPERTYFLOW_API_PUBLIC_URL", "https://api.example.com");
     let currentTenant = tenant();
@@ -954,7 +995,13 @@ describe("TenantService", () => {
       })
     );
 
-    const connection = await service.beginNotificationProviderConnection(currentTenant, "whatsapp");
+    const connection = await service.beginNotificationProviderConnection(currentTenant, {
+      provider: "whatsapp",
+      whatsappAccessToken: "whatsapp-token",
+      whatsappAppSecret: "whatsapp-secret",
+      whatsappGraphApiVersion: "v21.0",
+      whatsappPhoneNumberId: "phone-number-1"
+    });
 
     expect(connection).toMatchObject({
       provider: "whatsapp",
@@ -964,6 +1011,10 @@ describe("TenantService", () => {
     expect(capturedRequests).toEqual([
       {
         widget: {
+          leadWhatsappAccessToken: "whatsapp-token",
+          leadWhatsappAppSecret: "whatsapp-secret",
+          leadWhatsappGraphApiVersion: "v21.0",
+          leadWhatsappPhoneNumberId: "phone-number-1",
           leadWhatsappWebhookVerifyToken: connection.webhookVerifyToken
         }
       }

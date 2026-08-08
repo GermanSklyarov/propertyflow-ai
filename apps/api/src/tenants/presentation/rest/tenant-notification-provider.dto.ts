@@ -48,7 +48,37 @@ export class TenantNotificationProviderConnectDto implements TenantNotificationP
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
+  lineChannelAccessToken?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  lineChannelSecret?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
   telegramBotToken?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  whatsappAccessToken?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  whatsappAppSecret?: string;
+
+  @ApiProperty({ required: false, example: "v20.0" })
+  @IsOptional()
+  @Matches(/^v\d+\.\d+$/)
+  whatsappGraphApiVersion?: string;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  whatsappPhoneNumberId?: string;
 }
 
 export class TenantNotificationProviderTestDto

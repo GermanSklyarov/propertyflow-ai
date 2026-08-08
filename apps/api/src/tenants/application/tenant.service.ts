@@ -549,8 +549,12 @@ export class TenantService {
       configuredTenant = await this.configureTelegramWebhook(tenant, request, webhookUrl);
     }
 
+    if (provider === "line") {
+      configuredTenant = await this.configureLineWebhookCredentials(tenant, request);
+    }
+
     if (provider === "whatsapp") {
-      const configured = await this.configureWhatsappWebhookVerification(tenant);
+      const configured = await this.configureWhatsappWebhookVerification(tenant, request);
       configuredTenant = configured.tenant;
       webhookVerifyToken = configured.webhookVerifyToken;
     }
@@ -739,21 +743,67 @@ export class TenantService {
     }
   }
 
+  private async configureLineWebhookCredentials(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderConnectRequest | TenantNotificationProviderConnectRequest["provider"]
+  ): Promise<TenantSnapshot> {
+    const tokenFromRequest = typeof request === "string" ? undefined : normalizeSecretInput(request.lineChannelAccessToken);
+    const secretFromRequest = typeof request === "string" ? undefined : normalizeSecretInput(request.lineChannelSecret);
+    const token = tokenFromRequest ?? tenant.widget.leadLineChannelAccessToken;
+    const secret = secretFromRequest ?? tenant.widget.leadLineChannelSecret;
+
+    if (!token || !secret) {
+      throw new BadRequestException("Paste a LINE channel access token and channel secret before connecting a recipient.");
+    }
+
+    if (!tokenFromRequest && !secretFromRequest) {
+      return tenant;
+    }
+
+    const updated = await this.tenants.updateSettings(tenant.id, {
+      widget: {
+        leadLineChannelAccessToken: token,
+        leadLineChannelSecret: secret
+      }
+    });
+
+    if (!updated) {
+      throw new NotFoundException("Agency workspace was not found");
+    }
+
+    return updated;
+  }
+
   private async configureWhatsappWebhookVerification(
-    tenant: TenantSnapshot
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderConnectRequest | TenantNotificationProviderConnectRequest["provider"]
   ): Promise<{ tenant: TenantSnapshot; webhookVerifyToken: string }> {
+    const accessToken =
+      typeof request === "string" ? tenant.widget.leadWhatsappAccessToken : normalizeSecretInput(request.whatsappAccessToken) ?? tenant.widget.leadWhatsappAccessToken;
+    const appSecret =
+      typeof request === "string" ? tenant.widget.leadWhatsappAppSecret : normalizeSecretInput(request.whatsappAppSecret) ?? tenant.widget.leadWhatsappAppSecret;
+    const phoneNumberId =
+      typeof request === "string" ? tenant.widget.leadWhatsappPhoneNumberId : normalizeSecretInput(request.whatsappPhoneNumberId) ?? tenant.widget.leadWhatsappPhoneNumberId;
+    const graphVersion =
+      typeof request === "string"
+        ? tenant.widget.leadWhatsappGraphApiVersion
+        : normalizeGraphApiVersionInput(request.whatsappGraphApiVersion ?? tenant.widget.leadWhatsappGraphApiVersion);
     const existingToken = tenant.widget.leadWhatsappWebhookVerifyToken?.trim();
 
-    if (existingToken) {
+    if (existingToken && !hasWhatsappConnectCredentialUpdate(tenant, request)) {
       return {
         tenant,
         webhookVerifyToken: existingToken
       };
     }
 
-    const webhookVerifyToken = createNotificationWebhookSecret();
+    const webhookVerifyToken = existingToken || createNotificationWebhookSecret();
     const updated = await this.tenants.updateSettings(tenant.id, {
       widget: {
+        ...(accessToken ? { leadWhatsappAccessToken: accessToken } : {}),
+        ...(appSecret ? { leadWhatsappAppSecret: appSecret } : {}),
+        ...(phoneNumberId ? { leadWhatsappPhoneNumberId: phoneNumberId } : {}),
+        leadWhatsappGraphApiVersion: graphVersion || "v20.0",
         leadWhatsappWebhookVerifyToken: webhookVerifyToken
       }
     });
@@ -1419,6 +1469,27 @@ function providerLabel(provider: TenantNotificationProviderVerifyRequest["provid
 
 function appendUnique(values: string[], value: string): string[] {
   return Array.from(new Set([...values, value].map((item) => item.trim()).filter(Boolean))).slice(0, 10);
+}
+
+function hasWhatsappConnectCredentialUpdate(
+  tenant: TenantSnapshot,
+  request: TenantNotificationProviderConnectRequest | TenantNotificationProviderConnectRequest["provider"]
+): boolean {
+  if (typeof request === "string") {
+    return false;
+  }
+
+  const accessToken = normalizeSecretInput(request.whatsappAccessToken);
+  const appSecret = normalizeSecretInput(request.whatsappAppSecret);
+  const phoneNumberId = normalizeSecretInput(request.whatsappPhoneNumberId);
+  const graphVersion = normalizeGraphApiVersionInput(request.whatsappGraphApiVersion ?? tenant.widget.leadWhatsappGraphApiVersion);
+
+  return Boolean(
+    (accessToken && accessToken !== tenant.widget.leadWhatsappAccessToken) ||
+      (appSecret && appSecret !== tenant.widget.leadWhatsappAppSecret) ||
+      (phoneNumberId && phoneNumberId !== tenant.widget.leadWhatsappPhoneNumberId) ||
+      graphVersion !== (tenant.widget.leadWhatsappGraphApiVersion ?? "v20.0")
+  );
 }
 
 interface TelegramGetMeResponse {
