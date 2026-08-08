@@ -19,6 +19,7 @@ import {
   updateTenantSettings,
   verifyNotificationProvider
 } from "@shared/api/agency-client";
+import { getErrorMessage } from "@shared/lib/errors";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
@@ -111,9 +112,16 @@ export async function beginNotificationProviderConnectionAction(provider: Tenant
   const result = await beginNotificationProviderConnection({
     provider,
     telegramBotToken: getOptionalString(formData, "leadTelegramBotToken")
-  });
+  }).catch(
+    (error): TenantNotificationProviderCheckResponse => ({
+      checkedAt: new Date().toISOString(),
+      error: getErrorMessage(error),
+      provider,
+      status: "failed"
+    })
+  );
 
-  redirect(buildNotificationConnectUrl(result));
+  redirect("code" in result ? buildNotificationConnectUrl(result) : buildNotificationResultUrl("connect", result));
 }
 
 export async function sendNotificationProviderTestAction(provider: TenantNotificationProvider, formData: FormData) {
@@ -148,7 +156,7 @@ function getNotificationProviderPayload(provider: TenantNotificationProvider, fo
 }
 
 function buildNotificationResultUrl(
-  action: "test" | "verify",
+  action: "connect" | "test" | "verify",
   result: TenantNotificationProviderCheckResponse
 ): string {
   const params = new URLSearchParams({

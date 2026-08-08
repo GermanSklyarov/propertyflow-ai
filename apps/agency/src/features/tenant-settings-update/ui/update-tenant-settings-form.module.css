@@ -418,6 +418,38 @@
   overflow-wrap: anywhere;
 }
 
+.notificationSetupGrid {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.notificationSetupField {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.notificationSetupField span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.notificationSetupField input {
+  min-width: 0;
+  min-height: 38px;
+  width: 100%;
+  border: 1px solid rgb(15 118 110 / 22%);
+  background: #fff;
+  padding: 0 9px;
+  color: var(--teal-dark);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
 .originBuilder {
   display: grid;
   gap: 10px;

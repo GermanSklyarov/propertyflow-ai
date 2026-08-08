@@ -199,10 +199,6 @@ export function TenantLeadNotificationFields({
           </label>
         </ProviderPanel>
       </div>
-      <p className={styles.hint}>
-        Next production step: replace manual recipient IDs with connect codes and provider webhooks, so agents only add the
-        bot and send a one-time code.
-      </p>
     </div>
   );
 }
@@ -270,7 +266,7 @@ function ProviderPanel({
 }
 
 function NotificationResult({ result }: { result: NotificationActionResult }) {
-  if (result.action === "connect") {
+  if (result.action === "connect" && result.status === "connected") {
     return <NotificationConnectResult result={result} />;
   }
 
@@ -293,20 +289,42 @@ function NotificationResult({ result }: { result: NotificationActionResult }) {
 
 function NotificationConnectResult({ result }: { result: NotificationActionResult }) {
   const provider = providerLabels[result.provider];
+  const expiresAt = result.expiresAt ? new Date(result.expiresAt).toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" }) : undefined;
 
   return (
     <div className={styles.notificationConnect} role="status">
       <KeyRound size={16} />
       <span>
-        <strong>
-          Connect {provider}: send {result.code} to the agency bot
-        </strong>
-        <small>
-          Webhook URL: {result.webhookUrl}
-          {result.webhookVerifyToken ? ` · Verify token: ${result.webhookVerifyToken}` : ""}
-          {result.expiresAt ? ` · Code expires ${new Date(result.expiresAt).toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })}` : ""}
-        </small>
+        <strong>{getConnectionTitle(result, provider)}</strong>
+        <small>{expiresAt ? `Connection code expires ${expiresAt}.` : "Connection code is ready."}</small>
+        {result.webhookUrl || result.webhookVerifyToken ? (
+          <div className={styles.notificationSetupGrid}>
+            {result.webhookUrl && result.provider !== "telegram" ? <SetupValue label="Webhook URL" value={result.webhookUrl} /> : null}
+            {result.webhookVerifyToken ? <SetupValue label="Verify token" value={result.webhookVerifyToken} /> : null}
+          </div>
+        ) : null}
       </span>
     </div>
   );
+}
+
+function SetupValue({ label, value }: { label: string; value: string }) {
+  return (
+    <label className={styles.notificationSetupField}>
+      <span>{label}</span>
+      <input readOnly value={value} />
+    </label>
+  );
+}
+
+function getConnectionTitle(result: NotificationActionResult, provider: string): string {
+  if (result.provider === "telegram") {
+    return `Telegram webhook configured. Send ${result.code} to the agency bot.`;
+  }
+
+  if (result.provider === "whatsapp") {
+    return `Connect ${provider}: add webhook details in Meta, then send ${result.code}.`;
+  }
+
+  return `Connect ${provider}: add webhook URL, then send ${result.code} to the agency bot.`;
 }

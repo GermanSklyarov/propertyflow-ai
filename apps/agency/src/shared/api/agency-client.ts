@@ -1486,7 +1486,7 @@ export async function beginNotificationProviderConnection(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to begin notification provider connection: ${response.status}`);
+    throw new Error(await readApiErrorMessage(response, `Failed to begin notification provider connection: ${response.status}`));
   }
 
   return (await response.json()) as TenantNotificationProviderConnectResponse;
@@ -1523,4 +1523,11 @@ function toQueryString(request: object) {
   const query = params.toString();
 
   return query ? `?${query}` : "";
+}
+
+async function readApiErrorMessage(response: Response, fallback: string): Promise<string> {
+  const body = (await response.json().catch(() => null)) as { error?: string; message?: string | string[] } | null;
+  const message = Array.isArray(body?.message) ? body.message.join(" ") : body?.message;
+
+  return message || body?.error || fallback;
 }
