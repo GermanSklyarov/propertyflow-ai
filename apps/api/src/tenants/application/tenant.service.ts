@@ -25,6 +25,7 @@ import type {
   RequestAgencyMagicLinkRequest,
   RequestAgencyMagicLinkResponse,
   TenantNotificationProviderCheckResponse,
+  TenantNotificationProviderConnectRequest,
   TenantNotificationProviderConnectResponse,
   TenantNotificationProviderTestRequest,
   TenantNotificationProviderVerifyRequest,
@@ -536,10 +537,13 @@ export class TenantService {
 
   async beginNotificationProviderConnection(
     tenant: TenantSnapshot,
-    provider: TenantNotificationProviderVerifyRequest["provider"]
+    request: TenantNotificationProviderConnectRequest | TenantNotificationProviderConnectRequest["provider"]
   ): Promise<TenantNotificationProviderConnectResponse> {
+    const provider = typeof request === "string" ? request : request.provider;
+    const webhookUrl = buildNotificationWebhookUrl(provider, tenant.slug);
+    const configuredTenant = provider === "telegram" ? await this.configureTelegramWebhook(tenant, request, webhookUrl) : tenant;
     const now = new Date();
-    await this.notificationConnectionTokens.revokeActiveForTenantProvider(tenant.id, provider, now);
+    await this.notificationConnectionTokens.revokeActiveForTenantProvider(configuredTenant.id, provider, now);
     const expiresAt = addMinutes(now, notificationConnectionTtlMinutes);
     const code = createNotificationConnectionCode();
 
@@ -549,7 +553,7 @@ export class TenantService {
       expiresAt,
       id: randomUUID(),
       provider,
-      tenantId: tenant.id
+      tenantId: configuredTenant.id
     });
 
     return {
@@ -557,7 +561,7 @@ export class TenantService {
       expiresAt: expiresAt.toISOString(),
       instructions: buildNotificationConnectionInstructions(provider, code),
       provider,
-      webhookUrl: buildNotificationWebhookUrl(provider, tenant.slug)
+      webhookUrl
     };
   }
 
@@ -640,6 +644,51 @@ export class TenantService {
     } catch (error) {
       return failedProvider("telegram", checkedAt, toErrorMessage(error));
     }
+  }
+
+  private async configureTelegramWebhook(
+    tenant: TenantSnapshot,
+    request: TenantNotificationProviderConnectRequest | TenantNotificationProviderConnectRequest["provider"],
+    webhookUrl: string
+  ): Promise<TenantSnapshot> {
+    const tokenFromRequest = typeof request === "string" ? undefined : normalizeSecretInput(request.telegramBotToken);
+    const token = tokenFromRequest ?? tenant.widget.leadTelegramBotToken;
+
+    if (!token) {
+      throw new BadRequestException("Paste a Telegram bot token before connecting a recipient.");
+    }
+
+    const secret = createNotificationWebhookSecret();
+    const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        allowed_updates: ["message", "channel_post"],
+        drop_pending_updates: false,
+        secret_token: secret,
+        url: webhookUrl
+      })
+    });
+    const body = (await response.json().catch(() => null)) as TelegramSetWebhookResponse | null;
+
+    if (!response.ok || body?.ok === false) {
+      throw new BadRequestException(body?.description || "Telegram rejected webhook setup for this bot token.");
+    }
+
+    const updated = await this.tenants.updateSettings(tenant.id, {
+      widget: {
+        leadTelegramBotToken: token,
+        leadTelegramWebhookSecret: secret
+      }
+    });
+
+    if (!updated) {
+      throw new NotFoundException("Agency workspace was not found");
+    }
+
+    return updated;
   }
 
   private async verifyLineProvider(
@@ -1261,6 +1310,10 @@ function createNotificationConnectionCode(): string {
   return `PF-${digits}`;
 }
 
+function createNotificationWebhookSecret(): string {
+  return randomBytes(32).toString("base64url");
+}
+
 function buildNotificationConnectionInstructions(
   provider: TenantNotificationProviderVerifyRequest["provider"],
   code: string
@@ -1307,6 +1360,11 @@ interface TelegramGetMeResponse {
     first_name?: string;
     username?: string;
   };
+}
+
+interface TelegramSetWebhookResponse {
+  description?: string;
+  ok: boolean;
 }
 
 interface LineBotInfoResponse {

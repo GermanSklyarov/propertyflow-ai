@@ -44,6 +44,11 @@ export class TenantNotificationProviderConnectDto implements TenantNotificationP
   @ApiProperty({ enum: providers })
   @IsIn(providers)
   provider!: TenantNotificationProvider;
+
+  @ApiProperty({ required: false })
+  @IsOptional()
+  @IsString()
+  telegramBotToken?: string;
 }
 
 export class TenantNotificationProviderTestDto

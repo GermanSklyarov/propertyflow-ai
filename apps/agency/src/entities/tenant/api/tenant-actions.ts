@@ -110,10 +110,11 @@ export async function verifyNotificationProviderAction(provider: TenantNotificat
   redirect(buildNotificationResultUrl("verify", result));
 }
 
-export async function beginNotificationProviderConnectionAction(provider: TenantNotificationProvider, _formData: FormData) {
+export async function beginNotificationProviderConnectionAction(provider: TenantNotificationProvider, formData: FormData) {
   await requireAgencySession();
   const result = await beginNotificationProviderConnection({
-    provider
+    provider,
+    telegramBotToken: getOptionalString(formData, "leadTelegramBotToken")
   });
 
   redirect(buildNotificationConnectUrl(result));

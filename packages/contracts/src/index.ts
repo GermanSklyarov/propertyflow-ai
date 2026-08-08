@@ -299,6 +299,7 @@ export interface TenantNotificationProviderTestRequest extends TenantNotificatio
 }
 
 export interface TenantNotificationProviderConnectRequest {
+  telegramBotToken?: string;
   provider: TenantNotificationProvider;
 }
 

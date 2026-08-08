@@ -72,7 +72,7 @@ export function TenantLeadNotificationFields({
 
         <ProviderPanel
           connected={Boolean(widgetSettings.leadTelegramChatIds?.length)}
-          description="Create a bot with BotFather, paste this agency bot token, then verify it."
+          description="Create a bot with BotFather, paste this agency bot token, then connect a recipient. PropertyFlowAI configures the webhook secret automatically."
           docsUrl="https://t.me/BotFather"
           provider="telegram"
           result={result}
@@ -81,9 +81,10 @@ export function TenantLeadNotificationFields({
           <label className={styles.field}>
             <span>Bot token</span>
             <input
+              autoComplete="off"
               name="leadTelegramBotToken"
               placeholder={widgetSettings.leadTelegramBotToken ? "Saved. Paste a new token to replace." : "123456:agency-bot-token"}
-              type="password"
+              spellCheck={false}
             />
           </label>
           <label className={styles.field}>
@@ -93,14 +94,6 @@ export function TenantLeadNotificationFields({
               name="leadTelegramChatIds"
               placeholder="-1001234567890"
               rows={3}
-            />
-          </label>
-          <label className={styles.field}>
-            <span>Webhook secret token</span>
-            <input
-              name="leadTelegramWebhookSecret"
-              placeholder={widgetSettings.leadTelegramWebhookSecret ? "Saved. Paste a new secret to replace." : "Set this as Telegram secret_token"}
-              type="password"
             />
           </label>
         </ProviderPanel>
@@ -116,17 +109,19 @@ export function TenantLeadNotificationFields({
           <label className={styles.field}>
             <span>Channel access token</span>
             <input
+              autoComplete="off"
               name="leadLineChannelAccessToken"
               placeholder={widgetSettings.leadLineChannelAccessToken ? "Saved. Paste a new token to replace." : "LINE channel access token"}
-              type="password"
+              spellCheck={false}
             />
           </label>
           <label className={styles.field}>
             <span>Channel secret</span>
             <input
+              autoComplete="off"
               name="leadLineChannelSecret"
               placeholder={widgetSettings.leadLineChannelSecret ? "Saved. Paste a new secret to replace." : "LINE channel secret"}
-              type="password"
+              spellCheck={false}
             />
           </label>
           <label className={styles.field}>
@@ -151,9 +146,10 @@ export function TenantLeadNotificationFields({
           <label className={styles.field}>
             <span>Access token</span>
             <input
+              autoComplete="off"
               name="leadWhatsappAccessToken"
               placeholder={widgetSettings.leadWhatsappAccessToken ? "Saved. Paste a new token to replace." : "WhatsApp Cloud API token"}
-              type="password"
+              spellCheck={false}
             />
           </label>
           <label className={styles.field}>
@@ -167,21 +163,23 @@ export function TenantLeadNotificationFields({
           <label className={styles.field}>
             <span>Webhook verify token</span>
             <input
+              autoComplete="off"
               name="leadWhatsappWebhookVerifyToken"
               placeholder={
                 widgetSettings.leadWhatsappWebhookVerifyToken
                   ? "Saved. Paste a new token to replace."
                   : "Use this token in WhatsApp webhook verification"
               }
-              type="password"
+              spellCheck={false}
             />
           </label>
           <label className={styles.field}>
             <span>App secret</span>
             <input
+              autoComplete="off"
               name="leadWhatsappAppSecret"
               placeholder={widgetSettings.leadWhatsappAppSecret ? "Saved. Paste a new secret to replace." : "WhatsApp app secret"}
-              type="password"
+              spellCheck={false}
             />
           </label>
           <label className={styles.field}>

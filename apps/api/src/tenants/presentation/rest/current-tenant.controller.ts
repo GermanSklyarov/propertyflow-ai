@@ -110,7 +110,7 @@ export class CurrentTenantController {
     @Tenant() tenant: TenantSnapshot,
     @Body() payload: TenantNotificationProviderConnectDto
   ): Promise<TenantNotificationProviderConnectResponse> {
-    return this.tenants.beginNotificationProviderConnection(tenant, payload.provider);
+    return this.tenants.beginNotificationProviderConnection(tenant, payload);
   }
 
   @Post("current/notifications/provider/test")

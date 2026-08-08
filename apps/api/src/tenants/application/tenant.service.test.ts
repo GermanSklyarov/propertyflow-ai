@@ -843,19 +843,26 @@ describe("TenantService", () => {
   });
 
   it("confirms notification connection codes and appends recipients to tenant settings", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ ok: true }),
+      ok: true,
+      status: 200
+    });
+    vi.stubGlobal("fetch", fetchMock);
     let currentTenant = tenant({
       widget: {
         ...tenant().widget,
+        leadTelegramBotToken: "telegram-token",
         leadTelegramChatIds: ["-100-existing"]
       }
     });
-    let capturedRequest: UpdateTenantSettingsRequest | undefined;
+    const capturedRequests: UpdateTenantSettingsRequest[] = [];
     const connectionTokens = notificationConnectionTokens();
     const service = new TenantService(
       repository({
         findById: async () => currentTenant,
         updateSettings: async (_tenantId, request) => {
-          capturedRequest = request;
+          capturedRequests.push(request);
           currentTenant = {
             ...currentTenant,
             widget: {
@@ -876,6 +883,13 @@ describe("TenantService", () => {
 
     const connection = await service.beginNotificationProviderConnection(currentTenant, "telegram");
 
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.telegram.org/bottelegram-token/setWebhook",
+      expect.objectContaining({
+        body: expect.stringContaining('"secret_token"')
+      })
+    );
+
     await expect(
       service.confirmNotificationProviderConnection({
         code: connection.code,
@@ -889,7 +903,13 @@ describe("TenantService", () => {
       provider: "telegram",
       status: "connected"
     });
-    expect(capturedRequest).toEqual({
+    expect(capturedRequests[0]).toEqual({
+      widget: {
+        leadTelegramBotToken: "telegram-token",
+        leadTelegramWebhookSecret: expect.any(String)
+      }
+    });
+    expect(capturedRequests[1]).toEqual({
       widget: {
         leadTelegramChatIds: ["-100-existing", "-100-new"]
       }
