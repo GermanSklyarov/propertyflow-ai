@@ -1467,7 +1467,7 @@ export async function verifyNotificationProvider(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to verify notification provider: ${response.status}`);
+    throw new Error(await readApiErrorMessage(response, `Failed to verify notification provider: ${response.status}`));
   }
 
   return (await response.json()) as TenantNotificationProviderCheckResponse;
@@ -1505,7 +1505,7 @@ export async function sendNotificationProviderTest(
   });
 
   if (!response.ok) {
-    throw new Error(`Failed to send notification provider test: ${response.status}`);
+    throw new Error(await readApiErrorMessage(response, `Failed to send notification provider test: ${response.status}`));
   }
 
   return (await response.json()) as TenantNotificationProviderCheckResponse;

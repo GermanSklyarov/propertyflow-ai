@@ -102,14 +102,38 @@ export async function updateTenantSettingsAction(formData: FormData) {
 
 export async function verifyNotificationProviderAction(provider: TenantNotificationProvider, formData: FormData) {
   await requireAgencySession();
-  const result = await verifyNotificationProvider(getNotificationProviderPayload(provider, formData));
+  const result = await toNotificationProviderResult(provider, verifyNotificationProvider(getNotificationProviderPayload(provider, formData)));
 
   redirect(buildNotificationResultUrl("verify", result));
 }
 
 export async function beginNotificationProviderConnectionAction(provider: TenantNotificationProvider, formData: FormData) {
   await requireAgencySession();
-  const result = await beginNotificationProviderConnection(getNotificationProviderPayload(provider, formData)).catch(
+  const result = await toNotificationProviderResult(provider, beginNotificationProviderConnection(getNotificationProviderPayload(provider, formData)));
+
+  redirect("code" in result ? buildNotificationConnectUrl(result) : buildNotificationResultUrl("connect", result));
+}
+
+export async function sendNotificationProviderTestAction(provider: TenantNotificationProvider, formData: FormData) {
+  await requireAgencySession();
+  const result = await toNotificationProviderResult(provider, sendNotificationProviderTest(getNotificationProviderPayload(provider, formData)));
+
+  redirect(buildNotificationResultUrl("test", result));
+}
+
+async function toNotificationProviderResult<T extends TenantNotificationProviderCheckResponse>(
+  provider: TenantNotificationProvider,
+  promise: Promise<T>
+): Promise<TenantNotificationProviderCheckResponse>;
+async function toNotificationProviderResult<T extends { provider: TenantNotificationProvider }>(
+  provider: TenantNotificationProvider,
+  promise: Promise<T>
+): Promise<T | TenantNotificationProviderCheckResponse>;
+async function toNotificationProviderResult<T extends { provider: TenantNotificationProvider }>(
+  provider: TenantNotificationProvider,
+  promise: Promise<T>
+): Promise<T | TenantNotificationProviderCheckResponse> {
+  return promise.catch(
     (error): TenantNotificationProviderCheckResponse => ({
       checkedAt: new Date().toISOString(),
       error: getErrorMessage(error),
@@ -117,15 +141,6 @@ export async function beginNotificationProviderConnectionAction(provider: Tenant
       status: "failed"
     })
   );
-
-  redirect("code" in result ? buildNotificationConnectUrl(result) : buildNotificationResultUrl("connect", result));
-}
-
-export async function sendNotificationProviderTestAction(provider: TenantNotificationProvider, formData: FormData) {
-  await requireAgencySession();
-  const result = await sendNotificationProviderTest(getNotificationProviderPayload(provider, formData));
-
-  redirect(buildNotificationResultUrl("test", result));
 }
 
 function getTextList(formData: FormData, key: string): string[] | undefined {
