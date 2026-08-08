@@ -1,3 +1,4 @@
+import { lookup } from "node:dns/promises";
 import {
   BadRequestException,
   ConflictException,
@@ -20,6 +21,10 @@ import type {
 import type { TenantRepository } from "../domain/tenant.repository.js";
 import { AgencyEmailTokenService } from "./agency-email-token.service.js";
 import { TenantService } from "./tenant.service.js";
+
+vi.mock("node:dns/promises", () => ({
+  lookup: vi.fn(async () => ({ address: "203.0.113.10", family: 4 }))
+}));
 
 describe("TenantService", () => {
   afterEach(() => {
@@ -1033,6 +1038,25 @@ describe("TenantService", () => {
     });
 
     await expect(service.beginNotificationProviderConnection(currentTenant, "telegram")).rejects.toBeInstanceOf(BadRequestException);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects messenger recipient connection when the public webhook host cannot resolve", async () => {
+    vi.stubEnv("PROPERTYFLOW_API_PUBLIC_URL", "https://dead-tunnel.trycloudflare.com");
+    vi.mocked(lookup).mockRejectedValueOnce(new Error("ENOTFOUND"));
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new TenantService(repository());
+    const currentTenant = tenant({
+      widget: {
+        ...tenant().widget,
+        leadTelegramBotToken: "telegram-token"
+      }
+    });
+
+    await expect(service.beginNotificationProviderConnection(currentTenant, "telegram")).rejects.toMatchObject({
+      message: expect.stringContaining("cannot be resolved")
+    });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 

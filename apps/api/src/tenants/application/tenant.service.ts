@@ -1,4 +1,5 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { lookup } from "node:dns/promises";
 import {
   BadRequestException,
   ConflictException,
@@ -541,7 +542,7 @@ export class TenantService {
   ): Promise<TenantNotificationProviderConnectResponse> {
     const provider = typeof request === "string" ? request : request.provider;
     const webhookUrl = buildNotificationWebhookUrl(provider, tenant.slug);
-    assertPublicNotificationWebhookUrl(webhookUrl);
+    await assertPublicNotificationWebhookUrl(webhookUrl);
     let configuredTenant = tenant;
     let webhookVerifyToken: string | undefined;
 
@@ -1445,7 +1446,7 @@ function buildNotificationWebhookUrl(provider: TenantNotificationProviderVerifyR
   return `${baseUrl}/public/v1/notifications/${provider}/${tenantSlug}`;
 }
 
-function assertPublicNotificationWebhookUrl(webhookUrl: string): void {
+async function assertPublicNotificationWebhookUrl(webhookUrl: string): Promise<void> {
   let url: URL;
 
   try {
@@ -1465,6 +1466,14 @@ function assertPublicNotificationWebhookUrl(webhookUrl: string): void {
   if (url.protocol !== "https:" || isLocalHost) {
     throw new BadRequestException(
       "Messenger webhooks require PROPERTYFLOW_API_PUBLIC_URL to be a public HTTPS URL. If you use a tunnel, update PROPERTYFLOW_API_PUBLIC_URL and restart the API after the tunnel URL changes."
+    );
+  }
+
+  try {
+    await lookup(url.hostname);
+  } catch (_error) {
+    throw new BadRequestException(
+      "Messenger webhook host cannot be resolved from the public internet. If you use a tunnel, update PROPERTYFLOW_API_PUBLIC_URL with the active tunnel URL and restart the API."
     );
   }
 }
