@@ -207,12 +207,17 @@ function buildQualifiedLeadMessage(payload: PublicWidgetLeadDto): string | undef
   const lines = ["Widget handoff request."];
   const visitorNote = normalizeOptional(payload.message);
   const recommendedListings: AiChatReferencedListing[] = (payload.recommendedListings ?? []).slice(0, 3);
+  const qualification = buildLeadQualificationSection(payload);
   const conversation = (payload.conversation ?? [])
     .filter((turn: AiChatTurn) => turn.text.trim())
     .slice(-8);
 
   if (visitorNote) {
     lines.push(`Visitor note: ${visitorNote}`);
+  }
+
+  if (qualification) {
+    lines.push(qualification);
   }
 
   if (recommendedListings.length) {
@@ -246,6 +251,87 @@ function buildQualifiedLeadMessage(payload: PublicWidgetLeadDto): string | undef
   }
 
   return lines.join("\n\n").slice(0, 3000);
+}
+
+function buildLeadQualificationSection(payload: PublicWidgetLeadDto): string | undefined {
+  const source = [
+    payload.message,
+    ...(payload.conversation ?? []).filter((turn: AiChatTurn) => turn.role === "user").map((turn: AiChatTurn) => turn.text)
+  ]
+    .filter(Boolean)
+    .join("\n");
+  const details = [
+    parseBudget(source) ? `Budget: ${parseBudget(source)}` : undefined,
+    parsePurpose(source) ? `Purpose: ${parsePurpose(source)}` : undefined,
+    parseTiming(source) ? `Timing: ${parseTiming(source)}` : undefined,
+    parseContactPreference(source) ? `Contact channel: ${parseContactPreference(source)}` : undefined
+  ].filter(Boolean);
+
+  return details.length ? ["Lead qualification:", ...details].join("\n") : undefined;
+}
+
+function parseBudget(text: string): string | undefined {
+  const match =
+    text.match(/\b(?:under|below|max|up to|до|менее|ไม่เกิน|ต่ำกว่า|预算|预算是|ไม่เกิน)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))?/i) ??
+    text.match(/\b([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))\b/i);
+
+  return match?.[0] ? normalizeQualificationValue(match[0]) : undefined;
+}
+
+function parsePurpose(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+  const candidates = [
+    { label: "Investment", pattern: /(investment|invest|rental yield|yield|инвест|доходн|ลงทุน|投资|投資|收益)/gi },
+    { label: "Relocation", pattern: /(relocation|relocat|move to|переезд|релокац|ย้าย|搬家|移居)/gi },
+    { label: "Family living", pattern: /(family|school|семь|семья|школ|ครอบครัว|โรงเรียน|家庭|学校|學校)/gi },
+    { label: "Personal use", pattern: /(personal use|for myself|live there|living|для себя|жить|อยู่อาศัย|自住|自己住)/gi }
+  ];
+  const latest = candidates
+    .flatMap(({ label, pattern }) => [...normalized.matchAll(pattern)].map((match) => ({ index: match.index ?? -1, label })))
+    .sort((left, right) => right.index - left.index)[0];
+
+  return latest?.label;
+}
+
+function parseContactPreference(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+
+  if (/(whatsapp|ватсап|วอตส์แอป)/i.test(normalized)) {
+    return "WhatsApp";
+  }
+
+  if (/(telegram|телеграм)/i.test(normalized)) {
+    return "Telegram";
+  }
+
+  if (/(line|ไลน์)/i.test(normalized)) {
+    return "LINE";
+  }
+
+  if (/(email|e-mail|почт|อีเมล|邮箱|郵箱)/i.test(normalized)) {
+    return "Email";
+  }
+
+  if (/(phone|call|телефон|номер|звон|โทร|电话|電話)/i.test(normalized)) {
+    return "Phone";
+  }
+
+  return undefined;
+}
+
+function parseTiming(text: string): string | undefined {
+  const matches = [
+    ...text.matchAll(
+      /next week|next month|monday(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|tomorrow|today|within\s+[0-9]+\s+(?:days|weeks|months)|следующ(?:ей|ий|ем)\s+\S+|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|下周|下週|下个月|下個月/gi
+    )
+  ];
+  const match = matches.at(-1);
+
+  return match?.[0] ? normalizeQualificationValue(match[0]) : undefined;
+}
+
+function normalizeQualificationValue(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function resolveRequestOrigin(value?: string): string | undefined {

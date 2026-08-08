@@ -81,14 +81,18 @@ describe("LeadNotificationService", () => {
           "",
           "Visitor note: my phone number +660827955673",
           "",
+          "Lead qualification:",
+          "Budget: under 3m",
+          "Purpose: Relocation",
+          "Timing: monday at 10 a.m.",
+          "Contact channel: Phone",
+          "",
           "Recommended listings:",
           "1. Price Comparable A (property-1)",
           "2. Pricing Metadata Smoke Condo (property-2)",
           "3. Price Recommendation Target Condo (property-3)",
           "",
           "Recent widget conversation:",
-          "assistant: Hi! I'm Anna, your AI property consultant.",
-          "user: find me a condo in pattaya for investment under 3m",
           "assistant: I found 6 matching listings for you and here is a deliberately long response that should not dominate messenger notifications.",
           "Shown listings:",
           "1. Price Comparable A (property-1)",
@@ -109,7 +113,7 @@ describe("LeadNotificationService", () => {
     expect(requestBody.text).toContain("📞 Phone: +660827955673");
     expect(requestBody.text).toContain("💬 Contact channel: Phone");
     expect(requestBody.text).toContain("💰 Budget: under 3m");
-    expect(requestBody.text).toContain("🎯 Purpose: Investment");
+    expect(requestBody.text).toContain("🎯 Purpose: Relocation");
     expect(requestBody.text).toContain("🗓️ Timing: monday at 10 a.m.");
     expect(requestBody.text).toContain("📝 Latest request: my phone number +660827955673");
     expect(requestBody.text).toContain("🏠 Selected listing: Price Recommendation Target Condo (property-3)");

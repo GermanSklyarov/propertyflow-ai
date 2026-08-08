@@ -311,7 +311,9 @@ function parseAiConciergeNotificationContext(payload: LeadNotificationPayload): 
 
   const sections = splitLeadSections(message);
   const clientTurns = parseClientTurns(sections);
-  const qualificationText = [parseVisitorNote(sections), ...parseClientTurns(sections, Number.POSITIVE_INFINITY)].filter(Boolean).join("\n");
+  const qualificationText = [parseLeadQualificationSection(sections), parseVisitorNote(sections), ...parseClientTurns(sections, Number.POSITIVE_INFINITY)]
+    .filter(Boolean)
+    .join("\n");
   const recommendedListings = parseRecommendedListings(sections);
   const selectedListing =
     recommendedListings.find((listing) => listing.propertyId === payload.lead.propertyId) ?? recommendedListings[0];
@@ -337,6 +339,10 @@ function parseVisitorNote(sections: string[]): string | undefined {
   const value = section?.replace(/^Visitor note:\s*/, "").trim();
 
   return value || undefined;
+}
+
+function parseLeadQualificationSection(sections: string[]): string | undefined {
+  return sections.find((item) => item.startsWith("Lead qualification:"));
 }
 
 function parseRecommendedListings(sections: string[]): AiConciergeNotificationContext["recommendedListings"] {
