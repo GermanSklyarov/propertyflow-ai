@@ -45,12 +45,15 @@ interface TenantRow {
   widget_lead_line_channel_secret: string | null;
   widget_lead_line_recipient_ids: string[] | null;
   widget_lead_telegram_bot_token: string | null;
+  widget_lead_telegram_webhook_secret: string | null;
   widget_lead_qualification_fields: string[] | null;
   widget_lead_telegram_chat_ids: string[] | null;
   widget_lead_whatsapp_access_token: string | null;
+  widget_lead_whatsapp_app_secret: string | null;
   widget_lead_whatsapp_graph_api_version: string | null;
   widget_lead_whatsapp_phone_number_id: string | null;
   widget_lead_whatsapp_recipients: string[] | null;
+  widget_lead_whatsapp_webhook_verify_token: string | null;
   widget_lead_webhook_url: string | null;
   widget_listing_url_template: string | null;
   widget_tone: TenantWidgetTone | null;
@@ -80,10 +83,13 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
   leadLineRecipientIds: [],
   leadTelegramBotToken: undefined,
   leadTelegramChatIds: [],
+  leadTelegramWebhookSecret: undefined,
   leadWhatsappAccessToken: undefined,
+  leadWhatsappAppSecret: undefined,
   leadWhatsappGraphApiVersion: "v20.0",
   leadWhatsappPhoneNumberId: undefined,
   leadWhatsappRecipients: [],
+  leadWhatsappWebhookVerifyToken: undefined,
   leadWebhookUrl: undefined,
   leadQualificationFields: supportedLeadQualificationFields.filter((field) => field !== "nationality"),
   listingUrlTemplate: "/listings/:propertyId",
@@ -241,13 +247,16 @@ export class PgTenantRepository implements TenantRepository {
             widget_lead_webhook_url,
             widget_lead_telegram_chat_ids,
             widget_lead_telegram_bot_token,
+            widget_lead_telegram_webhook_secret,
             widget_lead_line_recipient_ids,
             widget_lead_line_channel_access_token,
             widget_lead_line_channel_secret,
             widget_lead_whatsapp_recipients,
             widget_lead_whatsapp_access_token,
+            widget_lead_whatsapp_app_secret,
             widget_lead_whatsapp_phone_number_id,
             widget_lead_whatsapp_graph_api_version,
+            widget_lead_whatsapp_webhook_verify_token,
             widget_lead_qualification_fields,
             widget_listing_url_template,
             widget_tone,
@@ -290,7 +299,10 @@ export class PgTenantRepository implements TenantRepository {
             $27,
             $28,
             $29,
-            $29
+            $30,
+            $31,
+            $32,
+            $32
           )
           returning *
         `,
@@ -312,13 +324,16 @@ export class PgTenantRepository implements TenantRepository {
           defaultWidgetSettings.leadWebhookUrl ?? null,
           defaultWidgetSettings.leadTelegramChatIds,
           defaultWidgetSettings.leadTelegramBotToken ?? null,
+          defaultWidgetSettings.leadTelegramWebhookSecret ?? null,
           defaultWidgetSettings.leadLineRecipientIds,
           defaultWidgetSettings.leadLineChannelAccessToken ?? null,
           defaultWidgetSettings.leadLineChannelSecret ?? null,
           defaultWidgetSettings.leadWhatsappRecipients,
           defaultWidgetSettings.leadWhatsappAccessToken ?? null,
+          defaultWidgetSettings.leadWhatsappAppSecret ?? null,
           defaultWidgetSettings.leadWhatsappPhoneNumberId ?? null,
           defaultWidgetSettings.leadWhatsappGraphApiVersion,
+          defaultWidgetSettings.leadWhatsappWebhookVerifyToken ?? null,
           defaultWidgetSettings.leadQualificationFields,
           defaultWidgetSettings.listingUrlTemplate,
           defaultWidgetSettings.tone,
@@ -391,18 +406,21 @@ export class PgTenantRepository implements TenantRepository {
           widget_lead_webhook_url = $16,
           widget_lead_telegram_chat_ids = $17,
           widget_lead_telegram_bot_token = $18,
-          widget_lead_line_recipient_ids = $19,
-          widget_lead_line_channel_access_token = $20,
-          widget_lead_line_channel_secret = $21,
-          widget_lead_whatsapp_recipients = $22,
-          widget_lead_whatsapp_access_token = $23,
-          widget_lead_whatsapp_phone_number_id = $24,
-          widget_lead_whatsapp_graph_api_version = $25,
-          widget_lead_qualification_fields = $26,
-          widget_listing_url_template = $27,
-          widget_tone = $28,
-          widget_languages = $29,
-          updated_at = $30
+          widget_lead_telegram_webhook_secret = $19,
+          widget_lead_line_recipient_ids = $20,
+          widget_lead_line_channel_access_token = $21,
+          widget_lead_line_channel_secret = $22,
+          widget_lead_whatsapp_recipients = $23,
+          widget_lead_whatsapp_access_token = $24,
+          widget_lead_whatsapp_app_secret = $25,
+          widget_lead_whatsapp_phone_number_id = $26,
+          widget_lead_whatsapp_graph_api_version = $27,
+          widget_lead_whatsapp_webhook_verify_token = $28,
+          widget_lead_qualification_fields = $29,
+          widget_listing_url_template = $30,
+          widget_tone = $31,
+          widget_languages = $32,
+          updated_at = $33
         where id = $1
         returning *
       `,
@@ -425,13 +443,16 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.leadWebhookUrl ?? current.widget.leadWebhookUrl ?? null,
         request.widget?.leadTelegramChatIds ?? current.widget.leadTelegramChatIds ?? [],
         request.widget?.leadTelegramBotToken || current.widget.leadTelegramBotToken || null,
+        request.widget?.leadTelegramWebhookSecret || current.widget.leadTelegramWebhookSecret || null,
         request.widget?.leadLineRecipientIds ?? current.widget.leadLineRecipientIds ?? [],
         request.widget?.leadLineChannelAccessToken || current.widget.leadLineChannelAccessToken || null,
         request.widget?.leadLineChannelSecret || current.widget.leadLineChannelSecret || null,
         request.widget?.leadWhatsappRecipients ?? current.widget.leadWhatsappRecipients ?? [],
         request.widget?.leadWhatsappAccessToken || current.widget.leadWhatsappAccessToken || null,
+        request.widget?.leadWhatsappAppSecret || current.widget.leadWhatsappAppSecret || null,
         request.widget?.leadWhatsappPhoneNumberId || current.widget.leadWhatsappPhoneNumberId || null,
         request.widget?.leadWhatsappGraphApiVersion || current.widget.leadWhatsappGraphApiVersion || "v20.0",
+        request.widget?.leadWhatsappWebhookVerifyToken || current.widget.leadWhatsappWebhookVerifyToken || null,
         request.widget?.leadQualificationFields ?? current.widget.leadQualificationFields,
         request.widget?.listingUrlTemplate ?? current.widget.listingUrlTemplate,
         request.widget?.tone ?? current.widget.tone,
@@ -475,10 +496,13 @@ export class PgTenantRepository implements TenantRepository {
         leadLineRecipientIds: filterTextList(row.widget_lead_line_recipient_ids),
         leadTelegramBotToken: normalizeSecret(row.widget_lead_telegram_bot_token),
         leadTelegramChatIds: filterTextList(row.widget_lead_telegram_chat_ids),
+        leadTelegramWebhookSecret: normalizeSecret(row.widget_lead_telegram_webhook_secret),
         leadWhatsappAccessToken: normalizeSecret(row.widget_lead_whatsapp_access_token),
+        leadWhatsappAppSecret: normalizeSecret(row.widget_lead_whatsapp_app_secret),
         leadWhatsappGraphApiVersion: normalizeGraphApiVersion(row.widget_lead_whatsapp_graph_api_version),
         leadWhatsappPhoneNumberId: normalizeSecret(row.widget_lead_whatsapp_phone_number_id),
         leadWhatsappRecipients: filterPhoneList(row.widget_lead_whatsapp_recipients),
+        leadWhatsappWebhookVerifyToken: normalizeSecret(row.widget_lead_whatsapp_webhook_verify_token),
         leadWebhookUrl: normalizeWebhookUrl(row.widget_lead_webhook_url),
         leadQualificationFields: filterLeadQualificationFields(row.widget_lead_qualification_fields),
         listingUrlTemplate: normalizeListingUrlTemplate(row.widget_listing_url_template),

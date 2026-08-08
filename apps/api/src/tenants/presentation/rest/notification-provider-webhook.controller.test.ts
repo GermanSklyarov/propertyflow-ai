@@ -56,20 +56,110 @@ describe("NotificationProviderWebhookController", () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
     expect(tenants.confirmNotificationProviderConnection).not.toHaveBeenCalled();
   });
+
+  it("rejects Telegram webhooks with an invalid secret token", async () => {
+    const tenants = tenantService();
+    const controller = new NotificationProviderWebhookController(tenants);
+
+    await expect(
+      controller.handleTelegramWebhook("demo-agency", "wrong-secret", {
+        message: {
+          chat: { id: 12345, type: "private" },
+          text: "PF-123456"
+        }
+      })
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(tenants.confirmNotificationProviderConnection).not.toHaveBeenCalled();
+  });
+
+  it("verifies WhatsApp webhook challenges with the tenant verify token", async () => {
+    const tenants = tenantService();
+    const controller = new NotificationProviderWebhookController(tenants);
+
+    await expect(
+      controller.verifyWhatsappWebhook("demo-agency", "subscribe", "whatsapp-verify", "challenge-123")
+    ).resolves.toBe("challenge-123");
+  });
+
+  it("rejects WhatsApp webhook challenges with an invalid verify token", async () => {
+    const tenants = tenantService();
+    const controller = new NotificationProviderWebhookController(tenants);
+
+    await expect(controller.verifyWhatsappWebhook("demo-agency", "subscribe", "wrong-token", "challenge-123")).rejects.toBeInstanceOf(
+      ForbiddenException
+    );
+  });
+
+  it("accepts signed WhatsApp webhooks and replies to the chat", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const body = JSON.stringify({
+      entry: [
+        {
+          changes: [
+            {
+              value: {
+                messages: [{ from: "+66812345678", text: { body: "PF-123456" } }]
+              }
+            }
+          ]
+        }
+      ]
+    });
+    const tenants = tenantService();
+    const controller = new NotificationProviderWebhookController(tenants);
+
+    await expect(
+      controller.handleWhatsappWebhook("demo-agency", signWhatsappBody(body), { rawBody: Buffer.from(body) } as never, JSON.parse(body))
+    ).resolves.toMatchObject({
+      provider: "whatsapp",
+      status: "connected"
+    });
+    expect(tenants.confirmNotificationProviderConnection).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: "PF-123456",
+        provider: "whatsapp",
+        recipientId: "+66812345678"
+      })
+    );
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://graph.facebook.com/v20.0/phone-number-1/messages",
+      expect.objectContaining({
+        body: expect.stringContaining("PropertyFlowAI connected successfully")
+      })
+    );
+  });
+
+  it("rejects WhatsApp webhooks with an invalid signature", async () => {
+    const tenants = tenantService();
+    const controller = new NotificationProviderWebhookController(tenants);
+    const body = JSON.stringify({ entry: [{ changes: [{ value: { messages: [{ from: "+66812345678", text: { body: "PF-123456" } }] } }] }] });
+
+    await expect(
+      controller.handleWhatsappWebhook("demo-agency", "sha256=invalid", { rawBody: Buffer.from(body) } as never, JSON.parse(body))
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(tenants.confirmNotificationProviderConnection).not.toHaveBeenCalled();
+  });
 });
 
 function signLineBody(body: string): string {
   return createHmac("sha256", "line-secret").update(Buffer.from(body)).digest("base64");
 }
 
+function signWhatsappBody(body: string): string {
+  return `sha256=${createHmac("sha256", "whatsapp-secret").update(Buffer.from(body)).digest("hex")}`;
+}
+
 function tenantService(): TenantService {
   return {
-    confirmNotificationProviderConnection: vi.fn().mockResolvedValue({
-      checkedAt: "2026-08-08T08:00:00.000Z",
-      displayName: "LINE user",
-      provider: "line",
-      status: "connected"
-    }),
+    confirmNotificationProviderConnection: vi.fn().mockImplementation((request: { provider: "line" | "telegram" | "whatsapp" }) =>
+      Promise.resolve({
+        checkedAt: "2026-08-08T08:00:00.000Z",
+        displayName: "LINE user",
+        provider: request.provider,
+        status: "connected"
+      })
+    ),
     getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant())
   } as unknown as TenantService;
 }
@@ -102,6 +192,13 @@ function tenant(): TenantSnapshot {
       leadLineChannelSecret: "line-secret",
       leadLineRecipientIds: [],
       leadQualificationFields: ["budget", "email", "phone"],
+      leadTelegramBotToken: "telegram-token",
+      leadTelegramWebhookSecret: "telegram-secret",
+      leadWhatsappAccessToken: "whatsapp-token",
+      leadWhatsappAppSecret: "whatsapp-secret",
+      leadWhatsappGraphApiVersion: "v20.0",
+      leadWhatsappPhoneNumberId: "phone-number-1",
+      leadWhatsappWebhookVerifyToken: "whatsapp-verify",
       listingUrlTemplate: "/listings/:propertyId",
       personaGenders: { en: "feminine" },
       tone: "friendly",

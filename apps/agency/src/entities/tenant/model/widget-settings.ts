@@ -48,10 +48,13 @@ export const defaultTenantWidgetSettings: TenantSnapshot["widget"] = {
   leadLineRecipientIds: [],
   leadTelegramBotToken: undefined,
   leadTelegramChatIds: [],
+  leadTelegramWebhookSecret: undefined,
   leadWhatsappAccessToken: undefined,
+  leadWhatsappAppSecret: undefined,
   leadWhatsappGraphApiVersion: "v20.0",
   leadWhatsappPhoneNumberId: undefined,
   leadWhatsappRecipients: [],
+  leadWhatsappWebhookVerifyToken: undefined,
   leadQualificationFields: defaultLeadQualificationFields,
   listingUrlTemplate: defaultWidgetListingUrlTemplate,
   personaGenders: {
@@ -93,10 +96,14 @@ export function getTenantWidgetSettings(tenant: TenantSnapshot): TenantSnapshot[
     leadLineRecipientIds: tenant.widget?.leadLineRecipientIds ?? defaultTenantWidgetSettings.leadLineRecipientIds,
     leadTelegramBotToken: tenant.widget?.leadTelegramBotToken ?? defaultTenantWidgetSettings.leadTelegramBotToken,
     leadTelegramChatIds: tenant.widget?.leadTelegramChatIds ?? defaultTenantWidgetSettings.leadTelegramChatIds,
+    leadTelegramWebhookSecret: tenant.widget?.leadTelegramWebhookSecret ?? defaultTenantWidgetSettings.leadTelegramWebhookSecret,
     leadWhatsappAccessToken: tenant.widget?.leadWhatsappAccessToken ?? defaultTenantWidgetSettings.leadWhatsappAccessToken,
+    leadWhatsappAppSecret: tenant.widget?.leadWhatsappAppSecret ?? defaultTenantWidgetSettings.leadWhatsappAppSecret,
     leadWhatsappGraphApiVersion: tenant.widget?.leadWhatsappGraphApiVersion ?? defaultTenantWidgetSettings.leadWhatsappGraphApiVersion,
     leadWhatsappPhoneNumberId: tenant.widget?.leadWhatsappPhoneNumberId ?? defaultTenantWidgetSettings.leadWhatsappPhoneNumberId,
     leadWhatsappRecipients: tenant.widget?.leadWhatsappRecipients ?? defaultTenantWidgetSettings.leadWhatsappRecipients,
+    leadWhatsappWebhookVerifyToken:
+      tenant.widget?.leadWhatsappWebhookVerifyToken ?? defaultTenantWidgetSettings.leadWhatsappWebhookVerifyToken,
     leadQualificationFields: tenant.widget?.leadQualificationFields?.length
       ? tenant.widget.leadQualificationFields
       : defaultTenantWidgetSettings.leadQualificationFields,

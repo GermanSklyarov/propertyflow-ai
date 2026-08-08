@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { Body, Controller, ForbiddenException, Headers, Inject, Param, Post, Req } from "@nestjs/common";
+import { Body, Controller, ForbiddenException, Get, Headers, Inject, Param, Post, Query, Req } from "@nestjs/common";
 import type { TenantNotificationProviderCheckResponse, TenantSnapshot } from "@propertyflow/contracts";
 import type { FastifyRequest } from "fastify";
 import { TenantService } from "../../application/tenant.service.js";
@@ -11,14 +11,21 @@ export class NotificationProviderWebhookController {
   @Post("telegram/:tenantSlug")
   async handleTelegramWebhook(
     @Param("tenantSlug") tenantSlug: string,
+    @Headers("x-telegram-bot-api-secret-token") secretToken: string | undefined,
     @Body() payload: TelegramWebhookPayload
   ): Promise<TenantNotificationProviderCheckResponse> {
+    const tenant = await this.findTenantForReply(tenantSlug);
+
+    if (!isTelegramWebhookSecretValid(tenant, secretToken)) {
+      throw new ForbiddenException("Telegram webhook secret token is invalid");
+    }
+
     const message = payload.message ?? payload.channel_post;
     const code = extractConnectionCode(message?.text);
     const chatId = message?.chat?.id === undefined ? undefined : String(message.chat.id);
     const label = formatTelegramRecipientLabel(message?.chat, message?.from);
     const result = await this.confirmWebhookConnection("telegram", code, chatId, label);
-    await this.replyToTelegram(tenantSlug, chatId, result);
+    await this.replyToTelegram(tenant, chatId, result);
 
     return result;
   }
@@ -46,18 +53,42 @@ export class NotificationProviderWebhookController {
     return result;
   }
 
+  @Get("whatsapp/:tenantSlug")
+  async verifyWhatsappWebhook(
+    @Param("tenantSlug") tenantSlug: string,
+    @Query("hub.mode") mode: string | undefined,
+    @Query("hub.verify_token") verifyToken: string | undefined,
+    @Query("hub.challenge") challenge: string | undefined
+  ): Promise<string> {
+    const tenant = await this.findTenantForReply(tenantSlug);
+
+    if (!isWhatsappWebhookVerifyTokenValid(tenant, mode, verifyToken) || challenge === undefined) {
+      throw new ForbiddenException("WhatsApp webhook verify token is invalid");
+    }
+
+    return challenge;
+  }
+
   @Post("whatsapp/:tenantSlug")
   async handleWhatsappWebhook(
     @Param("tenantSlug") tenantSlug: string,
+    @Headers("x-hub-signature-256") signature: string | undefined,
+    @Req() request: RawBodyFastifyRequest,
     @Body() payload: WhatsappWebhookPayload
   ): Promise<TenantNotificationProviderCheckResponse> {
+    const tenant = await this.findTenantForReply(tenantSlug);
+
+    if (!isWhatsappWebhookSignatureValid(tenant, signature, request.rawBody)) {
+      throw new ForbiddenException("WhatsApp webhook signature is invalid");
+    }
+
     const message = payload.entry
       ?.flatMap((entry) => entry.changes ?? [])
       .flatMap((change) => change.value?.messages ?? [])
       .find((item) => extractConnectionCode(item.text?.body));
     const code = extractConnectionCode(message?.text?.body);
     const result = await this.confirmWebhookConnection("whatsapp", code, message?.from, message?.from);
-    await this.replyToWhatsapp(tenantSlug, message?.from, result);
+    await this.replyToWhatsapp(tenant, message?.from, result);
 
     return result;
   }
@@ -87,11 +118,10 @@ export class NotificationProviderWebhookController {
   }
 
   private async replyToTelegram(
-    tenantSlug: string,
+    tenant: TenantSnapshot | null,
     chatId: string | undefined,
     result: TenantNotificationProviderCheckResponse
   ): Promise<void> {
-    const tenant = await this.findTenantForReply(tenantSlug);
     const token = tenant?.widget.leadTelegramBotToken;
 
     if (!tenant || !token || !chatId) {
@@ -129,11 +159,10 @@ export class NotificationProviderWebhookController {
   }
 
   private async replyToWhatsapp(
-    tenantSlug: string,
+    tenant: TenantSnapshot | null,
     recipient: string | undefined,
     result: TenantNotificationProviderCheckResponse
   ): Promise<void> {
-    const tenant = await this.findTenantForReply(tenantSlug);
     const token = tenant?.widget.leadWhatsappAccessToken;
     const phoneNumberId = tenant?.widget.leadWhatsappPhoneNumberId;
     const graphVersion = tenant?.widget.leadWhatsappGraphApiVersion ?? "v20.0";
@@ -278,8 +307,62 @@ function isLineWebhookSignatureValid(
 
   const body = typeof rawBody === "string" ? Buffer.from(rawBody) : rawBody;
   const expected = createHmac("sha256", secret).update(body).digest("base64");
+
+  return safeEqualText(expected, signature);
+}
+
+function isTelegramWebhookSecretValid(tenant: TenantSnapshot | null, secretToken: string | undefined): boolean {
+  const expected = tenant?.widget.leadTelegramWebhookSecret?.trim();
+
+  if (!expected) {
+    return true;
+  }
+
+  return safeEqualText(expected, secretToken);
+}
+
+function isWhatsappWebhookVerifyTokenValid(
+  tenant: TenantSnapshot | null,
+  mode: string | undefined,
+  verifyToken: string | undefined
+): boolean {
+  const expected = tenant?.widget.leadWhatsappWebhookVerifyToken?.trim();
+
+  if (!expected) {
+    return true;
+  }
+
+  return mode === "subscribe" && safeEqualText(expected, verifyToken);
+}
+
+function isWhatsappWebhookSignatureValid(
+  tenant: TenantSnapshot | null,
+  signature: string | undefined,
+  rawBody: Buffer | string | undefined
+): boolean {
+  const secret = tenant?.widget.leadWhatsappAppSecret?.trim();
+
+  if (!secret) {
+    return true;
+  }
+
+  if (!signature?.startsWith("sha256=") || rawBody === undefined) {
+    return false;
+  }
+
+  const body = typeof rawBody === "string" ? Buffer.from(rawBody) : rawBody;
+  const expected = `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
+
+  return safeEqualText(expected, signature);
+}
+
+function safeEqualText(expected: string, actual: string | undefined): boolean {
+  if (!actual) {
+    return false;
+  }
+
   const expectedBuffer = Buffer.from(expected);
-  const actualBuffer = Buffer.from(signature);
+  const actualBuffer = Buffer.from(actual);
 
   return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
 }

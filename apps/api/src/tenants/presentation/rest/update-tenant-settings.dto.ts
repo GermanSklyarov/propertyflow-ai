@@ -113,6 +113,11 @@ export class UpdateTenantWidgetDto {
   @IsString()
   leadTelegramBotToken?: string;
 
+  @ApiProperty({ required: false, example: "telegram-webhook-secret-token" })
+  @IsOptional()
+  @IsString()
+  leadTelegramWebhookSecret?: string;
+
   @ApiProperty({ required: false, example: ["U4af4980629..."], type: [String] })
   @IsOptional()
   @IsArray()
@@ -140,10 +145,20 @@ export class UpdateTenantWidgetDto {
   @IsString()
   leadWhatsappAccessToken?: string;
 
+  @ApiProperty({ required: false, example: "whatsapp-app-secret" })
+  @IsOptional()
+  @IsString()
+  leadWhatsappAppSecret?: string;
+
   @ApiProperty({ required: false, example: "123456789012345" })
   @IsOptional()
   @IsString()
   leadWhatsappPhoneNumberId?: string;
+
+  @ApiProperty({ required: false, example: "propertyflow-whatsapp-verify-token" })
+  @IsOptional()
+  @IsString()
+  leadWhatsappWebhookVerifyToken?: string;
 
   @ApiProperty({ required: false, example: "v20.0" })
   @IsOptional()

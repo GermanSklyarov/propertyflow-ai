@@ -95,6 +95,14 @@ export function TenantLeadNotificationFields({
               rows={3}
             />
           </label>
+          <label className={styles.field}>
+            <span>Webhook secret token</span>
+            <input
+              name="leadTelegramWebhookSecret"
+              placeholder={widgetSettings.leadTelegramWebhookSecret ? "Saved. Paste a new secret to replace." : "Set this as Telegram secret_token"}
+              type="password"
+            />
+          </label>
         </ProviderPanel>
 
         <ProviderPanel
@@ -154,6 +162,26 @@ export function TenantLeadNotificationFields({
               defaultValue={widgetSettings.leadWhatsappPhoneNumberId ?? ""}
               name="leadWhatsappPhoneNumberId"
               placeholder="123456789012345"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>Webhook verify token</span>
+            <input
+              name="leadWhatsappWebhookVerifyToken"
+              placeholder={
+                widgetSettings.leadWhatsappWebhookVerifyToken
+                  ? "Saved. Paste a new token to replace."
+                  : "Use this token in WhatsApp webhook verification"
+              }
+              type="password"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>App secret</span>
+            <input
+              name="leadWhatsappAppSecret"
+              placeholder={widgetSettings.leadWhatsappAppSecret ? "Saved. Paste a new secret to replace." : "WhatsApp app secret"}
+              type="password"
             />
           </label>
           <label className={styles.field}>
