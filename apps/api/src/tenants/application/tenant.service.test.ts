@@ -792,7 +792,21 @@ describe("TenantService", () => {
       status: 200
     });
     vi.stubGlobal("fetch", fetchMock);
-    const service = new TenantService(repository());
+    let capturedRequest: UpdateTenantSettingsRequest | undefined;
+    const service = new TenantService(
+      repository({
+        updateSettings: async (_tenantId, request) => {
+          capturedRequest = request;
+
+          return tenant({
+            widget: {
+              ...tenant().widget,
+              ...request.widget
+            }
+          });
+        }
+      })
+    );
 
     await expect(
       service.verifyNotificationProvider(tenant(), {
@@ -812,6 +826,95 @@ describe("TenantService", () => {
         }
       })
     );
+    expect(capturedRequest).toEqual({
+      widget: {
+        leadLineChannelAccessToken: "line-token"
+      }
+    });
+  });
+
+  it("stores verified Telegram notification credentials", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ ok: true, result: { first_name: "Demo Bot", username: "demo_bot" } }),
+      ok: true,
+      status: 200
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let capturedRequest: UpdateTenantSettingsRequest | undefined;
+    const service = new TenantService(
+      repository({
+        updateSettings: async (_tenantId, request) => {
+          capturedRequest = request;
+
+          return tenant({
+            widget: {
+              ...tenant().widget,
+              ...request.widget
+            }
+          });
+        }
+      })
+    );
+
+    await expect(
+      service.verifyNotificationProvider(tenant(), {
+        provider: "telegram",
+        telegramBotToken: "telegram-token"
+      })
+    ).resolves.toMatchObject({
+      displayName: "@demo_bot",
+      provider: "telegram",
+      status: "connected"
+    });
+    expect(capturedRequest).toEqual({
+      widget: {
+        leadTelegramBotToken: "telegram-token"
+      }
+    });
+  });
+
+  it("stores verified WhatsApp notification credentials", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      json: async () => ({ display_phone_number: "+66123456789", verified_name: "Demo WhatsApp" }),
+      ok: true,
+      status: 200
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let capturedRequest: UpdateTenantSettingsRequest | undefined;
+    const service = new TenantService(
+      repository({
+        updateSettings: async (_tenantId, request) => {
+          capturedRequest = request;
+
+          return tenant({
+            widget: {
+              ...tenant().widget,
+              ...request.widget
+            }
+          });
+        }
+      })
+    );
+
+    await expect(
+      service.verifyNotificationProvider(tenant(), {
+        provider: "whatsapp",
+        whatsappAccessToken: "whatsapp-token",
+        whatsappGraphApiVersion: "v21.0",
+        whatsappPhoneNumberId: "phone-number-1"
+      })
+    ).resolves.toMatchObject({
+      displayName: "Demo WhatsApp",
+      provider: "whatsapp",
+      status: "connected"
+    });
+    expect(capturedRequest).toEqual({
+      widget: {
+        leadWhatsappAccessToken: "whatsapp-token",
+        leadWhatsappGraphApiVersion: "v21.0",
+        leadWhatsappPhoneNumberId: "phone-number-1"
+      }
+    });
   });
 
   it("sends Telegram notification test messages to configured recipients", async () => {

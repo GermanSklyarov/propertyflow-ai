@@ -653,6 +653,12 @@ export class TenantService {
         return failedProvider("telegram", checkedAt, "Telegram rejected this bot token.");
       }
 
+      if (normalizeSecretInput(request.telegramBotToken)) {
+        await this.updateNotificationCredentials(tenant, {
+          leadTelegramBotToken: token
+        });
+      }
+
       return {
         checkedAt,
         displayName: body.result.username ? `@${body.result.username}` : body.result.first_name,
@@ -695,18 +701,10 @@ export class TenantService {
       throw new BadRequestException(body?.description || "Telegram rejected webhook setup for this bot token.");
     }
 
-    const updated = await this.tenants.updateSettings(tenant.id, {
-      widget: {
-        leadTelegramBotToken: token,
-        leadTelegramWebhookSecret: secret
-      }
+    return this.updateNotificationCredentials(tenant, {
+      leadTelegramBotToken: token,
+      leadTelegramWebhookSecret: secret
     });
-
-    if (!updated) {
-      throw new NotFoundException("Agency workspace was not found");
-    }
-
-    return updated;
   }
 
   private async verifyLineProvider(
@@ -730,6 +728,12 @@ export class TenantService {
 
       if (!response.ok) {
         return failedProvider("line", checkedAt, "LINE rejected this channel access token.");
+      }
+
+      if (normalizeSecretInput(request.lineChannelAccessToken)) {
+        await this.updateNotificationCredentials(tenant, {
+          leadLineChannelAccessToken: token
+        });
       }
 
       return {
@@ -760,18 +764,10 @@ export class TenantService {
       return tenant;
     }
 
-    const updated = await this.tenants.updateSettings(tenant.id, {
-      widget: {
-        leadLineChannelAccessToken: token,
-        leadLineChannelSecret: secret
-      }
+    return this.updateNotificationCredentials(tenant, {
+      leadLineChannelAccessToken: token,
+      leadLineChannelSecret: secret
     });
-
-    if (!updated) {
-      throw new NotFoundException("Agency workspace was not found");
-    }
-
-    return updated;
   }
 
   private async configureWhatsappWebhookVerification(
@@ -798,19 +794,13 @@ export class TenantService {
     }
 
     const webhookVerifyToken = existingToken || createNotificationWebhookSecret();
-    const updated = await this.tenants.updateSettings(tenant.id, {
-      widget: {
-        ...(accessToken ? { leadWhatsappAccessToken: accessToken } : {}),
-        ...(appSecret ? { leadWhatsappAppSecret: appSecret } : {}),
-        ...(phoneNumberId ? { leadWhatsappPhoneNumberId: phoneNumberId } : {}),
-        leadWhatsappGraphApiVersion: graphVersion || "v20.0",
-        leadWhatsappWebhookVerifyToken: webhookVerifyToken
-      }
+    const updated = await this.updateNotificationCredentials(tenant, {
+      ...(accessToken ? { leadWhatsappAccessToken: accessToken } : {}),
+      ...(appSecret ? { leadWhatsappAppSecret: appSecret } : {}),
+      ...(phoneNumberId ? { leadWhatsappPhoneNumberId: phoneNumberId } : {}),
+      leadWhatsappGraphApiVersion: graphVersion || "v20.0",
+      leadWhatsappWebhookVerifyToken: webhookVerifyToken
     });
-
-    if (!updated) {
-      throw new NotFoundException("Agency workspace was not found");
-    }
 
     return {
       tenant: updated,
@@ -846,6 +836,18 @@ export class TenantService {
         return failedProvider("whatsapp", checkedAt, "WhatsApp Cloud API rejected these credentials.");
       }
 
+      if (
+        normalizeSecretInput(request.whatsappAccessToken) ||
+        normalizeSecretInput(request.whatsappPhoneNumberId) ||
+        request.whatsappGraphApiVersion
+      ) {
+        await this.updateNotificationCredentials(tenant, {
+          leadWhatsappAccessToken: token,
+          leadWhatsappGraphApiVersion: graphVersion,
+          leadWhatsappPhoneNumberId: phoneNumberId
+        });
+      }
+
       return {
         checkedAt,
         displayName: body?.verified_name ?? body?.display_phone_number,
@@ -855,6 +857,16 @@ export class TenantService {
     } catch (error) {
       return failedProvider("whatsapp", checkedAt, toErrorMessage(error));
     }
+  }
+
+  private async updateNotificationCredentials(tenant: TenantSnapshot, widget: UpdateTenantSettingsRequest["widget"]): Promise<TenantSnapshot> {
+    const updated = await this.tenants.updateSettings(tenant.id, { widget });
+
+    if (!updated) {
+      throw new NotFoundException("Agency workspace was not found");
+    }
+
+    return updated;
   }
 
   private async sendTelegramProviderTest(
