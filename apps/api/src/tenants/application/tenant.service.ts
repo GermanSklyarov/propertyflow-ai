@@ -541,6 +541,7 @@ export class TenantService {
   ): Promise<TenantNotificationProviderConnectResponse> {
     const provider = typeof request === "string" ? request : request.provider;
     const webhookUrl = buildNotificationWebhookUrl(provider, tenant.slug);
+    assertPublicNotificationWebhookUrl(webhookUrl);
     let configuredTenant = tenant;
     let webhookVerifyToken: string | undefined;
 
@@ -1380,6 +1381,30 @@ function buildNotificationWebhookUrl(provider: TenantNotificationProviderVerifyR
   );
 
   return `${baseUrl}/public/v1/notifications/${provider}/${tenantSlug}`;
+}
+
+function assertPublicNotificationWebhookUrl(webhookUrl: string): void {
+  let url: URL;
+
+  try {
+    url = new URL(webhookUrl);
+  } catch (_error) {
+    throw new BadRequestException("Set PROPERTYFLOW_API_PUBLIC_URL to a valid public HTTPS URL before connecting messenger webhooks.");
+  }
+
+  const hostname = url.hostname.toLowerCase();
+  const isLocalHost =
+    hostname === "localhost" ||
+    hostname === "0.0.0.0" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname.endsWith(".local");
+
+  if (url.protocol !== "https:" || isLocalHost) {
+    throw new BadRequestException(
+      "Messenger webhooks require PROPERTYFLOW_API_PUBLIC_URL to be a public HTTPS URL. If you use a tunnel, update PROPERTYFLOW_API_PUBLIC_URL and restart the API after the tunnel URL changes."
+    );
+  }
 }
 
 function providerLabel(provider: TenantNotificationProviderVerifyRequest["provider"]): string {

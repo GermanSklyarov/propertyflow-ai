@@ -843,6 +843,7 @@ describe("TenantService", () => {
   });
 
   it("confirms notification connection codes and appends recipients to tenant settings", async () => {
+    vi.stubEnv("PROPERTYFLOW_API_PUBLIC_URL", "https://api.example.com");
     const fetchMock = vi.fn().mockResolvedValue({
       json: async () => ({ ok: true }),
       ok: true,
@@ -916,7 +917,24 @@ describe("TenantService", () => {
     });
   });
 
+  it("rejects messenger recipient connection when the public webhook URL is not HTTPS", async () => {
+    vi.stubEnv("PROPERTYFLOW_API_PUBLIC_URL", "http://127.0.0.1:3001");
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new TenantService(repository());
+    const currentTenant = tenant({
+      widget: {
+        ...tenant().widget,
+        leadTelegramBotToken: "telegram-token"
+      }
+    });
+
+    await expect(service.beginNotificationProviderConnection(currentTenant, "telegram")).rejects.toBeInstanceOf(BadRequestException);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("generates a WhatsApp webhook verify token when starting recipient connection", async () => {
+    vi.stubEnv("PROPERTYFLOW_API_PUBLIC_URL", "https://api.example.com");
     let currentTenant = tenant();
     const capturedRequests: UpdateTenantSettingsRequest[] = [];
     const service = new TenantService(
