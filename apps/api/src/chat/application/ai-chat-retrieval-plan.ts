@@ -1,11 +1,18 @@
 import type { AiChatRequest } from "@propertyflow/contracts";
 import { classifyAiChatIntent, type AiChatIntent } from "./ai-chat-intent.js";
 
+const recentSetReferencePattern =
+  /\b(them|these|those|options|listings|ones)\b|из них|этих|вариант|предлож|ตัวเลือก|รายการ|เหล่านี้|พวกนี้|这些|這些|这几个|這幾個|其中|房源|选项|選項/i;
+
+const beachDistanceComparisonPattern =
+  /closer|closest|nearer|nearest|close to|distance|beach|пляж|мор|ใกล้|ที่สุด|ชายหาด|ทะเล|距离|距離|近|最近|海滩|海灘|海边|海邊/i;
+
 export interface AiChatRetrievalPlan {
+  comparison?: "beach-distance";
   intent: AiChatIntent;
-  mode: "clarify-reference" | "listing-search" | "property-detail";
+  mode: "clarify-reference" | "listing-comparison" | "listing-search" | "property-detail";
   propertyId?: string;
-  reason: "explicit-property" | "follow-up-reference" | "missing-follow-up-reference" | "search-request";
+  reason: "comparison-follow-up" | "explicit-property" | "follow-up-reference" | "missing-follow-up-reference" | "search-request";
 }
 
 export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan {
@@ -30,6 +37,18 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
       mode: "property-detail",
       propertyId: namedPropertyId,
       reason: "follow-up-reference"
+    };
+  }
+
+  if (isRecentListingComparisonRequest(request) && getRecentRecommendations(request).length > 1) {
+    return {
+      comparison: "beach-distance",
+      intent: {
+        ...intent,
+        includeNeighborhood: true
+      },
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
     };
   }
 
@@ -81,7 +100,7 @@ function resolveNamedPropertyId(request: AiChatRequest): string | undefined {
   })?.propertyId;
 }
 
-function getRecentRecommendations(request: AiChatRequest): Array<{ propertyId: string; title: string }> {
+export function getRecentRecommendations(request: AiChatRequest): Array<{ propertyId: string; title: string }> {
   const seen = new Set<string>();
 
   return [...(request.conversation ?? [])]
@@ -99,11 +118,19 @@ function getRecentRecommendations(request: AiChatRequest): Array<{ propertyId: s
     });
 }
 
+function isRecentListingComparisonRequest(request: AiChatRequest): boolean {
+  const message = normalizeReferenceText(request.message);
+  const referencesRecentSet = recentSetReferencePattern.test(message);
+  const asksBeachDistance = beachDistanceComparisonPattern.test(message);
+
+  return referencesRecentSet && asksBeachDistance;
+}
+
 function normalizeReferenceText(value: string): string {
   return value
     .toLowerCase()
     .replaceAll("ё", "е")
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -21,8 +21,9 @@ import {
   type AiChatDueDiligencePayload
 } from "./ai-chat-due-diligence.js";
 import { classifyAiChatIntent } from "./ai-chat-intent.js";
+import { buildAiChatContext, buildListingEvidence, propertyCitation } from "./ai-chat-context.js";
 import { buildAiChatPropertyResponseDraft } from "./ai-chat-property-response.js";
-import { planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
+import { getRecentRecommendations, planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
 import {
   buildAiChatResponse,
   buildClarifyPropertyReferenceResponse,
@@ -59,6 +60,10 @@ export class AiChatService {
 
     if (plan.mode === "clarify-reference") {
       return buildClarifyPropertyReferenceResponse(request);
+    }
+
+    if (plan.mode === "listing-comparison") {
+      return this.answerWithRecentListingComparison(tenantId, request, options);
     }
 
     return this.answerWithSearch(tenantId, request, options);
@@ -124,6 +129,46 @@ export class AiChatService {
     return this.buildResponse({
       ...draft,
       request,
+      ...options
+    });
+  }
+
+  private async answerWithRecentListingComparison(
+    tenantId: string,
+    request: AiChatRequest,
+    options: AiChatAskOptions
+  ): Promise<AiChatResponse> {
+    const recommendations = getRecentRecommendations(request).slice(0, 3);
+    const properties = (
+      await Promise.all(recommendations.map((listing) => this.properties.findById(tenantId, listing.propertyId)))
+    ).filter((property): property is PropertySnapshot => Boolean(property));
+
+    if (properties.length < 2) {
+      return buildClarifyPropertyReferenceResponse(request);
+    }
+
+    const withKnownDistance = properties.filter((property) => property.beachDistanceMeters !== undefined);
+    const closest = [...withKnownDistance].sort((left, right) => left.beachDistanceMeters! - right.beachDistanceMeters!)[0];
+    const comparisonLines = properties.map((property) =>
+      property.beachDistanceMeters === undefined
+        ? `${property.title}: beach distance is not specified`
+        : `${property.title}: ${property.beachDistanceMeters}m from the beach`
+    );
+    const answer = closest
+      ? `Among the options we just discussed, ${closest.title} is closest to the beach at ${closest.beachDistanceMeters}m. ${comparisonLines.join(
+          " "
+        )}`
+      : `I can compare only the options we just discussed, but none of those listings has beach distance specified. ${comparisonLines.join(" ")}`;
+    const citations = properties.map((property) => propertyCitation(property));
+
+    return this.buildResponse({
+      citations,
+      context: buildAiChatContext([answer, ...buildListingEvidence(properties)], citations),
+      deterministicDraft: answer,
+      insights: [],
+      matchedPropertyIds: properties.map((property) => property.id),
+      request,
+      suggestedActions: ["compare-results", "open-map", "create-lead"],
       ...options
     });
   }

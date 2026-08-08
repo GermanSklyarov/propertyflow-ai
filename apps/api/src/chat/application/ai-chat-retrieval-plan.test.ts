@@ -106,6 +106,52 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("recognizes Thai shortlist beach-distance comparisons", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "th",
+        message: "ตัวเลือกไหนใกล้ชายหาดที่สุด"
+      })
+    ).toMatchObject({
+      comparison: "beach-distance",
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
+    });
+  });
+
+  it("recognizes Chinese shortlist beach-distance comparisons", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "zh",
+        message: "这些房源哪个离海滩最近？"
+      })
+    ).toMatchObject({
+      comparison: "beach-distance",
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
+    });
+  });
+
   it("keeps ordinary listing requests on listing search", () => {
     expect(
       planAiChatRetrieval({

@@ -426,6 +426,73 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("New Search Result Condo");
   });
 
+  it("compares the previous recommendation shortlist instead of searching again", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          beachDistanceMeters: 500,
+          id: "property-1",
+          title: "Price Comparable A"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          beachDistanceMeters: 500,
+          id: "property-2",
+          title: "Pricing Metadata Smoke Condo"
+        })
+      ],
+      [
+        "property-3",
+        propertyFactory({
+          beachDistanceMeters: 450,
+          id: "property-3",
+          title: "Price Recommendation Target Condo"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Price Comparable A" },
+            { propertyId: "property-2", title: "Pricing Metadata Smoke Condo" },
+            { propertyId: "property-3", title: "Price Recommendation Target Condo" }
+          ],
+          role: "assistant",
+          text: "I found 6 matching listings. Top matches: Price Comparable A, Pricing Metadata Smoke Condo, Price Recommendation Target Condo."
+        }
+      ],
+      locale: "en",
+      message: "Which one of them is closer to the beach?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["property-1", "property-2", "property-3"]);
+    expect(response.answer).toContain("Price Recommendation Target Condo is closest to the beach at 450m");
+    expect(response.answer).toContain("Price Comparable A: 500m from the beach");
+    expect(response.answer).not.toContain("Wongamat Sea View Residence");
+  });
+
   it("returns a chat response when a referenced listing is no longer available", async () => {
     const properties = {
       findById: vi.fn().mockResolvedValue(null),
