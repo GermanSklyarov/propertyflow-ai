@@ -38,7 +38,6 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const leadWebhookUrl = getOptionalString(formData, "leadWebhookUrl");
   const leadTelegramChatIds = getTextList(formData, "leadTelegramChatIds");
   const leadTelegramBotToken = getOptionalString(formData, "leadTelegramBotToken");
-  const leadTelegramWebhookSecret = getOptionalString(formData, "leadTelegramWebhookSecret");
   const leadLineRecipientIds = getTextList(formData, "leadLineRecipientIds");
   const leadLineChannelAccessToken = getOptionalString(formData, "leadLineChannelAccessToken");
   const leadLineChannelSecret = getOptionalString(formData, "leadLineChannelSecret");
@@ -47,7 +46,6 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const leadWhatsappAppSecret = getOptionalString(formData, "leadWhatsappAppSecret");
   const leadWhatsappPhoneNumberId = getOptionalString(formData, "leadWhatsappPhoneNumberId");
   const leadWhatsappGraphApiVersion = getOptionalString(formData, "leadWhatsappGraphApiVersion");
-  const leadWhatsappWebhookVerifyToken = getOptionalString(formData, "leadWhatsappWebhookVerifyToken");
   const listingUrlTemplate = getListingUrlTemplate(formData);
   const primaryMarket = getOptionalMarket(formData);
   const languages = getLanguageCodes(formData);
@@ -77,7 +75,6 @@ export async function updateTenantSettingsAction(formData: FormData) {
         leadWebhookUrl: leadWebhookUrl ?? "",
         ...(leadTelegramChatIds ? { leadTelegramChatIds } : {}),
         ...(leadTelegramBotToken ? { leadTelegramBotToken } : {}),
-        ...(leadTelegramWebhookSecret ? { leadTelegramWebhookSecret } : {}),
         ...(leadLineRecipientIds ? { leadLineRecipientIds } : {}),
         ...(leadLineChannelAccessToken ? { leadLineChannelAccessToken } : {}),
         ...(leadLineChannelSecret ? { leadLineChannelSecret } : {}),
@@ -86,7 +83,6 @@ export async function updateTenantSettingsAction(formData: FormData) {
         ...(leadWhatsappAppSecret ? { leadWhatsappAppSecret } : {}),
         ...(leadWhatsappPhoneNumberId ? { leadWhatsappPhoneNumberId } : {}),
         ...(leadWhatsappGraphApiVersion ? { leadWhatsappGraphApiVersion } : {}),
-        ...(leadWhatsappWebhookVerifyToken ? { leadWhatsappWebhookVerifyToken } : {}),
         ...(languages.length ? { languages } : {}),
         ...(leadQualificationFields ? { leadQualificationFields } : {}),
         ...(listingUrlTemplate ? { listingUrlTemplate } : {}),
@@ -181,6 +177,10 @@ function buildNotificationConnectUrl(result: TenantNotificationProviderConnectRe
     notificationStatus: "connected",
     notificationWebhookUrl: result.webhookUrl
   });
+
+  if (result.webhookVerifyToken) {
+    params.set("notificationWebhookVerifyToken", result.webhookVerifyToken);
+  }
 
   return `/settings?${params.toString()}#lead-notification-settings`;
 }

@@ -308,6 +308,7 @@ export interface TenantNotificationProviderConnectResponse {
   expiresAt: string;
   instructions: string[];
   provider: TenantNotificationProvider;
+  webhookVerifyToken?: string;
   webhookUrl: string;
 }
 

@@ -19,6 +19,7 @@ export default async function AgencySettingsPage({
     notificationName?: string;
     notificationProvider?: string;
     notificationStatus?: string;
+    notificationWebhookVerifyToken?: string;
     notificationWebhookUrl?: string;
     updated?: string;
   }>;
@@ -68,6 +69,7 @@ function parseNotificationResult(query: {
   notificationName?: string;
   notificationProvider?: string;
   notificationStatus?: string;
+  notificationWebhookVerifyToken?: string;
   notificationWebhookUrl?: string;
 }): NotificationActionResult | undefined {
   const action = query.notificationAction;
@@ -86,6 +88,7 @@ function parseNotificationResult(query: {
     expiresAt: query.notificationExpiresAt,
     provider,
     status,
+    webhookVerifyToken: query.notificationWebhookVerifyToken,
     webhookUrl: query.notificationWebhookUrl
   };
 }

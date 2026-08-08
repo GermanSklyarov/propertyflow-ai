@@ -916,6 +916,42 @@ describe("TenantService", () => {
     });
   });
 
+  it("generates a WhatsApp webhook verify token when starting recipient connection", async () => {
+    let currentTenant = tenant();
+    const capturedRequests: UpdateTenantSettingsRequest[] = [];
+    const service = new TenantService(
+      repository({
+        updateSettings: async (_tenantId, request) => {
+          capturedRequests.push(request);
+          currentTenant = {
+            ...currentTenant,
+            widget: {
+              ...currentTenant.widget,
+              ...request.widget
+            }
+          };
+
+          return currentTenant;
+        }
+      })
+    );
+
+    const connection = await service.beginNotificationProviderConnection(currentTenant, "whatsapp");
+
+    expect(connection).toMatchObject({
+      provider: "whatsapp",
+      webhookVerifyToken: expect.any(String),
+      webhookUrl: expect.stringContaining("/public/v1/notifications/whatsapp/")
+    });
+    expect(capturedRequests).toEqual([
+      {
+        widget: {
+          leadWhatsappWebhookVerifyToken: connection.webhookVerifyToken
+        }
+      }
+    ]);
+  });
+
   it("normalizes widget language updates before saving settings", async () => {
     let capturedRequest: UpdateTenantSettingsRequest | undefined;
     const service = new TenantService(

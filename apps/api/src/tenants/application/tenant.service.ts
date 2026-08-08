@@ -541,7 +541,19 @@ export class TenantService {
   ): Promise<TenantNotificationProviderConnectResponse> {
     const provider = typeof request === "string" ? request : request.provider;
     const webhookUrl = buildNotificationWebhookUrl(provider, tenant.slug);
-    const configuredTenant = provider === "telegram" ? await this.configureTelegramWebhook(tenant, request, webhookUrl) : tenant;
+    let configuredTenant = tenant;
+    let webhookVerifyToken: string | undefined;
+
+    if (provider === "telegram") {
+      configuredTenant = await this.configureTelegramWebhook(tenant, request, webhookUrl);
+    }
+
+    if (provider === "whatsapp") {
+      const configured = await this.configureWhatsappWebhookVerification(tenant);
+      configuredTenant = configured.tenant;
+      webhookVerifyToken = configured.webhookVerifyToken;
+    }
+
     const now = new Date();
     await this.notificationConnectionTokens.revokeActiveForTenantProvider(configuredTenant.id, provider, now);
     const expiresAt = addMinutes(now, notificationConnectionTtlMinutes);
@@ -561,6 +573,7 @@ export class TenantService {
       expiresAt: expiresAt.toISOString(),
       instructions: buildNotificationConnectionInstructions(provider, code),
       provider,
+      webhookVerifyToken,
       webhookUrl
     };
   }
@@ -723,6 +736,35 @@ export class TenantService {
     } catch (error) {
       return failedProvider("line", checkedAt, toErrorMessage(error));
     }
+  }
+
+  private async configureWhatsappWebhookVerification(
+    tenant: TenantSnapshot
+  ): Promise<{ tenant: TenantSnapshot; webhookVerifyToken: string }> {
+    const existingToken = tenant.widget.leadWhatsappWebhookVerifyToken?.trim();
+
+    if (existingToken) {
+      return {
+        tenant,
+        webhookVerifyToken: existingToken
+      };
+    }
+
+    const webhookVerifyToken = createNotificationWebhookSecret();
+    const updated = await this.tenants.updateSettings(tenant.id, {
+      widget: {
+        leadWhatsappWebhookVerifyToken: webhookVerifyToken
+      }
+    });
+
+    if (!updated) {
+      throw new NotFoundException("Agency workspace was not found");
+    }
+
+    return {
+      tenant: updated,
+      webhookVerifyToken
+    };
   }
 
   private async verifyWhatsappProvider(

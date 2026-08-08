@@ -16,6 +16,7 @@ export interface NotificationActionResult {
   expiresAt?: string;
   provider: TenantNotificationProvider;
   status: TenantNotificationProviderCheckStatus;
+  webhookVerifyToken?: string;
   webhookUrl?: string;
 }
 
@@ -137,7 +138,7 @@ export function TenantLeadNotificationFields({
 
         <ProviderPanel
           connected={Boolean(widgetSettings.leadWhatsappRecipients?.length)}
-          description="Use this agency's WhatsApp Cloud API app and business phone number."
+          description="Use this agency's WhatsApp Cloud API app and business phone number. PropertyFlowAI generates the webhook verify token for Meta."
           docsUrl="https://developers.facebook.com/docs/whatsapp/cloud-api"
           provider="whatsapp"
           result={result}
@@ -160,19 +161,15 @@ export function TenantLeadNotificationFields({
               placeholder="123456789012345"
             />
           </label>
-          <label className={styles.field}>
-            <span>Webhook verify token</span>
-            <input
-              autoComplete="off"
-              name="leadWhatsappWebhookVerifyToken"
-              placeholder={
-                widgetSettings.leadWhatsappWebhookVerifyToken
-                  ? "Saved. Paste a new token to replace."
-                  : "Use this token in WhatsApp webhook verification"
-              }
-              spellCheck={false}
-            />
-          </label>
+          <ReadonlyValue
+            label="Webhook verify token"
+            placeholder="Click Connect recipient to generate"
+            value={
+              result?.provider === "whatsapp"
+                ? result.webhookVerifyToken ?? widgetSettings.leadWhatsappWebhookVerifyToken
+                : widgetSettings.leadWhatsappWebhookVerifyToken
+            }
+          />
           <label className={styles.field}>
             <span>App secret</span>
             <input
@@ -207,6 +204,15 @@ export function TenantLeadNotificationFields({
         bot and send a one-time code.
       </p>
     </div>
+  );
+}
+
+function ReadonlyValue({ label, placeholder, value }: { label: string; placeholder: string; value?: string }) {
+  return (
+    <label className={styles.field}>
+      <span>{label}</span>
+      <input readOnly aria-label={label} placeholder={placeholder} value={value ?? ""} />
+    </label>
   );
 }
 
@@ -297,6 +303,7 @@ function NotificationConnectResult({ result }: { result: NotificationActionResul
         </strong>
         <small>
           Webhook URL: {result.webhookUrl}
+          {result.webhookVerifyToken ? ` · Verify token: ${result.webhookVerifyToken}` : ""}
           {result.expiresAt ? ` · Code expires ${new Date(result.expiresAt).toLocaleTimeString("en", { hour: "2-digit", minute: "2-digit" })}` : ""}
         </small>
       </span>
