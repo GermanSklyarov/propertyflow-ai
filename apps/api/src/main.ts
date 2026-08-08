@@ -8,7 +8,9 @@ import { AppModule } from "./app.module.js";
 
 const config = loadAppConfig();
 
-const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter(), {
+  rawBody: true
+});
 
 app.useGlobalPipes(
   new ValidationPipe({

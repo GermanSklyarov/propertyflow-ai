@@ -1,5 +1,7 @@
-import { Body, Controller, Inject, Param, Post } from "@nestjs/common";
+import { createHmac, timingSafeEqual } from "node:crypto";
+import { Body, Controller, ForbiddenException, Headers, Inject, Param, Post, Req } from "@nestjs/common";
 import type { TenantNotificationProviderCheckResponse, TenantSnapshot } from "@propertyflow/contracts";
+import type { FastifyRequest } from "fastify";
 import { TenantService } from "../../application/tenant.service.js";
 
 @Controller("public/v1/notifications")
@@ -24,14 +26,22 @@ export class NotificationProviderWebhookController {
   @Post("line/:tenantSlug")
   async handleLineWebhook(
     @Param("tenantSlug") tenantSlug: string,
+    @Headers("x-line-signature") signature: string | undefined,
+    @Req() request: RawBodyFastifyRequest,
     @Body() payload: LineWebhookPayload
   ): Promise<TenantNotificationProviderCheckResponse> {
+    const tenant = await this.findTenantForReply(tenantSlug);
+
+    if (!isLineWebhookSignatureValid(tenant, signature, request.rawBody)) {
+      throw new ForbiddenException("LINE webhook signature is invalid");
+    }
+
     const event = payload.events?.find((item) => extractConnectionCode(item.message?.text));
     const code = extractConnectionCode(event?.message?.text);
     const recipientId = event?.source?.groupId ?? event?.source?.roomId ?? event?.source?.userId;
     const label = event?.source?.type ? `LINE ${event.source.type}` : undefined;
     const result = await this.confirmWebhookConnection("line", code, recipientId, label);
-    await this.replyToLine(tenantSlug, event?.replyToken, result);
+    await this.replyToLine(tenant, event?.replyToken, result);
 
     return result;
   }
@@ -96,11 +106,10 @@ export class NotificationProviderWebhookController {
   }
 
   private async replyToLine(
-    tenantSlug: string,
+    tenant: TenantSnapshot | null,
     replyToken: string | undefined,
     result: TenantNotificationProviderCheckResponse
   ): Promise<void> {
-    const tenant = await this.findTenantForReply(tenantSlug);
     const token = tenant?.widget.leadLineChannelAccessToken;
 
     if (!tenant || !token || !replyToken) {
@@ -181,6 +190,10 @@ interface TelegramMessage {
   text?: string;
 }
 
+type RawBodyFastifyRequest = FastifyRequest & {
+  rawBody?: Buffer | string;
+};
+
 interface LineWebhookPayload {
   events?: Array<{
     message?: {
@@ -246,6 +259,29 @@ function buildConnectionReply(result: TenantNotificationProviderCheckResponse, t
   }
 
   return "❌ This connection code is invalid or has expired.\nPlease generate a new code in PropertyFlowAI and try again.";
+}
+
+function isLineWebhookSignatureValid(
+  tenant: TenantSnapshot | null,
+  signature: string | undefined,
+  rawBody: Buffer | string | undefined
+): boolean {
+  const secret = tenant?.widget.leadLineChannelSecret?.trim();
+
+  if (!secret) {
+    return true;
+  }
+
+  if (!signature || rawBody === undefined) {
+    return false;
+  }
+
+  const body = typeof rawBody === "string" ? Buffer.from(rawBody) : rawBody;
+  const expected = createHmac("sha256", secret).update(body).digest("base64");
+  const expectedBuffer = Buffer.from(expected);
+  const actualBuffer = Buffer.from(signature);
+
+  return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
 }
 
 async function postJson(url: string, body: unknown, headers: Record<string, string> = {}): Promise<void> {
