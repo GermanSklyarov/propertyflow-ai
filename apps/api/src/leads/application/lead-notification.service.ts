@@ -27,9 +27,17 @@ interface LeadNotificationPayload {
 
 interface AiConciergeNotificationContext {
   clientTurns: string[];
+  qualification: AiConciergeLeadQualification;
   recommendedListings: Array<{ propertyId: string; title: string }>;
   selectedListing?: { propertyId: string; title: string };
   visitorNote?: string;
+}
+
+interface AiConciergeLeadQualification {
+  budget?: string;
+  contactPreference?: string;
+  purpose?: string;
+  timing?: string;
 }
 
 @Injectable()
@@ -266,20 +274,24 @@ function buildMessengerText(payload: LeadNotificationPayload): string {
   const context = parseAiConciergeNotificationContext(payload);
   const agencyBaseUrl = getAgencyBaseUrl();
   const lines = [
-    "New AI Concierge lead",
-    `Agency: ${payload.tenant.name}`,
-    `Contact: ${lead.contactName}`,
-    lead.preferredLocale ? `Language: ${lead.preferredLocale}` : undefined,
-    lead.contactEmail ? `Email: ${lead.contactEmail}` : undefined,
-    lead.contactPhone ? `Phone: ${lead.contactPhone}` : undefined,
-    context.visitorNote ? `Request: ${trimText(context.visitorNote, 280)}` : undefined,
-    context.selectedListing ? `Selected listing: ${formatListing(context.selectedListing)}` : undefined,
-    !context.selectedListing && lead.propertyId ? `Property ID: ${lead.propertyId}` : undefined,
-    agencyBaseUrl ? `Lead: ${buildAgencyUrl(agencyBaseUrl, `/leads/${lead.id}`)}` : undefined,
-    agencyBaseUrl && lead.propertyId ? `Listing: ${buildAgencyUrl(agencyBaseUrl, `/listings/${lead.propertyId}`)}` : undefined,
+    "✨ New AI Concierge lead",
+    `🏢 Agency: ${payload.tenant.name}`,
+    `👤 Contact: ${lead.contactName}`,
+    lead.preferredLocale ? `🌐 Language: ${lead.preferredLocale}` : undefined,
+    lead.contactEmail ? `✉️ Email: ${lead.contactEmail}` : undefined,
+    lead.contactPhone ? `📞 Phone: ${lead.contactPhone}` : undefined,
+    context.qualification.contactPreference ? `💬 Contact channel: ${context.qualification.contactPreference}` : undefined,
+    context.qualification.budget ? `💰 Budget: ${context.qualification.budget}` : undefined,
+    context.qualification.purpose ? `🎯 Purpose: ${context.qualification.purpose}` : undefined,
+    context.qualification.timing ? `🗓️ Timing: ${context.qualification.timing}` : undefined,
+    context.visitorNote ? `📝 Latest request: ${trimText(context.visitorNote, 280)}` : undefined,
+    context.selectedListing ? `🏠 Selected listing: ${formatListing(context.selectedListing)}` : undefined,
+    !context.selectedListing && lead.propertyId ? `🏠 Property ID: ${lead.propertyId}` : undefined,
+    agencyBaseUrl ? `📋 Lead: ${buildAgencyUrl(agencyBaseUrl, `/leads/${lead.id}`)}` : undefined,
+    agencyBaseUrl && lead.propertyId ? `🔗 Listing: ${buildAgencyUrl(agencyBaseUrl, `/listings/${lead.propertyId}`)}` : undefined,
     "",
     context.clientTurns.length
-      ? ["Recent client messages:", ...context.clientTurns.map((turn) => `- ${trimText(turn, 180)}`)].join("\n")
+      ? ["💬 Recent client messages:", ...context.clientTurns.map((turn) => `- ${trimText(turn, 180)}`)].join("\n")
       : "Open the lead queue for conversation context."
   ];
 
@@ -292,17 +304,21 @@ function parseAiConciergeNotificationContext(payload: LeadNotificationPayload): 
   if (!message?.includes("Widget handoff request.")) {
     return {
       clientTurns: [],
+      qualification: {},
       recommendedListings: []
     };
   }
 
   const sections = splitLeadSections(message);
+  const clientTurns = parseClientTurns(sections);
+  const qualificationText = [parseVisitorNote(sections), ...parseClientTurns(sections, Number.POSITIVE_INFINITY)].filter(Boolean).join("\n");
   const recommendedListings = parseRecommendedListings(sections);
   const selectedListing =
     recommendedListings.find((listing) => listing.propertyId === payload.lead.propertyId) ?? recommendedListings[0];
 
   return {
-    clientTurns: parseClientTurns(sections),
+    clientTurns,
+    qualification: parseLeadQualification(qualificationText),
     recommendedListings,
     selectedListing,
     visitorNote: parseVisitorNote(sections)
@@ -338,7 +354,7 @@ function parseRecommendedListings(sections: string[]): AiConciergeNotificationCo
     .slice(0, 3);
 }
 
-function parseClientTurns(sections: string[]): string[] {
+function parseClientTurns(sections: string[], limit = 4): string[] {
   const section = sections.find((item) => item.startsWith("Recent widget conversation:"));
 
   if (!section) {
@@ -349,7 +365,84 @@ function parseClientTurns(sections: string[]): string[] {
     .split("\n")
     .map((line) => line.match(/^user:\s*(.+)$/)?.[1]?.trim())
     .filter((text): text is string => Boolean(text))
-    .slice(-4);
+    .slice(-limit);
+}
+
+function parseLeadQualification(text: string): AiConciergeLeadQualification {
+  return {
+    budget: parseBudget(text),
+    contactPreference: parseContactPreference(text),
+    purpose: parsePurpose(text),
+    timing: parseTiming(text)
+  };
+}
+
+function parseBudget(text: string): string | undefined {
+  const match =
+    text.match(/\b(?:under|below|max|up to|до|менее|ไม่เกิน|ต่ำกว่า|预算|预算是|ไม่เกิน)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))?/i) ??
+    text.match(/\b([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))\b/i);
+
+  if (!match?.[0]) {
+    return undefined;
+  }
+
+  return normalizeQualificationValue(match[0]);
+}
+
+function parsePurpose(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+  const candidates = [
+    { label: "Investment", pattern: /(investment|invest|rental yield|yield|инвест|доходн|ลงทุน|投资|投資|收益)/gi },
+    { label: "Relocation", pattern: /(relocation|relocat|move to|переезд|релокац|ย้าย|搬家|移居)/gi },
+    { label: "Family living", pattern: /(family|school|семь|семья|школ|ครอบครัว|โรงเรียน|家庭|学校|學校)/gi },
+    { label: "Personal use", pattern: /(personal use|for myself|live there|living|для себя|жить|อยู่อาศัย|自住|自己住)/gi }
+  ];
+  const latest = candidates
+    .flatMap(({ label, pattern }) => [...normalized.matchAll(pattern)].map((match) => ({ index: match.index ?? -1, label })))
+    .sort((left, right) => right.index - left.index)[0];
+
+  return latest?.label;
+}
+
+function parseContactPreference(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+
+  if (/(whatsapp|ватсап|วอตส์แอป)/i.test(normalized)) {
+    return "WhatsApp";
+  }
+
+  if (/(telegram|телеграм)/i.test(normalized)) {
+    return "Telegram";
+  }
+
+  if (/(line|ไลน์)/i.test(normalized)) {
+    return "LINE";
+  }
+
+  if (/(email|e-mail|почт|อีเมล|邮箱|郵箱)/i.test(normalized)) {
+    return "Email";
+  }
+
+  if (/(phone|call|телефон|номер|звон|โทร|电话|電話)/i.test(normalized)) {
+    return "Phone";
+  }
+
+  return undefined;
+}
+
+function parseTiming(text: string): string | undefined {
+  const matches = [
+    ...text.matchAll(
+      /next week|next month|monday(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|tomorrow|today|within\s+[0-9]+\s+(?:days|weeks|months)|следующ(?:ей|ий|ем)\s+\S+|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|下周|下週|下个月|下個月/gi
+    )
+  ];
+  const match = matches.at(-1);
+
+  return match?.[0] ? normalizeQualificationValue(match[0]) : undefined;
+}
+
+function normalizeQualificationValue(value: string): string {
+  return value.replace(/\s+/g, " ").trim();
 }
 
 function parseListingLine(line: string): { propertyId: string; title: string } | null {

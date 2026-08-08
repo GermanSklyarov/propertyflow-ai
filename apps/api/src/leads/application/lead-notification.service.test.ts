@@ -79,33 +79,43 @@ describe("LeadNotificationService", () => {
         message: [
           "Widget handoff request.",
           "",
-          "Visitor note: i would like to see it next week, my phone number +660827955673",
+          "Visitor note: my phone number +660827955673",
           "",
           "Recommended listings:",
           "1. Price Comparable A (property-1)",
           "2. Pricing Metadata Smoke Condo (property-2)",
+          "3. Price Recommendation Target Condo (property-3)",
           "",
           "Recent widget conversation:",
           "assistant: Hi! I'm Anna, your AI property consultant.",
-          "user: find me a condo in pattaya under 3m",
+          "user: find me a condo in pattaya for investment under 3m",
           "assistant: I found 6 matching listings for you and here is a deliberately long response that should not dominate messenger notifications.",
           "Shown listings:",
           "1. Price Comparable A (property-1)",
           "2. Pricing Metadata Smoke Condo (property-2)",
-          "user: i like the first option, may i see it?",
-          "user: i would like to see it next week, my phone number +660827955673"
+          "3. Price Recommendation Target Condo (property-3)",
+          "user: which one of them is closer to the beach?",
+          "user: i like Price Recommendation Target Condo, may i see it?",
+          "user: can i see it on monday at 10 a.m.?",
+          "user: my phone number +660827955673"
         ].join("\n"),
-        propertyId: "property-1"
+        propertyId: "property-3"
       })
     );
 
     const requestBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as { text: string };
 
-    expect(requestBody.text).toContain("Request: i would like to see it next week");
-    expect(requestBody.text).toContain("Selected listing: Price Comparable A (property-1)");
-    expect(requestBody.text).toContain("Lead: https://agency.propertyflow.test/app/leads/lead-1");
-    expect(requestBody.text).toContain("Listing: https://agency.propertyflow.test/app/listings/property-1");
-    expect(requestBody.text).toContain("- i like the first option, may i see it?");
+    expect(requestBody.text).toContain("✨ New AI Concierge lead");
+    expect(requestBody.text).toContain("📞 Phone: +660827955673");
+    expect(requestBody.text).toContain("💬 Contact channel: Phone");
+    expect(requestBody.text).toContain("💰 Budget: under 3m");
+    expect(requestBody.text).toContain("🎯 Purpose: Investment");
+    expect(requestBody.text).toContain("🗓️ Timing: monday at 10 a.m.");
+    expect(requestBody.text).toContain("📝 Latest request: my phone number +660827955673");
+    expect(requestBody.text).toContain("🏠 Selected listing: Price Recommendation Target Condo (property-3)");
+    expect(requestBody.text).toContain("📋 Lead: https://agency.propertyflow.test/app/leads/lead-1");
+    expect(requestBody.text).toContain("🔗 Listing: https://agency.propertyflow.test/app/listings/property-3");
+    expect(requestBody.text).toContain("- i like Price Recommendation Target Condo, may i see it?");
     expect(requestBody.text).not.toContain("Recent widget conversation:");
     expect(requestBody.text).not.toContain("deliberately long response");
   });
