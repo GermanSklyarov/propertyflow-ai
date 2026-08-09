@@ -23,29 +23,39 @@ export async function buildAiChatResponse(options: BuildAiChatResponseOptions): 
   const id = responseId(options);
 
   if (options.textGenerator.isConfigured()) {
-    const generated = await options.textGenerator.generate({
-      citations: options.citations,
-      context: buildAiChatGenerationContext(options.request, options.context, options.deterministicDraft),
-      locale: options.request.locale,
-      message: options.request.message,
-      persona: options.persona
-    });
+    try {
+      const generated = await options.textGenerator.generate({
+        citations: options.citations,
+        context: buildAiChatGenerationContext(options.request, options.context, options.deterministicDraft),
+        locale: options.request.locale,
+        message: options.request.message,
+        persona: options.persona
+      });
 
-    return {
-      id,
-      message: options.request.message,
-      answer: generated.answer,
-      matchedPropertyIds: options.matchedPropertyIds,
-      citations: options.citations,
-      insights: options.insights,
-      suggestedActions: options.suggestedActions,
-      generation: {
-        mode: "llm",
-        provider: generated.provider,
-        model: generated.model
-      },
-      createdAt
-    };
+      return {
+        id,
+        message: options.request.message,
+        answer: generated.answer,
+        matchedPropertyIds: options.matchedPropertyIds,
+        citations: options.citations,
+        insights: options.insights,
+        suggestedActions: options.suggestedActions,
+        generation: {
+          mode: "llm",
+          provider: generated.provider,
+          model: generated.model
+        },
+        createdAt
+      };
+    } catch (error) {
+      return buildDeterministicAiChatResponse({
+        ...options,
+        createdAt,
+        id,
+        reason: `AI provider failed after retrieval: ${toErrorMessage(error)}`,
+        text: options.deterministicDraft
+      });
+    }
   }
 
   if (!options.useDeterministicFallback) {
@@ -61,6 +71,10 @@ export async function buildAiChatResponse(options: BuildAiChatResponseOptions): 
     reason: "AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK is enabled",
     text: options.deterministicDraft
   });
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
 }
 
 export function buildClarifyPropertyReferenceResponse(

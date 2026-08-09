@@ -203,7 +203,8 @@ export class LeadNotificationService {
       const response = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify(body)
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(5_000)
       });
 
       if (!response.ok) {

@@ -88,6 +88,36 @@ describe("ai-chat-response", () => {
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
+  it("falls back to grounded retrieval output when the configured text generator fails", async () => {
+    const textGenerator: AiTextGenerator = {
+      generate: vi.fn().mockRejectedValue(new Error("AI provider request failed: 429")),
+      isConfigured: vi.fn().mockReturnValue(true)
+    };
+
+    const response = await buildAiChatResponse({
+      citations,
+      context: "Listing context",
+      deterministicDraft: "Draft answer with real listings.",
+      idFactory: () => "response-llm-failed",
+      insights: [],
+      matchedPropertyIds: ["property-1"],
+      now: () => new Date("2026-07-21T00:00:00.000Z"),
+      request,
+      suggestedActions: ["create-lead"],
+      textGenerator,
+      useDeterministicFallback: false
+    });
+
+    expect(response).toMatchObject({
+      answer: "Draft answer with real listings.",
+      generation: {
+        mode: "deterministic-fallback",
+        reason: "AI provider failed after retrieval: AI provider request failed: 429"
+      },
+      matchedPropertyIds: ["property-1"]
+    });
+  });
+
   it("marks explicit deterministic fallback as local-demo output", async () => {
     const textGenerator: AiTextGenerator = {
       generate: vi.fn(),

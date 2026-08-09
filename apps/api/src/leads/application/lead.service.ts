@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import type {
   ApplyLeadQualityAssignRequest,
   ApplyLeadQualityAssignResponse,
@@ -43,6 +43,8 @@ import { LeadNotificationService } from "./lead-notification.service.js";
 
 @Injectable()
 export class LeadService {
+  private readonly logger = new Logger(LeadService.name);
+
   private readonly statusTransitions: Record<LeadStatus, LeadStatus[]> = {
     new: ["contacted", "qualified", "lost"],
     contacted: ["qualified", "lost"],
@@ -66,40 +68,52 @@ export class LeadService {
       tenantId
     });
 
-    await this.audit.record({
-      tenantId,
-      user,
-      action: "lead.created",
-      resourceType: "lead",
-      resourceId: lead.id,
-      metadata: {
-        propertyId: lead.propertyId,
-        source: lead.source,
-        assignedAgentId: lead.assignedAgentId,
-        attributionSocialPostChannel: lead.attributionSocialPostChannel,
-        attributionSocialPostTrackingSlug: lead.attributionSocialPostTrackingSlug
-      }
-    });
-
-    this.realtime.publish(tenantId, "lead.created", {
-      leadId: lead.id,
-      propertyId: lead.propertyId,
-      source: lead.source,
-      assignedAgentId: lead.assignedAgentId,
-      attributionSocialPostChannel: lead.attributionSocialPostChannel,
-      attributionSocialPostTrackingSlug: lead.attributionSocialPostTrackingSlug
-    });
-
-    await this.leads.recordStatusEvent({
-      tenantId,
-      leadId: lead.id,
-      status: lead.status,
-      user
-    });
-
-    await this.notifications.notifyLeadCreated(tenantId, lead);
+    await this.runLeadCreatedSideEffects(tenantId, lead, user);
 
     return lead;
+  }
+
+  private async runLeadCreatedSideEffects(tenantId: string, lead: LeadSnapshot, user?: RequestUser): Promise<void> {
+    const sideEffects = [
+      this.audit.record({
+        tenantId,
+        user,
+        action: "lead.created",
+        resourceType: "lead",
+        resourceId: lead.id,
+        metadata: {
+          propertyId: lead.propertyId,
+          source: lead.source,
+          assignedAgentId: lead.assignedAgentId,
+          attributionSocialPostChannel: lead.attributionSocialPostChannel,
+          attributionSocialPostTrackingSlug: lead.attributionSocialPostTrackingSlug
+        }
+      }),
+      Promise.resolve().then(() =>
+        this.realtime.publish(tenantId, "lead.created", {
+          leadId: lead.id,
+          propertyId: lead.propertyId,
+          source: lead.source,
+          assignedAgentId: lead.assignedAgentId,
+          attributionSocialPostChannel: lead.attributionSocialPostChannel,
+          attributionSocialPostTrackingSlug: lead.attributionSocialPostTrackingSlug
+        })
+      ),
+      this.leads.recordStatusEvent({
+        tenantId,
+        leadId: lead.id,
+        status: lead.status,
+        user
+      }),
+      this.notifications.notifyLeadCreated(tenantId, lead)
+    ];
+    const results = await Promise.allSettled(sideEffects);
+
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        this.logger.warn(`Lead created side effect ${index + 1} failed for ${lead.id}: ${toErrorMessage(result.reason)}`);
+      }
+    });
   }
 
   async listUnassigned(tenantId: string): Promise<LeadListResponse> {
@@ -761,4 +775,8 @@ export class LeadService {
           : rawUnassigned === true || rawUnassigned === "true"
     };
   }
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown error";
 }

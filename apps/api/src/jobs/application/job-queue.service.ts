@@ -1,4 +1,4 @@
-import { Inject, Injectable, OnModuleDestroy } from "@nestjs/common";
+import { Injectable, Logger, OnModuleDestroy } from "@nestjs/common";
 import { Queue, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import {
@@ -14,7 +14,11 @@ import { loadAppConfig } from "@propertyflow/config";
 
 @Injectable()
 export class JobQueueService implements OnModuleDestroy {
+  private readonly logger = new Logger(JobQueueService.name);
+
   private readonly connection = new Redis(loadAppConfig().redisUrl, {
+    connectTimeout: 2_000,
+    enableOfflineQueue: false,
     maxRetriesPerRequest: null
   });
 
@@ -30,6 +34,12 @@ export class JobQueueService implements OnModuleDestroy {
       removeOnFail: 1_000
     }
   });
+
+  constructor() {
+    this.connection.on("error", (error) => {
+      this.logger.warn(`Redis job queue connection error: ${error.message}`);
+    });
+  }
 
   async enqueue(name: BackgroundJobName, payload: BackgroundJobPayload): Promise<BackgroundJobSnapshot> {
     const job = await this.queue.add(name, payload);

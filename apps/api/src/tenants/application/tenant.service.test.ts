@@ -254,6 +254,49 @@ describe("TenantService", () => {
     );
   });
 
+  it("blocks external widget origins when the allowlist is still empty", async () => {
+    const service = new TenantService(
+      repository({
+        findBySlug: async () =>
+          tenant({
+            widget: {
+              ...tenant().widget,
+              allowedOrigins: []
+            }
+          })
+      })
+    );
+
+    await expect(service.getPublicWidgetConfig("demo-agency", { origin: "http://localhost:3002" })).resolves.toMatchObject({
+      readiness: {
+        status: "test-mode"
+      },
+      tenantSlug: "demo-agency"
+    });
+    await expect(service.getPublicWidgetConfig("demo-agency", { origin: "https://evil.example.com" })).rejects.toBeInstanceOf(
+      ForbiddenException
+    );
+  });
+
+  it("requires an explicit widget origin allowlist in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const service = new TenantService(
+      repository({
+        findBySlug: async () =>
+          tenant({
+            widget: {
+              ...tenant().widget,
+              allowedOrigins: []
+            }
+          })
+      })
+    );
+
+    await expect(service.getPublicWidgetConfig("demo-agency", { origin: "http://localhost:3002" })).rejects.toBeInstanceOf(
+      ForbiddenException
+    );
+  });
+
   it("provisions a new agency workspace from signup intent", async () => {
     vi.stubEnv("PROPERTYFLOW_ACCESS_TOKEN_SECRET", "test-secret");
     let capturedInput: Parameters<TenantRepository["provision"]>[0] | undefined;
@@ -310,7 +353,7 @@ describe("TenantService", () => {
       name: "Riviera Pattaya Realty",
       ownerEmail: "owner@riviera.example",
       ownerName: "Workspace owner",
-      ownerUserId: "manager-demo-1",
+      ownerUserId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       slug: "riviera-pattaya-realty",
       subscriptionPlan: "starter",
       website: "https://riviera.example"
@@ -673,7 +716,10 @@ describe("TenantService", () => {
       }
     });
 
-    expect(() => service.assertPublicWidgetOriginAllowed(openTenant, "https://unknown.example.com")).not.toThrow();
+    expect(() => service.assertPublicWidgetOriginAllowed(openTenant, "http://localhost:3002")).not.toThrow();
+    expect(() => service.assertPublicWidgetOriginAllowed(openTenant, "https://unknown.example.com")).toThrow(
+      "Widget origin is not allowed for this tenant"
+    );
     expect(() => service.assertPublicWidgetOriginAllowed(lockedTenant, "https://agency.example.com")).not.toThrow();
     expect(() =>
       service.assertPublicWidgetOriginAllowed(lockedTenant, undefined, "https://agency.example.com/listings/1")

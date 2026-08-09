@@ -3,15 +3,13 @@ import type { PropertySnapshot } from "@propertyflow/domain";
 
 const apiBaseUrl = process.env.API_BASE_URL ?? "http://localhost:3001";
 const tenantId = process.env.SMOKE_TENANT_ID ?? "demo-agency";
-const userId = process.env.SMOKE_USER_ID ?? "smoke-runner";
-const userRole = process.env.SMOKE_USER_ROLE ?? "admin";
 const token = `smoke-${crypto.randomUUID().slice(0, 8)}`;
+const accessToken = process.env.SMOKE_ACCESS_TOKEN ?? (await createAgencyAccessToken());
 
 const headers = {
+  authorization: `Bearer ${accessToken}`,
   "content-type": "application/json",
-  "x-tenant-id": tenantId,
-  "x-user-id": userId,
-  "x-user-role": userRole
+  "x-tenant-id": tenantId
 };
 
 const propertyPayload = {
@@ -100,6 +98,36 @@ async function requestJson<TResponse>(path: string, init: RequestInit): Promise<
   }
 
   return JSON.parse(body) as TResponse;
+}
+
+async function createAgencyAccessToken(): Promise<string> {
+  const tenantSlug = process.env.SMOKE_TENANT_SLUG ?? tenantId;
+  const workEmail = process.env.SMOKE_WORK_EMAIL ?? "manager@propertyflow.local";
+  const bootstrapCode = process.env.SMOKE_BOOTSTRAP_CODE ?? process.env.PROPERTYFLOW_BOOTSTRAP_LOGIN_CODE;
+  const response = await fetch(`${apiBaseUrl}/tenants/session`, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      bootstrapCode,
+      tenantSlug,
+      workEmail
+    })
+  });
+  const body = await response.text();
+
+  if (!response.ok) {
+    throw new Error(`POST /tenants/session failed with ${response.status}: ${body}`);
+  }
+
+  const session = JSON.parse(body) as { accessToken?: string };
+
+  if (!session.accessToken) {
+    throw new Error("POST /tenants/session did not return an access token");
+  }
+
+  return session.accessToken;
 }
 
 function sleep(ms: number): Promise<void> {

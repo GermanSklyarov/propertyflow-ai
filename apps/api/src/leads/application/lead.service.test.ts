@@ -118,6 +118,43 @@ describe("LeadService", () => {
     expect(notifications.notifyLeadCreated).toHaveBeenCalledWith("demo-agency", lead);
   });
 
+  it("returns the created lead when non-critical lead side effects fail", async () => {
+    const lead = {
+      contactEmail: "buyer@example.com",
+      contactName: "Widget Buyer",
+      createdAt: "2026-07-17T08:00:00.000Z",
+      id: "lead-widget-1",
+      priority: "high",
+      source: "ai-concierge",
+      status: "new",
+      tenantId: "demo-agency",
+      updatedAt: "2026-07-17T08:00:00.000Z"
+    } satisfies LeadSnapshot;
+    const request = {
+      contactEmail: "buyer@example.com",
+      contactName: "Widget Buyer",
+      source: "ai-concierge"
+    } satisfies CreateLeadRequest;
+    const { audit, leads, notifications, realtime, service } = createService(lead);
+
+    vi.mocked(audit.record).mockRejectedValueOnce(new Error("audit unavailable"));
+    vi.mocked(realtime.publish).mockImplementationOnce(() => {
+      throw new Error("realtime unavailable");
+    });
+    vi.mocked(leads.recordStatusEvent).mockRejectedValueOnce(new Error("status history unavailable"));
+    vi.mocked(notifications.notifyLeadCreated).mockRejectedValueOnce(new Error("telegram unavailable"));
+
+    await expect(service.create("demo-agency", request, user)).resolves.toEqual(lead);
+    expect(leads.create).toHaveBeenCalledWith({
+      ...request,
+      tenantId: "demo-agency"
+    });
+    expect(audit.record).toHaveBeenCalled();
+    expect(realtime.publish).toHaveBeenCalled();
+    expect(leads.recordStatusEvent).toHaveBeenCalled();
+    expect(notifications.notifyLeadCreated).toHaveBeenCalledWith("demo-agency", lead);
+  });
+
   it("lists social-post leads by property and tracking slug", async () => {
     const lead = {
       attributionSocialPostChannel: "facebook",

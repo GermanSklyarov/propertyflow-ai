@@ -101,7 +101,7 @@ export class TenantService {
       throw new ConflictException("Agency workspace already exists");
     }
 
-    const ownerUserId = process.env.PROPERTYFLOW_BOOTSTRAP_USER_ID ?? process.env.PROPERTYFLOW_USER_ID ?? "manager-demo-1";
+    const ownerUserId = randomUUID();
     const tenant = await this.tenants.provision({
       name: agencyName,
       ownerEmail: normalizeRequiredText(request.workEmail).toLowerCase(),
@@ -389,11 +389,19 @@ export class TenantService {
   }
 
   assertPublicWidgetOriginAllowed(tenant: TenantSnapshot, originHeader?: string, refererHeader?: string): void {
-    if (!tenant.widget.allowedOrigins.length) {
-      return;
-    }
-
     const requestOrigin = normalizeRequestOrigin(originHeader) ?? normalizeRequestOrigin(refererHeader);
+
+    if (!tenant.widget.allowedOrigins.length) {
+      if (!requestOrigin && process.env.NODE_ENV !== "production") {
+        return;
+      }
+
+      if (requestOrigin && process.env.NODE_ENV !== "production" && isLocalDevelopmentOrigin(requestOrigin)) {
+        return;
+      }
+
+      throw new ForbiddenException("Widget origin is not allowed for this tenant");
+    }
 
     if (!requestOrigin || !tenant.widget.allowedOrigins.includes(requestOrigin)) {
       throw new ForbiddenException("Widget origin is not allowed for this tenant");
@@ -1675,6 +1683,16 @@ function normalizeRequestOrigin(value: string | undefined): string | undefined {
     return url.origin.toLowerCase();
   } catch (_error) {
     return undefined;
+  }
+}
+
+function isLocalDevelopmentOrigin(origin: string): boolean {
+  try {
+    const hostname = new URL(origin).hostname.toLowerCase();
+
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch (_error) {
+    return false;
   }
 }
 
