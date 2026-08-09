@@ -1,5 +1,16 @@
 import { Type } from "class-transformer";
-import { IsArray, IsEmail, IsIn, IsOptional, IsString, IsUUID, MinLength, ValidateNested } from "class-validator";
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  MinLength,
+  ValidateNested
+} from "class-validator";
 import type { PublicWidgetAskRequest, PublicWidgetLeadRequest } from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 
@@ -10,16 +21,19 @@ const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-
 class PublicWidgetConversationListingDto {
   @IsString()
   @MinLength(1)
+  @MaxLength(120)
   propertyId!: string;
 
   @IsString()
   @MinLength(1)
+  @MaxLength(180)
   title!: string;
 }
 
 class PublicWidgetConversationTurnDto {
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(3)
   @ValidateNested({ each: true })
   @Type(() => PublicWidgetConversationListingDto)
   recommendedListings?: PublicWidgetAskRequest["conversation"] extends Array<infer Turn>
@@ -33,12 +47,14 @@ class PublicWidgetConversationTurnDto {
 
   @IsString()
   @MinLength(1)
+  @MaxLength(2_000)
   text!: string;
 }
 
 export class PublicWidgetAskDto implements PublicWidgetAskRequest {
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(12)
   @ValidateNested({ each: true })
   @Type(() => PublicWidgetConversationTurnDto)
   conversation?: PublicWidgetAskRequest["conversation"];
@@ -48,7 +64,13 @@ export class PublicWidgetAskDto implements PublicWidgetAskRequest {
 
   @IsString()
   @MinLength(3)
+  @MaxLength(2_000)
   message!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  sessionId?: string;
 
   @IsOptional()
   @IsUUID()
@@ -78,6 +100,7 @@ export class PublicWidgetLeadDto implements PublicWidgetLeadRequest {
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(12)
   @ValidateNested({ each: true })
   @Type(() => PublicWidgetConversationTurnDto)
   conversation?: PublicWidgetLeadRequest["conversation"];
@@ -87,10 +110,12 @@ export class PublicWidgetLeadDto implements PublicWidgetLeadRequest {
 
   @IsOptional()
   @IsString()
+  @MaxLength(2_000)
   message?: string;
 
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(3)
   @ValidateNested({ each: true })
   @Type(() => PublicWidgetConversationListingDto)
   recommendedListings?: PublicWidgetLeadRequest["recommendedListings"];

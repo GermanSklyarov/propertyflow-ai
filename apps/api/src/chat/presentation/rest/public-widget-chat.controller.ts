@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Headers, Inject, Param, Post } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Headers, Inject, Param, Post, Req } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import type {
   PublicWidgetAskResponse,
@@ -15,7 +15,16 @@ import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../../propertie
 import { TenantService } from "../../../tenants/application/tenant.service.js";
 import type { AiConciergePersona } from "../../application/ai-text-generator.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
+import { PublicWidgetRateLimitService } from "../../application/public-widget-rate-limit.service.js";
 import { PublicWidgetAskDto, PublicWidgetLeadDto } from "./public-widget-chat.dto.js";
+
+interface PublicWidgetRequest {
+  headers: Record<string, string | string[] | undefined>;
+  ip?: string;
+  socket?: {
+    remoteAddress?: string;
+  };
+}
 
 @Controller("public/v1/widget")
 @ApiTags("public-widget")
@@ -24,7 +33,8 @@ export class PublicWidgetChatController {
     @Inject(TenantService) private readonly tenants: TenantService,
     @Inject(AiChatService) private readonly chat: AiChatService,
     @Inject(LeadService) private readonly leads: LeadService,
-    @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository
+    @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
+    @Inject(PublicWidgetRateLimitService) private readonly rateLimits: PublicWidgetRateLimitService
   ) {}
 
   @Post("ask/:tenantSlug")
@@ -59,18 +69,29 @@ export class PublicWidgetChatController {
   async ask(
     @Param("tenantSlug") tenantSlug: string,
     @Body() payload: PublicWidgetAskDto,
+    @Req() request: PublicWidgetRequest,
     @Headers("origin") origin?: string,
     @Headers("referer") referer?: string
   ): Promise<PublicWidgetAskResponse> {
     const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
+    assertPublicWidgetAskPayloadBounds(payload);
     this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
+    await this.rateLimits.checkPublicWidgetAsk({
+      ip: resolveClientIp(request),
+      sessionId: payload.sessionId,
+      tenantId: tenant.id
+    });
 
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
     const response = await this.chat.ask(
       tenant.id,
       {
-        ...payload,
-        locale
+        conversation: payload.conversation,
+        locale,
+        market: payload.market,
+        message: payload.message,
+        propertyId: payload.propertyId,
+        purpose: payload.purpose
       },
       {
         persona: resolveWidgetPersona(tenant, locale)
@@ -191,6 +212,40 @@ function resolveWidgetPersona(tenant: TenantSnapshot, locale: TenantWidgetLangua
     tone: tenant.widget.tone,
     welcomeMessage: tenant.widget.welcomeMessages[locale] ?? tenant.widget.welcomeMessage
   };
+}
+
+function assertPublicWidgetAskPayloadBounds(payload: PublicWidgetAskDto): void {
+  if (payload.message.length > 2_000) {
+    throw new BadRequestException("Widget message must be 2,000 characters or fewer");
+  }
+
+  if ((payload.conversation ?? []).length > 12) {
+    throw new BadRequestException("Widget conversation history must include 12 turns or fewer");
+  }
+
+  for (const turn of payload.conversation ?? []) {
+    if (turn.text.length > 2_000) {
+      throw new BadRequestException("Widget conversation turn text must be 2,000 characters or fewer");
+    }
+
+    if ((turn.recommendedListings ?? []).length > 3) {
+      throw new BadRequestException("Widget conversation turns can include at most 3 recommended listings");
+    }
+  }
+}
+
+function resolveClientIp(request: PublicWidgetRequest): string {
+  const forwarded = readFirstHeader(request, "x-forwarded-for")?.split(",")[0]?.trim();
+  const cloudflare = readFirstHeader(request, "cf-connecting-ip")?.trim();
+  const realIp = readFirstHeader(request, "x-real-ip")?.trim();
+
+  return forwarded || cloudflare || realIp || request.ip || request.socket?.remoteAddress || "unknown";
+}
+
+function readFirstHeader(request: PublicWidgetRequest, header: string): string | undefined {
+  const value = request.headers[header];
+
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function normalizeOptional(value?: string): string | undefined {

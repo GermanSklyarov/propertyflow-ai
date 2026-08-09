@@ -69,6 +69,7 @@
     locale: requestedLocale,
     messages: [],
     runtimeError: "",
+    sessionId: getSessionId(),
     submittedLeadKeys: {}
   };
   var handoffIntentPatterns = [
@@ -428,7 +429,8 @@
       body: JSON.stringify({
         conversation: conversation,
         locale: state.locale,
-        message: trimmed
+        message: trimmed,
+        sessionId: state.sessionId
       }),
       headers: {
         accept: "application/json",
@@ -739,6 +741,33 @@
 
   function getStorageKey() {
     return "propertyflow.widget." + tenantSlug + "." + state.locale;
+  }
+
+  function getSessionId() {
+    var key = "propertyflow.widget." + tenantSlug + ".session";
+
+    try {
+      var existing = window.sessionStorage.getItem(key);
+
+      if (existing) {
+        return existing;
+      }
+
+      var next = createSessionId();
+      window.sessionStorage.setItem(key, next);
+
+      return next;
+    } catch (_error) {
+      return createSessionId();
+    }
+  }
+
+  function createSessionId() {
+    if (window.crypto && typeof window.crypto.randomUUID === "function") {
+      return window.crypto.randomUUID();
+    }
+
+    return "session-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
   }
 
   function mergeConfig(fallback, remote) {

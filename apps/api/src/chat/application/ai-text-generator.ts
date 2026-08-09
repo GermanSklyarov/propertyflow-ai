@@ -8,6 +8,8 @@ import type {
 
 export const AI_TEXT_GENERATOR = Symbol("AI_TEXT_GENERATOR");
 
+const maxConciergeOutputTokens = 900;
+
 export interface AiConciergePersona {
   leadQualificationFields?: TenantLeadQualificationField[];
   name?: string;
@@ -83,6 +85,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       },
       body: JSON.stringify({
         model,
+        max_tokens: maxConciergeOutputTokens,
         temperature: 0.2,
         messages: [
           {
@@ -139,6 +142,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
         },
         body: JSON.stringify({
           generationConfig: {
+            maxOutputTokens: maxConciergeOutputTokens,
             temperature: 0.2
           },
           contents: [

@@ -69,6 +69,21 @@ describe("ai-chat-context", () => {
     expect(context).toContain("Source labels available through the separate citations API field:");
     expect(context).toContain("- Wongamat Sea View Residence, pattaya, 3500000 THB");
   });
+
+  it("caps RAG and conversation context before LLM generation", () => {
+    const ragContext = buildAiChatContext("x".repeat(40_000), [propertyCitation(propertyFactory())]);
+    const conversationContext = buildConversationContext({
+      conversation: Array.from({ length: 20 }, (_, index) => ({
+        role: index % 2 === 0 ? "user" : "assistant",
+        text: "y".repeat(4_000)
+      })),
+      locale: "en",
+      message: "Show me options"
+    });
+
+    expect(ragContext.length).toBeLessThanOrEqual(24_000);
+    expect(conversationContext.length).toBeLessThanOrEqual(48_000);
+  });
 });
 
 function propertyFactory(overrides: Partial<PropertySnapshot> = {}): PropertySnapshot {

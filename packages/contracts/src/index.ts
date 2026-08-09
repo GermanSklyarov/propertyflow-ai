@@ -374,7 +374,9 @@ export interface PublicWidgetConfigResponse {
   welcomeMessages: TenantWidgetSettings["welcomeMessages"];
 }
 
-export interface PublicWidgetAskRequest extends AiChatRequest {}
+export interface PublicWidgetAskRequest extends AiChatRequest {
+  sessionId?: string;
+}
 
 export interface PublicWidgetAskResponse extends AiChatResponse {
   conciergeMode: TenantSnapshot["subscriptionPlan"];

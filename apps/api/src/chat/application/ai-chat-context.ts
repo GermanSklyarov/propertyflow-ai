@@ -1,33 +1,38 @@
 import type { AiChatCitation, AiChatRequest, KnowledgeDocumentChunkSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 
+const maxConversationContextTokens = 12_000;
+const maxRagContextTokens = 6_000;
+
 export function buildAiChatContext(lines: string[] | string, citations: AiChatCitation[]): string {
   const contextLines = Array.isArray(lines) ? lines : [lines];
 
-  return [
+  return truncateByEstimatedTokens([
     ...contextLines,
     "",
     "Source labels available through the separate citations API field:",
     ...citations.map((citation) => `- ${citation.label}`)
-  ].join("\n");
+  ].join("\n"), maxRagContextTokens);
 }
 
 export function buildConversationContext(request: AiChatRequest): string {
   const turns = (request.conversation ?? [])
     .filter((turn) => (turn.role === "assistant" || turn.role === "user") && turn.text.trim())
-    .slice(-8)
+    .slice(-12)
     .map((turn) => {
       const listings = (turn.recommendedListings ?? [])
         .slice(0, 3)
         .map((listing, index) => `${index + 1}. ${listing.title} (${listing.propertyId})`);
       const suffix = listings.length ? `\nRecommended listings shown:\n${listings.join("\n")}` : "";
 
-      return `${turn.role}: ${turn.text.trim().slice(0, 800)}${suffix}`;
+      return `${turn.role}: ${turn.text.trim().slice(0, 2_000)}${suffix}`;
     });
 
-  return turns.length
+  const context = turns.length
     ? ["Recent conversation. Use it to resolve follow-up references and avoid repeating the greeting:", ...turns, ""].join("\n")
     : "";
+
+  return truncateByEstimatedTokens(context, maxConversationContextTokens);
 }
 
 export function buildListingEvidence(properties: PropertySnapshot[]): string[] {
@@ -135,4 +140,14 @@ function truncate(value: string, maxLength: number): string {
   const normalized = value.replace(/\s+/g, " ").trim();
 
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized;
+}
+
+function truncateByEstimatedTokens(value: string, maxTokens: number): string {
+  const maxChars = maxTokens * 4;
+
+  if (value.length <= maxChars) {
+    return value;
+  }
+
+  return `${value.slice(0, maxChars - 3)}...`;
 }

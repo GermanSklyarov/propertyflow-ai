@@ -4,6 +4,7 @@ import type { AiChatResponse, LeadSnapshot, TenantSnapshot } from "@propertyflow
 import { LeadService } from "../../../leads/application/lead.service.js";
 import type { PropertyRepository } from "../../../properties/domain/property.repository.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
+import type { PublicWidgetRateLimitService } from "../../application/public-widget-rate-limit.service.js";
 import { TenantService } from "../../../tenants/application/tenant.service.js";
 import { PublicWidgetChatController } from "./public-widget-chat.controller.js";
 
@@ -29,7 +30,8 @@ describe("PublicWidgetChatController", () => {
       create: vi.fn()
     } as unknown as LeadService;
     const properties = propertyRepository();
-    const controller = new PublicWidgetChatController(tenants, chat, leads, properties);
+    const rateLimits = rateLimitService();
+    const controller = new PublicWidgetChatController(tenants, chat, leads, properties, rateLimits);
 
     await expect(
       controller.ask(
@@ -41,8 +43,10 @@ describe("PublicWidgetChatController", () => {
           ],
           locale: "ru",
           message: "Квартира в Паттайе до 5 млн",
-          market: "pattaya"
+          market: "pattaya",
+          sessionId: "session-1"
         },
+        requestFactory({ ip: "203.0.113.10" }),
         "https://agency.example.com"
       )
     ).resolves.toMatchObject({
@@ -73,6 +77,11 @@ describe("PublicWidgetChatController", () => {
       }
     );
     expect(tenants.assertPublicWidgetOriginAllowed).toHaveBeenCalledWith(tenant, "https://agency.example.com", undefined);
+    expect(rateLimits.checkPublicWidgetAsk).toHaveBeenCalledWith({
+      ip: "203.0.113.10",
+      sessionId: "session-1",
+      tenantId: "tenant-rag"
+    });
     expect(tenants.recordPublicWidgetAsk).toHaveBeenCalledWith(tenant, {
       locale: "ru",
       origin: "https://agency.example.com",
@@ -110,7 +119,7 @@ describe("PublicWidgetChatController", () => {
           : Promise.resolve(null)
       )
     });
-    const controller = new PublicWidgetChatController(tenants, chat, leads, properties);
+    const controller = new PublicWidgetChatController(tenants, chat, leads, properties, rateLimitService());
 
     await expect(
       controller.ask(
@@ -119,6 +128,7 @@ describe("PublicWidgetChatController", () => {
           locale: "en",
           message: "Show me sea view condos"
         },
+        requestFactory(),
         "https://agency.example.com",
         "https://agency.example.com/listings"
       )
@@ -160,7 +170,7 @@ describe("PublicWidgetChatController", () => {
         title: "Wongamat Sea View Residence"
       })
     });
-    const controller = new PublicWidgetChatController(tenants, chat, leads, properties);
+    const controller = new PublicWidgetChatController(tenants, chat, leads, properties, rateLimitService());
 
     await expect(
       controller.ask(
@@ -169,6 +179,7 @@ describe("PublicWidgetChatController", () => {
           locale: "en",
           message: "Show me sea view condos"
         },
+        requestFactory(),
         "https://agency.example.com"
       )
     ).resolves.toMatchObject({
@@ -201,12 +212,16 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn()
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository(), rateLimitService());
 
-    const response = await controller.ask("demo-agency", {
-      locale: "zh",
-      message: "海景公寓"
-    });
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "zh",
+        message: "海景公寓"
+      },
+      requestFactory()
+    );
 
     expect(response.locale).toBe("ru");
     expect(chat.ask).toHaveBeenCalledWith(
@@ -225,6 +240,34 @@ describe("PublicWidgetChatController", () => {
         }
       }
     );
+  });
+
+  it("rejects oversized widget ask messages before calling the LLM", async () => {
+    const tenant = tenantFactory();
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn()
+    } as unknown as AiChatService;
+    const leads = {
+      create: vi.fn()
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository(), rateLimitService());
+
+    await expect(
+      controller.ask(
+        "demo-agency",
+        {
+          locale: "en",
+          message: "x".repeat(2_001)
+        },
+        requestFactory()
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(chat.ask).not.toHaveBeenCalled();
   });
 
   it("creates a tenant-scoped lead from public widget handoff", async () => {
@@ -248,7 +291,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn().mockResolvedValue(leadFactory({ id: "lead-widget-1", tenantId: tenant.id }))
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository(), rateLimitService());
 
     await expect(
       controller.createLead(
@@ -301,7 +344,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn().mockResolvedValue(leadFactory({ tenantId: tenant.id }))
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository(), rateLimitService());
 
     await expect(
       controller.createLead(
@@ -348,7 +391,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn().mockResolvedValue(leadFactory({ propertyId: "property-1", tenantId: tenant.id }))
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository(), rateLimitService());
 
     await controller.createLead(
       "demo-agency",
@@ -416,7 +459,7 @@ describe("PublicWidgetChatController", () => {
     const leads = {
       create: vi.fn()
     } as unknown as LeadService;
-    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository());
+    const controller = new PublicWidgetChatController(tenants, chat, leads, propertyRepository(), rateLimitService());
 
     await expect(
       controller.createLead("demo-agency", {
@@ -525,4 +568,20 @@ function propertyRepository(overrides: Partial<PropertyRepository> = {}): Proper
     updateStatus: vi.fn(),
     ...overrides
   } as unknown as PropertyRepository;
+}
+
+function rateLimitService(): PublicWidgetRateLimitService {
+  return {
+    checkPublicWidgetAsk: vi.fn().mockResolvedValue(undefined)
+  } as unknown as PublicWidgetRateLimitService;
+}
+
+function requestFactory(overrides: { headers?: Record<string, string | string[] | undefined>; ip?: string } = {}) {
+  return {
+    headers: overrides.headers ?? {},
+    ip: overrides.ip ?? "198.51.100.20",
+    socket: {
+      remoteAddress: "198.51.100.21"
+    }
+  };
 }
