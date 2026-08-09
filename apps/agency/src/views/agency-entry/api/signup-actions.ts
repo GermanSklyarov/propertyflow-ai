@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { provisionTenant, requestAgencyMagicLink } from "@shared/api/agency-client";
 import { setAgencySession } from "@shared/lib/tenant-session";
@@ -27,6 +28,7 @@ export async function submitAgencySignup(formData: FormData) {
     tenantId: provisioned.tenant.id
   });
 
+  revalidatePath("/", "layout");
   redirect(`/setup?plan=${provisioned.tenant.subscriptionPlan}`);
 }
 

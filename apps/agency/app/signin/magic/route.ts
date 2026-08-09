@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { exchangeAgencyMagicLink } from "@shared/api/agency-client";
 import {
   agencyAccessTokenCookie,
@@ -47,6 +48,8 @@ export async function GET(request: NextRequest) {
     path: "/",
     secure
   });
+
+  revalidatePath("/", "layout");
 
   return response;
 }

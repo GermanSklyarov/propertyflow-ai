@@ -6,8 +6,7 @@ import {
   ArrowRight,
   Bell,
   DatabaseZap,
-  LogOut,
-  Search,
+  LogOut
 } from "lucide-react";
 import type { TenantSubscriptionPlan } from "@propertyflow/contracts";
 import {
@@ -34,6 +33,7 @@ export function AgencyShell({
   const quickLinks = getAgencyTopbarQuickLinks(subscriptionPlan);
   const upgradeCta = getAgencyUpgradeCta(subscriptionPlan);
   const planLabel = subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1);
+  const shouldShowLogout = isAuthenticated || !isEntryRoute;
 
   if (isEntryRoute) {
     return <div className={styles.entryRoot}>{children}</div>;
@@ -91,12 +91,14 @@ export function AgencyShell({
         <div className={styles.main}>
           <header className={styles.topbar}>
             <nav className={styles.quickNav} aria-label="Agency quick links">
-              <span className={styles.quickNavLabel}>
-                <Search size={16} />
-                Quick jump
-              </span>
               {quickLinks.map((link) => (
-                <Link className={styles.quickLink} href={link.href} key={link.href}>
+                <Link
+                  className={`${styles.quickLink} ${
+                    isAgencyNavigationItemActive(pathname, link.href) ? styles.quickLinkActive : ""
+                  }`}
+                  href={link.href}
+                  key={link.href}
+                >
                   {link.label}
                 </Link>
               ))}
@@ -106,17 +108,12 @@ export function AgencyShell({
                 <DatabaseZap size={16} />
                 {subscriptionPlan === "starter" ? "Widget ready" : "API connected"}
               </span>
-              {subscriptionPlan === "starter" ? (
-                <span className={styles.actionButton}>
-                  <Bell size={16} />
-                  Starter setup
-                </span>
-              ) : (
-                <span className={styles.actionButton}>
+              {subscriptionPlan !== "starter" ? (
+                <Link className={styles.actionLink} href="/leads">
                   <Bell size={16} />7 follow-ups
-                </span>
-              )}
-              {isAuthenticated ? (
+                </Link>
+              ) : null}
+              {shouldShowLogout ? (
                 <form action={submitAgencyLogout}>
                   <button aria-label="Logout" className={styles.logoutButton} title="Logout" type="submit">
                     <LogOut size={16} />

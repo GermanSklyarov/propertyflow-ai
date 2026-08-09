@@ -252,7 +252,7 @@ export function SigninEntryPage({
                   sign-in link.
                 </p>
                 {developmentMagicLinkHref ? (
-                  <Link href={developmentMagicLinkHref}>Continue with local development link</Link>
+                  <a href={developmentMagicLinkHref}>Continue with local development link</a>
                 ) : null}
               </div>
             </div>

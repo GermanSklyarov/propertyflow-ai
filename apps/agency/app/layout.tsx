@@ -12,9 +12,13 @@ export const metadata: Metadata = {
   }
 };
 
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const session = await getAgencySession();
-  const tenant = session ? await getCurrentTenant({ tenantId: session.tenantId }).catch(() => null) : null;
+  const tenant = session
+    ? await getCurrentTenant({ revalidateSeconds: false, tenantId: session.tenantId }).catch(() => null)
+    : null;
 
   return (
     <html className="notranslate" lang="en" translate="no">
