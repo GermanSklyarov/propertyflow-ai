@@ -6,6 +6,7 @@ import type {
   ListingSourceImportMode,
   ListingSourceSnapshot,
   ListingSourceStatus,
+  ListingSourceSyncInterval,
   ListingSourceType
 } from "@propertyflow/contracts";
 import type { Pool } from "pg";
@@ -24,6 +25,8 @@ interface ListingSourceRow {
   import_mode: ListingSourceImportMode;
   mapping: ListingSourceFieldMapping;
   status: ListingSourceStatus;
+  sync_interval: ListingSourceSyncInterval;
+  next_sync_at: Date | null;
   last_sync_at: Date | null;
   last_error: string | null;
   created_at: Date;
@@ -50,6 +53,7 @@ export class PgListingSourceRepository implements ListingSourceRepository {
           import_mode,
           mapping,
           status,
+          sync_interval,
           created_at,
           updated_at
         ) values (
@@ -65,7 +69,8 @@ export class PgListingSourceRepository implements ListingSourceRepository {
           $10,
           $11,
           $12,
-          $13
+          $13,
+          $14
         )
         returning *
       `,
@@ -81,6 +86,7 @@ export class PgListingSourceRepository implements ListingSourceRepository {
         request.importMode ?? "hybrid",
         request.mapping,
         "draft",
+        request.syncInterval ?? "disabled",
         now,
         now
       ]
@@ -137,6 +143,30 @@ export class PgListingSourceRepository implements ListingSourceRepository {
     return row ? this.toSnapshot(row) : null;
   }
 
+  async updateSchedule(
+    tenantId: string,
+    sourceId: string,
+    syncInterval: ListingSourceSyncInterval,
+    nextSyncAt?: Date
+  ): Promise<ListingSourceSnapshot | null> {
+    const now = new Date().toISOString();
+    const result = await this.pool.query<ListingSourceRow>(
+      `
+        update listing_source_configs
+        set
+          sync_interval = $3,
+          next_sync_at = $4,
+          updated_at = $5
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, sourceId, syncInterval, nextSyncAt?.toISOString() ?? null, now]
+    );
+
+    const row = result.rows[0];
+    return row ? this.toSnapshot(row) : null;
+  }
+
   private toSnapshot(row: ListingSourceRow): ListingSourceSnapshot {
     return {
       id: row.id,
@@ -150,6 +180,8 @@ export class PgListingSourceRepository implements ListingSourceRepository {
       importMode: row.import_mode,
       mapping: row.mapping,
       status: row.status,
+      syncInterval: row.sync_interval ?? "disabled",
+      nextSyncAt: row.next_sync_at?.toISOString(),
       lastSyncAt: row.last_sync_at?.toISOString(),
       lastError: row.last_error ?? undefined,
       createdAt: row.created_at.toISOString(),

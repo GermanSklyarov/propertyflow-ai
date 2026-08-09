@@ -55,6 +55,7 @@ import type {
   ListingSourceListResponse,
   ListingSourcePreviewResponse,
   ListingSourceSnapshot,
+  ListingSourceSyncInterval,
   AddPropertyImageRequest,
   ConfirmPropertyImageDeleteRequest,
   ConfirmPropertyImageUploadRequest,
@@ -1268,6 +1269,27 @@ export async function syncListingSource(sourceId: string, options: AgencyApiOpti
   }
 
   return (await response.json()) as BackgroundJobSnapshot;
+}
+
+export async function updateListingSourceSchedule(
+  sourceId: string,
+  syncInterval: ListingSourceSyncInterval,
+  options: AgencyApiOptions = {}
+): Promise<ListingSourceSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/listing-sources/${sourceId}/schedule`, {
+    method: "PATCH",
+    headers: {
+      "content-type": "application/json",
+      ...(await tenantHeaders(options))
+    },
+    body: JSON.stringify({ syncInterval })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to update listing source schedule: ${response.status}`);
+  }
+
+  return (await response.json()) as ListingSourceSnapshot;
 }
 
 export async function embedKnowledgeChunks(

@@ -12,6 +12,7 @@ import type {
   ListingSourceListResponse,
   ListingSourcePreviewResponse,
   ListingSourceSnapshot,
+  ListingSourceSyncInterval,
   ListingSourceType
 } from "@propertyflow/contracts";
 import { JobQueueService } from "../../jobs/application/job-queue.service.js";
@@ -23,6 +24,12 @@ import {
 const allowedTypes: ListingSourceType[] = ["rest-api", "xml-feed"];
 const allowedAuthTypes: ListingSourceAuthType[] = ["none", "bearer", "api-key-header"];
 const allowedImportModes: ListingSourceImportMode[] = ["crm_inventory", "concierge_index_only", "hybrid"];
+const allowedSyncIntervals: ListingSourceSyncInterval[] = ["disabled", "hourly", "every_6_hours", "daily"];
+const syncIntervalMs: Record<Exclude<ListingSourceSyncInterval, "disabled">, number> = {
+  daily: 24 * 60 * 60 * 1000,
+  every_6_hours: 6 * 60 * 60 * 1000,
+  hourly: 60 * 60 * 1000
+};
 const allowedAttributeTypes: ListingSourceCustomAttributeType[] = ["text", "number", "boolean", "date", "enum", "json"];
 const allowedFilterHints: ListingSourceCustomAttributeFilterHint[] = [
   "availability",
@@ -46,7 +53,10 @@ export class ListingSourceService {
   ) {}
 
   async create(tenantId: string, request: CreateListingSourceRequest): Promise<ListingSourceSnapshot> {
-    return this.sources.save(tenantId, this.normalizeCreateRequest(request));
+    const source = await this.sources.save(tenantId, this.normalizeCreateRequest(request));
+    await this.configureRepeatableSync(source);
+
+    return source;
   }
 
   async list(tenantId: string): Promise<ListingSourceListResponse> {
@@ -121,14 +131,33 @@ export class ListingSourceService {
     await this.sources.markSyncStarted(tenantId, sourceId);
 
     return this.jobs.enqueue("properties.import", {
-      tenantId,
-      requestedByUserId,
-      source: source.type === "xml-feed" ? "partner-xml" : "partner-api",
-      importMode: source.importMode,
-      objectUrl: source.endpointUrl,
-      sourceConfigId: source.id,
-      fieldMapping: source.mapping
+      ...this.buildImportPayload(source),
+      requestedByUserId
     });
+  }
+
+  async updateSchedule(
+    tenantId: string,
+    sourceId: string,
+    syncInterval: ListingSourceSyncInterval
+  ): Promise<ListingSourceSnapshot> {
+    const source = await this.sources.findById(tenantId, sourceId);
+
+    if (!source) {
+      throw new BadRequestException("Listing source was not found for this tenant.");
+    }
+
+    const normalized = this.normalizeSyncInterval(syncInterval);
+    const nextSyncAt = normalized === "disabled" ? undefined : new Date(Date.now() + syncIntervalMs[normalized]);
+    const updated = await this.sources.updateSchedule(tenantId, sourceId, normalized, nextSyncAt);
+
+    if (!updated) {
+      throw new BadRequestException("Listing source was not found for this tenant.");
+    }
+
+    await this.configureRepeatableSync(updated);
+
+    return updated;
   }
 
   private normalizeCreateRequest(request: CreateListingSourceRequest): CreateListingSourceRequest {
@@ -160,8 +189,45 @@ export class ListingSourceService {
       authHeaderName: this.optionalString(request.authHeaderName),
       authSecretRef: this.optionalString(request.authSecretRef),
       importMode,
+      syncInterval: this.normalizeSyncInterval(request.syncInterval ?? "disabled"),
       mapping: this.normalizeMapping(request.mapping)
     };
+  }
+
+  private async configureRepeatableSync(source: ListingSourceSnapshot): Promise<void> {
+    const jobId = this.buildRepeatableJobId(source);
+
+    if (source.syncInterval === "disabled") {
+      await this.jobs.removeRepeatable("properties.import", jobId);
+      return;
+    }
+
+    await this.jobs.upsertRepeatable("properties.import", this.buildImportPayload(source), {
+      everyMs: syncIntervalMs[source.syncInterval],
+      jobId
+    });
+  }
+
+  private buildImportPayload(source: ListingSourceSnapshot) {
+    return {
+      tenantId: source.tenantId,
+      source: source.type === "xml-feed" ? "partner-xml" as const : "partner-api" as const,
+      importMode: source.importMode,
+      objectUrl: source.endpointUrl,
+      sourceConfigId: source.id,
+      fieldMapping: source.mapping
+    };
+  }
+
+  private buildRepeatableJobId(source: Pick<ListingSourceSnapshot, "id" | "tenantId">): string {
+    return `listing-source-sync:${source.tenantId}:${source.id}`;
+  }
+
+  private normalizeSyncInterval(value: ListingSourceSyncInterval): ListingSourceSyncInterval {
+    if (!allowedSyncIntervals.includes(value)) {
+      throw new BadRequestException("Unsupported listing source sync interval.");
+    }
+    return value;
   }
 
   private normalizeEndpointUrl(endpointUrl: string): string {

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiHeader, ApiTags } from "@nestjs/swagger";
 import type {
   BackgroundJobSnapshot,
@@ -15,7 +15,7 @@ import { UserContextGuard } from "../../../shared/auth/user-context.guard.js";
 import { TenantId } from "../../../shared/presentation/tenant-id.decorator.js";
 import { TenantGuard } from "../../../shared/presentation/tenant.guard.js";
 import { ListingSourceService } from "../../application/listing-source.service.js";
-import { CreateListingSourceDto } from "./create-listing-source.dto.js";
+import { CreateListingSourceDto, UpdateListingSourceScheduleDto } from "./create-listing-source.dto.js";
 
 @ApiTags("knowledge")
 @ApiHeader({ name: "x-tenant-id", required: true })
@@ -98,5 +98,31 @@ export class ListingSourcesController {
     });
 
     return job;
+  }
+
+  @Patch(":sourceId/schedule")
+  @Roles("manager", "admin")
+  async updateSchedule(
+    @TenantId() tenantId: string,
+    @CurrentUser() user: RequestUser,
+    @Param("sourceId") sourceId: string,
+    @Body() payload: UpdateListingSourceScheduleDto
+  ): Promise<ListingSourceSnapshot> {
+    const source = await this.listingSources.updateSchedule(tenantId, sourceId, payload.syncInterval);
+
+    await this.audit.record({
+      tenantId,
+      user,
+      action: "knowledge.listing_source_sync_requested",
+      resourceType: "knowledge",
+      resourceId: sourceId,
+      metadata: {
+        name: source.name,
+        syncInterval: source.syncInterval,
+        nextSyncAt: source.nextSyncAt
+      }
+    });
+
+    return source;
   }
 }

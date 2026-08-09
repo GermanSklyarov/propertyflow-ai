@@ -34,6 +34,7 @@ export default async function AgencyKnowledgePage({
     listingSync?: string;
     locale?: string;
     q?: string;
+    schedule?: string;
     source?: string;
     warnings?: string;
   }>;

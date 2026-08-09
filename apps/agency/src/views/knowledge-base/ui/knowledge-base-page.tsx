@@ -21,7 +21,8 @@ import {
 import {
   createRestListingSourceAction,
   previewRestListingSourceAction,
-  syncListingSourceAction
+  syncListingSourceAction,
+  updateListingSourceScheduleAction
 } from "@entities/knowledge/api/knowledge-actions";
 import {
   buildKnowledgeSourceCoverage,
@@ -613,6 +614,15 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
             Root path
             <input name="rootPath" placeholder="data.items or listings.listing" />
           </label>
+          <label>
+            Auto-update
+            <select name="syncInterval" defaultValue="every_6_hours">
+              <option value="disabled">Manual only</option>
+              <option value="hourly">Every hour</option>
+              <option value="every_6_hours">Every 6 hours</option>
+              <option value="daily">Daily</option>
+            </select>
+          </label>
         </div>
 
         <div className={styles.listingApiMappingGrid}>
@@ -662,6 +672,7 @@ function ListingApiConnectForm({ defaultOpen }: { defaultOpen: boolean }) {
 function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
   const summary = buildListingSourceSummary(source);
   const syncAction = syncListingSourceAction.bind(null, source.id, source.name);
+  const scheduleAction = updateListingSourceScheduleAction.bind(null, source.id, source.name);
 
   return (
     <article className={styles.listingApiSourceCard} data-status={source.status}>
@@ -681,6 +692,7 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
         <span>{summary.customAttributeCount} custom attrs</span>
         <span>{summary.searchableCustomAttributeCount} searchable</span>
         <span>{formatImportMode(source.importMode)}</span>
+        <span>{formatListingSourceSyncInterval(source.syncInterval)}</span>
       </div>
 
       <div className={styles.listingApiReadiness} data-ready={summary.missingProductionFields.length === 0} data-tone={summary.statusTone}>
@@ -741,6 +753,24 @@ function ListingApiSourceCard({ source }: { source: ListingSourceSnapshot }) {
           <RefreshCw size={15} />
           {summary.syncButtonLabel}
         </button>
+      </form>
+
+      <form action={scheduleAction} className={styles.listingApiScheduleForm}>
+        <label>
+          Auto-update
+          <select name="syncInterval" defaultValue={source.syncInterval}>
+            <option value="disabled">Manual only</option>
+            <option value="hourly">Every hour</option>
+            <option value="every_6_hours">Every 6 hours</option>
+            <option value="daily">Daily</option>
+          </select>
+        </label>
+        <button className={styles.listingApiScheduleButton} type="submit">
+          Save schedule
+        </button>
+        <small>
+          {source.nextSyncAt ? `Next sync ${formatDateTime(source.nextSyncAt)}` : "No automatic sync is scheduled."}
+        </small>
       </form>
     </article>
   );
@@ -897,6 +927,24 @@ function formatImportMode(value: ListingSourceSnapshot["importMode"]) {
   } satisfies Record<ListingSourceSnapshot["importMode"], string>;
 
   return labels[value];
+}
+
+function formatListingSourceSyncInterval(value: ListingSourceSnapshot["syncInterval"]) {
+  const labels = {
+    daily: "Daily auto-sync",
+    disabled: "Manual sync",
+    every_6_hours: "6h auto-sync",
+    hourly: "Hourly auto-sync"
+  } satisfies Record<ListingSourceSnapshot["syncInterval"], string>;
+
+  return labels[value];
+}
+
+function formatDateTime(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    dateStyle: "medium",
+    timeStyle: "short"
+  }).format(new Date(value));
 }
 
 function formatListingSourceType(value: ListingSourceSnapshot["type"]) {

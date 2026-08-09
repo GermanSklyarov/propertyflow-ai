@@ -54,6 +54,37 @@ export class JobQueueService implements OnModuleDestroy {
     };
   }
 
+  async upsertRepeatable(
+    name: BackgroundJobName,
+    payload: BackgroundJobPayload,
+    options: { everyMs: number; jobId: string }
+  ): Promise<BackgroundJobSnapshot> {
+    await this.removeRepeatable(name, options.jobId);
+    const job = await this.queue.add(name, payload, {
+      jobId: options.jobId,
+      repeat: {
+        every: options.everyMs,
+        immediately: false
+      }
+    });
+
+    return {
+      id: String(job.id),
+      name,
+      queue: PROPERTYFLOW_JOBS_QUEUE,
+      status: "queued",
+      tenantId: payload.tenantId,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  async removeRepeatable(name: BackgroundJobName, jobId: string): Promise<void> {
+    const repeatableJobs = await this.queue.getRepeatableJobs();
+    const existing = repeatableJobs.filter((job) => job.name === name && job.id === jobId);
+
+    await Promise.all(existing.map((job) => this.queue.removeRepeatableByKey(job.key)));
+  }
+
   async list(tenantId: string, states: BackgroundJobState[], limit = 50): Promise<BackgroundJobMonitorResponse> {
     const boundedLimit = Math.min(Math.max(limit, 1), 100);
     const jobsByState = await Promise.all(

@@ -455,6 +455,7 @@ function listingSource(overrides: Partial<ListingSourceSnapshot> = {}): ListingS
     },
     name: "Partner API",
     status: "connected",
+    syncInterval: "disabled",
     tenantId: "demo-agency",
     type: "rest-api",
     updatedAt: "2026-07-30T00:00:00.000Z",

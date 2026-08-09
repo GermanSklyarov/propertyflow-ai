@@ -19,15 +19,19 @@ function createService() {
       importMode: request.importMode ?? "hybrid",
       mapping: request.mapping,
       status: "draft",
+      syncInterval: request.syncInterval ?? "disabled",
       createdAt: now,
       updatedAt: now
     })),
     list: vi.fn(),
     findById: vi.fn(),
-    markSyncStarted: vi.fn()
+    markSyncStarted: vi.fn(),
+    updateSchedule: vi.fn()
   } as unknown as ListingSourceRepository;
   const jobs = {
-    enqueue: vi.fn()
+    enqueue: vi.fn(),
+    removeRepeatable: vi.fn(),
+    upsertRepeatable: vi.fn()
   } as unknown as JobQueueService;
 
   return {
@@ -355,6 +359,7 @@ describe("ListingSourceService", () => {
         ]
       },
       status: "connected" as const,
+      syncInterval: "disabled" as const,
       lastError: "Previous sync failed",
       createdAt: "2026-07-29T00:00:00.000Z",
       updatedAt: "2026-07-29T00:00:00.000Z"
@@ -430,6 +435,7 @@ describe("ListingSourceService", () => {
         ]
       },
       status: "connected" as const,
+      syncInterval: "disabled" as const,
       createdAt: "2026-07-29T00:00:00.000Z",
       updatedAt: "2026-07-29T00:00:00.000Z"
     };
@@ -459,5 +465,84 @@ describe("ListingSourceService", () => {
       sourceConfigId: "source-xml",
       fieldMapping: source.mapping
     });
+  });
+
+  it("registers a repeatable import job when auto-update is enabled", async () => {
+    const { jobs, service, sources } = createService();
+    const source = {
+      id: "source-1",
+      tenantId: "demo-agency",
+      name: "REST feed",
+      type: "rest-api" as const,
+      endpointUrl: "https://agency.co.th/api/listings",
+      authType: "none" as const,
+      importMode: "concierge_index_only" as const,
+      mapping: {
+        canonical: {
+          title: "name"
+        }
+      },
+      status: "connected" as const,
+      syncInterval: "disabled" as const,
+      createdAt: "2026-07-29T00:00:00.000Z",
+      updatedAt: "2026-07-29T00:00:00.000Z"
+    };
+    vi.mocked(sources.findById).mockResolvedValue(source);
+    vi.mocked(sources.updateSchedule).mockResolvedValue({
+      ...source,
+      nextSyncAt: "2026-07-29T06:00:00.000Z",
+      syncInterval: "every_6_hours"
+    });
+
+    await service.updateSchedule("demo-agency", "source-1", "every_6_hours");
+
+    expect(sources.updateSchedule).toHaveBeenCalledWith("demo-agency", "source-1", "every_6_hours", expect.any(Date));
+    expect(jobs.upsertRepeatable).toHaveBeenCalledWith(
+      "properties.import",
+      expect.objectContaining({
+        importMode: "concierge_index_only",
+        objectUrl: "https://agency.co.th/api/listings",
+        source: "partner-api",
+        sourceConfigId: "source-1",
+        tenantId: "demo-agency"
+      }),
+      {
+        everyMs: 21_600_000,
+        jobId: "listing-source-sync:demo-agency:source-1"
+      }
+    );
+  });
+
+  it("removes the repeatable import job when auto-update is disabled", async () => {
+    const { jobs, service, sources } = createService();
+    const source = {
+      id: "source-1",
+      tenantId: "demo-agency",
+      name: "REST feed",
+      type: "rest-api" as const,
+      endpointUrl: "https://agency.co.th/api/listings",
+      authType: "none" as const,
+      importMode: "concierge_index_only" as const,
+      mapping: {
+        canonical: {
+          title: "name"
+        }
+      },
+      status: "connected" as const,
+      syncInterval: "every_6_hours" as const,
+      createdAt: "2026-07-29T00:00:00.000Z",
+      updatedAt: "2026-07-29T00:00:00.000Z"
+    };
+    vi.mocked(sources.findById).mockResolvedValue(source);
+    vi.mocked(sources.updateSchedule).mockResolvedValue({
+      ...source,
+      nextSyncAt: undefined,
+      syncInterval: "disabled"
+    });
+
+    await service.updateSchedule("demo-agency", "source-1", "disabled");
+
+    expect(sources.updateSchedule).toHaveBeenCalledWith("demo-agency", "source-1", "disabled", undefined);
+    expect(jobs.removeRepeatable).toHaveBeenCalledWith("properties.import", "listing-source-sync:demo-agency:source-1");
   });
 });

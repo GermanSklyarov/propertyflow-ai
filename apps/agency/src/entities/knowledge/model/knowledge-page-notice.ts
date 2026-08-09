@@ -8,6 +8,7 @@ export type KnowledgePageNoticeQuery = {
   items?: string;
   listingPreview?: string;
   listingSync?: string;
+  schedule?: string;
   source?: string;
   warnings?: string;
 };
@@ -46,6 +47,13 @@ export function buildKnowledgePageNotice(query: KnowledgePageNoticeQuery): Knowl
     };
   }
 
+  if (query.schedule) {
+    return {
+      message: `${query.source ?? "REST inventory source"} auto-update is ${formatSchedule(query.schedule)}.`,
+      tone: "success"
+    };
+  }
+
   if (query.created && query.ingest === "queued") {
     return {
       message: `${query.created} was added. AI is indexing this source now, and worker progress appears below.`,
@@ -75,4 +83,15 @@ export function buildKnowledgePageNotice(query: KnowledgePageNoticeQuery): Knowl
   }
 
   return undefined;
+}
+
+function formatSchedule(value: string) {
+  const labels: Record<string, string> = {
+    daily: "set to daily",
+    disabled: "disabled",
+    every_6_hours: "set to every 6 hours",
+    hourly: "set to hourly"
+  };
+
+  return labels[value] ?? "updated";
 }

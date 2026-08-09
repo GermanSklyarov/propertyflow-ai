@@ -5,12 +5,14 @@ import type {
   ListingSourceAuthType,
   ListingSourceFieldMapping,
   ListingSourceImportMode,
+  ListingSourceSyncInterval,
   ListingSourceType
 } from "@propertyflow/contracts";
 
 const sourceTypes: ListingSourceType[] = ["rest-api", "xml-feed"];
 const authTypes: ListingSourceAuthType[] = ["none", "bearer", "api-key-header"];
 const importModes: ListingSourceImportMode[] = ["crm_inventory", "concierge_index_only", "hybrid"];
+const syncIntervals: ListingSourceSyncInterval[] = ["disabled", "hourly", "every_6_hours", "daily"];
 
 export class CreateListingSourceDto implements CreateListingSourceRequest {
   @ApiProperty({ example: "Agency website listing feed" })
@@ -73,4 +75,10 @@ export class CreateListingSourceDto implements CreateListingSourceRequest {
   })
   @IsObject()
   mapping!: ListingSourceFieldMapping;
+}
+
+export class UpdateListingSourceScheduleDto {
+  @ApiProperty({ enum: syncIntervals, example: "every_6_hours" })
+  @IsIn(syncIntervals)
+  syncInterval!: ListingSourceSyncInterval;
 }

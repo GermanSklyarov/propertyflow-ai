@@ -10,7 +10,8 @@ import {
   embedKnowledgeChunks,
   ingestKnowledgeDocument,
   previewRestListingSource,
-  syncListingSource
+  syncListingSource,
+  updateListingSourceSchedule
 } from "@shared/api/agency-client";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 import { resolveKnowledgeDocumentBody } from "../model/knowledge-document-draft";
@@ -116,6 +117,26 @@ export async function syncListingSourceAction(sourceId: string, name: string) {
   redirect(`/knowledge?${params.toString()}#listing-api-sources`);
 }
 
+export async function updateListingSourceScheduleAction(sourceId: string, name: string, formData: FormData) {
+  const { tenantId } = await requireAgencySession();
+  const syncInterval = String(formData.get("syncInterval") ?? "disabled");
+
+  if (!["disabled", "hourly", "every_6_hours", "daily"].includes(syncInterval)) {
+    redirectListingSourceSetupError("Choose a supported auto-update interval.");
+  }
+
+  await updateListingSourceSchedule(sourceId, syncInterval as Parameters<typeof updateListingSourceSchedule>[1], { tenantId });
+
+  revalidatePath("/knowledge");
+
+  const params = new URLSearchParams({
+    schedule: syncInterval,
+    source: name
+  });
+
+  redirect(`/knowledge?${params.toString()}#listing-api-sources`);
+}
+
 export async function createRestListingSourceAction(formData: FormData) {
   const { tenantId } = await requireAgencySession();
   const request = buildRestListingSourceRequest(formData);
@@ -167,6 +188,7 @@ function buildRestListingSourceRequest(formData: FormData): CreateListingSourceR
   const authHeaderName = String(formData.get("authHeaderName") ?? "").trim();
   const authSecretRef = String(formData.get("authSecretRef") ?? "").trim();
   const importMode = String(formData.get("importMode") ?? "concierge_index_only") as CreateListingSourceRequest["importMode"];
+  const syncInterval = String(formData.get("syncInterval") ?? "disabled") as CreateListingSourceRequest["syncInterval"];
   const canonical = parseListingSourceCanonicalMappingDraft(formData.get("canonicalMapping"));
   const customAttributes = parseListingSourceCustomAttributesDraft(formData.get("customAttributes"));
 
@@ -189,6 +211,7 @@ function buildRestListingSourceRequest(formData: FormData): CreateListingSourceR
     authType,
     endpointUrl,
     importMode,
+    syncInterval,
     mapping: {
       canonical: canonical.value,
       customAttributes: customAttributes.value,

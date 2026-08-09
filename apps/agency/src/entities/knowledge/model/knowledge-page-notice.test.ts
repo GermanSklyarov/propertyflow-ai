@@ -44,6 +44,13 @@ describe("buildKnowledgePageNotice", () => {
     });
   });
 
+  it("announces listing source schedule updates", () => {
+    expect(buildKnowledgePageNotice({ schedule: "every_6_hours", source: "Partner API" })).toEqual({
+      message: "Partner API auto-update is set to every 6 hours.",
+      tone: "success"
+    });
+  });
+
   it("announces REST listing source setup errors", () => {
     expect(buildKnowledgePageNotice({ error: "Canonical mapping contains invalid JSON.", listingSync: "invalid" })).toEqual({
       message: "Canonical mapping contains invalid JSON.",

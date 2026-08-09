@@ -207,6 +207,12 @@ export class PropertyflowWorker {
           status = 'connected',
           last_sync_at = $3,
           last_error = $4,
+          next_sync_at = case sync_interval
+            when 'hourly' then $3::timestamptz + interval '1 hour'
+            when 'every_6_hours' then $3::timestamptz + interval '6 hours'
+            when 'daily' then $3::timestamptz + interval '1 day'
+            else null
+          end,
           updated_at = $3
         where tenant_id = $1 and id = $2
       `,
@@ -228,6 +234,12 @@ export class PropertyflowWorker {
         set
           status = 'failed',
           last_error = $3,
+          next_sync_at = case sync_interval
+            when 'hourly' then $4::timestamptz + interval '1 hour'
+            when 'every_6_hours' then $4::timestamptz + interval '6 hours'
+            when 'daily' then $4::timestamptz + interval '1 day'
+            else null
+          end,
           updated_at = $4
         where tenant_id = $1 and id = $2
       `,

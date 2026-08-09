@@ -1461,6 +1461,7 @@ export type ListingSourceType = "rest-api" | "xml-feed";
 export type ListingSourceAuthType = "none" | "bearer" | "api-key-header";
 export type ListingSourceStatus = "draft" | "connected" | "syncing" | "failed" | "disabled";
 export type ListingSourceImportMode = "crm_inventory" | "concierge_index_only" | "hybrid";
+export type ListingSourceSyncInterval = "disabled" | "hourly" | "every_6_hours" | "daily";
 
 export type ListingSourceCanonicalField =
   | "externalId"
@@ -1531,6 +1532,8 @@ export interface ListingSourceSnapshot {
   importMode: ListingSourceImportMode;
   mapping: ListingSourceFieldMapping;
   status: ListingSourceStatus;
+  syncInterval: ListingSourceSyncInterval;
+  nextSyncAt?: string;
   lastSyncAt?: string;
   lastError?: string;
   createdAt: string;
@@ -1545,7 +1548,12 @@ export interface CreateListingSourceRequest {
   authHeaderName?: string;
   authSecretRef?: string;
   importMode?: ListingSourceImportMode;
+  syncInterval?: ListingSourceSyncInterval;
   mapping: ListingSourceFieldMapping;
+}
+
+export interface UpdateListingSourceScheduleRequest {
+  syncInterval: ListingSourceSyncInterval;
 }
 
 export interface ListingSourcePreviewFieldResult {
