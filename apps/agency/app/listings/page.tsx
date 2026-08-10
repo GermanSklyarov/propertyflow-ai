@@ -1,8 +1,11 @@
 import { backgroundJobsQueryOptions } from "@entities/jobs/api/job-queries";
 import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
+import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
 import type { PropertySearchRequest, PropertySearchSort } from "@propertyflow/contracts";
+import { buildPlanAccessMessage, canAccessTenantPlan, crmTenantPlans } from "@shared/lib/tenant-plan-access";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
+import { PageLoadState } from "@shared/ui/page-load-state";
 import { ListingsPage } from "@views/listings/ui/listings-page";
 
 const PAGE_SIZE = 8;
@@ -24,6 +27,19 @@ export default async function AgencyListingsPage({
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
   const { tenantId } = await requireAgencySession();
+  const tenant = await queryClient.ensureQueryData(currentTenantQueryOptions(tenantId));
+
+  if (!canAccessTenantPlan(tenant.subscriptionPlan, crmTenantPlans)) {
+    return (
+      <PageLoadState
+        kicker="Growth feature"
+        message={buildPlanAccessMessage("Listing inventory")}
+        title="Upgrade to unlock CRM inventory"
+        variant="notice"
+      />
+    );
+  }
+
   const page = Math.max(1, Number(query.page ?? 1) || 1);
   const sort = query.sort && listingSorts.includes(query.sort) ? query.sort : "created-desc";
   const projectLink =

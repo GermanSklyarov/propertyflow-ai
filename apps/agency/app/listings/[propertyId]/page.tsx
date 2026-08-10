@@ -8,8 +8,10 @@ import {
   listingSocialPostReviewsQueryOptions,
   listingSocialPostsQueryOptions
 } from "@entities/listing/api/listing-queries";
+import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
 import { listLeads } from "@shared/api/agency-client";
 import { buildListingMediaSummary } from "@entities/listing/lib/listing-media";
+import { buildPlanAccessMessage, canAccessTenantPlan, crmTenantPlans } from "@shared/lib/tenant-plan-access";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
 import { PageLoadState } from "@shared/ui/page-load-state";
@@ -33,6 +35,19 @@ export default async function AgencyListingDetailPage({
   const query = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
   const { tenantId } = await requireAgencySession();
+  const tenant = await queryClient.ensureQueryData(currentTenantQueryOptions(tenantId));
+
+  if (!canAccessTenantPlan(tenant.subscriptionPlan, crmTenantPlans)) {
+    return (
+      <PageLoadState
+        kicker="Growth feature"
+        message={buildPlanAccessMessage("Listing workspace")}
+        title="Upgrade to unlock listing editing"
+        variant="notice"
+      />
+    );
+  }
+
   const [listingResult, galleryResult, aiAssetsResult] = await Promise.allSettled([
     queryClient.ensureQueryData(listingDetailQueryOptions(propertyId, tenantId)),
     queryClient.ensureQueryData(listingImagesQueryOptions(propertyId, tenantId)),

@@ -1,7 +1,10 @@
 import { listingsQueryOptions } from "@entities/listing/api/listing-queries";
 import { projectsQueryOptions } from "@entities/project/api/project-queries";
+import { currentTenantQueryOptions } from "@entities/tenant/api/tenant-queries";
+import { buildPlanAccessMessage, canAccessTenantPlan, crmTenantPlans } from "@shared/lib/tenant-plan-access";
 import { requireAgencySession } from "@shared/lib/tenant-session";
 import { createPropertyFlowQueryClient } from "@shared/query/query-client";
+import { PageLoadState } from "@shared/ui/page-load-state";
 import { ProjectsPage } from "@views/projects/ui/projects-page";
 import type { PropertyProjectSearchRequest } from "@propertyflow/contracts";
 import type { ThailandMarket } from "@propertyflow/domain";
@@ -21,6 +24,19 @@ export default async function AgencyProjectsPage({
   const params = await searchParams;
   const queryClient = createPropertyFlowQueryClient();
   const { tenantId } = await requireAgencySession();
+  const tenant = await queryClient.ensureQueryData(currentTenantQueryOptions(tenantId));
+
+  if (!canAccessTenantPlan(tenant.subscriptionPlan, crmTenantPlans)) {
+    return (
+      <PageLoadState
+        kicker="Growth feature"
+        message={buildPlanAccessMessage("Projects")}
+        title="Upgrade to unlock project inventory"
+        variant="notice"
+      />
+    );
+  }
+
   const page = Math.max(1, Number(params.page ?? 1) || 1);
   const market = params.market && markets.includes(params.market as ThailandMarket) ? (params.market as ThailandMarket) : undefined;
   const projectRequest: PropertyProjectSearchRequest = {

@@ -39,6 +39,12 @@ import {
   summarizeWidgetInstallSteps,
   summarizeWidgetLaunchReadiness
 } from "../model/widget-install";
+import {
+  buildTenantSettingsIntegrationStatuses,
+  buildTenantSettingsReadinessItems,
+  buildTenantSettingsRoleScopes,
+  type TenantSettingsReadinessItem
+} from "../model/tenant-settings-readiness";
 import { CopyWidgetSnippetButton } from "./copy-widget-snippet-button";
 import styles from "./tenant-settings-panel.module.css";
 import { WidgetProductionCheckPanel } from "./widget-production-check-panel";
@@ -58,8 +64,10 @@ export function TenantSettingsPanel({
   tenant: TenantSnapshot;
   usage: TenantUsageResponse;
 }) {
-  const readinessItems = buildReadinessItems(tenant, usage);
+  const readinessItems = buildTenantSettingsReadinessItems(tenant, usage);
   const completedReadiness = readinessItems.filter((item) => item.done).length;
+  const roleScopes = buildTenantSettingsRoleScopes(tenant.subscriptionPlan);
+  const integrationStatuses = buildTenantSettingsIntegrationStatuses(tenant, usage);
   const activeKnowledgeJobCount = countRunningKnowledgeJobs(knowledgeJobs);
   const activeKnowledgeJobs = activeKnowledgeJobCount > 0;
   const starterReadiness = buildKnowledgeStarterReadiness(knowledgeDocuments, activeKnowledgeJobCount);
@@ -94,7 +102,7 @@ export function TenantSettingsPanel({
         <KpiCard icon={<Building2 size={18} />} label="Plan" note="Subscription tier" value={tenant.subscriptionPlan} />
         <KpiCard icon={<Globe2 size={18} />} label="Domain" note={tenant.customDomain ?? "Not configured"} value={formatDomainStatus(tenant.domainStatus)} />
         <KpiCard icon={<Users size={18} />} label="Agents" note="Seats used" value={formatUsage(getUsage(usage.items, "agents"))} />
-        <KpiCard icon={<Code2 size={18} />} label="Public API" note="Requests this month" value={formatUsage(getUsage(usage.items, "publicApiRequestsMonthly"))} />
+        <KpiCard icon={<Code2 size={18} />} label="Concierge API" note="Requests this month" value={formatUsage(getUsage(usage.items, "publicApiRequestsMonthly"))} />
       </section>
 
       <section className={styles.panel}>
@@ -333,11 +341,6 @@ export function TenantSettingsPanel({
 
         <PlanUpgradePath path={widgetPlanUpgradePath} />
 
-        <div className={styles.planModes}>
-          <PlanMode label="Starter" note="Documents, Knowledge Base, AI answers, and website widget." />
-          <PlanMode label="Growth" note="Conversations become leads when visitors ask for viewings, callbacks, or follow-up." />
-          <PlanMode label="Enterprise" note="CRM, analytics, automations, staff roles, SLA, pipeline, and integrations." />
-        </div>
       </section>
 
       <section className={styles.layout}>
@@ -429,49 +432,40 @@ export function TenantSettingsPanel({
       </section>
 
       <section className={styles.layout}>
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <div>
-              <p className="section-kicker">Access model</p>
-              <h2 className={styles.panelTitle}>Role matrix</h2>
+        {roleScopes.length ? (
+          <section className={styles.panel}>
+            <div className={styles.panelHeader}>
+              <div>
+                <p className="section-kicker">Access model</p>
+                <h2 className={styles.panelTitle}>Role matrix</h2>
+              </div>
+              <ShieldCheck size={20} />
             </div>
-            <ShieldCheck size={20} />
-          </div>
-          <div className={styles.roleList}>
-            <RoleRow label="Agent" scope="Own leads, assigned listings, Concierge follow-up" />
-            <RoleRow label="Broker" scope="Team inventory, lead assignment, publishing controls" />
-            <RoleRow label="Manager" scope="Settings, analytics, AI tools, integrations" />
-            <RoleRow label="Admin" scope="Tenant administration and platform-level controls" />
-          </div>
-        </section>
+            <div className={styles.roleList}>
+              {roleScopes.map((role) => (
+                <RoleRow label={role.label} scope={role.scope} key={role.label} />
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <div>
-              <p className="section-kicker">Integrations</p>
-              <h2 className={styles.panelTitle}>API readiness</h2>
+              <p className="section-kicker">Starter services</p>
+              <h2 className={styles.panelTitle}>Launch signals</h2>
             </div>
             <KeyRound size={20} />
           </div>
           <div className={styles.integrationList}>
-            <IntegrationRow label="Public property API" status="ready" />
-            <IntegrationRow label="Public lead capture API" status="ready" />
-            <IntegrationRow label="S3/MinIO media storage" status="configured" />
-            <IntegrationRow label="OpenSearch indexing" status="configured" />
-            <IntegrationRow label="WebSocket realtime" status="enabled" />
+            {integrationStatuses.map((integration) => (
+              <IntegrationRow label={integration.label} status={integration.status} key={integration.label} />
+            ))}
           </div>
         </section>
       </section>
     </>
   );
-}
-
-interface ReadinessItem {
-  actionHref?: string;
-  actionLabel?: string;
-  done: boolean;
-  label: string;
-  note: string;
 }
 
 function LaunchStep({
@@ -491,15 +485,6 @@ function LaunchStep({
       {icon}
       <strong>{title}</strong>
       <small>{value}</small>
-    </article>
-  );
-}
-
-function PlanMode({ label, note }: { label: string; note: string }) {
-  return (
-    <article className={styles.planMode}>
-      <strong>{label}</strong>
-      <span>{note}</span>
     </article>
   );
 }
@@ -545,7 +530,7 @@ function PlanUpgradePath({ path }: { path: ReturnType<typeof buildWidgetPlanUpgr
   );
 }
 
-function ReadinessCard({ item }: { item: ReadinessItem }) {
+function ReadinessCard({ item }: { item: TenantSettingsReadinessItem }) {
   const Icon = item.done ? CheckCircle2 : ShieldAlert;
 
   return (
@@ -675,7 +660,7 @@ function formatUsageKey(value: TenantUsageMetric["key"]) {
     agents: "Agent seats",
     aiCreditsMonthly: "AI credits",
     properties: "Properties",
-    publicApiRequestsMonthly: "Public API"
+    publicApiRequestsMonthly: "Concierge API"
   } satisfies Record<TenantUsageMetric["key"], string>;
 
   return labels[value];
@@ -683,46 +668,4 @@ function formatUsageKey(value: TenantUsageMetric["key"]) {
 
 function formatDomainStatus(value: TenantSnapshot["domainStatus"]) {
   return value ? value.replaceAll("-", " ") : "not configured";
-}
-
-function buildReadinessItems(tenant: TenantSnapshot, usage: TenantUsageResponse): ReadinessItem[] {
-  const propertyUsage = getUsage(usage.items, "properties");
-  const agentUsage = getUsage(usage.items, "agents");
-  const apiUsage = getUsage(usage.items, "publicApiRequestsMonthly");
-
-  return [
-    {
-      done: Boolean(tenant.branding.displayName && tenant.branding.primaryColor),
-      label: "Brand identity",
-      note: tenant.branding.logoUrl ? "Display name, color, and logo are configured." : "Add a logo when the agency brand is ready."
-    },
-    {
-      done: tenant.domainStatus === "verified",
-      label: "Client domain",
-      note: tenant.customDomain
-        ? `Domain ${tenant.customDomain} is ${formatDomainStatus(tenant.domainStatus)}.`
-        : "Add a custom domain before a public client launch."
-    },
-    {
-      done: Boolean(propertyUsage && propertyUsage.used > 0 && propertyUsage.utilizationRate < 90),
-      label: "Inventory capacity",
-      note: propertyUsage
-        ? `${formatNumber(propertyUsage.used)} of ${formatNumber(propertyUsage.limit)} listings used.`
-        : "Property usage is not available yet."
-    },
-    {
-      done: Boolean(agentUsage && agentUsage.used > 0 && agentUsage.utilizationRate < 95),
-      label: "Team seats",
-      note: agentUsage
-        ? `${formatNumber(agentUsage.used)} of ${formatNumber(agentUsage.limit)} agent seats used.`
-        : "Agent seat usage is not available yet."
-    },
-    {
-      done: Boolean(apiUsage && apiUsage.utilizationRate < 80),
-      label: "Integration headroom",
-      note: apiUsage
-        ? `${formatNumber(apiUsage.remaining)} public API calls remain this period.`
-        : "Public API usage is not available yet."
-    }
-  ];
 }

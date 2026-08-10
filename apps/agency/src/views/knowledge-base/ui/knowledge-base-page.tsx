@@ -30,7 +30,6 @@ import {
   buildKnowledgeSourceLaunchGate,
   buildRuntimeKnowledgeSourceGroups,
   filterOperationalKnowledgeSourceGroups,
-  filterPlannedKnowledgeSourceGroups,
   knowledgeSourceGroups,
   knowledgeSourcePipeline,
   summarizeKnowledgeSourceModes,
@@ -113,10 +112,8 @@ export function KnowledgeBasePage({
     totalDocuments: total
   });
   const operationalSourceGroups = filterOperationalKnowledgeSourceGroups(runtimeSourceGroups);
-  const plannedSourceGroups = filterPlannedKnowledgeSourceGroups(runtimeSourceGroups);
   const sourceModeSummary = summarizeKnowledgeSourceModes(operationalSourceGroups);
   const sourceReadiness = summarizeKnowledgeSourceReadiness(operationalSourceGroups);
-  const plannedSourceReadiness = summarizeKnowledgeSourceReadiness(plannedSourceGroups);
   const listingImportJobs = (sourceJobs ?? jobs).filter((job) => job.name === "properties.import");
   const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness, {
     starterLaunchReady: starterReadiness.launchReady,
@@ -225,7 +222,6 @@ export function KnowledgeBasePage({
             <SourceReadinessMetric label="Indexing" note="worker active" value={sourceReadiness.indexing} />
             <SourceReadinessMetric label="Failed" note="needs retry" value={sourceReadiness.failed} />
             <SourceReadinessMetric label="Actionable" note="setup links ready" value={sourceReadiness.actionable} />
-            <SourceReadinessMetric label="Roadmap" note="planned sources" value={plannedSourceReadiness.planned} />
           </div>
 
           <div className={styles.sourceLaunchGate} data-status={sourceLaunchGate.status}>
@@ -257,8 +253,6 @@ export function KnowledgeBasePage({
               <KnowledgeSourceGroupCard group={group} key={group.type} />
             ))}
           </div>
-
-          {plannedSourceGroups.length ? <PlannedKnowledgeSources groups={plannedSourceGroups} summary={plannedSourceReadiness} /> : null}
 
           <div className={styles.pipelineStrip} aria-label="Unified knowledge ingestion pipeline">
             {knowledgeSourcePipeline.map((step, index) => (
@@ -836,42 +830,6 @@ function KnowledgeSourceGroupCard({ group }: { group: KnowledgeSourceGroup }) {
   );
 }
 
-function PlannedKnowledgeSources({
-  groups,
-  summary
-}: {
-  groups: KnowledgeSourceGroup[];
-  summary: ReturnType<typeof summarizeKnowledgeSourceReadiness>;
-}) {
-  const connectors = groups.flatMap((group) =>
-    group.connectors.map((connector) => ({
-      connector,
-      group
-    }))
-  );
-
-  return (
-    <details className={styles.plannedSources}>
-      <summary>
-        <span>
-          <Clock3 size={16} />
-          Roadmap connectors
-        </span>
-        <strong>{summary.planned} planned</strong>
-      </summary>
-      <div className={styles.plannedConnectorGrid}>
-        {connectors.map(({ connector, group }) => (
-          <article className={styles.plannedConnectorCard} key={`${group.type}-${connector.label}`}>
-            <small>{group.title}</small>
-            <strong>{connector.label}</strong>
-            <span>{formatSourceMode(connector.mode)}</span>
-          </article>
-        ))}
-      </div>
-    </details>
-  );
-}
-
 function SourceConnector({ connector }: { connector: KnowledgeSourceConnector }) {
   const isPlanned = connector.status === "planned";
 
@@ -882,7 +840,6 @@ function SourceConnector({ connector }: { connector: KnowledgeSourceConnector })
         <strong>{connector.label}</strong>
         <span>{formatSourceMode(connector.mode)}</span>
         {connector.runtimeNote ? <em>{connector.runtimeNote}</em> : null}
-        {isPlanned ? <em>Roadmap connector; not part of Starter launch yet.</em> : null}
       </div>
       <div className={styles.sourceConnectorBadges}>
         {connector.countLabel ? <small>{connector.countLabel}</small> : null}
