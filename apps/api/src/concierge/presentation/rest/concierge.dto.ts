@@ -27,6 +27,7 @@ import type { PropertyListingType, PropertyPurpose, ThailandMarket } from "@prop
 const markets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
 const purposes: PropertyPurpose[] = ["investment", "living", "family", "relocation"];
 const listingIntents: PropertyListingType[] = ["sale", "rent", "sale_or_rent"];
+const locales: ConciergeRequest["locale"][] = ["en", "ru", "th", "zh"];
 
 export class ConciergeProfileDto implements ConciergeProfile {
   @ApiProperty({ required: false, enum: markets })
@@ -82,9 +83,9 @@ export class ConciergeProfileDto implements ConciergeProfile {
 }
 
 export class ConciergeRequestDto implements ConciergeRequest {
-  @ApiProperty({ enum: ["en", "ru"] })
-  @IsIn(["en", "ru"])
-  locale!: "en" | "ru";
+  @ApiProperty({ enum: locales })
+  @IsIn(locales)
+  locale!: ConciergeRequest["locale"];
 
   @ApiProperty()
   @IsString()

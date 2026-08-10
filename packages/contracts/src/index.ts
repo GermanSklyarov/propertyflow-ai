@@ -1178,7 +1178,7 @@ export interface ConciergeProfile {
 }
 
 export interface ConciergeRequest {
-  locale: "en" | "ru";
+  locale: "en" | "ru" | "th" | "zh";
   message: string;
   profile?: ConciergeProfile;
 }
