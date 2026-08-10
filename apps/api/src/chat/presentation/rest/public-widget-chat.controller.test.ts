@@ -444,6 +444,106 @@ describe("PublicWidgetChatController", () => {
     });
   });
 
+  it("extracts Thai budget and timing into widget lead qualification", async () => {
+    const tenant = tenantFactory({
+      subscriptionPlan: "starter",
+      widget: {
+        ...tenantFactory().widget,
+        languages: ["th"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      { ask: vi.fn() } as unknown as AiChatService,
+      leads,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    await controller.createLead(
+      "demo-agency",
+      {
+        contactName: "Buyer",
+        contactPhone: "+66123456789",
+        conversation: [
+          { role: "user", text: "คอนโดให้เช่าภูเก็ต งบไม่เกิน 40000 บาทต่อเดือน ทำงานออนไลน์" },
+          { role: "user", text: "อยากดูห้องเดือนหน้า ติดต่อทางไลน์" }
+        ],
+        locale: "th",
+        message: "ขอรายละเอียดเพิ่ม"
+      },
+      "https://agency.example.com"
+    );
+
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Budget: ไม่เกิน 40000 บาทต่อเดือน")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Timing: เดือนหน้า")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Contact channel: LINE")
+    }));
+  });
+
+  it("extracts Chinese investment budget into widget lead qualification", async () => {
+    const tenant = tenantFactory({
+      subscriptionPlan: "starter",
+      widget: {
+        ...tenantFactory().widget,
+        languages: ["zh"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      { ask: vi.fn() } as unknown as AiChatService,
+      leads,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    await controller.createLead(
+      "demo-agency",
+      {
+        contactEmail: "buyer@example.com",
+        contactName: "Buyer",
+        conversation: [
+          { role: "user", text: "想在芭提雅购买海景公寓，预算不超过300万泰铢，适合投资收益" },
+          { role: "user", text: "明天可以联系我" }
+        ],
+        locale: "zh",
+        message: "请发更多资料"
+      },
+      "https://agency.example.com"
+    );
+
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Budget: 不超过300万泰铢")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Purpose: Investment")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Timing: 明天")
+    }));
+  });
+
   it("rejects widget handoff without email or phone", async () => {
     const tenant = tenantFactory({
       subscriptionPlan: "growth"

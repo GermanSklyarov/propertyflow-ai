@@ -11,6 +11,7 @@ export interface ListingSourceRepository {
   list(tenantId: string): Promise<ListingSourceSnapshot[]>;
   findById(tenantId: string, sourceId: string): Promise<ListingSourceSnapshot | null>;
   markSyncStarted(tenantId: string, sourceId: string): Promise<ListingSourceSnapshot | null>;
+  markSyncFailed(tenantId: string, sourceId: string, reason: string): Promise<ListingSourceSnapshot | null>;
   updateSchedule(
     tenantId: string,
     sourceId: string,

@@ -1,4 +1,4 @@
-import { BadRequestException, Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, ServiceUnavailableException } from "@nestjs/common";
 import type {
   BackgroundJobSnapshot,
   CreateListingSourceRequest,
@@ -47,6 +47,8 @@ const previewTimeoutMs = 5000;
 
 @Injectable()
 export class ListingSourceService {
+  private readonly logger = new Logger(ListingSourceService.name);
+
   constructor(
     @Inject(LISTING_SOURCE_REPOSITORY) private readonly sources: ListingSourceRepository,
     @Inject(JobQueueService) private readonly jobs: JobQueueService
@@ -54,9 +56,8 @@ export class ListingSourceService {
 
   async create(tenantId: string, request: CreateListingSourceRequest): Promise<ListingSourceSnapshot> {
     const source = await this.sources.save(tenantId, this.normalizeCreateRequest(request));
-    await this.configureRepeatableSync(source);
 
-    return source;
+    return this.configureRepeatableSyncOrMarkFailed(source);
   }
 
   async list(tenantId: string): Promise<ListingSourceListResponse> {
@@ -130,10 +131,16 @@ export class ListingSourceService {
 
     await this.sources.markSyncStarted(tenantId, sourceId);
 
-    return this.jobs.enqueue("properties.import", {
-      ...this.buildImportPayload(source),
-      requestedByUserId
-    });
+    try {
+      return await this.jobs.enqueue("properties.import", {
+        ...this.buildImportPayload(source),
+        requestedByUserId
+      });
+    } catch (error) {
+      const reason = `Listing source sync could not be queued: ${toErrorMessage(error)}`;
+      await this.sources.markSyncFailed(tenantId, sourceId, reason);
+      throw new ServiceUnavailableException(reason);
+    }
   }
 
   async updateSchedule(
@@ -155,9 +162,7 @@ export class ListingSourceService {
       throw new BadRequestException("Listing source was not found for this tenant.");
     }
 
-    await this.configureRepeatableSync(updated);
-
-    return updated;
+    return this.configureRepeatableSyncOrMarkFailed(updated);
   }
 
   private normalizeCreateRequest(request: CreateListingSourceRequest): CreateListingSourceRequest {
@@ -206,6 +211,22 @@ export class ListingSourceService {
       everyMs: syncIntervalMs[source.syncInterval],
       jobId
     });
+  }
+
+  private async configureRepeatableSyncOrMarkFailed(source: ListingSourceSnapshot): Promise<ListingSourceSnapshot> {
+    try {
+      await this.configureRepeatableSync(source);
+      return source;
+    } catch (error) {
+      const reason = `Listing source auto-update could not be configured: ${toErrorMessage(error)}`;
+      this.logger.warn(`${reason} (${source.tenantId}:${source.id})`);
+
+      return await this.sources.markSyncFailed(source.tenantId, source.id, reason) ?? {
+        ...source,
+        lastError: reason,
+        status: "failed"
+      };
+    }
   }
 
   private buildImportPayload(source: ListingSourceSnapshot) {
@@ -518,6 +539,10 @@ function parseXmlFeed(xml: string): unknown {
   }
 
   return xmlChildrenToObject(root.children);
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown queue error";
 }
 
 interface XmlElement {

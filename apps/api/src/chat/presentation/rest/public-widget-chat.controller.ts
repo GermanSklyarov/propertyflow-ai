@@ -326,9 +326,11 @@ function buildLeadQualificationSection(payload: PublicWidgetLeadDto): string | u
 }
 
 function parseBudget(text: string): string | undefined {
-  const match =
-    text.match(/\b(?:under|below|max|up to|до|менее|ไม่เกิน|ต่ำกว่า|预算|预算是|ไม่เกิน)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))?/i) ??
-    text.match(/\b([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))\b/i);
+  const match = [
+    /(?:under|below|max|up to|budget|до|менее|не больше|ไม่เกิน|ต่ำกว่า|งบ|预算|預算|预算是|預算是|不超过|不超過|低于|低於)\s*[0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|ล้าน|百万|百萬|万|萬|k|thousand|тыс)?\s*(?:thb|baht|бат|บาท|泰铢|泰銖)?(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i,
+    /[0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|ล้าน|百万|百萬|万|萬|k|thousand|тыс)\s*(?:thb|baht|бат|บาท|泰铢|泰銖)?(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i,
+    /[0-9][0-9\s,.]*\s*(?:thb|baht|бат|บาท|泰铢|泰銖)(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i
+  ].map((pattern) => text.match(pattern)).find(Boolean);
 
   return match?.[0] ? normalizeQualificationValue(match[0]) : undefined;
 }

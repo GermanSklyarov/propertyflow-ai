@@ -1,4 +1,4 @@
-import { BadRequestException } from "@nestjs/common";
+import { BadRequestException, ServiceUnavailableException } from "@nestjs/common";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { JobQueueService } from "../../jobs/application/job-queue.service.js";
 import type { ListingSourceRepository } from "../domain/listing-source.repository.js";
@@ -25,6 +25,25 @@ function createService() {
     })),
     list: vi.fn(),
     findById: vi.fn(),
+    markSyncFailed: vi.fn(async (tenantId, sourceId, reason) => ({
+      id: sourceId,
+      tenantId,
+      name: "Failed feed",
+      type: "rest-api",
+      endpointUrl: "https://agency.co.th/api/listings",
+      authType: "none",
+      importMode: "hybrid",
+      mapping: {
+        canonical: {
+          title: "name"
+        }
+      },
+      status: "failed",
+      syncInterval: "disabled",
+      lastError: reason,
+      createdAt: now,
+      updatedAt: now
+    })),
     markSyncStarted: vi.fn(),
     updateSchedule: vi.fn()
   } as unknown as ListingSourceRepository;
@@ -409,6 +428,43 @@ describe("ListingSourceService", () => {
     });
   });
 
+  it("marks a source failed instead of leaving it syncing when manual sync cannot be queued", async () => {
+    const { jobs, service, sources } = createService();
+    const source = {
+      id: "source-1",
+      tenantId: "demo-agency",
+      name: "REST feed",
+      type: "rest-api" as const,
+      endpointUrl: "https://agency.co.th/api/listings",
+      authType: "none" as const,
+      importMode: "hybrid" as const,
+      mapping: {
+        canonical: {
+          title: "name"
+        }
+      },
+      status: "connected" as const,
+      syncInterval: "disabled" as const,
+      createdAt: "2026-07-29T00:00:00.000Z",
+      updatedAt: "2026-07-29T00:00:00.000Z"
+    };
+    vi.mocked(sources.findById).mockResolvedValue(source);
+    vi.mocked(sources.markSyncStarted).mockResolvedValue({
+      ...source,
+      status: "syncing"
+    });
+    vi.mocked(jobs.enqueue).mockRejectedValue(new Error("redis unavailable"));
+
+    await expect(service.sync("demo-agency", "user-1", "source-1")).rejects.toBeInstanceOf(ServiceUnavailableException);
+
+    expect(sources.markSyncStarted).toHaveBeenCalledWith("demo-agency", "source-1");
+    expect(sources.markSyncFailed).toHaveBeenCalledWith(
+      "demo-agency",
+      "source-1",
+      "Listing source sync could not be queued: redis unavailable"
+    );
+  });
+
   it("marks XML source syncing and queues XML feed import with field mapping", async () => {
     const { jobs, service, sources } = createService();
     const source = {
@@ -510,6 +566,72 @@ describe("ListingSourceService", () => {
         everyMs: 21_600_000,
         jobId: "listing-source-sync:demo-agency:source-1"
       }
+    );
+  });
+
+  it("keeps a created source visible with a failure reason when auto-update cannot be configured", async () => {
+    const { jobs, service, sources } = createService();
+    vi.mocked(jobs.upsertRepeatable).mockRejectedValue(new Error("redis unavailable"));
+
+    await expect(
+      service.create("demo-agency", {
+        name: "Website feed",
+        endpointUrl: "https://agency.co.th/api/listings",
+        syncInterval: "hourly",
+        mapping: {
+          canonical: {
+            title: "name"
+          }
+        }
+      })
+    ).resolves.toMatchObject({
+      lastError: "Listing source auto-update could not be configured: redis unavailable",
+      status: "failed"
+    });
+    expect(sources.save).toHaveBeenCalled();
+    expect(sources.markSyncFailed).toHaveBeenCalledWith(
+      "demo-agency",
+      "source-1",
+      "Listing source auto-update could not be configured: redis unavailable"
+    );
+  });
+
+  it("marks schedule updates failed when repeatable jobs cannot be changed", async () => {
+    const { jobs, service, sources } = createService();
+    const source = {
+      id: "source-1",
+      tenantId: "demo-agency",
+      name: "REST feed",
+      type: "rest-api" as const,
+      endpointUrl: "https://agency.co.th/api/listings",
+      authType: "none" as const,
+      importMode: "hybrid" as const,
+      mapping: {
+        canonical: {
+          title: "name"
+        }
+      },
+      status: "connected" as const,
+      syncInterval: "disabled" as const,
+      createdAt: "2026-07-29T00:00:00.000Z",
+      updatedAt: "2026-07-29T00:00:00.000Z"
+    };
+    vi.mocked(sources.findById).mockResolvedValue(source);
+    vi.mocked(sources.updateSchedule).mockResolvedValue({
+      ...source,
+      nextSyncAt: "2026-07-29T01:00:00.000Z",
+      syncInterval: "hourly"
+    });
+    vi.mocked(jobs.upsertRepeatable).mockRejectedValue(new Error("redis unavailable"));
+
+    await expect(service.updateSchedule("demo-agency", "source-1", "hourly")).resolves.toMatchObject({
+      lastError: "Listing source auto-update could not be configured: redis unavailable",
+      status: "failed"
+    });
+    expect(sources.markSyncFailed).toHaveBeenCalledWith(
+      "demo-agency",
+      "source-1",
+      "Listing source auto-update could not be configured: redis unavailable"
     );
   });
 

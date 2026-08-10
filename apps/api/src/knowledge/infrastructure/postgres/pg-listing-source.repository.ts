@@ -143,6 +143,25 @@ export class PgListingSourceRepository implements ListingSourceRepository {
     return row ? this.toSnapshot(row) : null;
   }
 
+  async markSyncFailed(tenantId: string, sourceId: string, reason: string): Promise<ListingSourceSnapshot | null> {
+    const now = new Date().toISOString();
+    const result = await this.pool.query<ListingSourceRow>(
+      `
+        update listing_source_configs
+        set
+          status = 'failed',
+          last_error = $3,
+          updated_at = $4
+        where tenant_id = $1 and id = $2
+        returning *
+      `,
+      [tenantId, sourceId, reason, now]
+    );
+
+    const row = result.rows[0];
+    return row ? this.toSnapshot(row) : null;
+  }
+
   async updateSchedule(
     tenantId: string,
     sourceId: string,
