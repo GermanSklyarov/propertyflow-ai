@@ -716,10 +716,14 @@ describe("AiChatService", () => {
     const [, requestInit] = fetchMock.mock.calls[0]!;
     const body = JSON.parse(String(requestInit?.body)) as {
       contents: Array<{ parts: Array<{ text: string }> }>;
+      generationConfig: { maxOutputTokens: number };
     };
+    expect(body.generationConfig.maxOutputTokens).toBe(1400);
     const prompt = body.contents[0]?.parts[0]?.text ?? "";
     expect(prompt).toContain('Your public concierge name is "Anna".');
     expect(prompt).toContain("Use a friendly tone.");
+    expect(prompt).toContain("Write 2-4 informative sentences for normal listing answers");
+    expect(prompt).toContain("Do not end mid-sentence.");
     expect(prompt).toContain("Lead qualification fields to collect naturally when relevant: budget, preferred area, financing or mortgage needs, WhatsApp.");
     expect(prompt).toContain("Ask at most one concise follow-up question at a time");
     expect(prompt).toContain("Do not repeat the tenant welcome message or reintroduce yourself after the first greeting");

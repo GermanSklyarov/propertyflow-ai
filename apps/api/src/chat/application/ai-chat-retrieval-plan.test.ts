@@ -94,6 +94,62 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("keeps viewing date follow-ups on the selected listing instead of searching again", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Pratumnak Investment One-Bed" },
+              { propertyId: "property-2", title: "Terminal 21 Walkable Studio" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          },
+          {
+            role: "user",
+            text: "i like the first option, may i see it?"
+          },
+          {
+            recommendedListings: [{ propertyId: "property-1", title: "Pratumnak Investment One-Bed" }],
+            role: "assistant",
+            text: "I can ask the agency to confirm viewing availability."
+          }
+        ],
+        locale: "en",
+        message: "i want to view this project on thursday at 3 pm"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-1",
+      reason: "follow-up-reference"
+    });
+  });
+
+  it("routes contextual investment advice questions to the current listing instead of searching again", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [{ propertyId: "property-1", title: "Wongamat Sea View Residence" }],
+            role: "assistant",
+            text: "Wongamat Sea View Residence is the top match."
+          }
+        ],
+        locale: "en",
+        message: "this condo is worth for investment?"
+      })
+    ).toMatchObject({
+      intent: {
+        includeAdvice: true,
+        route: "property-follow-up"
+      },
+      mode: "property-detail",
+      propertyId: "property-1",
+      reason: "follow-up-reference"
+    });
+  });
+
   it("asks for clarification instead of running a new search when a follow-up has no referenced listing", () => {
     expect(
       planAiChatRetrieval({

@@ -6,6 +6,10 @@ const recentSetReferencePattern =
 
 const beachDistanceComparisonPattern =
   /closer|closest|nearer|nearest|close to|distance|beach|пляж|мор|ใกล้|ที่สุด|ชายหาด|ทะเล|距离|距離|近|最近|海滩|海灘|海边|海邊/i;
+const viewingSlotFollowUpPattern =
+  /\b(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|am|pm|morning|afternoon|evening|tonight|\d{1,2}(?::\d{2})?)\b|сегодня|завтра|понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|утром|днем|вечером|час|โมง|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์|วันเสาร์|วันอาทิตย์|上午|下午|晚上|明天|今天|周一|週一|周二|週二|周三|週三|周四|週四|周五|週五|周六|週六|周日|週日/i;
+const contextualPropertyReferencePattern =
+  /\b(?:it|this\s+(?:condo|property|listing|option|unit|project|one)|that\s+(?:condo|property|listing|option|unit|project|one))\b|эт(?:от|а|о|у|ого|ой)?\s+(?:кондо|объект|вариант|квартир[ауы]?|проект)|\b(?:его|ее|её|он|она)\b|ห้องนี้|คอนโดนี้|ตัวเลือกนี้|รายการนี้|โครงการนี้|这个(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|這個(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|这套|這套|它/i;
 
 export interface AiChatRetrievalPlan {
   comparison?: "beach-distance";
@@ -52,6 +56,38 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     };
   }
 
+  if (isViewingSlotFollowUp(request)) {
+    const propertyId = resolveReferencedPropertyId(request, 0);
+
+    if (propertyId) {
+      return {
+        intent: {
+          ...intent,
+          route: "property-follow-up"
+        },
+        mode: "property-detail",
+        propertyId,
+        reason: "follow-up-reference"
+      };
+    }
+  }
+
+  if (isContextualPropertyFollowUp(request)) {
+    const propertyId = resolveReferencedPropertyId(request, 0);
+
+    if (propertyId) {
+      return {
+        intent: {
+          ...intent,
+          route: "property-follow-up"
+        },
+        mode: "property-detail",
+        propertyId,
+        reason: "follow-up-reference"
+      };
+    }
+  }
+
   if (intent.route === "property-follow-up") {
     const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
 
@@ -74,6 +110,19 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     mode: "listing-search",
     reason: "search-request"
   };
+}
+
+function isViewingSlotFollowUp(request: AiChatRequest): boolean {
+  const recommendations = getRecentRecommendations(request);
+
+  return recommendations.length > 0 && viewingSlotFollowUpPattern.test(request.message);
+}
+
+function isContextualPropertyFollowUp(request: AiChatRequest): boolean {
+  const recommendations = getRecentRecommendations(request);
+  const message = normalizeReferenceText(request.message);
+
+  return recommendations.length > 0 && contextualPropertyReferencePattern.test(message);
 }
 
 function resolveReferencedPropertyId(request: AiChatRequest, referencedListingIndex: number): string | undefined {

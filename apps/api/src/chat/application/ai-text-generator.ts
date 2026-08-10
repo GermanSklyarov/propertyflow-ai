@@ -8,7 +8,7 @@ import type {
 
 export const AI_TEXT_GENERATOR = Symbol("AI_TEXT_GENERATOR");
 
-const maxConciergeOutputTokens = 900;
+const maxConciergeOutputTokens = 1400;
 
 export interface AiConciergePersona {
   leadQualificationFields?: TenantLeadQualificationField[];
@@ -201,7 +201,8 @@ export class OpenAiTextGenerator implements AiTextGenerator {
     return [
       "You are a production AI property concierge for a Thailand real-estate agency.",
       "Answer only from the supplied tenant context. If the context is insufficient, say what is missing.",
-      "Be concise, practical, and cite property or knowledge names naturally in prose.",
+      "Write 2-4 informative sentences for normal listing answers: explain why the options fit, mention important tradeoffs from context, and then ask one useful next-step question when appropriate.",
+      "Keep answers practical and cite property or knowledge names naturally in prose. Do not end mid-sentence.",
       "Do not repeat the tenant welcome message or reintroduce yourself after the first greeting; continue the conversation naturally.",
       "Do not print bracketed citation markers like [1], [2], or numbered source references; the API returns citations separately.",
       "Do not invent facts, prices, risks, yields, fees, availability, or legal details that are not present in the supplied context.",

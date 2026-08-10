@@ -26,6 +26,12 @@ interface PublicWidgetRequest {
   };
 }
 
+interface PublicWidgetRecommendationBundle {
+  fitSummary: string;
+  listings: PublicWidgetRecommendedListing[];
+  totalMatches?: number;
+}
+
 @Controller("public/v1/widget")
 @ApiTags("public-widget")
 export class PublicWidgetChatController {
@@ -102,14 +108,14 @@ export class PublicWidgetChatController {
       origin: origin ?? null,
       referer: referer ?? null
     });
-    const recommendedListings = await this.buildRecommendedListings(tenant, response.matchedPropertyIds, origin, referer);
+    const recommendations = await this.buildRecommendedListings(tenant, response.matchedPropertyIds, origin, referer, locale);
 
     return {
       ...response,
-      answer: normalizePublicWidgetAnswer(response.answer, recommendedListings, locale),
+      answer: normalizePublicWidgetAnswer(response.answer, recommendations, locale, response.suggestedActions),
       conciergeMode: tenant.subscriptionPlan,
       locale,
-      recommendedListings,
+      recommendedListings: recommendations.listings,
       tenantSlug: tenant.slug
     };
   }
@@ -174,26 +180,37 @@ export class PublicWidgetChatController {
     tenant: TenantSnapshot,
     propertyIds: string[],
     origin?: string,
-    referer?: string
-  ): Promise<PublicWidgetRecommendedListing[]> {
+    referer?: string,
+    locale: TenantWidgetLanguage = "en"
+  ): Promise<PublicWidgetRecommendationBundle> {
     const baseOrigin = resolveRequestOrigin(origin) ?? resolveRequestOrigin(referer);
     const listingUrlTemplate = normalizeListingUrlTemplate(tenant.widget.listingUrlTemplate);
 
     if (!baseOrigin) {
-      return [];
+      return {
+        fitSummary: "",
+        listings: [],
+        totalMatches: propertyIds.length
+      };
     }
 
     const properties = await Promise.all(
-      propertyIds.slice(0, 3).map((propertyId) => this.properties.findById(tenant.id, propertyId))
+      propertyIds.slice(0, 8).map((propertyId) => this.properties.findById(tenant.id, propertyId))
     );
-
-    return properties
+    const matchedProperties = properties
       .filter((property): property is PropertySnapshot => Boolean(property))
-      .map((property) => ({
+      .filter(isPublicWidgetRecommendableProperty)
+      .slice(0, 3);
+
+    return {
+      fitSummary: buildListingFitSummary(matchedProperties, locale),
+      listings: matchedProperties.map((property) => ({
         propertyId: property.id,
         title: property.title,
         url: buildListingUrl(baseOrigin, listingUrlTemplate, property.id)
-      }));
+      })),
+      totalMatches: propertyIds.length
+    };
   }
 }
 
@@ -207,16 +224,23 @@ function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requested
 
 function normalizePublicWidgetAnswer(
   answer: string,
-  recommendedListings: PublicWidgetRecommendedListing[],
-  locale: TenantWidgetLanguage
+  recommendations: PublicWidgetRecommendationBundle,
+  locale: TenantWidgetLanguage,
+  suggestedActions: string[]
 ): string {
   const normalizedAnswer = stripMarkdownEmphasis(answer).trim();
 
-  if (!recommendedListings.length || !looksLikeInlineListingList(normalizedAnswer, recommendedListings)) {
+  if (!recommendations.listings.length || !isListingDiscoveryResponse(suggestedActions)) {
     return normalizedAnswer;
   }
 
-  return buildListingCardIntro(normalizedAnswer, recommendedListings.length, locale);
+  return [buildListingCardIntro(normalizedAnswer, recommendations.listings.length, locale, recommendations.totalMatches), recommendations.fitSummary]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
+function isListingDiscoveryResponse(suggestedActions: string[]): boolean {
+  return suggestedActions.includes("save-search");
 }
 
 function stripMarkdownEmphasis(value: string): string {
@@ -225,16 +249,14 @@ function stripMarkdownEmphasis(value: string): string {
     .replace(/__([^_]+)__/g, "$1");
 }
 
-function looksLikeInlineListingList(answer: string, recommendedListings: PublicWidgetRecommendedListing[]): boolean {
-  const normalizedAnswer = answer.toLowerCase();
-  const mentionsShownListing = recommendedListings.some((listing) => normalizedAnswer.includes(listing.title.toLowerCase()));
-
-  return mentionsShownListing && /(?:^|\n|\s)(?:\d{1,2}[.)]|[-*])\s+\S/.test(answer);
-}
-
-function buildListingCardIntro(answer: string, shownCount: number, locale: TenantWidgetLanguage): string {
+function buildListingCardIntro(
+  answer: string,
+  shownCount: number,
+  locale: TenantWidgetLanguage,
+  totalMatches?: number
+): string {
   const matchCount = answer.match(/\b(\d{1,4})\b/)?.[1];
-  const countText = matchCount ?? String(shownCount);
+  const countText = totalMatches && totalMatches > shownCount ? String(totalMatches) : matchCount ?? String(shownCount);
   const labels: Record<TenantWidgetLanguage, string> = {
     en: `I found ${countText} matching listing${countText === "1" ? "" : "s"}. ${
       shownCount === 1 ? "Here is the top match I can show now." : `Here are the top ${shownCount} I can show now.`
@@ -245,6 +267,168 @@ function buildListingCardIntro(answer: string, shownCount: number, locale: Tenan
   };
 
   return labels[locale] ?? labels.en;
+}
+
+function buildListingFitSummary(properties: PropertySnapshot[], locale: TenantWidgetLanguage): string {
+  if (!properties.length) {
+    return "";
+  }
+
+  const market = formatMarketLabel(properties[0]?.market);
+  const kind = formatKindLabel(properties[0]?.kind);
+  const priceRange = formatPriceRange(properties);
+  const bedroomSummary = summarizeBedrooms(properties, locale);
+  const areaSummary = summarizeArea(properties, locale);
+  const beachSummary = summarizeBeachDistance(properties, locale);
+  const amenities = summarizeAmenities(properties);
+  const details = [priceRange, bedroomSummary, areaSummary, beachSummary, amenities].filter(Boolean);
+
+  const overviewLabels: Record<TenantWidgetLanguage, string> = {
+    en: `These ${kind} options fit the ${market} search${details.length ? ` because they include ${details.join(", ")}` : ""}. Open the cards to compare exact photos, availability, and viewing details.`,
+    ru: `Эти варианты ${kind} подходят под поиск в ${market}${details.length ? `: ${details.join(", ")}` : ""}. Откройте карточки, чтобы сравнить фото, наличие и детали просмотра.`,
+    th: `ตัวเลือก${kind}เหล่านี้เหมาะกับการค้นหาใน ${market}${details.length ? ` เพราะมี ${details.join(", ")}` : ""} เปิดการ์ดเพื่อดูรูป ความพร้อม และรายละเอียดนัดชม`,
+    zh: `这些${kind}选项符合 ${market} 搜索${details.length ? `，因为包含${details.join("、")}` : ""}。打开卡片可查看照片、可售状态和看房细节。`
+  };
+  const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale));
+
+  return [overviewLabels[locale] ?? overviewLabels.en, ...cardDescriptions].filter(Boolean).join("\n");
+}
+
+function formatMarketLabel(market?: PropertySnapshot["market"]): string {
+  const labels: Partial<Record<PropertySnapshot["market"], string>> = {
+    bangkok: "Bangkok",
+    "hua-hin": "Hua Hin",
+    "koh-samui": "Koh Samui",
+    pattaya: "Pattaya",
+    phuket: "Phuket"
+  };
+
+  return market ? labels[market] ?? market : "selected market";
+}
+
+function formatKindLabel(kind?: PropertySnapshot["kind"]): string {
+  const labels: Partial<Record<PropertySnapshot["kind"], string>> = {
+    commercial: "commercial property",
+    condo: "condo",
+    land: "land",
+    townhouse: "townhouse",
+    villa: "villa"
+  };
+
+  return kind ? labels[kind] ?? kind : "property";
+}
+
+function formatPriceRange(properties: PropertySnapshot[]): string {
+  const prices = properties
+    .map((property) => property.price)
+    .filter((price): price is PropertySnapshot["price"] => Boolean(price) && price.amount >= 100_000);
+
+  if (!prices.length) {
+    return "";
+  }
+
+  const currency = prices[0]?.currency ?? "THB";
+  const min = Math.min(...prices.map((price) => price.amount));
+  const max = Math.max(...prices.map((price) => price.amount));
+
+  return min === max
+    ? `${formatMoneyAmount(min)} ${currency}`
+    : `${formatMoneyAmount(min)}-${formatMoneyAmount(max)} ${currency}`;
+}
+
+function formatMoneyAmount(value: number): string {
+  if (value >= 1_000_000) {
+    return `${Number((value / 1_000_000).toFixed(1)).toLocaleString("en-US")}M`;
+  }
+
+  if (value >= 1_000) {
+    return `${Math.round(value / 1_000).toLocaleString("en-US")}k`;
+  }
+
+  return value.toLocaleString("en-US");
+}
+
+function summarizeBedrooms(properties: PropertySnapshot[], locale: TenantWidgetLanguage): string {
+  const bedrooms = Array.from(new Set(properties.map((property) => property.bedrooms ?? 0).filter((value) => value > 0))).sort(
+    (left, right) => left - right
+  );
+
+  if (!bedrooms.length) {
+    return "";
+  }
+
+  const value = bedrooms.length === 1 ? String(bedrooms[0]) : `${bedrooms[0]}-${bedrooms[bedrooms.length - 1]}`;
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `${value} bedroom${value === "1" ? "" : "s"}`,
+    ru: `${value} спальн.`,
+    th: `${value} ห้องนอน`,
+    zh: `${value} 间卧室`
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
+function summarizeArea(properties: PropertySnapshot[], locale: TenantWidgetLanguage): string {
+  const areas = properties.map((property) => property.areaSqm ?? 0).filter((value) => value >= 10);
+
+  if (!areas.length) {
+    return "";
+  }
+
+  const min = Math.min(...areas);
+  const max = Math.max(...areas);
+  const value = min === max ? `${min}` : `${min}-${max}`;
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `${value} sqm layouts`,
+    ru: `площади ${value} кв.м`,
+    th: `พื้นที่ ${value} ตร.ม.`,
+    zh: `${value} 平米户型`
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
+function summarizeBeachDistance(properties: PropertySnapshot[], locale: TenantWidgetLanguage): string {
+  const distances = properties
+    .map((property) => property.beachDistanceMeters)
+    .filter((value): value is number => typeof value === "number" && value >= 0);
+
+  if (!distances.length) {
+    return "";
+  }
+
+  const closest = Math.min(...distances);
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `closest option about ${closest}m from the beach`,
+    ru: `ближайший вариант примерно ${closest} м от пляжа`,
+    th: `ตัวเลือกที่ใกล้ที่สุดประมาณ ${closest} ม. จากชายหาด`,
+    zh: `最近选项距离海滩约 ${closest} 米`
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
+function summarizeAmenities(properties: PropertySnapshot[]): string {
+  const amenities = Array.from(new Set(properties.flatMap((property) => property.amenities ?? []).filter(Boolean))).slice(0, 3);
+
+  return amenities.length ? `amenities like ${amenities.join(", ")}` : "";
+}
+
+function isPublicWidgetRecommendableProperty(property: PropertySnapshot): boolean {
+  return property.status === "available" && property.price.amount >= 100_000 && property.areaSqm >= 10;
+}
+
+function buildListingCardDescription(property: PropertySnapshot, locale: TenantWidgetLanguage): string {
+  const facts = [
+    formatPriceRange([property]),
+    summarizeBedrooms([property], locale),
+    summarizeArea([property], locale),
+    summarizeBeachDistance([property], locale),
+    summarizeAmenities([property])
+  ].filter(Boolean);
+  const detail = facts.length ? facts.join(", ") : formatMarketLabel(property.market);
+
+  return `${property.title}: ${detail}.`;
 }
 
 function resolveWidgetPersona(tenant: TenantSnapshot, locale: TenantWidgetLanguage): AiConciergePersona {
