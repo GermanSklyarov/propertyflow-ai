@@ -1,6 +1,8 @@
 services:
   postgres:
-    image: postgis/postgis:16-3.4
+    build:
+      context: ./infra/postgres
+    image: propertyflow/postgis-pgvector:16-3.4
     container_name: propertyflow-postgres
     environment:
       POSTGRES_USER: propertyflow
@@ -48,4 +50,3 @@ volumes:
   postgres-data:
   opensearch-data:
   minio-data:
-
