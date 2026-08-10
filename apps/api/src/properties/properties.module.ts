@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CqrsModule } from "@nestjs/cqrs";
+import { KnowledgeEmbeddingGenerator } from "@propertyflow/domain";
 import { AuditModule } from "../audit/audit.module.js";
 import { DatabaseModule } from "../database/database.module.js";
 import { JobsModule } from "../jobs/jobs.module.js";
@@ -28,6 +29,7 @@ import { PropertyComparisonService } from "./application/services/property-compa
 import { PropertyImagesService } from "./application/services/property-images.service.js";
 import { PropertyPublicationService } from "./application/services/property-publication.service.js";
 import { PropertySocialPostsService } from "./application/services/property-social-posts.service.js";
+import { PropertyVectorSearchService } from "./application/services/property-vector-search.service.js";
 import { IndexedPropertySearchService } from "./application/services/indexed-property-search.service.js";
 import { RentalYieldService } from "./application/services/rental-yield.service.js";
 import { SavedSearchLeadCoverageService } from "./application/services/saved-search-lead-coverage.service.js";
@@ -92,9 +94,14 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     PropertyImagesService,
     PropertyPublicationService,
     PropertySocialPostsService,
+    PropertyVectorSearchService,
     RentalYieldService,
     SavedSearchLeadCoverageService,
     SavedPropertySearchService,
+    {
+      provide: KnowledgeEmbeddingGenerator,
+      useFactory: () => new KnowledgeEmbeddingGenerator()
+    },
     {
       provide: PROPERTY_REPOSITORY,
       useClass: PgPropertyRepository

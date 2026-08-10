@@ -5,10 +5,10 @@ import type {
   NaturalLanguageSearchRequest,
   PropertySearchRequest
 } from "@propertyflow/contracts";
-import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
-import type { PropertySnapshot } from "@propertyflow/domain";
+import type { PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 import { IndexedPropertySearchService } from "./indexed-property-search.service.js";
+import { PropertyVectorSearchService } from "./property-vector-search.service.js";
 
 interface InterpretationResult {
   interpretedIntent: string;
@@ -21,7 +21,8 @@ interface InterpretationResult {
 export class NaturalLanguagePropertySearchService {
   constructor(
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
-    @Inject(IndexedPropertySearchService) private readonly indexedSearch: IndexedPropertySearchService
+    @Inject(IndexedPropertySearchService) private readonly indexedSearch: IndexedPropertySearchService,
+    @Inject(PropertyVectorSearchService) private readonly vectorSearch: PropertyVectorSearchService
   ) {}
 
   async search(tenantId: string, request: NaturalLanguageSearchRequest): Promise<NaturalLanguagePropertySearchResponse> {
@@ -38,7 +39,8 @@ export class NaturalLanguagePropertySearchService {
         indexedResult.items.map((item) => this.properties.findById(tenantId, item.propertyId))
       )
     ).filter((item): item is PropertySnapshot => item !== null).filter(isRecommendableProperty);
-    const fallbackItems = indexedItems.length
+    const rankedIndexed = await this.applyVectorRanking(tenantId, request.query, indexedItems);
+    const fallbackItems = rankedIndexed.items.length
       ? []
       : (await this.properties.search(tenantId, {
           ...interpretation.filters,
@@ -47,10 +49,20 @@ export class NaturalLanguagePropertySearchService {
           query: request.query,
           sort: "ai-fit"
         })).filter(isRecommendableProperty);
-    const items = indexedItems.length ? indexedItems : fallbackItems;
-    const rankingExplanation = indexedItems.length
-      ? interpretation.rankingExplanation
-      : `${interpretation.rankingExplanation} Postgres filtered search was used as a fallback because the indexed search returned no recommendable available listings.`;
+    const rankedFallback = rankedIndexed.items.length
+      ? { items: [] as PropertySnapshot[], vectorApplied: false }
+      : await this.applyVectorRanking(tenantId, request.query, fallbackItems);
+    const items = rankedIndexed.items.length ? rankedIndexed.items : rankedFallback.items;
+    const vectorApplied = rankedIndexed.vectorApplied || rankedFallback.vectorApplied;
+    const rankingExplanation = [
+      interpretation.rankingExplanation,
+      rankedIndexed.items.length
+        ? undefined
+        : "Postgres filtered search was used as a fallback because the indexed search returned no recommendable available listings.",
+      vectorApplied
+        ? "pgvector semantic similarity reranked recommendable available listings for Concierge fit."
+        : undefined
+    ].filter(Boolean).join(" ");
 
     return {
       interpretedIntent: interpretation.interpretedIntent,
@@ -61,7 +73,36 @@ export class NaturalLanguagePropertySearchService {
       },
       rankingExplanation,
       items,
-      total: indexedItems.length ? indexedResult.total : fallbackItems.length
+      total: rankedIndexed.items.length ? Math.min(indexedResult.total, rankedIndexed.items.length) : rankedFallback.items.length
+    };
+  }
+
+  private async applyVectorRanking(
+    tenantId: string,
+    query: string,
+    items: PropertySnapshot[]
+  ): Promise<{ items: PropertySnapshot[]; vectorApplied: boolean }> {
+    if (items.length < 2) {
+      return { items, vectorApplied: false };
+    }
+
+    const ranks = await this.vectorSearch.rankCandidates(tenantId, query, items.map((item) => item.id));
+
+    if (!ranks.length) {
+      return { items, vectorApplied: false };
+    }
+
+    const lexicalScoreById = new Map(items.map((item, index) => [item.id, (items.length - index) / items.length]));
+    const vectorScoreById = new Map(ranks.map((rank) => [rank.propertyId, rank.similarityScore]));
+
+    return {
+      items: [...items].sort((left, right) => {
+        const leftScore = hybridScore(left.id, lexicalScoreById, vectorScoreById);
+        const rightScore = hybridScore(right.id, lexicalScoreById, vectorScoreById);
+
+        return rightScore - leftScore;
+      }),
+      vectorApplied: true
     };
   }
 
@@ -269,4 +310,15 @@ export class NaturalLanguagePropertySearchService {
 
 function isRecommendableProperty(property: PropertySnapshot): boolean {
   return property.status === "available";
+}
+
+function hybridScore(
+  propertyId: string,
+  lexicalScoreById: Map<string, number>,
+  vectorScoreById: Map<string, number>
+): number {
+  const lexicalScore = lexicalScoreById.get(propertyId) ?? 0;
+  const vectorScore = vectorScoreById.get(propertyId);
+
+  return vectorScore === undefined ? lexicalScore * 0.35 : vectorScore * 0.65 + lexicalScore * 0.35;
 }

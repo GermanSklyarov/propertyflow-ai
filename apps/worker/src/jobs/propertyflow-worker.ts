@@ -77,7 +77,8 @@ export class PropertyflowWorker {
       this.pool,
       new Client({
         node: config.opensearchUrl
-      })
+      }),
+      this.embeddings
     );
 
     this.connection = new Redis(config.redisUrl, {

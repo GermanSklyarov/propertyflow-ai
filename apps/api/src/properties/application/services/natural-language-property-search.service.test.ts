@@ -4,7 +4,7 @@ import { NaturalLanguagePropertySearchService } from "./natural-language-propert
 
 describe("NaturalLanguagePropertySearchService", () => {
   it("extracts strict filters from Russian sea-view condo requests", () => {
-    const service = new NaturalLanguagePropertySearchService({} as never, {} as never);
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 
     const interpretation = service.interpret({
       locale: "ru",
@@ -33,7 +33,9 @@ describe("NaturalLanguagePropertySearchService", () => {
         total: 0
       })
     };
-    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never);
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
 
     const result = await service.search("demo-agency", {
       locale: "en",
@@ -63,7 +65,9 @@ describe("NaturalLanguagePropertySearchService", () => {
         total: 2
       })
     };
-    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never);
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
 
     const result = await service.search("demo-agency", {
       locale: "en",
@@ -71,6 +75,42 @@ describe("NaturalLanguagePropertySearchService", () => {
     });
 
     expect(result.items.map((item) => item.id)).toEqual([available.id]);
+  });
+
+  it("uses pgvector similarity to rerank recommendable indexed listings", async () => {
+    const weakLexicalFirst = propertyFactory({ id: "11111111-1111-1111-1111-111111111111", title: "Generic City Condo" });
+    const semanticBest = propertyFactory({ id: "22222222-2222-2222-2222-222222222222", title: "Beachfront Sea View Condo" });
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) =>
+        propertyId === weakLexicalFirst.id ? weakLexicalFirst : semanticBest,
+      search: async () => []
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "sea view near beach" },
+        index: "propertyflow-properties-v1",
+        items: [
+          { propertyId: weakLexicalFirst.id },
+          { propertyId: semanticBest.id }
+        ],
+        total: 2
+      })
+    };
+    const vectorSearch = {
+      rankCandidates: async () => [
+        { propertyId: semanticBest.id, rank: 1, similarityScore: 0.95 },
+        { propertyId: weakLexicalFirst.id, rank: 2, similarityScore: 0.2 }
+      ]
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, vectorSearch as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "sea view near beach"
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual([semanticBest.id, weakLexicalFirst.id]);
+    expect(result.rankingExplanation).toContain("pgvector semantic similarity reranked");
   });
 });
 

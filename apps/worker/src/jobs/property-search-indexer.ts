@@ -1,4 +1,5 @@
 import { Client } from "@opensearch-project/opensearch";
+import { KnowledgeEmbeddingGenerator } from "@propertyflow/domain";
 import type { Pool } from "pg";
 import { PROPERTY_SEARCH_INDEX } from "@propertyflow/contracts";
 import type {
@@ -74,7 +75,8 @@ export interface PropertySearchDocument {
 export class PropertySearchIndexer {
   constructor(
     private readonly pool: Pool,
-    private readonly client: Client
+    private readonly client: Client,
+    private readonly embeddings: KnowledgeEmbeddingGenerator
   ) {}
 
   async indexProperty(tenantId: string, propertyId: string): Promise<PropertySearchDocument> {
@@ -93,8 +95,93 @@ export class PropertySearchIndexer {
       body: document,
       refresh: true
     });
+    await this.upsertPropertyEmbedding(document).catch((error: unknown) => {
+      console.warn(
+        `[property-search] pgvector embedding unavailable for ${tenantId}:${propertyId}`,
+        error instanceof Error ? error.message : error
+      );
+    });
 
     return document;
+  }
+
+  private async upsertPropertyEmbedding(document: PropertySearchDocument): Promise<void> {
+    const now = new Date().toISOString();
+    const searchText = buildPropertyEmbeddingText(document);
+
+    try {
+      const embedding = await this.embeddings.embed(searchText, "document");
+
+      await this.pool.query(
+        `
+          insert into property_search_embeddings (
+            tenant_id,
+            property_id,
+            search_text,
+            embedding,
+            embedding_model,
+            embedding_status,
+            last_error,
+            created_at,
+            updated_at
+          ) values (
+            $1,
+            $2,
+            $3,
+            $4::vector,
+            $5,
+            'embedded',
+            null,
+            $6,
+            $6
+          )
+          on conflict (tenant_id, property_id) do update
+          set
+            search_text = excluded.search_text,
+            embedding = excluded.embedding,
+            embedding_model = excluded.embedding_model,
+            embedding_status = 'embedded',
+            last_error = null,
+            updated_at = excluded.updated_at
+        `,
+        [document.tenantId, document.id, searchText, toVectorLiteral(embedding.vector), embedding.modelKey, now]
+      );
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Property embedding failed";
+
+      await this.pool.query(
+        `
+          insert into property_search_embeddings (
+            tenant_id,
+            property_id,
+            search_text,
+            embedding,
+            embedding_model,
+            embedding_status,
+            last_error,
+            created_at,
+            updated_at
+          ) values (
+            $1,
+            $2,
+            $3,
+            null,
+            $4,
+            'failed',
+            $5,
+            $6,
+            $6
+          )
+          on conflict (tenant_id, property_id) do update
+          set
+            search_text = excluded.search_text,
+            embedding_status = 'failed',
+            last_error = excluded.last_error,
+            updated_at = excluded.updated_at
+        `,
+        [document.tenantId, document.id, searchText, this.embeddings.modelKey(), reason, now]
+      );
+    }
   }
 
   private async findProperty(tenantId: string, propertyId: string): Promise<PropertySnapshot | null> {
@@ -257,4 +344,29 @@ function toSearchDocument(property: PropertySnapshot): PropertySearchDocument {
     createdAt: property.createdAt,
     updatedAt: property.updatedAt
   };
+}
+
+function buildPropertyEmbeddingText(document: PropertySearchDocument): string {
+  return [
+    document.title,
+    document.description,
+    document.address,
+    document.market,
+    document.kind,
+    document.listingType,
+    document.status,
+    `${document.bedrooms} bedrooms`,
+    `${document.bathrooms} bathrooms`,
+    `${document.areaSqm} sqm`,
+    document.beachDistanceMeters !== undefined ? `${document.beachDistanceMeters}m from beach` : undefined,
+    document.priceAmount ? `${document.priceAmount} ${document.priceCurrency}` : undefined,
+    document.rentalPriceMonthlyAmount ? `${document.rentalPriceMonthlyAmount} monthly rent` : undefined,
+    ...document.amenities
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function toVectorLiteral(vector: number[]): string {
+  return `[${vector.join(",")}]`;
 }
