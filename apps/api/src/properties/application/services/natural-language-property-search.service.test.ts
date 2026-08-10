@@ -19,6 +19,59 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(interpretation.rankingExplanation).toContain("requiredAmenities=sea-view");
   });
 
+  it("extracts Thai rental filters and lifestyle signals", async () => {
+    const property = propertyFactory({ listingType: "rent", market: "phuket", rentalPriceMonthly: { amount: 40_000, currency: "THB" } });
+    const repository = {
+      findById: async () => null,
+      search: async () => [property]
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "คอนโดให้เช่าภูเก็ต 2 ห้องนอน งบไม่เกิน 40000 บาทต่อเดือน ใกล้ทะเล มีสระว่ายน้ำ ฟิตเนส เน็ตแรง" },
+        index: "propertyflow-properties-v1",
+        items: [],
+        total: 0
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "th",
+      query: "คอนโดให้เช่าภูเก็ต 2 ห้องนอน งบไม่เกิน 40000 บาทต่อเดือน ใกล้ทะเล มีสระว่ายน้ำ ฟิตเนส เน็ตแรง"
+    });
+
+    expect(result.filters).toMatchObject({
+      listingType: "rent",
+      market: "phuket",
+      maxMonthlyRentThb: 40_000,
+      minBedrooms: 2,
+      maxBeachDistanceMeters: 1000,
+      requiredAmenities: ["pool", "gym", "fast-internet"]
+    });
+    expect(result.filters.lifestyleSignals).toEqual(expect.arrayContaining(["beach-life", "remote-work"]));
+  });
+
+  it("extracts Chinese sale and investment filters", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "zh",
+      query: "想在芭提雅购买海景公寓，预算不超过300万泰铢，2卧室，靠近海边，有泳池，适合投资出租收益"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      listingType: "sale",
+      market: "pattaya",
+      maxPriceThb: 3_000_000,
+      minBedrooms: 2,
+      maxBeachDistanceMeters: 1000,
+      requiredAmenities: ["pool", "sea-view"]
+    });
+    expect(interpretation.purpose).toBe("investment");
+  });
+
   it("falls back to Postgres search when indexed search returns no recommendable listings", async () => {
     const property = propertyFactory({ id: "property-available", status: "available" });
     const repository = {

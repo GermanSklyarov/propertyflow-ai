@@ -17,6 +17,35 @@ interface InterpretationResult {
   purpose?: PropertyPurpose;
 }
 
+interface BudgetSignal {
+  amountThb: number;
+  cadence?: "monthly";
+}
+
+const MARKET_PATTERNS: Array<[ThailandMarket, RegExp]> = [
+  ["pattaya", /(?:pattaya|паттай|พัทยา|芭提雅)/],
+  ["phuket", /(?:phuket|пхукет|ภูเก็ต|普吉)/],
+  ["bangkok", /(?:bangkok|бангкок|กรุงเทพ|曼谷)/],
+  ["hua-hin", /(?:hua[\s-]?hin|хуахин|хуа\s?хин|หัวหิน|华欣|華欣)/],
+  ["koh-samui", /(?:koh[\s-]?samui|samui|самуи|ко\s?самуи|เกาะสมุย|สมุย|苏梅|蘇梅)/]
+];
+
+const AMENITY_PATTERNS: Array<[string, RegExp]> = [
+  ["pool", /(?:\b(?:pool|swimming pool)\b|бассейн|бассейном|สระว่ายน้ำ|泳池|游泳池)/],
+  ["gym", /(?:\b(?:gym|fitness)\b|фитнес|спортзал|тренажерный зал|ฟิตเนส|健身房|健身)/],
+  ["sea-view", /(?:\b(?:sea view|ocean view)\b|вид на море|с видом на море|панорам[а-я ]+мор|วิวทะเล|เห็นทะเล|海景|看海)/],
+  ["fast-internet", /(?:\b(?:fast internet|good internet)\b|быстрый интернет|хороший интернет|อินเทอร์เน็ต|เน็ตแรง|网络|網絡|高速网|高速網)/],
+  ["coworking", /(?:\bcoworking\b|коворкинг|коворкинги|โคเวิร์ก|โคเวิร์ค|共享办公|共享辦公)/]
+];
+
+const LIFESTYLE_PATTERNS: Array<[string, RegExp]> = [
+  ["quiet-area", /(?:тих|спокойн|quiet|calm|เงียบ|สงบ|安静|安靜)/],
+  ["cafes", /(?:кафе|coffee|restaurants|рестораны|ร้านกาแฟ|ร้านอาหาร|咖啡|餐厅|餐廳)/],
+  ["beach-life", /(?:пляж|beach|мор|sea|ทะเล|ชายหาด|海边|海邊|海滩|海灘)/],
+  ["remote-work", /(?:internet|интернет|coworking|коворкинг|remote|удален|ออนไลน์|เน็ต|远程|遠程|网络|網絡|共享办公|共享辦公)/],
+  ["shopping", /(?:terminal 21|shopping|mall|торгов|ห้าง|商场|商場|购物|購物)/]
+];
+
 @Injectable()
 export class NaturalLanguagePropertySearchService {
   constructor(
@@ -123,13 +152,13 @@ export class NaturalLanguagePropertySearchService {
       explanations.push(`listingType=${listingType}`);
     }
 
-    const maxPriceThb = this.detectMaxPriceThb(normalized);
-    if (maxPriceThb && listingType === "rent") {
-      filters.maxMonthlyRentThb = maxPriceThb;
-      explanations.push(`maxMonthlyRentThb=${maxPriceThb}`);
-    } else if (maxPriceThb) {
-      filters.maxPriceThb = maxPriceThb;
-      explanations.push(`maxPriceThb=${maxPriceThb}`);
+    const budget = this.detectBudgetThb(normalized);
+    if (budget && (listingType === "rent" || budget.cadence === "monthly")) {
+      filters.maxMonthlyRentThb = budget.amountThb;
+      explanations.push(`maxMonthlyRentThb=${budget.amountThb}`);
+    } else if (budget) {
+      filters.maxPriceThb = budget.amountThb;
+      explanations.push(`maxPriceThb=${budget.amountThb}`);
     }
 
     const minBedrooms = this.detectMinBedrooms(normalized);
@@ -170,39 +199,57 @@ export class NaturalLanguagePropertySearchService {
   }
 
   private normalize(query: string): string {
-    return query.toLowerCase().replaceAll("ё", "е").replace(/\s+/g, " ").trim();
+    return query
+      .toLowerCase()
+      .replaceAll("ё", "е")
+      .replace(/[，。；：]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
   }
 
   private detectMarket(query: string): ThailandMarket | undefined {
-    const markets: Array<[ThailandMarket, string[]]> = [
-      ["pattaya", ["pattaya", "паттай"]],
-      ["phuket", ["phuket", "пхукет"]],
-      ["bangkok", ["bangkok", "бангкок"]],
-      ["hua-hin", ["hua hin", "hua-hin", "хуахин", "хуа хин"]],
-      ["koh-samui", ["koh samui", "samui", "koh-samui", "самуи", "ко самуи"]]
-    ];
-
-    return markets.find(([, aliases]) => aliases.some((alias) => query.includes(alias)))?.[0];
+    return MARKET_PATTERNS.find(([, pattern]) => pattern.test(query))?.[0];
   }
 
-  private detectMaxPriceThb(query: string): number | undefined {
-    const millionMatch = query.match(/(?:до|under|below|max|maximum|budget)\s*(\d+(?:[.,]\d+)?)\s*(?:млн|million|m)\s*(?:бат|baht|thb)?/);
+  private detectBudgetThb(query: string): BudgetSignal | undefined {
+    const cadence = /(?:month|monthly|per month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租)/.test(query)
+      ? "monthly"
+      : undefined;
+    const millionMatch = query.match(
+      /(?:до|under|below|max|maximum|budget|งบ|ไม่เกิน|ต่ำกว่า|预算|預算|不超过|不超過|低于|低於)?\s*(\d+(?:[.,]\d+)?)\s*(?:млн|million|m|ล้าน|百万|百萬)\s*(?:бат|baht|thb|บาท|泰铢|泰銖)?/
+    );
     if (millionMatch?.[1]) {
-      return Math.round(Number(millionMatch[1].replace(",", ".")) * 1_000_000);
+      return {
+        amountThb: Math.round(Number(millionMatch[1].replace(",", ".")) * 1_000_000),
+        cadence
+      };
     }
 
-    const thbMatch = query.match(/(?:до|under|below|max|maximum|budget)\s*(\d[\d\s,.]*)\s*(?:бат|baht|thb)/);
+    const tenThousandMatch = query.match(
+      /(?:до|under|below|max|maximum|budget|งบ|ไม่เกิน|ต่ำกว่า|预算|預算|不超过|不超過|低于|低於)?\s*(\d+(?:[.,]\d+)?)\s*(?:万|萬)\s*(?:บาท|泰铢|泰銖|thb)?/
+    );
+    if (tenThousandMatch?.[1]) {
+      return {
+        amountThb: Math.round(Number(tenThousandMatch[1].replace(",", ".")) * 10_000),
+        cadence
+      };
+    }
+
+    const thbMatch = query.match(
+      /(?:до|under|below|max|maximum|budget|งบ|ไม่เกิน|ต่ำกว่า|预算|預算|ไม่เกิน|不超过|不超過|低于|低於)?\s*(\d[\d\s,.]*)\s*(?:бат|baht|thb|บาท|泰铢|泰銖)/
+    );
     if (thbMatch?.[1]) {
       const amount = Number(thbMatch[1].replace(/[^\d]/g, ""));
-      return Number.isFinite(amount) && amount > 0 ? amount : undefined;
+      return Number.isFinite(amount) && amount > 0 ? { amountThb: amount, cadence } : undefined;
     }
 
     return undefined;
   }
 
   private detectListingType(query: string): PropertySearchRequest["listingType"] | undefined {
-    const rentalIntent = /(снять|арендовать|аренда|rent|lease)/.test(query);
-    const saleIntent = /(купить|покуп|продаж|buy|purchase|sale)/.test(query);
+    const investmentSaleIntent = /(?:rent out|yield|roi|invest|investment|сдач|доход|инвест|ลงทุน|ผลตอบแทน|投资|投資|收益|回报|回報)/.test(query);
+    const rentalIntent = /(?:снять|сним|арендовать|аренда|rent|lease|เช่า|ให้เช่า|租房|租公寓|月租)/.test(query);
+    const saleIntent = /(?:купить|покуп|продаж|buy|purchase|sale|ownership|ซื้อ|ขาย|买|買|购买|購買|出售)/.test(query) || investmentSaleIntent;
 
     if (rentalIntent && saleIntent) {
       return "sale_or_rent";
@@ -220,12 +267,12 @@ export class NaturalLanguagePropertySearchService {
   }
 
   private detectMinBedrooms(query: string): number | undefined {
-    const explicit = query.match(/(\d+)\s*(?:bedroom|bedrooms|br|спальн|спальни|спален)/);
+    const explicit = query.match(/(\d+)\s*(?:bedroom|bedrooms|br|спальн|спальни|спален|ห้องนอน|卧室|臥室|房间|房間|房)/);
     if (explicit?.[1]) {
       return Number(explicit[1]);
     }
 
-    if (/\b(studio|студия|студию)\b/.test(query)) {
+    if (/(?:\b(?:studio)\b|студия|студию|สตูดิโอ|开间|開間|单间|單間)/.test(query)) {
       return 0;
     }
 
@@ -233,16 +280,18 @@ export class NaturalLanguagePropertySearchService {
   }
 
   private detectMinAreaSqm(query: string): number | undefined {
-    const match = query.match(/(?:от|from|min|minimum)\s*(\d+)\s*(?:м2|м²|sqm|sq m|square meters)/);
+    const match = query.match(/(?:от|from|min|minimum|ตั้งแต่|อย่างน้อย|至少)?\s*(\d+)\s*(?:м2|м²|sqm|sq m|square meters|ตร\.?\s?ม\.?|ตารางเมตร|平米|平方米)/);
     return match?.[1] ? Number(match[1]) : undefined;
   }
 
   private detectBeachDistanceMeters(query: string): number | undefined {
-    if (/(рядом|near|close|walk|пешком).*(пляж|beach|мор|sea)/.test(query)) {
+    if (/(рядом|near|close|walk|пешком|ใกล้|เดิน|近|靠近|步行).*(пляж|beach|мор|sea|ทะเล|ชายหาด|海|海边|海邊|海滩|海灘)/.test(query)) {
       return 1000;
     }
 
-    if (/(10\s*(мин|minutes|min).*(мор|sea|beach|пляж))|((мор|sea|beach|пляж).{0,30}10\s*(мин|minutes|min))/.test(query)) {
+    if (
+      /(10\s*(мин|minutes|min|นาที|分钟|分鐘).*(мор|sea|beach|пляж|ทะเล|ชายหาด|海|海边|海邊|海滩|海灘))|((мор|sea|beach|пляж|ทะเล|ชายหาด|海|海边|海邊|海滩|海灘).{0,30}10\s*(мин|minutes|min|นาที|分钟|分鐘))/.test(query)
+    ) {
       return 800;
     }
 
@@ -250,31 +299,23 @@ export class NaturalLanguagePropertySearchService {
   }
 
   private detectAmenities(query: string): string[] {
-    const amenities: Array<[string, RegExp]> = [
-      ["pool", /(?:\b(?:pool|swimming pool)\b|бассейн|бассейном)/],
-      ["gym", /(?:\b(?:gym|fitness)\b|фитнес|спортзал|тренажерный зал)/],
-      ["sea-view", /(?:\b(?:sea view|ocean view)\b|вид на море|с видом на море|панорам[а-я ]+мор)/],
-      ["fast-internet", /(?:\b(?:fast internet|good internet)\b|быстрый интернет|хороший интернет)/],
-      ["coworking", /(?:\bcoworking\b|коворкинг|коворкинги)/]
-    ];
-
-    return amenities.filter(([, pattern]) => pattern.test(query)).map(([amenity]) => amenity);
+    return AMENITY_PATTERNS.filter(([, pattern]) => pattern.test(query)).map(([amenity]) => amenity);
   }
 
   private detectPurpose(query: string): PropertyPurpose | undefined {
-    if (/(инвест|доходн|roi|yield|rent|аренд|сдач)/.test(query)) {
+    if (/(инвест|доходн|roi|yield|rent out|сдач|ลงทุน|ผลตอบแทน|ปล่อยเช่า|投资|投資|收益|回报|回報|出租收益)/.test(query)) {
       return "investment";
     }
 
-    if (/(переезд|relocat|move to|переехать)/.test(query)) {
+    if (/(переезд|relocat|move to|переехать|ย้าย|搬到|移居)/.test(query)) {
       return "relocation";
     }
 
-    if (/(family|семь|школ)/.test(query)) {
+    if (/(family|семь|семей|школ|ครอบครัว|เด็ก|โรงเรียน|家庭|家人|孩子|学校|學校)/.test(query)) {
       return "family";
     }
 
-    if (/(жить|live|winter|зим)/.test(query)) {
+    if (/(жить|live|living|winter|зим|อยู่เอง|อาศัย|过冬|過冬|自住|居住)/.test(query)) {
       return "living";
     }
 
@@ -282,15 +323,9 @@ export class NaturalLanguagePropertySearchService {
   }
 
   private detectLifestyleSignals(query: string): string[] {
-    const signals: Array<[string, RegExp]> = [
-      ["quiet-area", /(тих|quiet|calm)/],
-      ["cafes", /(кафе|coffee|restaurants|рестораны)/],
-      ["beach-life", /(пляж|beach|мор|sea)/],
-      ["remote-work", /(internet|интернет|coworking|коворкинг|remote|удален)/],
-      ["shopping", /(terminal 21|shopping|mall|торгов)/]
-    ];
+    const normalized = this.normalize(query);
 
-    return signals.filter(([, pattern]) => pattern.test(query)).map(([signal]) => signal);
+    return LIFESTYLE_PATTERNS.filter(([, pattern]) => pattern.test(normalized)).map(([signal]) => signal);
   }
 
   private describeIntent(query: string, purpose: PropertyPurpose | undefined, filters: PropertySearchRequest): string {
