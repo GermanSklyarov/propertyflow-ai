@@ -143,7 +143,7 @@
           '<div class="pf-message pf-message-' +
           message.role +
           '">' +
-          escapeText(message.text) +
+          escapeText(cleanDisplayText(message.text)) +
           buildRecommendationsHtml(message.recommendations) +
           "</div>"
         );
@@ -311,6 +311,9 @@
     var thread = app.querySelector(".pf-thread");
     if (thread) {
       thread.scrollTop = thread.scrollHeight;
+      window.requestAnimationFrame(function () {
+        thread.scrollTop = thread.scrollHeight;
+      });
     }
   }
 
@@ -692,6 +695,13 @@
 
   function assistantMessage(text, recommendations) {
     return { recommendations: normalizeRecommendedListings(recommendations), role: "assistant", text: text };
+  }
+
+  function cleanDisplayText(value) {
+    return String(value || "")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/__([^_]+)__/g, "$1")
+      .trim();
   }
 
   function resetConversation() {
@@ -1149,7 +1159,7 @@
       ".pf-readiness{grid-row:2;margin:12px 12px 0;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4d8f;font-size:12px;font-weight:850;line-height:1.4;padding:10px}",
       ".pf-readiness-needs-setup{border-color:#fed7aa;background:#fff7ed;color:#7c4a05}",
       ".pf-error{grid-row:3;margin:12px 12px 0;border:1px solid #fed7aa;background:#fff7ed;color:#7c4a05;font-size:12px;font-weight:800;line-height:1.4;padding:10px}",
-      ".pf-thread{grid-row:4;display:grid;align-content:start;gap:10px;min-height:0;overflow:auto;padding:12px}",
+      ".pf-thread{grid-row:4;display:grid;align-content:start;gap:10px;min-height:0;overflow:auto;overscroll-behavior:contain;padding:12px;scrollbar-gutter:stable}",
       ".pf-message{border:1px solid #d9e7e3;font-size:14px;font-weight:750;line-height:1.45;padding:10px;white-space:pre-wrap}",
       ".pf-message-assistant{background:#edf8f4;color:#0b4f49}",
       ".pf-message-user{justify-self:end;background:#0b4f49;color:#fff;max-width:88%}",

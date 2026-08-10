@@ -144,6 +144,59 @@ describe("PublicWidgetChatController", () => {
     expect(properties.findById).toHaveBeenCalledWith("tenant-rag", "property-1");
   });
 
+  it("keeps public widget listing answers compact when cards already render the top matches", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 9 matching listings, and I'm happy to share the top 3 with you!\n\n1. **Wongamat Sea View Residence**",
+          matchedPropertyIds: ["property-1"]
+        })
+      )
+    } as unknown as AiChatService;
+    const leads = {
+      create: vi.fn()
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      leads,
+      propertyRepository({
+        findById: vi.fn().mockResolvedValue({
+          id: "property-1",
+          title: "Wongamat Sea View Residence"
+        })
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "Show me sea view condos"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toBe("I found 9 matching listings. Here is the top match I can show now.");
+    expect(response.answer).not.toContain("**");
+    expect(response.answer).not.toContain("1. Wongamat");
+    expect(response.recommendedListings).toHaveLength(1);
+  });
+
   it("keeps recommended listing links on the widget origin when tenant route config is unsafe", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

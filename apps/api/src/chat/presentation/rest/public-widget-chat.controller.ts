@@ -106,6 +106,7 @@ export class PublicWidgetChatController {
 
     return {
       ...response,
+      answer: normalizePublicWidgetAnswer(response.answer, recommendedListings, locale),
       conciergeMode: tenant.subscriptionPlan,
       locale,
       recommendedListings,
@@ -202,6 +203,48 @@ function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requested
   }
 
   return enabledLanguages[0] ?? "en";
+}
+
+function normalizePublicWidgetAnswer(
+  answer: string,
+  recommendedListings: PublicWidgetRecommendedListing[],
+  locale: TenantWidgetLanguage
+): string {
+  const normalizedAnswer = stripMarkdownEmphasis(answer).trim();
+
+  if (!recommendedListings.length || !looksLikeInlineListingList(normalizedAnswer, recommendedListings)) {
+    return normalizedAnswer;
+  }
+
+  return buildListingCardIntro(normalizedAnswer, recommendedListings.length, locale);
+}
+
+function stripMarkdownEmphasis(value: string): string {
+  return value
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1");
+}
+
+function looksLikeInlineListingList(answer: string, recommendedListings: PublicWidgetRecommendedListing[]): boolean {
+  const normalizedAnswer = answer.toLowerCase();
+  const mentionsShownListing = recommendedListings.some((listing) => normalizedAnswer.includes(listing.title.toLowerCase()));
+
+  return mentionsShownListing && /(?:^|\n|\s)(?:\d{1,2}[.)]|[-*])\s+\S/.test(answer);
+}
+
+function buildListingCardIntro(answer: string, shownCount: number, locale: TenantWidgetLanguage): string {
+  const matchCount = answer.match(/\b(\d{1,4})\b/)?.[1];
+  const countText = matchCount ?? String(shownCount);
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `I found ${countText} matching listing${countText === "1" ? "" : "s"}. ${
+      shownCount === 1 ? "Here is the top match I can show now." : `Here are the top ${shownCount} I can show now.`
+    }`,
+    ru: `Я нашла ${countText} подходящих вариантов. Ниже топ-${shownCount}, которые можно открыть сейчас.`,
+    th: `พบรายการที่ตรงกับคำขอ ${countText} รายการ ด้านล่างคือ ${shownCount} รายการเด่นที่เปิดดูได้ตอนนี้`,
+    zh: `我找到了 ${countText} 个匹配房源。下面是现在可以打开查看的前 ${shownCount} 个。`
+  };
+
+  return labels[locale] ?? labels.en;
 }
 
 function resolveWidgetPersona(tenant: TenantSnapshot, locale: TenantWidgetLanguage): AiConciergePersona {
