@@ -6,6 +6,7 @@ import type {
   PropertySearchRequest
 } from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
+import type { PropertySnapshot } from "@propertyflow/domain";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 import { IndexedPropertySearchService } from "./indexed-property-search.service.js";
 
@@ -32,11 +33,24 @@ export class NaturalLanguagePropertySearchService {
       offset: 0
     };
     const indexedResult = await this.indexedSearch.search(tenantId, indexedRequest);
-    const items = (
+    const indexedItems = (
       await Promise.all(
         indexedResult.items.map((item) => this.properties.findById(tenantId, item.propertyId))
       )
-    ).filter((item) => item !== null);
+    ).filter((item): item is PropertySnapshot => item !== null).filter(isRecommendableProperty);
+    const fallbackItems = indexedItems.length
+      ? []
+      : (await this.properties.search(tenantId, {
+          ...interpretation.filters,
+          limit: 20,
+          offset: 0,
+          query: request.query,
+          sort: "ai-fit"
+        })).filter(isRecommendableProperty);
+    const items = indexedItems.length ? indexedItems : fallbackItems;
+    const rankingExplanation = indexedItems.length
+      ? interpretation.rankingExplanation
+      : `${interpretation.rankingExplanation} Postgres filtered search was used as a fallback because the indexed search returned no recommendable available listings.`;
 
     return {
       interpretedIntent: interpretation.interpretedIntent,
@@ -45,9 +59,9 @@ export class NaturalLanguagePropertySearchService {
         lifestyleSignals: this.detectLifestyleSignals(request.query),
         investmentSignals: interpretation.purpose === "investment" ? ["rental-yield", "occupancy-demand"] : []
       },
-      rankingExplanation: interpretation.rankingExplanation,
+      rankingExplanation,
       items,
-      total: indexedResult.total
+      total: indexedItems.length ? indexedResult.total : fallbackItems.length
     };
   }
 
@@ -251,4 +265,8 @@ export class NaturalLanguagePropertySearchService {
 
     return parts.join("; ");
   }
+}
+
+function isRecommendableProperty(property: PropertySnapshot): boolean {
+  return property.status === "available";
 }
