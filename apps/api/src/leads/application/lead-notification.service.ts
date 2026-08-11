@@ -35,8 +35,13 @@ interface AiConciergeNotificationContext {
 
 interface AiConciergeLeadQualification {
   budget?: string;
+  contractLength?: string;
   contactPreference?: string;
+  dealIntent?: string;
+  moveInDate?: string;
+  ownershipStructure?: string;
   purpose?: string;
+  purchaseTiming?: string;
   timing?: string;
 }
 
@@ -282,8 +287,13 @@ function buildMessengerText(payload: LeadNotificationPayload): string {
     lead.contactEmail ? `✉️ Email: ${lead.contactEmail}` : undefined,
     lead.contactPhone ? `📞 Phone: ${lead.contactPhone}` : undefined,
     context.qualification.contactPreference ? `💬 Contact channel: ${context.qualification.contactPreference}` : undefined,
+    context.qualification.dealIntent ? `🧭 Intent: ${context.qualification.dealIntent}` : undefined,
     context.qualification.budget ? `💰 Budget: ${context.qualification.budget}` : undefined,
     context.qualification.purpose ? `🎯 Purpose: ${context.qualification.purpose}` : undefined,
+    context.qualification.ownershipStructure ? `🪪 Ownership/quota: ${context.qualification.ownershipStructure}` : undefined,
+    context.qualification.purchaseTiming ? `⏳ Purchase timing: ${context.qualification.purchaseTiming}` : undefined,
+    context.qualification.moveInDate ? `📦 Move-in: ${context.qualification.moveInDate}` : undefined,
+    context.qualification.contractLength ? `📄 Contract length: ${context.qualification.contractLength}` : undefined,
     context.qualification.timing ? `🗓️ Timing: ${context.qualification.timing}` : undefined,
     context.visitorNote ? `📝 Latest request: ${trimText(context.visitorNote, 280)}` : undefined,
     context.selectedListing ? `🏠 Selected listing: ${formatListing(context.selectedListing)}` : undefined,
@@ -378,10 +388,36 @@ function parseClientTurns(sections: string[], limit = 4): string[] {
 function parseLeadQualification(text: string): AiConciergeLeadQualification {
   return {
     budget: parseBudget(text),
+    contractLength: parseQualifiedLine(text, "Contract length") ?? parseContractLength(text),
     contactPreference: parseContactPreference(text),
+    dealIntent: parseQualifiedLine(text, "Intent") ?? parseDealIntent(text),
+    moveInDate: parseQualifiedLine(text, "Move-in") ?? parseMoveInDate(text),
+    ownershipStructure: parseQualifiedLine(text, "Ownership/quota") ?? parseOwnershipStructure(text),
     purpose: parsePurpose(text),
+    purchaseTiming: parseQualifiedLine(text, "Purchase timing") ?? parsePurchaseTiming(text),
     timing: parseTiming(text)
   };
+}
+
+function parseQualifiedLine(text: string, label: string): string | undefined {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const value = text.match(new RegExp(`^${escaped}:\\s*(.+)$`, "im"))?.[1]?.trim();
+
+  return value || undefined;
+}
+
+function parseDealIntent(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+
+  if (/\b(?:rent|rental|lease|monthly|per month)\b|аренд|снять|เช่า|รายเดือน|ต่อเดือน|租|月租|每月/i.test(normalized)) {
+    return "Rent";
+  }
+
+  if (/\b(?:buy|purchase|sale|ownership|freehold|quota)\b|купить|покуп|продаж|собствен|ซื้อ|ขาย|买|買|购买|購買/i.test(normalized)) {
+    return "Buy";
+  }
+
+  return undefined;
 }
 
 function parseBudget(text: string): string | undefined {
@@ -409,6 +445,60 @@ function parsePurpose(text: string): string | undefined {
     .sort((left, right) => right.index - left.index)[0];
 
   return latest?.label;
+}
+
+function parseOwnershipStructure(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+
+  if (/(foreign quota|foreigner|foreign name|иностранн|фаранг|ต่างชาติ|ชาวต่างชาติ|外国|外國|外籍)/i.test(normalized)) {
+    return "Foreign quota";
+  }
+
+  if (/(thai quota|thai name|thai person|тайск|таец|тайца|คนไทย|ชื่อไทย|泰国人|泰國人|泰籍)/i.test(normalized)) {
+    return "Thai name/quota";
+  }
+
+  if (/(company|company name|thai company|компан|บริษัท|公司)/i.test(normalized)) {
+    return "Company";
+  }
+
+  return undefined;
+}
+
+function parsePurchaseTiming(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+
+  if (!/(buy|purchase|ownership|freehold|quota|купить|покуп|собствен|ซื้อ|购买|購買|买|買)/i.test(normalized)) {
+    return undefined;
+  }
+
+  const match = normalized.match(
+    /(?:asap|soon|right away|this month|next month|this year|next year|in\s+[0-9]+\s+(?:weeks|months|years)|within\s+[0-9]+\s+(?:weeks|months|years)|в ближайшее время|срочно|в этом месяце|в следующем месяце|в этом году|в следующем году|через\s+[0-9]+\s+(?:недел|месяц|год)|เร็วๆนี้|เดือนนี้|เดือนหน้า|ปีนี้|ปีหน้า|今年|明年|下个月|下個月|这个月|這個月)/i
+  );
+
+  return match?.[0] ? normalizeQualificationValue(match[0]) : undefined;
+}
+
+function parseMoveInDate(text: string): string | undefined {
+  const normalized = text.toLowerCase();
+
+  if (!/(rent|rental|lease|move in|move-in|аренд|снять|заехать|въезд|เช่า|ย้ายเข้า|入住|租)/i.test(normalized)) {
+    return undefined;
+  }
+
+  const match = normalized.match(
+    /(?:move[-\s]?in|available from|start from|from|заезд|въезд|заехать|с\s+|ย้ายเข้า|入住)\s+(today|tomorrow|next week|next month|this weekend|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|[0-9]{1,2}[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?|сегодня|завтра|на следующей неделе|в следующем месяце|เดือนหน้า|พรุ่งนี้|明天|下周|下週|下个月|下個月)/i
+  );
+
+  return match?.[1] ? normalizeQualificationValue(match[1]) : undefined;
+}
+
+function parseContractLength(text: string): string | undefined {
+  const match = text.match(
+    /(?:for|contract|lease|term|на|контракт|срок|สัญญา|租期)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年))|([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年)\s*(?:contract|lease|term|контракт|договор|สัญญา|租期)?)/i
+  );
+
+  return match?.[1] || match?.[2] ? normalizeQualificationValue(match[1] ?? match[2]!) : undefined;
 }
 
 function parseContactPreference(text: string): string | undefined {

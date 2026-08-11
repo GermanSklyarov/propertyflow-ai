@@ -119,8 +119,12 @@ function buildViewingHandoffAnswer(property: PropertySnapshot, requestMessage?: 
   const rental = property.rentalPriceMonthly
     ? ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`
     : "";
+  const qualificationPrompt =
+    property.listingType === "rent"
+      ? " If you already know your target move-in date and contract length, include those too so the agent can check availability and rate."
+      : " If you are buying, please also mention whether ownership would be foreign quota, Thai name, or company, and your approximate purchase timing.";
 
-  return `Great choice. I can help arrange a viewing of ${property.title}${slotText}. I cannot directly confirm the agent's calendar from here, but I can pass this preferred slot to the agency team. Please share your WhatsApp, Telegram, phone, or email so they can confirm the exact time.${rental}`;
+  return `Great choice. I can help arrange a viewing of ${property.title}${slotText}. I cannot directly confirm the agent's calendar from here, but I can pass this preferred slot to the agency team. Please share your WhatsApp, Telegram, phone, or email so they can confirm the exact time.${qualificationPrompt}${rental}`;
 }
 
 function extractViewingSlot(message: string): string | undefined {

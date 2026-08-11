@@ -82,8 +82,11 @@ describe("LeadNotificationService", () => {
           "Visitor note: my phone number +660827955673",
           "",
           "Lead qualification:",
+          "Intent: Buy",
           "Budget: under 3m",
           "Purpose: Relocation",
+          "Ownership/quota: Foreign quota",
+          "Purchase timing: next year",
           "Timing: monday at 10 a.m.",
           "Contact channel: Phone",
           "",
@@ -112,8 +115,11 @@ describe("LeadNotificationService", () => {
     expect(requestBody.text).toContain("✨ New AI Concierge lead");
     expect(requestBody.text).toContain("📞 Phone: +660827955673");
     expect(requestBody.text).toContain("💬 Contact channel: Phone");
+    expect(requestBody.text).toContain("🧭 Intent: Buy");
     expect(requestBody.text).toContain("💰 Budget: under 3m");
     expect(requestBody.text).toContain("🎯 Purpose: Relocation");
+    expect(requestBody.text).toContain("🪪 Ownership/quota: Foreign quota");
+    expect(requestBody.text).toContain("⏳ Purchase timing: next year");
     expect(requestBody.text).toContain("🗓️ Timing: monday at 10 a.m.");
     expect(requestBody.text).toContain("📝 Latest request: my phone number +660827955673");
     expect(requestBody.text).toContain("🏠 Selected listing: Price Recommendation Target Condo (property-3)");
