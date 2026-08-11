@@ -33,6 +33,8 @@ interface PublicWidgetRecommendationBundle {
   totalMatches?: number;
 }
 
+type WidgetPriceMode = "rent" | "sale";
+
 @Controller("public/v1/widget")
 @ApiTags("public-widget")
 export class PublicWidgetChatController {
@@ -218,7 +220,7 @@ export class PublicWidgetChatController {
 
     return {
       candidateMatches: visiblePropertyIds.length,
-      fitSummary: buildListingFitSummary(matchedProperties, locale),
+      fitSummary: buildListingFitSummary(matchedProperties, locale, resolveWidgetPriceMode(payload?.message)),
       listings: matchedProperties.map((property) => ({
         propertyId: property.id,
         title: property.title,
@@ -335,14 +337,18 @@ function buildListingCardIntro(
   return labels[locale] ?? labels.en;
 }
 
-function buildListingFitSummary(properties: PropertySnapshot[], locale: TenantWidgetLanguage): string {
+function buildListingFitSummary(
+  properties: PropertySnapshot[],
+  locale: TenantWidgetLanguage,
+  priceMode: WidgetPriceMode = "sale"
+): string {
   if (!properties.length) {
     return "";
   }
 
   const market = formatMarketLabel(properties[0]?.market);
   const kind = formatKindLabel(properties[0]?.kind);
-  const priceRange = formatPriceRange(properties);
+  const priceRange = formatPriceRange(properties, priceMode);
   const bedroomSummary = summarizeBedrooms(properties, locale);
   const areaSummary = summarizeArea(properties, locale);
   const beachSummary = summarizeBeachDistance(properties, locale);
@@ -355,9 +361,20 @@ function buildListingFitSummary(properties: PropertySnapshot[], locale: TenantWi
     th: `ตัวเลือก${kind}เหล่านี้เหมาะกับการค้นหาใน ${market}${details.length ? ` เพราะมี ${details.join(", ")}` : ""} เปิดการ์ดเพื่อดูรูป ความพร้อม และรายละเอียดนัดชม`,
     zh: `这些${kind}选项符合 ${market} 搜索${details.length ? `，因为包含${details.join("、")}` : ""}。打开卡片可查看照片、可售状态和看房细节。`
   };
-  const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale));
+  const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale, priceMode));
 
   return [overviewLabels[locale] ?? overviewLabels.en, ...cardDescriptions].filter(Boolean).join("\n");
+}
+
+function resolveWidgetPriceMode(message = ""): WidgetPriceMode {
+  const normalized = message.toLowerCase();
+  const rentalIntent = /\b(?:rent|rental|lease|monthly|per month)\b|аренд|снять|เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月/i.test(normalized);
+  const saleIntent =
+    /\b(?:buy|purchase|sale|ownership|freehold|invest|investment)\b|купить|покуп|продаж|собствен|инвест|ซื้อ|ขาย|买|買|购买|購買|投资|投資/i.test(
+      normalized
+    );
+
+  return rentalIntent && !saleIntent ? "rent" : "sale";
 }
 
 function formatMarketLabel(market?: PropertySnapshot["market"]): string {
@@ -384,11 +401,12 @@ function formatKindLabel(kind?: PropertySnapshot["kind"]): string {
   return kind ? labels[kind] ?? kind : "property";
 }
 
-function formatPriceRange(properties: PropertySnapshot[]): string {
+function formatPriceRange(properties: PropertySnapshot[], priceMode: WidgetPriceMode = "sale"): string {
   const rentalPrices = properties.flatMap((property) =>
     property.rentalPriceMonthly && property.rentalPriceMonthly.amount >= 1_000 ? [property.rentalPriceMonthly] : []
   );
   const shouldShowRent =
+    priceMode === "rent" &&
     rentalPrices.length > 0 &&
     properties.every((property) => property.listingType === "rent" || property.listingType === "sale_or_rent" || property.rentalPriceMonthly);
   const prices = shouldShowRent
@@ -495,9 +513,13 @@ function isPublicWidgetRecommendableProperty(property: PropertySnapshot): boolea
   );
 }
 
-function buildListingCardDescription(property: PropertySnapshot, locale: TenantWidgetLanguage): string {
+function buildListingCardDescription(
+  property: PropertySnapshot,
+  locale: TenantWidgetLanguage,
+  priceMode: WidgetPriceMode = "sale"
+): string {
   const facts = [
-    formatPriceRange([property]),
+    formatPriceRange([property], priceMode),
     summarizeBedrooms([property], locale),
     summarizeArea([property], locale),
     summarizeBeachDistance([property], locale),

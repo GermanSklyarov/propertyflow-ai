@@ -258,7 +258,7 @@ export class NaturalLanguagePropertySearchService {
 
   private detectListingType(query: string): PropertySearchRequest["listingType"] | undefined {
     const investmentSaleIntent = /(?:rent out|yield|roi|invest|investment|сдач|доход|инвест|ลงทุน|ผลตอบแทน|投资|投資|收益|回报|回報)/.test(query);
-    const rentalIntent = /(?:снять|сним|арендовать|аренда|rent|lease|monthly|per month|month|месяц|мес|เช่า|ให้เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月)/.test(query);
+    const rentalIntent = /(?:снять|сним|арендовать|аренда|\brent\b|\brental\b|\blease\b|\bmonthly\b|\bper month\b|\bmonth\b|месяц|мес|เช่า|ให้เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月)/.test(query);
     const saleIntent = /(?:купить|покуп|продаж|buy|purchase|sale|ownership|ซื้อ|ขาย|买|買|购买|購買|出售)/.test(query) || investmentSaleIntent;
 
     if (rentalIntent && saleIntent) {
@@ -313,7 +313,7 @@ export class NaturalLanguagePropertySearchService {
   }
 
   private detectPurpose(query: string): PropertyPurpose | undefined {
-    if (/(инвест|доходн|roi|yield|rent out|сдач|ลงทุน|ผลตอบแทน|ปล่อยเช่า|投资|投資|收益|回报|回報|出租收益)/.test(query)) {
+    if (/(инвест|доходн|invest|investment|roi|yield|rent out|сдач|ลงทุน|ผลตอบแทน|ปล่อยเช่า|投资|投資|收益|回报|回報|出租收益)/.test(query)) {
       return "investment";
     }
 

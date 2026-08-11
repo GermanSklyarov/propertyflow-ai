@@ -69,6 +69,23 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(interpretation.filters).not.toHaveProperty("maxPriceThb");
   });
 
+  it("does not treat recommend as a rental intent when buy is explicit", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query: "i want to buy a condo in pattaya for investment under 5m, what can you recommend?"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      listingType: "sale",
+      market: "pattaya",
+      maxPriceThb: 5_000_000
+    });
+    expect(interpretation.filters).not.toHaveProperty("maxMonthlyRentThb");
+    expect(interpretation.purpose).toBe("investment");
+  });
+
   it("extracts Chinese sale and investment filters", () => {
     const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 

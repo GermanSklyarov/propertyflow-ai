@@ -606,6 +606,60 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("3.5M-7.8M THB");
   });
 
+  it("summarizes buy and investment widget results with sale price instead of monthly rent", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 1 matching listing.",
+          matchedPropertyIds: ["property-1"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockResolvedValue(
+          propertyFactory({
+            id: "property-1",
+            listingType: "sale_or_rent",
+            price: { amount: 3_450_000, currency: "THB" },
+            rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+            title: "Wongamat Sea View Residence"
+          })
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "i want to buy a condo in pattaya for investment under 5m, what can you recommend?"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("3.5M THB");
+    expect(response.answer).not.toContain("28k THB/mo");
+  });
+
   it("does not expose draft or incomplete listings as public widget recommendation cards", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
