@@ -74,7 +74,7 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     const propertyId =
       intent.referencedListingIndex === undefined
         ? selectedPropertyId ?? resolveReferencedPropertyId(request, 0)
-        : resolveReferencedPropertyId(request, intent.referencedListingIndex) ?? selectedPropertyId;
+        : resolveReferencedPropertyId(request, intent.referencedListingIndex);
 
     if (propertyId) {
       return {
@@ -165,7 +165,7 @@ function resolveSelectedPropertyIdFromConversation(request: AiChatRequest): stri
 
     if (turn.role === "user" && currentListings.length) {
       const index = resolveReferencedListingIndexFromText(turn.text);
-      const byIndex = index === undefined ? undefined : currentListings[index]?.propertyId ?? currentListings[0]?.propertyId;
+      const byIndex = index === undefined ? undefined : currentListings[index]?.propertyId;
       const byName = resolveNamedPropertyIdFromListings(turn.text, currentListings);
 
       selectedPropertyId = byName ?? byIndex ?? selectedPropertyId;
@@ -233,7 +233,7 @@ function resolveReferencedPropertyId(request: AiChatRequest, referencedListingIn
     return undefined;
   }
 
-  return recommendations[referencedListingIndex]?.propertyId ?? recommendations[0]?.propertyId;
+  return recommendations[referencedListingIndex]?.propertyId;
 }
 
 function resolveNamedPropertyId(request: AiChatRequest): string | undefined {

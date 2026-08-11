@@ -281,6 +281,12 @@
         event.preventDefault();
         ask(form.elements.message.value);
       });
+      form.elements.message.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+          event.preventDefault();
+          ask(form.elements.message.value);
+        }
+      });
     }
 
     var handoffToggle = app.querySelector(".pf-handoff-toggle");
@@ -1232,7 +1238,9 @@
       ".pf-header-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}",
       ".pf-reset,.pf-close{border:1px solid rgba(255,255,255,.28);background:transparent;color:#fff;cursor:pointer;font:inherit}",
       ".pf-reset{height:32px;padding:0 9px;font-size:11px;font-weight:900;text-transform:uppercase}",
-      ".pf-close{font-size:22px;line-height:1;width:32px;height:32px}",
+      ".pf-close{position:relative;display:grid;place-items:center;color:transparent;font-size:0;line-height:1;width:32px;height:32px;padding:0}",
+      ".pf-close::before,.pf-close::after{content:'';position:absolute;left:50%;top:50%;width:18px;height:3px;background:#fff;transform:translate(-50%,-50%) rotate(45deg)}",
+      ".pf-close::after{transform:translate(-50%,-50%) rotate(-45deg)}",
       ".pf-reset:hover,.pf-close:hover{background:rgba(255,255,255,.12)}",
       ".pf-readiness{grid-row:2;margin:12px 12px 0;border:1px solid #bfdbfe;background:#eff6ff;color:#1d4d8f;font-size:12px;font-weight:850;line-height:1.4;padding:10px}",
       ".pf-readiness-needs-setup{border-color:#fed7aa;background:#fff7ed;color:#7c4a05}",

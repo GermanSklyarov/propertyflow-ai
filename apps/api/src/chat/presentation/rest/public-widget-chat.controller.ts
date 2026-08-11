@@ -27,6 +27,7 @@ interface PublicWidgetRequest {
 }
 
 interface PublicWidgetRecommendationBundle {
+  candidateMatches?: number;
   fitSummary: string;
   listings: PublicWidgetRecommendedListing[];
   totalMatches?: number;
@@ -196,29 +197,34 @@ export class PublicWidgetChatController {
 
     if (!baseOrigin) {
       return {
+        candidateMatches: propertyIds.length,
         fitSummary: "",
         listings: [],
         totalMatches: propertyIds.length
       };
     }
 
-    const excludedPropertyIds = payload && isMoreListingsRequest(payload.message) ? getShownListingIds(payload.conversation) : new Set<string>();
+    const excludedPropertyIds =
+      payload && isMoreListingsRequest(payload.message) && !isAllListingsRequest(payload.message)
+        ? getShownListingIds(payload.conversation)
+        : new Set<string>();
     const visiblePropertyIds = propertyIds.filter((propertyId) => !excludedPropertyIds.has(propertyId));
     const idsToLoad = visiblePropertyIds.length ? visiblePropertyIds : propertyIds;
     const properties = await Promise.all(idsToLoad.slice(0, 8).map((propertyId) => this.properties.findById(tenant.id, propertyId)));
-    const matchedProperties = properties
+    const publicProperties = properties
       .filter((property): property is PropertySnapshot => Boolean(property))
-      .filter(isPublicWidgetRecommendableProperty)
-      .slice(0, 3);
+      .filter(isPublicWidgetRecommendableProperty);
+    const matchedProperties = publicProperties.slice(0, 3);
 
     return {
+      candidateMatches: visiblePropertyIds.length,
       fitSummary: buildListingFitSummary(matchedProperties, locale),
       listings: matchedProperties.map((property) => ({
         propertyId: property.id,
         title: property.title,
         url: buildListingUrl(baseOrigin, listingUrlTemplate, property.id)
       })),
-      totalMatches: propertyIds.length
+      totalMatches: publicProperties.length
     };
   }
 }
@@ -256,7 +262,16 @@ function normalizePublicWidgetAnswer(
     return normalizedAnswer;
   }
 
-  return [buildListingCardIntro(normalizedAnswer, recommendations.listings.length, locale, recommendations.totalMatches), recommendations.fitSummary]
+  return [
+    buildListingCardIntro(
+      normalizedAnswer,
+      recommendations.listings.length,
+      locale,
+      recommendations.totalMatches,
+      recommendations.candidateMatches
+    ),
+    recommendations.fitSummary
+  ]
     .filter(Boolean)
     .join("\n\n");
 }
@@ -282,6 +297,10 @@ function isMoreListingsRequest(message: string): boolean {
   );
 }
 
+function isAllListingsRequest(message: string): boolean {
+  return /\b(?:all|everything|show\s+all|see\s+all)\b|все вариант|покажи все|ทั้งหมด|全部|所有/i.test(message);
+}
+
 function stripMarkdownEmphasis(value: string): string {
   return value
     .replace(/\*\*([^*]+)\*\*/g, "$1")
@@ -292,10 +311,18 @@ function buildListingCardIntro(
   answer: string,
   shownCount: number,
   locale: TenantWidgetLanguage,
-  totalMatches?: number
+  totalMatches?: number,
+  candidateMatches?: number
 ): string {
-  const matchCount = answer.match(/\b(\d{1,4})\b/)?.[1];
-  const countText = totalMatches && totalMatches > shownCount ? String(totalMatches) : matchCount ?? String(shownCount);
+  const parsedMatchCount = Number(answer.match(/\b(\d{1,4})\b/)?.[1]);
+  const publicMatchCount = totalMatches ?? shownCount;
+  const shouldUsePublicCount =
+    Number.isFinite(parsedMatchCount) &&
+    candidateMatches !== undefined &&
+    parsedMatchCount === candidateMatches &&
+    publicMatchCount < candidateMatches;
+  const countText =
+    shouldUsePublicCount || !Number.isFinite(parsedMatchCount) ? String(publicMatchCount) : String(parsedMatchCount);
   const labels: Record<TenantWidgetLanguage, string> = {
     en: `I found ${countText} matching listing${countText === "1" ? "" : "s"}. ${
       shownCount === 1 ? "Here is the top match I can show now." : `Here are the top ${shownCount} I can show now.`

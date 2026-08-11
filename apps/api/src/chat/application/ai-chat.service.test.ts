@@ -711,6 +711,40 @@ describe("AiChatService", () => {
     expect(response.answer).toContain("Another Pattaya Condo");
   });
 
+  it("keeps additional search candidate ids available for public widget cards", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const service = serviceFactory({
+      searchItems: [
+        propertyFactory({ id: "property-1", title: "Terminal 21 Walkable Studio" }),
+        propertyFactory({ id: "property-2", title: "Central Pattaya Rental Loft" }),
+        propertyFactory({ id: "property-3", title: "Smoke Beach Condo smoke-eb330e15" }),
+        propertyFactory({ id: "property-4", title: "Wongamat Sea View Residence" })
+      ],
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "find me a condo in pattaya under 30k/month" },
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Terminal 21 Walkable Studio" },
+            { propertyId: "property-2", title: "Central Pattaya Rental Loft" }
+          ],
+          role: "assistant",
+          text: "I found 4 matching listings. Here are the top 2."
+        }
+      ],
+      locale: "en",
+      message: "show me all options"
+    });
+
+    expect(response.matchedPropertyIds).toEqual(["property-1", "property-2", "property-3", "property-4"]);
+  });
+
   it("returns a chat response when a referenced listing is no longer available", async () => {
     const properties = {
       findById: vi.fn().mockResolvedValue(null),

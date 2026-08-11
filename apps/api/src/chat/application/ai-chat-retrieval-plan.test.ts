@@ -121,6 +121,28 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("asks for clarification when the visitor references an unseen ordinal option", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Terminal 21 Walkable Studio" },
+              { propertyId: "property-2", title: "Central Pattaya Rental Loft" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "what about the third option?"
+      })
+    ).toMatchObject({
+      mode: "clarify-reference",
+      reason: "missing-follow-up-reference"
+    });
+  });
+
   it("resolves named listings from prior recommendations even without ordinal wording", () => {
     expect(
       planAiChatRetrieval({

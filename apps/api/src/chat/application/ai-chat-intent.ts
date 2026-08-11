@@ -32,7 +32,7 @@ export function classifyAiChatIntent(message: string): AiChatIntent {
   };
 }
 
-function resolveReferencedListingIndex(message: string): number {
+function resolveReferencedListingIndex(message: string): number | undefined {
   if (thirdListingPattern.test(message)) {
     return 2;
   }
@@ -41,7 +41,11 @@ function resolveReferencedListingIndex(message: string): number {
     return 1;
   }
 
-  return 0;
+  if (/\b(?:first|1(?:st)?\s+(?:option|listing|one))\b|перв|第一|第1|一/i.test(message)) {
+    return 0;
+  }
+
+  return undefined;
 }
 
 function normalizeIntentText(message: string): string {
