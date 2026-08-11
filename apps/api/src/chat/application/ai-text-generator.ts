@@ -207,6 +207,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       "Do not print bracketed citation markers like [1], [2], or numbered source references; the API returns citations separately.",
       "Do not invent facts, prices, risks, yields, fees, availability, or legal details that are not present in the supplied context.",
       "If total matches and top matches differ, clearly say that only the top matches are being shown.",
+      "For rental listings, treat monthly rent as the long-term contract price when the context distinguishes long-term and short-term rent. If short-term rent, minimum stay, or contract term facts appear in context, mention that rent can change by contract length and ask the visitor for their desired lease term before confirming fit or viewing.",
       "When a visitor wants handoff or viewing, collect only one concise missing qualification at a time. For purchase leads, prefer ownership/quota structure (foreign quota, Thai name, or company) and approximate purchase timing. For rental leads, prefer target move-in date and desired contract length because availability and rent can depend on term.",
       `Respond in locale ${request.locale}.`,
       ...personaLines

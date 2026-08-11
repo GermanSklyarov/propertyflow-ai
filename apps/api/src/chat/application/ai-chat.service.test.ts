@@ -983,6 +983,7 @@ describe("AiChatService", () => {
     expect(prompt).toContain('use first-person feminine forms such as "я нашла", "я подобрала", "я проверила"');
     expect(prompt).toContain('never use masculine forms such as "я нашел" or "я подобрал"');
     expect(prompt).toContain("Do not print bracketed citation markers like [1], [2]");
+    expect(prompt).toContain("If short-term rent, minimum stay, or contract term facts appear in context");
   });
 });
 

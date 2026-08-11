@@ -332,17 +332,17 @@ export function buildRuntimeKnowledgeSourceGroups(
   const activeKnowledgeJobs = input.jobs.some(
     (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && isRunningBackgroundJob(job)
   );
-  const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && !isPartnerFeedJob(job) && isRunningBackgroundJob(job));
+  const activeImportJobs = input.jobs.some((job) => job.name === "properties.import" && !isPartnerFeedJob(job) && isActiveIngestionJob(job));
   const failedKnowledgeJobs = input.jobs.some(
     (job) => (job.name === "knowledge.documents.ingest" || job.name === "knowledge.chunks.embed") && job.state === "failed"
   );
   const failedImportJobs = input.jobs.some((job) => job.name === "properties.import" && !isPartnerFeedJob(job) && job.state === "failed");
   const activeRestImportJobs = input.jobs.some(
-    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && isRunningBackgroundJob(job)
+    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && isActiveIngestionJob(job)
   );
   const failedRestImportJobs = input.jobs.some((job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-api" && job.state === "failed");
   const activeXmlImportJobs = input.jobs.some(
-    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-xml" && isRunningBackgroundJob(job)
+    (job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-xml" && isActiveIngestionJob(job)
   );
   const failedXmlImportJobs = input.jobs.some((job) => job.name === "properties.import" && getBackgroundJobPayloadSource(job) === "partner-xml" && job.state === "failed");
   const listingKnowledgeDocuments = input.documents.filter((document) => document.tags.includes("property-listing")).length;
@@ -680,6 +680,19 @@ function isPartnerFeedJob(job: BackgroundJobMonitorItem) {
   const source = getBackgroundJobPayloadSource(job);
 
   return source === "partner-api" || source === "partner-xml";
+}
+
+function isActiveIngestionJob(job: BackgroundJobMonitorItem) {
+  return isRunningBackgroundJob(job) && !hasTerminalImportResult(job);
+}
+
+function hasTerminalImportResult(job: BackgroundJobMonitorItem) {
+  return (
+    getResultNumber(job.result, "imported") > 0 ||
+    getResultNumber(job.result, "knowledgeDocumentsCreated") > 0 ||
+    getResultNumber(job.result, "skipped") > 0 ||
+    getResultNumber(job.result, "total") > 0
+  );
 }
 
 function isAiReadyDocument(document: KnowledgeDocumentSnapshot) {

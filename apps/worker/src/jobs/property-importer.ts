@@ -1444,7 +1444,7 @@ function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
     draft.projectDeveloper ? `Developer: ${draft.projectDeveloper}` : undefined,
     draft.projectStatus ? `Project status: ${draft.projectStatus}` : undefined,
     draft.priceThb > 0 ? `Price: ${draft.priceCurrency ?? "THB"} ${draft.priceThb}` : undefined,
-    draft.rentalPriceMonthlyThb ? `Monthly rent: THB ${draft.rentalPriceMonthlyThb}` : undefined,
+    draft.rentalPriceMonthlyThb ? `${hasShortTermRent(draft) ? "Long-term monthly rent" : "Monthly rent"}: THB ${draft.rentalPriceMonthlyThb}` : undefined,
     draft.monthlyRentEstimateThb ? `Estimated monthly rent: THB ${draft.monthlyRentEstimateThb}` : undefined,
     draft.maintenanceFeeMonthlyThb ? `Maintenance fee: THB ${draft.maintenanceFeeMonthlyThb} per month` : undefined,
     draft.availableFrom ? `Available from: ${draft.availableFrom}` : undefined,
@@ -1463,6 +1463,10 @@ function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
   ]
     .filter(Boolean)
     .join("\n");
+}
+
+function hasShortTermRent(draft: ImportedPropertyDraft) {
+  return draft.customAttributes.some((attribute) => attribute.key === "short_term_rent_thb_month" && attribute.value);
 }
 
 function buildCustomAttributesKnowledgeBlock(attributes: ImportedCustomAttribute[]) {

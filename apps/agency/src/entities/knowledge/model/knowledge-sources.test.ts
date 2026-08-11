@@ -226,6 +226,32 @@ describe("knowledge sources model", () => {
     });
   });
 
+  it("does not keep CSV sources indexing when an import job already has a terminal result", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [
+        backgroundJob({
+          name: "properties.import",
+          result: { imported: 60, knowledgeDocumentsCreated: 60, total: 60 },
+          state: "active"
+        })
+      ],
+      totalDocuments: 0
+    });
+    const propertyFeed = groups.find((group) => group.type === "property_feed");
+    const coverage = buildKnowledgeSourceCoverage(groups);
+
+    expect(propertyFeed?.connectors[0]).toMatchObject({
+      runtimeNote: "Feeds Concierge without forcing CRM",
+      status: "connected"
+    });
+    expect(coverage.find((item) => item.type === "property_feed")).toMatchObject({
+      description: "1/3 sources feeding AI",
+      indexing: 0,
+      status: "connected"
+    });
+  });
+
   it("marks launch gate ready once at least one source feeds AI", () => {
     const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
       documents: [knowledgeDocument({ tags: ["faq"] })],
