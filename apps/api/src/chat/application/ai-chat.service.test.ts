@@ -493,6 +493,171 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("Wongamat Sea View Residence");
   });
 
+  it("compares shortlist options for investment using listing facts", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          amenities: ["pool"],
+          id: "property-1",
+          monthlyRentEstimate: undefined,
+          price: { amount: 2_900_000, currency: "THB" },
+          title: "Budget Living Condo"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          amenities: ["sea-view", "pool"],
+          id: "property-2",
+          maintenanceFeeMonthly: { amount: 2200, currency: "THB" },
+          monthlyRentEstimate: { amount: 30000, currency: "THB" },
+          price: { amount: 3_200_000, currency: "THB" },
+          title: "Yield Focus Condo"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Budget Living Condo" },
+            { propertyId: "property-2", title: "Yield Focus Condo" }
+          ],
+          role: "assistant",
+          text: "I found two options."
+        }
+      ],
+      locale: "en",
+      message: "which one is better for investment?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.answer).toContain("Yield Focus Condo looks strongest for investment");
+    expect(response.answer).toContain("estimated rent 30000 THB/mo");
+    expect(response.matchedPropertyIds).toEqual(["property-1", "property-2"]);
+  });
+
+  it("keeps repeated details on the selected listing instead of searching again", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      ["property-1", propertyFactory({ id: "property-1", title: "First Condo" })],
+      [
+        "property-2",
+        propertyFactory({
+          amenities: ["fiber-internet", "pool", "pet-friendly"],
+          id: "property-2",
+          title: "Second Pet Friendly Condo"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "First Condo" },
+            { propertyId: "property-2", title: "Second Pet Friendly Condo" }
+          ],
+          role: "assistant",
+          text: "I found two options."
+        },
+        { role: "user", text: "I like the second option" },
+        {
+          recommendedListings: [{ propertyId: "property-2", title: "Second Pet Friendly Condo" }],
+          role: "assistant",
+          text: "Second Pet Friendly Condo is a good fit."
+        },
+        { role: "user", text: "is it close to the beach?" },
+        {
+          recommendedListings: [{ propertyId: "property-2", title: "Second Pet Friendly Condo" }],
+          role: "assistant",
+          text: "It is close enough for daily beach access."
+        }
+      ],
+      locale: "en",
+      message: "can I bring a dog?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["property-2"]);
+    expect(response.answer).toContain("Second Pet Friendly Condo is a 1-bedroom condo");
+  });
+
+  it("reuses the previous search query when the visitor asks for more options", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { market: "pattaya", maxPriceThb: 3_000_000 },
+        interpretedIntent: "Pattaya condo under 3M",
+        items: [propertyFactory({ id: "property-2", title: "Another Pattaya Condo" })],
+        rankingExplanation: "Continuing the Pattaya condo search.",
+        total: 20
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "find me a condo in pattaya under 3m" },
+        {
+          recommendedListings: [{ propertyId: "property-1", title: "Pratumnak Investment One-Bed" }],
+          role: "assistant",
+          text: "I found 20 matching listings. Here is the top match."
+        }
+      ],
+      locale: "en",
+      message: "can I see more options?"
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "en",
+      market: undefined,
+      purpose: undefined,
+      query: "find me a condo in pattaya under 3m"
+    });
+    expect(response.answer).toContain("Another Pattaya Condo");
+  });
+
   it("returns a chat response when a referenced listing is no longer available", async () => {
     const properties = {
       findById: vi.fn().mockResolvedValue(null),

@@ -147,18 +147,7 @@ export class AiChatService {
       return buildClarifyPropertyReferenceResponse(request);
     }
 
-    const withKnownDistance = properties.filter((property) => property.beachDistanceMeters !== undefined);
-    const closest = [...withKnownDistance].sort((left, right) => left.beachDistanceMeters! - right.beachDistanceMeters!)[0];
-    const comparisonLines = properties.map((property) =>
-      property.beachDistanceMeters === undefined
-        ? `${property.title}: beach distance is not specified`
-        : `${property.title}: ${property.beachDistanceMeters}m from the beach`
-    );
-    const answer = closest
-      ? `Among the options we just discussed, ${closest.title} is closest to the beach at ${closest.beachDistanceMeters}m. ${comparisonLines.join(
-          " "
-        )}`
-      : `I can compare only the options we just discussed, but none of those listings has beach distance specified. ${comparisonLines.join(" ")}`;
+    const answer = buildRecentListingComparisonAnswer(properties, request.message, planComparison(request));
     const citations = properties.map((property) => propertyCitation(property));
 
     return this.buildResponse({
@@ -195,15 +184,20 @@ export class AiChatService {
     tenantId: string,
     request: AiChatRequest
   ): Promise<NaturalLanguagePropertySearchResponse> {
+    const searchRequest = {
+      ...request,
+      message: resolveEffectiveSearchMessage(request)
+    };
+
     try {
       return await this.naturalLanguageSearch.search(tenantId, {
-        locale: request.locale,
-        query: request.message,
-        market: request.market,
-        purpose: request.purpose
+        locale: searchRequest.locale,
+        query: searchRequest.message,
+        market: searchRequest.market,
+        purpose: searchRequest.purpose
       });
     } catch (error) {
-      const fallback = this.interpretStructuredSearchFallback(request);
+      const fallback = this.interpretStructuredSearchFallback(searchRequest);
 
       this.logger.warn(
         `AI chat listing search failed for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`
@@ -310,6 +304,147 @@ export class AiChatService {
       useDeterministicFallback: process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true"
     });
   }
+}
+
+function planComparison(request: AiChatRequest): NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]> {
+  return planAiChatRetrieval(request).comparison ?? "beach-distance";
+}
+
+function buildRecentListingComparisonAnswer(
+  properties: PropertySnapshot[],
+  message: string,
+  comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>
+): string {
+  if (comparison === "beach-distance") {
+    const withKnownDistance = properties.filter((property) => property.beachDistanceMeters !== undefined);
+    const closest = [...withKnownDistance].sort((left, right) => left.beachDistanceMeters! - right.beachDistanceMeters!)[0];
+    const comparisonLines = properties.map((property) =>
+      property.beachDistanceMeters === undefined
+        ? `${property.title}: beach distance is not specified`
+        : `${property.title}: ${property.beachDistanceMeters}m from the beach`
+    );
+
+    return closest
+      ? `Among the options we just discussed, ${closest.title} is closest to the beach at ${closest.beachDistanceMeters}m. ${comparisonLines.join(
+          " "
+        )}`
+      : `I can compare only the options we just discussed, but none of those listings has beach distance specified. ${comparisonLines.join(" ")}`;
+  }
+
+  const scored = properties
+    .map((property) => ({ property, score: scorePropertyForComparison(property, comparison) }))
+    .sort((left, right) => right.score - left.score);
+  const best = scored[0]?.property;
+  const criteria = comparisonLabel(comparison);
+  const facts = scored.map(({ property }) => `${property.title}: ${comparisonFacts(property, comparison)}.`).join(" ");
+  const question = message.trim().endsWith("?") ? "" : " ";
+
+  return best
+    ? `Among the options we just discussed, ${best.title} looks strongest for ${criteria} based on the available listing facts.${question}${facts}`
+    : `I can compare only the options we just discussed for ${criteria}. ${facts}`;
+}
+
+function scorePropertyForComparison(
+  property: PropertySnapshot,
+  comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>
+): number {
+  const amenities = new Set(property.amenities.map((amenity) => amenity.toLowerCase()));
+  const hasAny = (...values: string[]) => values.some((value) => amenities.has(value));
+
+  if (comparison === "investment") {
+    return [
+      property.monthlyRentEstimate ? 3 : 0,
+      hasAny("sea-view", "beachfront", "pool") ? 2 : 0,
+      property.maintenanceFeeMonthly ? 1 : 0,
+      property.price.amount <= 3_000_000 ? 1 : 0
+    ].reduce((sum, value) => sum + value, 0);
+  }
+
+  if (comparison === "pets") {
+    return [hasAny("pet-friendly", "pets-allowed") ? 4 : 0, property.areaSqm >= 45 ? 1 : 0, property.bedrooms >= 2 ? 1 : 0].reduce(
+      (sum, value) => sum + value,
+      0
+    );
+  }
+
+  if (comparison === "relocation") {
+    return [
+      hasAny("fiber-internet", "fast-internet", "coworking-lounge", "parking") ? 3 : 0,
+      property.beachDistanceMeters !== undefined && property.beachDistanceMeters <= 800 ? 1 : 0,
+      property.areaSqm >= 35 ? 1 : 0
+    ].reduce((sum, value) => sum + value, 0);
+  }
+
+  return [
+    property.bedrooms >= 2 ? 2 : 0,
+    property.areaSqm >= 45 ? 2 : 0,
+    hasAny("pool", "gym", "parking", "security", "playground") ? 1 : 0,
+    property.beachDistanceMeters !== undefined && property.beachDistanceMeters <= 1000 ? 1 : 0
+  ].reduce((sum, value) => sum + value, 0);
+}
+
+function comparisonLabel(comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>): string {
+  const labels = {
+    "beach-distance": "beach access",
+    investment: "investment",
+    living: "living",
+    pets: "living with pets",
+    relocation: "relocation"
+  };
+
+  return labels[comparison];
+}
+
+function comparisonFacts(
+  property: PropertySnapshot,
+  comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>
+): string {
+  const rent = property.monthlyRentEstimate
+    ? `estimated rent ${property.monthlyRentEstimate.amount} ${property.monthlyRentEstimate.currency}/mo`
+    : "rent estimate missing";
+  const fee = property.maintenanceFeeMonthly
+    ? `maintenance ${property.maintenanceFeeMonthly.amount} ${property.maintenanceFeeMonthly.currency}/mo`
+    : "maintenance fee missing";
+  const beach =
+    property.beachDistanceMeters === undefined ? "beach distance not specified" : `${property.beachDistanceMeters}m from the beach`;
+  const amenities = property.amenities.length ? `amenities ${property.amenities.slice(0, 4).join(", ")}` : "amenities not specified";
+
+  if (comparison === "investment") {
+    return `${property.price.amount} ${property.price.currency}, ${rent}, ${fee}, ${amenities}`;
+  }
+
+  if (comparison === "pets") {
+    return `${property.areaSqm} sqm, ${property.bedrooms} bedroom${property.bedrooms === 1 ? "" : "s"}, ${amenities}`;
+  }
+
+  if (comparison === "relocation") {
+    return `${property.areaSqm} sqm, ${beach}, ${amenities}`;
+  }
+
+  return `${property.areaSqm} sqm, ${property.bedrooms} bedroom${property.bedrooms === 1 ? "" : "s"}, ${beach}, ${amenities}`;
+}
+
+function resolveEffectiveSearchMessage(request: AiChatRequest): string {
+  if (!isMoreListingsRequest(request.message)) {
+    return request.message;
+  }
+
+  return [...(request.conversation ?? [])]
+    .reverse()
+    .find((turn) => turn.role === "user" && !isMoreListingsRequest(turn.text) && looksLikeSearchRequest(turn.text))
+    ?.text ?? request.message;
+}
+
+function isMoreListingsRequest(message: string): boolean {
+  return /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i.test(
+    message
+  );
+}
+
+function looksLikeSearchRequest(message: string): boolean {
+  return /find|show|recommend|suggest|condo|apartment|house|villa|rent|buy|найд|подбер|покаж|кондо|квартир|дом|аренд|купить|หา|แนะนำ|คอนโด|ซื้อ|เช่า|找|推荐|推薦|公寓|买|買|租/i.test(
+    message
+  );
 }
 
 function emptyDueDiligencePayload(): AiChatDueDiligencePayload {

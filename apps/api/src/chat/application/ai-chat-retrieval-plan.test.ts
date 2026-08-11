@@ -231,6 +231,128 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("compares recent options for investment instead of starting a new search", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "which one is better for investment?"
+      })
+    ).toMatchObject({
+      comparison: "investment",
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
+    });
+  });
+
+  it("compares recent options for relocation and living with pets", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "which of these is better for relocation and remote work?"
+      })
+    ).toMatchObject({
+      comparison: "relocation",
+      mode: "listing-comparison"
+    });
+
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "which option is best with a dog?"
+      })
+    ).toMatchObject({
+      comparison: "pets",
+      mode: "listing-comparison"
+    });
+  });
+
+  it("keeps property detail questions on the selected listing across multiple turns", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          },
+          { role: "user", text: "I like the second option" },
+          {
+            recommendedListings: [{ propertyId: "property-2", title: "Option B" }],
+            role: "assistant",
+            text: "Option B is a good fit."
+          },
+          { role: "user", text: "is it close to the beach?" },
+          {
+            recommendedListings: [{ propertyId: "property-2", title: "Option B" }],
+            role: "assistant",
+            text: "It is 650m from the beach."
+          }
+        ],
+        locale: "en",
+        message: "can I bring a dog?"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-2",
+      reason: "follow-up-reference"
+    });
+  });
+
+  it("treats requests for more options as a listing search continuation", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found 20 matching listings. Here are the top 2."
+          }
+        ],
+        locale: "en",
+        message: "can I see more options?"
+      })
+    ).toMatchObject({
+      mode: "listing-search",
+      reason: "search-request"
+    });
+  });
+
   it("keeps ordinary listing requests on listing search", () => {
     expect(
       planAiChatRetrieval({

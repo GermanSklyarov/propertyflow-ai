@@ -6,13 +6,23 @@ const recentSetReferencePattern =
 
 const beachDistanceComparisonPattern =
   /closer|closest|nearer|nearest|close to|distance|beach|пляж|мор|ใกล้|ที่สุด|ชายหาด|ทะเล|距离|距離|近|最近|海滩|海灘|海边|海邊/i;
+const shortlistComparisonPattern =
+  /\b(?:compare|which|what|better|best|pick|choose|rank)\b|сравн|како[йе]|лучш|выбр|哪个|哪個|比较|比較|ดีกว่า|ดีที่สุด|เปรียบเทียบ/i;
+const investmentComparisonPattern = /investment|invest|yield|roi|rent|rental|доход|инвест|аренд|收益|投资|投資|出租|租金|ลงทุน|ปล่อยเช่า/i;
+const relocationComparisonPattern = /relocation|relocat|move|remote|internet|work|quiet|переезд|релокац|удален|интернет|тих|搬家|移居|网络|網絡|安静|ย้าย|ทำงาน|อินเทอร์เน็ต|เงียบ/i;
+const livingComparisonPattern = /living|live|family|school|kid|retire|для себя|жить|семь|школ|自住|家庭|学校|學校|อยู่อาศัย|ครอบครัว|โรงเรียน/i;
+const petsComparisonPattern = /\bpets?\b|\bdogs?\b|\bcats?\b|собак|кош|питом|สัตว์เลี้ยง|หมา|แมว|宠物|寵物|狗|猫|貓/i;
+const moreListingsPattern =
+  /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i;
 const viewingSlotFollowUpPattern =
   /\b(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|am|pm|morning|afternoon|evening|tonight|\d{1,2}(?::\d{2})?)\b|сегодня|завтра|понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|утром|днем|вечером|час|โมง|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์|วันเสาร์|วันอาทิตย์|上午|下午|晚上|明天|今天|周一|週一|周二|週二|周三|週三|周四|週四|周五|週五|周六|週六|周日|週日/i;
 const contextualPropertyReferencePattern =
   /\b(?:it|this\s+(?:condo|property|listing|option|unit|project|one)|that\s+(?:condo|property|listing|option|unit|project|one))\b|эт(?:от|а|о|у|ого|ой)?\s+(?:кондо|объект|вариант|квартир[ауы]?|проект)|\b(?:его|ее|её|он|она)\b|ห้องนี้|คอนโดนี้|ตัวเลือกนี้|รายการนี้|โครงการนี้|这个(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|這個(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|这套|這套|它/i;
+const propertyDetailQuestionPattern =
+  /pet|dog|cat|fee|maintenance|quota|foreign|ownership|floor|sqm|size|balcony|furniture|internet|parking|quiet|noise|view|yield|roi|rent|rental|beach|walk|school|family|питом|собак|кош|комис|квот|этаж|площад|балкон|мебел|интернет|парков|тих|шум|вид|доход|аренд|пляж|семь|школ|宠物|狗|猫|貓|费用|費用|楼层|樓層|面积|面積|阳台|陽台|家具|网络|網絡|停车|停車|安静|噪音|景观|景觀|租金|海滩|海灘|家庭|学校|學校|สัตว์เลี้ยง|หมา|แมว|ค่าส่วนกลาง|ชั้น|พื้นที่|ระเบียง|เฟอร์นิเจอร์|อินเทอร์เน็ต|ที่จอดรถ|เงียบ|วิว|ค่าเช่า|ชายหาด|ครอบครัว|โรงเรียน/i;
 
 export interface AiChatRetrievalPlan {
-  comparison?: "beach-distance";
+  comparison?: "beach-distance" | "investment" | "living" | "pets" | "relocation";
   intent: AiChatIntent;
   mode: "clarify-reference" | "listing-comparison" | "listing-search" | "property-detail";
   propertyId?: string;
@@ -44,12 +54,15 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     };
   }
 
-  if (isRecentListingComparisonRequest(request) && getRecentRecommendations(request).length > 1) {
+  const comparison = resolveRecentListingComparison(request);
+
+  if (comparison && getRecentRecommendations(request).length > 1) {
     return {
-      comparison: "beach-distance",
+      comparison,
       intent: {
         ...intent,
-        includeNeighborhood: true
+        includeAdvice: intent.includeAdvice || comparison === "investment",
+        includeNeighborhood: intent.includeNeighborhood || comparison === "beach-distance" || comparison === "relocation" || comparison === "living"
       },
       mode: "listing-comparison",
       reason: "comparison-follow-up"
@@ -73,12 +86,30 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
   }
 
   if (isContextualPropertyFollowUp(request)) {
-    const propertyId = resolveReferencedPropertyId(request, 0);
+    const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
 
     if (propertyId) {
       return {
         intent: {
           ...intent,
+          route: "property-follow-up"
+        },
+        mode: "property-detail",
+        propertyId,
+        reason: "follow-up-reference"
+      };
+    }
+  }
+
+  if (isPropertyDetailQuestion(request)) {
+    const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
+
+    if (propertyId) {
+      return {
+        intent: {
+          ...intent,
+          includeAdvice: intent.includeAdvice || investmentComparisonPattern.test(request.message),
+          includeNeighborhood: intent.includeNeighborhood || beachDistanceComparisonPattern.test(request.message),
           route: "property-follow-up"
         },
         mode: "property-detail",
@@ -125,6 +156,13 @@ function isContextualPropertyFollowUp(request: AiChatRequest): boolean {
   return recommendations.length > 0 && contextualPropertyReferencePattern.test(message);
 }
 
+function isPropertyDetailQuestion(request: AiChatRequest): boolean {
+  const recommendations = getRecentRecommendations(request);
+  const message = normalizeReferenceText(request.message);
+
+  return recommendations.length > 0 && !moreListingsPattern.test(message) && propertyDetailQuestionPattern.test(message);
+}
+
 function resolveReferencedPropertyId(request: AiChatRequest, referencedListingIndex: number): string | undefined {
   const recommendations = getRecentRecommendations(request);
 
@@ -167,12 +205,35 @@ export function getRecentRecommendations(request: AiChatRequest): Array<{ proper
     });
 }
 
-function isRecentListingComparisonRequest(request: AiChatRequest): boolean {
+function resolveRecentListingComparison(request: AiChatRequest): AiChatRetrievalPlan["comparison"] | undefined {
   const message = normalizeReferenceText(request.message);
-  const referencesRecentSet = recentSetReferencePattern.test(message);
-  const asksBeachDistance = beachDistanceComparisonPattern.test(message);
+  const referencesRecentSet = recentSetReferencePattern.test(message) || shortlistComparisonPattern.test(message);
 
-  return referencesRecentSet && asksBeachDistance;
+  if (!referencesRecentSet || moreListingsPattern.test(message)) {
+    return undefined;
+  }
+
+  if (beachDistanceComparisonPattern.test(message)) {
+    return "beach-distance";
+  }
+
+  if (investmentComparisonPattern.test(message)) {
+    return "investment";
+  }
+
+  if (petsComparisonPattern.test(message)) {
+    return "pets";
+  }
+
+  if (relocationComparisonPattern.test(message)) {
+    return "relocation";
+  }
+
+  if (livingComparisonPattern.test(message)) {
+    return "living";
+  }
+
+  return undefined;
 }
 
 function normalizeReferenceText(value: string): string {

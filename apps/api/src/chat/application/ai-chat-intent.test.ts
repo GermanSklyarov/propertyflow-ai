@@ -17,6 +17,13 @@ describe("classifyAiChatIntent", () => {
     });
   });
 
+  it("does not confuse viewing time with an ordinal listing reference", () => {
+    expect(classifyAiChatIntent("Can I view the second option on Friday at 3 pm?")).toMatchObject({
+      referencedListingIndex: 1,
+      route: "property-follow-up"
+    });
+  });
+
   it("supports Thai and Chinese property follow-up language", () => {
     expect(classifyAiChatIntent("ขอนัดดูตัวเลือกที่สอง")).toMatchObject({
       referencedListingIndex: 1,
