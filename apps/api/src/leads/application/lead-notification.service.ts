@@ -440,7 +440,7 @@ function parseContactPreference(text: string): string | undefined {
 function parseTiming(text: string): string | undefined {
   const matches = [
     ...text.matchAll(
-      /next week|next month|monday(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|tomorrow|today|within\s+[0-9]+\s+(?:days|weeks|months)|следующ(?:ей|ий|ем)\s+\S+|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|下周|下週|下个月|下個月/gi
+      /next week|next month|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|tomorrow|today|within\s+[0-9]+\s+(?:days|weeks|months)|следующ(?:ей|ий|ем)\s+\S+|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|下周|下週|下个月|下個月/gi
     )
   ];
   const match = matches.at(-1);

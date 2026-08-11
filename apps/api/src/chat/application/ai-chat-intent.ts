@@ -8,8 +8,8 @@ export interface AiChatIntent {
 const propertyFollowUpPattern =
   /(first option|second option|third option|see it|view it|visit|viewing|schedule|book|перв|втор|трет|посмотр|просмотр|запис|นัดดู|ดูห้อง|ดูคอนโด|ตัวเลือก|第[123]|第一|第二|第三|看房|预约|預約)/i;
 
-const thirdListingPattern = /(3|third|трет|สาม|第三|第3|三)/i;
-const secondListingPattern = /(2|second|втор|สอง|第二|第2|二)/i;
+const thirdListingPattern = /\b(?:third|3(?:rd)?\s+(?:option|listing|one))\b|трет|สาม|第三|第3|三/i;
+const secondListingPattern = /\b(?:second|2(?:nd)?\s+(?:option|listing|one))\b|втор|สอง|第二|第2|二/i;
 
 const neighborhoodPattern =
   /(рядом|around|near|neighborhood|район|пляж|beach|кафе|cafe|школ|school|hospital|больниц)/i;

@@ -57,7 +57,7 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
   }
 
   if (isViewingSlotFollowUp(request)) {
-    const propertyId = resolveReferencedPropertyId(request, 0);
+    const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
 
     if (propertyId) {
       return {

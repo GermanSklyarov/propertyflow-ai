@@ -39,6 +39,29 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("keeps ordinal viewing slots on the referenced listing", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Pratumnak Investment One-Bed" },
+              { propertyId: "property-2", title: "Terminal 21 Walkable Studio" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "i like the second option, can i view it on friday at 3 pm?"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-2",
+      reason: "follow-up-reference"
+    });
+  });
+
   it("resolves named listings from prior recommendations even without ordinal wording", () => {
     expect(
       planAiChatRetrieval({

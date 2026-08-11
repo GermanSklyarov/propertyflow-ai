@@ -686,6 +686,59 @@ describe("PublicWidgetChatController", () => {
     });
   });
 
+  it("keeps the selected listing and viewing slot in auto-captured widget leads", async () => {
+    const tenant = tenantFactory({
+      subscriptionPlan: "starter"
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ propertyId: "property-2", tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      { ask: vi.fn() } as unknown as AiChatService,
+      leads,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    await controller.createLead(
+      "demo-agency",
+      {
+        contactName: "Website visitor",
+        contactPhone: "+660827955673",
+        conversation: [
+          { role: "user", text: "find me a condo in pattaya under 3m" },
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Pratumnak Investment One-Bed" },
+              { propertyId: "property-2", title: "Terminal 21 Walkable Studio" }
+            ],
+            role: "assistant",
+            text: "I found 3 matching listings."
+          },
+          { role: "user", text: "i like the second option, can i view it on friday at 3 pm?" }
+        ],
+        locale: "en",
+        message: "my phone number +660827955673",
+        recommendedListings: [{ propertyId: "property-2", title: "Terminal 21 Walkable Studio" }]
+      },
+      "https://agency.example.com"
+    );
+
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Timing: friday at 3 pm"),
+      propertyId: "property-2"
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("1. Terminal 21 Walkable Studio (property-2)")
+    }));
+  });
+
   it("extracts Thai budget and timing into widget lead qualification", async () => {
     const tenant = tenantFactory({
       subscriptionPlan: "starter",

@@ -422,6 +422,11 @@
       return;
     }
 
+    if (shouldSubmitQualifiedLeadFromChat(trimmed)) {
+      submitQualifiedLeadFromChat(trimmed);
+      return;
+    }
+
     var conversation = buildConversationHistory(trimmed);
     state.messages.push({ role: "user", text: trimmed });
     persistMessages();
@@ -454,7 +459,6 @@
           assistantMessage(response.answer || getEmptyAnswerMessage(state.locale), recommendations)
         );
         persistMessages();
-        autoSubmitQualifiedLeadFromChat(trimmed);
       })
       .catch(function (error) {
         state.messages.push(assistantMessage(getAskFailureMessage(state.locale, error)));
@@ -492,10 +496,8 @@
       });
   }
 
-  function autoSubmitQualifiedLeadFromChat(triggerMessage) {
-    var contact = extractContactDetailsFromConversation();
+  function shouldSubmitQualifiedLeadFromChat(triggerMessage) {
     var recommendations = getRecentRecommendedListings();
-    var leadProperty = resolveReferencedListingFromMessage(triggerMessage, recommendations) || recommendations[0];
     var conversationText = state.messages
       .map(function (message) {
         return message.text || "";
@@ -503,14 +505,21 @@
       .join(" ")
       .toLowerCase();
 
-    if (
-      !state.config.capabilities ||
-      state.config.capabilities.leadCapture !== true ||
-      !leadProperty ||
-      !leadProperty.propertyId ||
-      (!contact.email && !contact.phone) ||
-      !matchesIntent((triggerMessage + " " + conversationText).toLowerCase(), handoffIntentPatterns)
-    ) {
+    return Boolean(
+      state.config.capabilities &&
+        state.config.capabilities.leadCapture === true &&
+        recommendations.length &&
+        hasContactDetails(triggerMessage) &&
+        matchesIntent((triggerMessage + " " + conversationText).toLowerCase(), handoffIntentPatterns)
+    );
+  }
+
+  function submitQualifiedLeadFromChat(triggerMessage) {
+    var contact = extractContactDetailsFromText(triggerMessage + " " + getUserConversationText());
+    var recommendations = getRecentRecommendedListings();
+    var leadProperty = resolveLeadListingFromConversation(triggerMessage, recommendations);
+
+    if (!leadProperty || !leadProperty.propertyId || (!contact.email && !contact.phone)) {
       return;
     }
 
@@ -521,6 +530,10 @@
     }
 
     state.submittedLeadKeys[leadKey] = true;
+    state.messages.push({ role: "user", text: triggerMessage });
+    persistMessages();
+    state.isSending = true;
+    render();
 
     fetch(apiBase.replace(/\/$/, "") + "/public/v1/widget/leads/" + encodeURIComponent(tenantSlug), {
       body: JSON.stringify({
@@ -537,13 +550,35 @@
         "content-type": "application/json"
       },
       method: "POST"
-    }).catch(function (_error) {
-      delete state.submittedLeadKeys[leadKey];
-    });
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throwWidgetHttpError("Widget lead failed", response);
+        }
+
+        return response.json();
+      })
+      .then(function (response) {
+        state.messages.push(assistantMessage(response.message || getHandoffSuccessMessage(state.locale)));
+        persistMessages();
+      })
+      .catch(function (error) {
+        delete state.submittedLeadKeys[leadKey];
+        state.messages.push(assistantMessage(getHandoffFailureMessage(state.locale, error)));
+        persistMessages();
+      })
+      .finally(function () {
+        state.isSending = false;
+        render();
+      });
   }
 
   function extractContactDetailsFromConversation() {
-    var text = state.messages
+    return extractContactDetailsFromText(getUserConversationText());
+  }
+
+  function getUserConversationText() {
+    return state.messages
       .filter(function (message) {
         return message.role === "user";
       })
@@ -551,14 +586,24 @@
         return message.text || "";
       })
       .join(" ");
+  }
+
+  function extractContactDetailsFromText(text) {
     var emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     var phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
+    var telegramMatch = text.match(/(?:telegram|телеграм)\s+(@[A-Z0-9_]{5,32})/i) || text.match(/(^|\s)(@[A-Z0-9_]{5,32})\b/i);
 
     return {
       email: emailMatch ? emailMatch[0].trim() : "",
       name: "",
-      phone: phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : ""
+      phone: phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : telegramMatch ? "Telegram " + (telegramMatch[1] || telegramMatch[2]).trim() : ""
     };
+  }
+
+  function hasContactDetails(text) {
+    var contact = extractContactDetailsFromText(text);
+
+    return Boolean(contact.email || contact.phone);
   }
 
   function resolveReferencedListingFromMessage(message, recommendations) {
@@ -568,11 +613,44 @@
       return null;
     }
 
+    if (/\b(third|3(?:rd)?\s+(?:option|listing|one))\b|трет|第三|第3/.test(normalized)) {
+      return recommendations[2] || recommendations[0] || null;
+    }
+
+    if (/\b(second|2(?:nd)?\s+(?:option|listing|one))\b|втор|第二|第2/.test(normalized)) {
+      return recommendations[1] || recommendations[0] || null;
+    }
+
+    if (/\b(first|1(?:st)?\s+(?:option|listing|one))\b|перв|第一|第1/.test(normalized)) {
+      return recommendations[0] || null;
+    }
+
     return (
       recommendations.find(function (listing) {
         return normalizeReferenceText(listing.title) && normalized.indexOf(normalizeReferenceText(listing.title)) >= 0;
       }) || null
     );
+  }
+
+  function resolveLeadListingFromConversation(triggerMessage, recommendations) {
+    var direct = resolveReferencedListingFromMessage(triggerMessage, recommendations);
+
+    if (direct) {
+      return direct;
+    }
+
+    var selected = state.messages
+      .slice()
+      .reverse()
+      .filter(function (message) {
+        return message.role === "user";
+      })
+      .map(function (message) {
+        return resolveReferencedListingFromMessage(message.text || "", recommendations);
+      })
+      .find(Boolean);
+
+    return selected || recommendations[0] || null;
   }
 
   function normalizeReferenceText(value) {

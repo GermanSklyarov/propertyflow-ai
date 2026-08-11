@@ -81,7 +81,7 @@ export class AiChatService {
       return buildUnavailablePropertyResponse(request);
     }
 
-    const knowledge = await this.retrieveKnowledge(tenantId, request);
+    const knowledge = intent.includeAdvice || intent.includeNeighborhood ? await this.retrieveKnowledge(tenantId, request) : [];
     const advisorSummary = intent.includeAdvice ? await this.retrieveAdvisorSummary(tenantId, property) : undefined;
     const dueDiligence = advisorSummary
       ? buildAiChatDueDiligencePayloadFromSummaries([{ property, summary: advisorSummary }])
