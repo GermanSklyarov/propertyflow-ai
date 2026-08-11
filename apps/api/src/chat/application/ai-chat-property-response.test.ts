@@ -44,6 +44,39 @@ describe("ai-chat-property-response", () => {
     expect(draft.deterministicDraft).toContain("Please share your WhatsApp, Telegram, phone, or email");
   });
 
+  it("answers family and pet suitability questions instead of repeating the listing description", () => {
+    const familyDraft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("Can I live there with kids?"),
+      knowledge: [],
+      property: propertyFactory({ areaSqm: 45, bedrooms: 1, title: "Central Pattaya Rental Loft" }),
+      requestMessage: "Can I live there with kids?"
+    });
+    const petDraft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("Can I live there with pets?"),
+      knowledge: [],
+      property: propertyFactory({
+        amenities: ["pool", "gym"],
+        rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+        title: "Central Pattaya Rental Loft"
+      }),
+      requestMessage: "Can I live there with pets?"
+    });
+
+    expect(familyDraft.deterministicDraft).toContain("can be considered for living with kids");
+    expect(familyDraft.deterministicDraft).toContain("more suitable for one adult, a couple, or a small family");
+    expect(petDraft.deterministicDraft).toContain("I do not see pet-friendly or pets-allowed confirmed");
+    expect(petDraft.deterministicDraft).toContain("verify the building rules for dogs or cats");
+    expect(petDraft.deterministicDraft).not.toContain("Central Pattaya Rental Loft is a 1-bedroom condo");
+  });
+
   it("adds neighborhood, advisor, and knowledge context only when requested and supplied", () => {
     const draft = buildAiChatPropertyResponseDraft({
       advisorSummary: advisorSummaryFactory(),

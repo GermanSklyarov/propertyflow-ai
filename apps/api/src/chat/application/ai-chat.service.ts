@@ -117,7 +117,7 @@ export class AiChatService {
       : await this.properties.search(tenantId, search.filters);
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
-    const knowledge = await this.retrieveKnowledge(tenantId, request);
+    const knowledge = isMoreListingsRequest(request.message) ? [] : await this.retrieveKnowledge(tenantId, request);
     const dueDiligence = await this.retrieveDueDiligence(tenantId, matches);
     const draft = buildAiChatSearchResponseDraft({
       dueDiligence,

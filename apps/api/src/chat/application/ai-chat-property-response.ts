@@ -27,10 +27,11 @@ export function buildAiChatPropertyResponseDraft(options: {
   requestMessage?: string;
 }): AiChatResponseDraft {
   const citations: AiChatCitation[] = [propertyCitation(options.property)];
+  const suitabilityAnswer = buildSuitabilityAnswer(options.property, options.requestMessage);
   const answerParts = [
     options.intent.wantsViewing
       ? buildViewingHandoffAnswer(options.property, options.requestMessage)
-      : describeProperty(options.property)
+      : suitabilityAnswer ?? describeProperty(options.property)
   ];
 
   if (options.intent.includeNeighborhood && options.neighborhood) {
@@ -73,6 +74,43 @@ export function buildAiChatPropertyResponseDraft(options: {
     matchedPropertyIds: [options.property.id],
     suggestedActions: ["compare-similar-properties", "open-investment-calculator", "create-lead"]
   };
+}
+
+function buildSuitabilityAnswer(property: PropertySnapshot, requestMessage?: string): string | undefined {
+  const normalized = requestMessage?.toLowerCase() ?? "";
+
+  if (/\b(pet|pets|dog|cat|dogs|cats)\b|питом|собак|кош|สัตว์เลี้ยง|หมา|แมว|宠物|寵物|狗|猫|貓/i.test(normalized)) {
+    const amenities = new Set(property.amenities.map((amenity) => amenity.toLowerCase()));
+    const hasPetSignal = amenities.has("pet-friendly") || amenities.has("pets-allowed");
+    const space = `${property.areaSqm} sqm, ${property.bedrooms} bedroom${property.bedrooms === 1 ? "" : "s"}`;
+    const rent = property.rentalPriceMonthly
+      ? ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`
+      : "";
+
+    return hasPetSignal
+      ? `${property.title} looks suitable to check for pets: the listing has a pet-friendly signal, ${space}, and ${summarizeLocation(property)}. I would still ask the agent to confirm the building's current pet rules before booking.${rent}`
+      : `${property.title} may work on budget and location, but I do not see pet-friendly or pets-allowed confirmed in the listing facts. Please ask the agent to verify the building rules for dogs or cats before you rely on this option.${rent}`;
+  }
+
+  if (/\b(kid|kids|child|children|family)\b|семь|ребен|дет|ครอบครัว|เด็ก|家庭|孩子/i.test(normalized)) {
+    const bedroomNote =
+      property.bedrooms <= 1
+        ? `It is a ${property.bedrooms}-bedroom, ${property.areaSqm} sqm unit, so it is more suitable for one adult, a couple, or a small family than for a larger family.`
+        : `It has ${property.bedrooms} bedrooms and ${property.areaSqm} sqm, which is more comfortable for family living.`;
+    const rent = property.rentalPriceMonthly
+      ? ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`
+      : "";
+
+    return `${property.title} can be considered for living with kids, but check the layout and building rules carefully. ${bedroomNote} ${summarizeLocation(property)}.${rent}`;
+  }
+
+  return undefined;
+}
+
+function summarizeLocation(property: PropertySnapshot): string {
+  return property.beachDistanceMeters === undefined
+    ? "beach distance is not specified"
+    : `${property.beachDistanceMeters}m from the beach`;
 }
 
 function buildViewingHandoffAnswer(property: PropertySnapshot, requestMessage?: string): string {

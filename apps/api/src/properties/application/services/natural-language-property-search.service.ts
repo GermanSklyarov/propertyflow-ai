@@ -354,7 +354,12 @@ export class NaturalLanguagePropertySearchService {
 }
 
 function isRecommendableProperty(property: PropertySnapshot): boolean {
-  return property.status === "available";
+  return (
+    property.status === "available" &&
+    property.areaSqm >= 10 &&
+    (property.price.amount >= 100_000 || (property.rentalPriceMonthly?.amount ?? 0) >= 1_000) &&
+    !/(^|\s)(smoke|starter import)\b/i.test(property.title)
+  );
 }
 
 function hybridScore(

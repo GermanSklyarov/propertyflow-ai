@@ -146,6 +146,44 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.items.map((item) => item.id)).toEqual([available.id]);
   });
 
+  it("does not recommend smoke or incomplete imported listings", async () => {
+    const smoke = propertyFactory({ id: "smoke-property", title: "Smoke Beach Condo smoke-eb330e15" });
+    const incomplete = propertyFactory({
+      areaSqm: 1,
+      id: "starter-import",
+      price: { amount: 0, currency: "THB" },
+      title: "Starter Import Real Listing starter-import-73d24796"
+    });
+    const available = propertyFactory({ id: "property-available", title: "Central Pattaya Rental Loft" });
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) =>
+        propertyId === smoke.id ? smoke : propertyId === incomplete.id ? incomplete : available,
+      search: async () => []
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "pattaya rental condo" },
+        index: "propertyflow-properties-v1",
+        items: [
+          { propertyId: smoke.id },
+          { propertyId: incomplete.id },
+          { propertyId: available.id }
+        ],
+        total: 3
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "pattaya rental condo"
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual([available.id]);
+  });
+
   it("uses pgvector similarity to rerank recommendable indexed listings", async () => {
     const weakLexicalFirst = propertyFactory({ id: "11111111-1111-1111-1111-111111111111", title: "Generic City Condo" });
     const semanticBest = propertyFactory({ id: "22222222-2222-2222-2222-222222222222", title: "Beachfront Sea View Condo" });

@@ -665,7 +665,8 @@ describe("AiChatService", () => {
 
     expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
     expect(response.matchedPropertyIds).toEqual(["property-2"]);
-    expect(response.answer).toContain("Second Pet Friendly Condo is a 1-bedroom condo");
+    expect(response.answer).toContain("Second Pet Friendly Condo looks suitable to check for pets");
+    expect(response.answer).toContain("confirm the building's current pet rules");
   });
 
   it("reuses the previous search query when the visitor asks for more options", async () => {

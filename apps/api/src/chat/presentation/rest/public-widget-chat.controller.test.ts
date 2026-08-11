@@ -273,6 +273,73 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("Jomtien Compact One-Bed");
   });
 
+  it("does not expose raw search drafts when more options have no public cards", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer:
+            "I found 4 matching listings. Top matches: Smoke Beach Condo smoke-eb330e15. Relevant knowledge: Internal Concierge Handoff Instructions...",
+          matchedPropertyIds: ["smoke-property", "property-1", "property-2"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      ["smoke-property", propertyFactory({ id: "smoke-property", title: "Smoke Beach Condo smoke-eb330e15" })],
+      ["property-1", propertyFactory({ id: "property-1", title: "Terminal 21 Walkable Studio" })],
+      ["property-2", propertyFactory({ id: "property-2", title: "Central Pattaya Rental Loft" })]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Terminal 21 Walkable Studio" },
+              { propertyId: "property-2", title: "Central Pattaya Rental Loft" }
+            ],
+            role: "assistant",
+            text: "I found 3 matching listings."
+          }
+        ],
+        locale: "en",
+        message: "show me more options"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings).toEqual([]);
+    expect(response.answer).toContain("I do not have additional public listing cards");
+    expect(response.answer).not.toContain("Top matches");
+    expect(response.answer).not.toContain("Relevant knowledge");
+    expect(response.answer).not.toContain("Smoke Beach Condo");
+  });
+
   it("summarizes rental widget results with monthly rent instead of sale price", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

@@ -248,6 +248,10 @@ function normalizePublicWidgetAnswer(
 ): string {
   const normalizedAnswer = stripMarkdownEmphasis(answer).trim();
 
+  if (!recommendations.listings.length && suggestedActions.includes("save-search")) {
+    return buildNoAdditionalListingCardsMessage(locale);
+  }
+
   if (!recommendations.listings.length || !isListingDiscoveryResponse(suggestedActions)) {
     return normalizedAnswer;
   }
@@ -259,6 +263,17 @@ function normalizePublicWidgetAnswer(
 
 function isListingDiscoveryResponse(suggestedActions: string[]): boolean {
   return suggestedActions.includes("save-search");
+}
+
+function buildNoAdditionalListingCardsMessage(locale: TenantWidgetLanguage): string {
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: "I do not have additional public listing cards to show for this search right now. You can adjust the budget, area, or requirements and I can look again.",
+    ru: "Сейчас у меня нет дополнительных публичных карточек по этому поиску. Можно изменить бюджет, район или требования, и я поищу заново.",
+    th: "ตอนนี้ยังไม่มีการ์ดประกาศเพิ่มเติมสำหรับการค้นหานี้ ลองปรับงบ ทำเล หรือเงื่อนไข แล้วฉันจะค้นหาให้อีกครั้ง",
+    zh: "目前这个搜索没有更多可公开展示的房源卡片。你可以调整预算、区域或条件，我再帮你重新查找。"
+  };
+
+  return labels[locale] ?? labels.en;
 }
 
 function isMoreListingsRequest(message: string): boolean {
@@ -445,7 +460,12 @@ function summarizeAmenities(properties: PropertySnapshot[]): string {
 }
 
 function isPublicWidgetRecommendableProperty(property: PropertySnapshot): boolean {
-  return property.status === "available" && (property.price.amount >= 100_000 || (property.rentalPriceMonthly?.amount ?? 0) >= 1_000) && property.areaSqm >= 10;
+  return (
+    property.status === "available" &&
+    (property.price.amount >= 100_000 || (property.rentalPriceMonthly?.amount ?? 0) >= 1_000) &&
+    property.areaSqm >= 10 &&
+    !/(^|\s)(smoke|starter import)\b/i.test(property.title)
+  );
 }
 
 function buildListingCardDescription(property: PropertySnapshot, locale: TenantWidgetLanguage): string {
