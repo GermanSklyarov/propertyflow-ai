@@ -209,6 +209,141 @@ describe("PublicWidgetChatController", () => {
     expect(response.recommendedListings).toHaveLength(1);
   });
 
+  it("shows unseen listing cards when the visitor asks for more options", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 3 matching listings.",
+          matchedPropertyIds: ["property-1", "property-2", "property-3"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      ["property-1", propertyFactory({ id: "property-1", title: "Pratumnak Investment One-Bed" })],
+      ["property-2", propertyFactory({ id: "property-2", title: "Terminal 21 Walkable Studio" })],
+      ["property-3", propertyFactory({ id: "property-3", title: "Jomtien Compact One-Bed" })]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Pratumnak Investment One-Bed" },
+              { propertyId: "property-2", title: "Terminal 21 Walkable Studio" }
+            ],
+            role: "assistant",
+            text: "I found 3 matching listings."
+          }
+        ],
+        locale: "en",
+        message: "show me more options"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Jomtien Compact One-Bed"]);
+    expect(response.answer).toContain("Here is the top match");
+    expect(response.answer).toContain("Jomtien Compact One-Bed");
+  });
+
+  it("summarizes rental widget results with monthly rent instead of sale price", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 2 matching listings.",
+          matchedPropertyIds: ["property-1", "property-2"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          id: "property-1",
+          listingType: "sale_or_rent",
+          price: { amount: 3_450_000, currency: "THB" },
+          rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+          title: "Wongamat Sea View Residence"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          id: "property-2",
+          listingType: "rent",
+          price: { amount: 7_800_000, currency: "THB" },
+          rentalPriceMonthly: { amount: 29_000, currency: "THB" },
+          title: "Na Jomtien Beachfront Lease"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "find me a condo in pattaya under 30k per month"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("28k-29k THB/mo");
+    expect(response.answer).toContain("Wongamat Sea View Residence: 28k THB/mo");
+    expect(response.answer).not.toContain("3.5M-7.8M THB");
+  });
+
   it("does not expose draft or incomplete listings as public widget recommendation cards", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
@@ -736,6 +871,49 @@ describe("PublicWidgetChatController", () => {
     }));
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
       message: expect.stringContaining("1. Terminal 21 Walkable Studio (property-2)")
+    }));
+  });
+
+  it("extracts concrete viewing dates from widget leads", async () => {
+    const tenant = tenantFactory({ subscriptionPlan: "starter" });
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ propertyId: "property-2", tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      {
+        assertPublicWidgetOriginAllowed: vi.fn(),
+        getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+        recordPublicWidgetAsk: vi.fn()
+      } as unknown as TenantService,
+      { ask: vi.fn() } as unknown as AiChatService,
+      leads,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    await controller.createLead(
+      "demo-agency",
+      {
+        contactName: "Website visitor",
+        contactPhone: "+660827955673",
+        conversation: [
+          { role: "user", text: "find me a condo in pattaya under 3m" },
+          {
+            recommendedListings: [{ propertyId: "property-2", title: "Terminal 21 Walkable Studio" }],
+            role: "assistant",
+            text: "I can help arrange this viewing."
+          },
+          { role: "user", text: "i like the second option, can i view it on 15 august at 3p.m?" }
+        ],
+        locale: "en",
+        message: "my phone number +660827955673",
+        recommendedListings: [{ propertyId: "property-2", title: "Terminal 21 Walkable Studio" }]
+      },
+      "https://agency.example.com"
+    );
+
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Timing: 15 august at 3p.m")
     }));
   });
 

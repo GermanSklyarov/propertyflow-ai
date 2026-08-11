@@ -80,7 +80,7 @@
   ];
   var searchIntentPatterns = [
     /(найд|подбер|покаж|посовет|вариант|кондо|квартир|дом|студи|район|инвест|аренд|снять|купить)/i,
-    /(listing|property|condo|apartment|house|rent|buy|recommend|suggest|area|investment|budget|bedroom)/i,
+    /(listing|property|condo|apartment|house|rent|buy|recommend|suggest|area|investment|budget|bedroom|more options|show me more|show all|see all|other options)/i,
     /(หา|ค้นหา|แนะนำ|ตัวเลือก|คอนโด|อพาร์ตเมนต์|บ้าน|เช่า|ซื้อ|ทำเล|ย่าน|ลงทุน|งบ|ห้องนอน)/i,
     /(找|寻找|搜尋|搜索|推荐|推薦|房源|公寓|共管公寓|房子|住宅|租|买|買|区域|區域|地段|投资|投資|预算|預算|卧室|臥室)/i
   ];

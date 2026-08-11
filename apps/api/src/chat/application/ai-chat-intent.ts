@@ -3,10 +3,13 @@ export interface AiChatIntent {
   includeNeighborhood: boolean;
   referencedListingIndex?: number;
   route: "property-follow-up" | "search";
+  wantsViewing: boolean;
 }
 
 const propertyFollowUpPattern =
   /(first option|second option|third option|see it|view it|visit|viewing|schedule|book|перв|втор|трет|посмотр|просмотр|запис|นัดดู|ดูห้อง|ดูคอนโด|ตัวเลือก|第[123]|第一|第二|第三|看房|预约|預約)/i;
+const viewingRequestPattern =
+  /\b(?:see|view|visit|viewing|schedule|book)\b|посмотр|просмотр|запис|นัดดู|ดูห้อง|ดูคอนโด|看房|预约|預約/i;
 
 const thirdListingPattern = /\b(?:third|3(?:rd)?\s+(?:option|listing|one))\b|трет|สาม|第三|第3|三/i;
 const secondListingPattern = /\b(?:second|2(?:nd)?\s+(?:option|listing|one))\b|втор|สอง|第二|第2|二/i;
@@ -24,7 +27,8 @@ export function classifyAiChatIntent(message: string): AiChatIntent {
     includeAdvice: advicePattern.test(normalized),
     includeNeighborhood: neighborhoodPattern.test(normalized),
     referencedListingIndex: isPropertyFollowUp ? resolveReferencedListingIndex(normalized) : undefined,
-    route: isPropertyFollowUp ? "property-follow-up" : "search"
+    route: isPropertyFollowUp ? "property-follow-up" : "search",
+    wantsViewing: viewingRequestPattern.test(normalized)
   };
 }
 

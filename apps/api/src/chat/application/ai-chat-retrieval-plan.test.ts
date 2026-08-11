@@ -62,6 +62,65 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("recognizes common viewing date phrases as booking follow-ups", () => {
+    const baseConversation = [
+      {
+        recommendedListings: [
+          { propertyId: "property-1", title: "Pratumnak Investment One-Bed" },
+          { propertyId: "property-2", title: "Terminal 21 Walkable Studio" }
+        ],
+        role: "assistant" as const,
+        text: "I found two options."
+      }
+    ];
+    const messages = [
+      "i like the second option, can i view it on 15 august at 3p.m?",
+      "i like the second option, can i view it this weekend?",
+      "i like the second option, can i view it tomorrow at 3 p.m?",
+      "i would lile to view the second option tomorrow at 1 pm",
+      "can i view the second option next week?"
+    ];
+
+    for (const message of messages) {
+      expect(
+        planAiChatRetrieval({
+          conversation: baseConversation,
+          locale: "en",
+          message
+        })
+      ).toMatchObject({
+        mode: "property-detail",
+        propertyId: "property-2",
+        reason: "follow-up-reference"
+      });
+    }
+  });
+
+  it("keeps later pronoun viewing requests on the previously selected listing", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Pratumnak Investment One-Bed" },
+              { propertyId: "property-2", title: "Terminal 21 Walkable Studio" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          },
+          { role: "user", text: "can i view the second option next week?" },
+          { role: "assistant", text: "Please share your contact so the team can confirm." }
+        ],
+        locale: "en",
+        message: "can i view it?"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-2",
+      reason: "follow-up-reference"
+    });
+  });
+
   it("resolves named listings from prior recommendations even without ordinal wording", () => {
     expect(
       planAiChatRetrieval({

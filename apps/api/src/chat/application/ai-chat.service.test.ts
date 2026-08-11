@@ -426,6 +426,58 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("New Search Result Condo");
   });
 
+  it("answers viewing requests with a handoff prompt and the requested slot", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      ["property-1", propertyFactory({ id: "property-1", title: "Pratumnak Investment One-Bed" })],
+      [
+        "property-2",
+        propertyFactory({
+          id: "property-2",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 19_000, currency: "THB" },
+          title: "Terminal 21 Walkable Studio"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Pratumnak Investment One-Bed" },
+            { propertyId: "property-2", title: "Terminal 21 Walkable Studio" }
+          ],
+          role: "assistant",
+          text: "I found two options."
+        }
+      ],
+      locale: "en",
+      message: "i like the second option, can i view it tomorrow at 3 p.m?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["property-2"]);
+    expect(response.answer).toContain("I can help arrange a viewing of Terminal 21 Walkable Studio for tomorrow at 3 p.m");
+    expect(response.answer).toContain("Please share your WhatsApp, Telegram, phone, or email");
+    expect(response.answer).not.toContain("Terminal 21 Walkable Studio is a 1-bedroom condo");
+  });
+
   it("compares the previous recommendation shortlist instead of searching again", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([

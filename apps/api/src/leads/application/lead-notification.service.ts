@@ -440,7 +440,7 @@ function parseContactPreference(text: string): string | undefined {
 function parseTiming(text: string): string | undefined {
   const matches = [
     ...text.matchAll(
-      /next week|next month|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|tomorrow|today|within\s+[0-9]+\s+(?:days|weeks|months)|следующ(?:ей|ий|ем)\s+\S+|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|下周|下週|下个月|下個月/gi
+      /next week|next month|this weekend|weekend|day after tomorrow|tomorrow|today|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|后天|後天|周末|週末|下周|下週|下个月|下個月/gi
     )
   ];
   const match = matches.at(-1);

@@ -15,7 +15,7 @@ describe("ai-chat-property-response", () => {
         contextLines: ["Structured due diligence context"],
         insights: []
       },
-      intent: classifyAiChatIntent("May I see this listing?"),
+      intent: classifyAiChatIntent("Tell me more about this listing"),
       knowledge: [],
       property: propertyFactory()
     });
@@ -26,6 +26,22 @@ describe("ai-chat-property-response", () => {
     expect(draft.citations).toEqual([expect.objectContaining({ propertyId: "property-1", source: "property" })]);
     expect(draft.matchedPropertyIds).toEqual(["property-1"]);
     expect(draft.suggestedActions).toEqual(["compare-similar-properties", "open-investment-calculator", "create-lead"]);
+  });
+
+  it("builds a viewing handoff draft for booking requests", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("May I view this listing tomorrow at 3 pm?"),
+      knowledge: [],
+      property: propertyFactory(),
+      requestMessage: "May I view this listing tomorrow at 3 pm?"
+    });
+
+    expect(draft.deterministicDraft).toContain("I can help arrange a viewing of Wongamat Sea View Residence for tomorrow at 3 pm");
+    expect(draft.deterministicDraft).toContain("Please share your WhatsApp, Telegram, phone, or email");
   });
 
   it("adds neighborhood, advisor, and knowledge context only when requested and supplied", () => {

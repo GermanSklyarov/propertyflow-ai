@@ -243,12 +243,22 @@ export class NaturalLanguagePropertySearchService {
       return Number.isFinite(amount) && amount > 0 ? { amountThb: amount, cadence } : undefined;
     }
 
+    const thousandMatch = query.match(
+      /(?:до|under|below|max|maximum|budget|งบ|ไม่เกิน|ต่ำกว่า|预算|預算|不超过|不超過|低于|低於)?\s*(\d+(?:[.,]\d+)?)\s*(?:k|thousand|тыс)\s*(?:бат|baht|thb|บาท|泰铢|泰銖)?/
+    );
+    if (thousandMatch?.[1]) {
+      return {
+        amountThb: Math.round(Number(thousandMatch[1].replace(",", ".")) * 1_000),
+        cadence
+      };
+    }
+
     return undefined;
   }
 
   private detectListingType(query: string): PropertySearchRequest["listingType"] | undefined {
     const investmentSaleIntent = /(?:rent out|yield|roi|invest|investment|сдач|доход|инвест|ลงทุน|ผลตอบแทน|投资|投資|收益|回报|回報)/.test(query);
-    const rentalIntent = /(?:снять|сним|арендовать|аренда|rent|lease|เช่า|ให้เช่า|租房|租公寓|月租)/.test(query);
+    const rentalIntent = /(?:снять|сним|арендовать|аренда|rent|lease|monthly|per month|month|месяц|мес|เช่า|ให้เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月)/.test(query);
     const saleIntent = /(?:купить|покуп|продаж|buy|purchase|sale|ownership|ซื้อ|ขาย|买|買|购买|購買|出售)/.test(query) || investmentSaleIntent;
 
     if (rentalIntent && saleIntent) {

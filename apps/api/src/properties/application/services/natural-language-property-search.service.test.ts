@@ -53,6 +53,22 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.filters.lifestyleSignals).toEqual(expect.arrayContaining(["beach-life", "remote-work"]));
   });
 
+  it("treats compact monthly budgets as rental searches", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query: "find me a condo in pattaya under 30k per month"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      listingType: "rent",
+      market: "pattaya",
+      maxMonthlyRentThb: 30_000
+    });
+    expect(interpretation.filters).not.toHaveProperty("maxPriceThb");
+  });
+
   it("extracts Chinese sale and investment filters", () => {
     const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 

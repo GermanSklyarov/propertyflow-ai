@@ -81,7 +81,7 @@ export class AiChatService {
       return buildUnavailablePropertyResponse(request);
     }
 
-    const knowledge = intent.includeAdvice || intent.includeNeighborhood ? await this.retrieveKnowledge(tenantId, request) : [];
+    const knowledge = intent.includeAdvice ? await this.retrieveKnowledge(tenantId, request) : [];
     const advisorSummary = intent.includeAdvice ? await this.retrieveAdvisorSummary(tenantId, property) : undefined;
     const dueDiligence = advisorSummary
       ? buildAiChatDueDiligencePayloadFromSummaries([{ property, summary: advisorSummary }])
@@ -95,7 +95,8 @@ export class AiChatService {
       intent,
       knowledge,
       neighborhood,
-      property
+      property,
+      requestMessage: request.message
     });
 
     return this.buildResponse({
@@ -337,10 +338,9 @@ function buildRecentListingComparisonAnswer(
   const best = scored[0]?.property;
   const criteria = comparisonLabel(comparison);
   const facts = scored.map(({ property }) => `${property.title}: ${comparisonFacts(property, comparison)}.`).join(" ");
-  const question = message.trim().endsWith("?") ? "" : " ";
 
   return best
-    ? `Among the options we just discussed, ${best.title} looks strongest for ${criteria} based on the available listing facts.${question}${facts}`
+    ? `Among the options we just discussed, ${best.title} looks strongest for ${criteria} based on the available listing facts. ${facts}`
     : `I can compare only the options we just discussed for ${criteria}. ${facts}`;
 }
 

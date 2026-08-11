@@ -15,7 +15,7 @@ const petsComparisonPattern = /\bpets?\b|\bdogs?\b|\bcats?\b|собак|кош|�
 const moreListingsPattern =
   /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i;
 const viewingSlotFollowUpPattern =
-  /\b(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|am|pm|morning|afternoon|evening|tonight|\d{1,2}(?::\d{2})?)\b|сегодня|завтра|понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|утром|днем|вечером|час|โมง|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์|วันเสาร์|วันอาทิตย์|上午|下午|晚上|明天|今天|周一|週一|周二|週二|周三|週三|周四|週四|周五|週五|周六|週六|周日|週日/i;
+  /\b(?:today|tomorrow|day after tomorrow|next week|this weekend|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|am|pm|a\.m\.?|p\.m\.?|morning|afternoon|evening|tonight|\d{1,2}(?::\d{2})?|\d{1,2}\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))\b|in\s+\d+\s+days?|через\s+\d+\s+дн|послезавтра|сегодня|завтра|следующ|выходн|понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|утром|днем|вечером|час|โมง|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์|วันเสาร์|วันอาทิตย์|上午|下午|晚上|明天|今天|后天|後天|周一|週一|周二|週二|周三|週三|周四|週四|周五|週五|周六|週六|周日|週日/i;
 const contextualPropertyReferencePattern =
   /\b(?:it|this\s+(?:condo|property|listing|option|unit|project|one)|that\s+(?:condo|property|listing|option|unit|project|one))\b|эт(?:от|а|о|у|ого|ой)?\s+(?:кондо|объект|вариант|квартир[ауы]?|проект)|\b(?:его|ее|её|он|она)\b|ห้องนี้|คอนโดนี้|ตัวเลือกนี้|รายการนี้|โครงการนี้|这个(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|這個(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|这套|這套|它/i;
 const propertyDetailQuestionPattern =
@@ -32,6 +32,7 @@ export interface AiChatRetrievalPlan {
 export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan {
   const intent = classifyAiChatIntent(request.message);
   const namedPropertyId = resolveNamedPropertyId(request);
+  const selectedPropertyId = resolveSelectedPropertyIdFromConversation(request);
 
   if (request.propertyId) {
     return {
@@ -70,7 +71,10 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
   }
 
   if (isViewingSlotFollowUp(request)) {
-    const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
+    const propertyId =
+      intent.referencedListingIndex === undefined
+        ? selectedPropertyId ?? resolveReferencedPropertyId(request, 0)
+        : resolveReferencedPropertyId(request, intent.referencedListingIndex) ?? selectedPropertyId;
 
     if (propertyId) {
       return {
@@ -86,7 +90,7 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
   }
 
   if (isContextualPropertyFollowUp(request)) {
-    const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
+    const propertyId = selectedPropertyId ?? resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
 
     if (propertyId) {
       return {
@@ -102,7 +106,7 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
   }
 
   if (isPropertyDetailQuestion(request)) {
-    const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
+    const propertyId = selectedPropertyId ?? resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
 
     if (propertyId) {
       return {
@@ -141,6 +145,65 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     mode: "listing-search",
     reason: "search-request"
   };
+}
+
+function resolveSelectedPropertyIdFromConversation(request: AiChatRequest): string | undefined {
+  let currentListings: Array<{ propertyId: string; title: string }> = [];
+  let selectedPropertyId: string | undefined;
+
+  for (const turn of request.conversation ?? []) {
+    const listings = (turn.recommendedListings ?? [])
+      .filter((listing) => listing.propertyId.trim() && listing.title.trim())
+      .slice(0, 3);
+
+    if (turn.role === "assistant" && listings.length) {
+      currentListings = listings;
+      if (listings.length === 1) {
+        selectedPropertyId = listings[0]?.propertyId;
+      }
+    }
+
+    if (turn.role === "user" && currentListings.length) {
+      const index = resolveReferencedListingIndexFromText(turn.text);
+      const byIndex = index === undefined ? undefined : currentListings[index]?.propertyId ?? currentListings[0]?.propertyId;
+      const byName = resolveNamedPropertyIdFromListings(turn.text, currentListings);
+
+      selectedPropertyId = byName ?? byIndex ?? selectedPropertyId;
+    }
+  }
+
+  return selectedPropertyId;
+}
+
+function resolveReferencedListingIndexFromText(message: string): number | undefined {
+  const normalized = normalizeReferenceText(message);
+
+  if (/\b(?:third|3(?:rd)?\s+(?:option|listing|one))\b|трет|สาม|第三|第3|三/i.test(normalized)) {
+    return 2;
+  }
+
+  if (/\b(?:second|2(?:nd)?\s+(?:option|listing|one))\b|втор|สอง|第二|第2|二/i.test(normalized)) {
+    return 1;
+  }
+
+  if (/\b(?:first|1(?:st)?\s+(?:option|listing|one))\b|перв|第一|第1|一/i.test(normalized)) {
+    return 0;
+  }
+
+  return undefined;
+}
+
+function resolveNamedPropertyIdFromListings(
+  message: string,
+  listings: Array<{ propertyId: string; title: string }>
+): string | undefined {
+  const normalizedMessage = normalizeReferenceText(message);
+
+  return listings.find((listing) => {
+    const title = normalizeReferenceText(listing.title);
+
+    return title && normalizedMessage.includes(title);
+  })?.propertyId;
 }
 
 function isViewingSlotFollowUp(request: AiChatRequest): boolean {

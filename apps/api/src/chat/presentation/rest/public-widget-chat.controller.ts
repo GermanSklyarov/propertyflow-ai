@@ -108,7 +108,14 @@ export class PublicWidgetChatController {
       origin: origin ?? null,
       referer: referer ?? null
     });
-    const recommendations = await this.buildRecommendedListings(tenant, response.matchedPropertyIds, origin, referer, locale);
+    const recommendations = await this.buildRecommendedListings(
+      tenant,
+      response.matchedPropertyIds,
+      origin,
+      referer,
+      locale,
+      payload
+    );
 
     return {
       ...response,
@@ -181,7 +188,8 @@ export class PublicWidgetChatController {
     propertyIds: string[],
     origin?: string,
     referer?: string,
-    locale: TenantWidgetLanguage = "en"
+    locale: TenantWidgetLanguage = "en",
+    payload?: PublicWidgetAskDto
   ): Promise<PublicWidgetRecommendationBundle> {
     const baseOrigin = resolveRequestOrigin(origin) ?? resolveRequestOrigin(referer);
     const listingUrlTemplate = normalizeListingUrlTemplate(tenant.widget.listingUrlTemplate);
@@ -194,9 +202,10 @@ export class PublicWidgetChatController {
       };
     }
 
-    const properties = await Promise.all(
-      propertyIds.slice(0, 8).map((propertyId) => this.properties.findById(tenant.id, propertyId))
-    );
+    const excludedPropertyIds = payload && isMoreListingsRequest(payload.message) ? getShownListingIds(payload.conversation) : new Set<string>();
+    const visiblePropertyIds = propertyIds.filter((propertyId) => !excludedPropertyIds.has(propertyId));
+    const idsToLoad = visiblePropertyIds.length ? visiblePropertyIds : propertyIds;
+    const properties = await Promise.all(idsToLoad.slice(0, 8).map((propertyId) => this.properties.findById(tenant.id, propertyId)));
     const matchedProperties = properties
       .filter((property): property is PropertySnapshot => Boolean(property))
       .filter(isPublicWidgetRecommendableProperty)
@@ -212,6 +221,15 @@ export class PublicWidgetChatController {
       totalMatches: propertyIds.length
     };
   }
+}
+
+function getShownListingIds(conversation?: AiChatTurn[]): Set<string> {
+  return new Set(
+    (conversation ?? [])
+      .flatMap((turn) => turn.recommendedListings ?? [])
+      .map((listing) => listing.propertyId.trim())
+      .filter(Boolean)
+  );
 }
 
 function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requestedLocale: TenantWidgetLanguage): TenantWidgetLanguage {
@@ -241,6 +259,12 @@ function normalizePublicWidgetAnswer(
 
 function isListingDiscoveryResponse(suggestedActions: string[]): boolean {
   return suggestedActions.includes("save-search");
+}
+
+function isMoreListingsRequest(message: string): boolean {
+  return /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i.test(
+    message
+  );
 }
 
 function stripMarkdownEmphasis(value: string): string {
@@ -319,9 +343,15 @@ function formatKindLabel(kind?: PropertySnapshot["kind"]): string {
 }
 
 function formatPriceRange(properties: PropertySnapshot[]): string {
-  const prices = properties
-    .map((property) => property.price)
-    .filter((price): price is PropertySnapshot["price"] => Boolean(price) && price.amount >= 100_000);
+  const rentalPrices = properties.flatMap((property) =>
+    property.rentalPriceMonthly && property.rentalPriceMonthly.amount >= 1_000 ? [property.rentalPriceMonthly] : []
+  );
+  const shouldShowRent =
+    rentalPrices.length > 0 &&
+    properties.every((property) => property.listingType === "rent" || property.listingType === "sale_or_rent" || property.rentalPriceMonthly);
+  const prices = shouldShowRent
+    ? rentalPrices
+    : properties.map((property) => property.price).filter((price): price is PropertySnapshot["price"] => Boolean(price) && price.amount >= 100_000);
 
   if (!prices.length) {
     return "";
@@ -332,8 +362,8 @@ function formatPriceRange(properties: PropertySnapshot[]): string {
   const max = Math.max(...prices.map((price) => price.amount));
 
   return min === max
-    ? `${formatMoneyAmount(min)} ${currency}`
-    : `${formatMoneyAmount(min)}-${formatMoneyAmount(max)} ${currency}`;
+    ? `${formatMoneyAmount(min)} ${currency}${shouldShowRent ? "/mo" : ""}`
+    : `${formatMoneyAmount(min)}-${formatMoneyAmount(max)} ${currency}${shouldShowRent ? "/mo" : ""}`;
 }
 
 function formatMoneyAmount(value: number): string {
@@ -415,7 +445,7 @@ function summarizeAmenities(properties: PropertySnapshot[]): string {
 }
 
 function isPublicWidgetRecommendableProperty(property: PropertySnapshot): boolean {
-  return property.status === "available" && property.price.amount >= 100_000 && property.areaSqm >= 10;
+  return property.status === "available" && (property.price.amount >= 100_000 || (property.rentalPriceMonthly?.amount ?? 0) >= 1_000) && property.areaSqm >= 10;
 }
 
 function buildListingCardDescription(property: PropertySnapshot, locale: TenantWidgetLanguage): string {
@@ -606,7 +636,7 @@ function parseContactPreference(text: string): string | undefined {
 function parseTiming(text: string): string | undefined {
   const matches = [
     ...text.matchAll(
-      /next week|next month|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|tomorrow|today|within\s+[0-9]+\s+(?:days|weeks|months)|следующ(?:ей|ий|ем)\s+\S+|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|下周|下週|下个月|下個月/gi
+      /next week|next month|this weekend|weekend|day after tomorrow|tomorrow|today|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|后天|後天|周末|週末|下周|下週|下个月|下個月/gi
     )
   ];
   const match = matches.at(-1);
