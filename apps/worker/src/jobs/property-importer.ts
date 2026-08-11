@@ -12,6 +12,7 @@ import {
   type PropertyKind,
   type PropertyListingType,
   type PropertyProjectStatus,
+  type PropertyStatus,
   type ThailandMarket
 } from "@propertyflow/domain";
 
@@ -23,6 +24,7 @@ const supportedMarkets = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"
 const supportedKinds = ["condo", "villa", "townhouse", "land", "commercial"] as const;
 const supportedListingTypes = ["sale", "rent", "sale_or_rent"] as const;
 const supportedProjectStatuses = ["planned", "under_construction", "completed", "paused"] as const;
+const supportedPropertyStatuses = ["draft", "available", "reserved", "sold", "rented", "archived"] as const;
 
 const marketCoordinates = {
   pattaya: { latitude: 12.9236, longitude: 100.8825 },
@@ -47,7 +49,9 @@ interface ImportedPropertyDraft {
   floor?: number;
   foreignQuota?: string;
   kind: PropertyKind;
+  latitude?: number;
   listingType: PropertyListingType;
+  longitude?: number;
   maintenanceFeeMonthlyThb?: number;
   market: ThailandMarket;
   minimumRentalMonths?: number;
@@ -59,6 +63,7 @@ interface ImportedPropertyDraft {
   projectStatus?: PropertyProjectStatus;
   rawPayload?: Record<string, unknown>;
   rentalPriceMonthlyThb?: number;
+  status: PropertyStatus;
   title: string;
 }
 
@@ -80,6 +85,11 @@ interface ImportIssue {
   reason: string;
   rowNumber: number;
   title?: string;
+}
+
+interface ImportDraftOptions {
+  relaxed?: boolean;
+  storeRawPayload?: boolean;
 }
 
 export interface PropertyImportResult {
@@ -126,7 +136,10 @@ export class PropertyImporter {
 
     for (const [index, row] of rows.entries()) {
       try {
-        const draft = toImportedPropertyDraft(row);
+        const draft = toImportedPropertyDraft(row, {
+          relaxed: importMode === "concierge_index_only",
+          storeRawPayload: importMode === "concierge_index_only"
+        });
 
         if (draft.externalId) {
           rowsWithExternalId += 1;
@@ -198,7 +211,11 @@ export class PropertyImporter {
   private async insertProperty(tenantId: string, draft: ImportedPropertyDraft): Promise<string> {
     const propertyId = crypto.randomUUID();
     const now = new Date().toISOString();
-    const location = marketCoordinates[draft.market];
+    const fallbackLocation = marketCoordinates[draft.market];
+    const location = {
+      latitude: draft.latitude ?? fallbackLocation.latitude,
+      longitude: draft.longitude ?? fallbackLocation.longitude
+    };
 
     const client = await this.pool.connect();
 
@@ -248,7 +265,7 @@ export class PropertyImporter {
             $7,
             $8,
             $9,
-            'draft',
+            $25,
             $10,
             'THB',
             $11,
@@ -277,6 +294,7 @@ export class PropertyImporter {
             kind = excluded.kind,
             listing_type = excluded.listing_type,
             market = excluded.market,
+            status = excluded.status,
             price_amount = excluded.price_amount,
             price_currency = excluded.price_currency,
             rental_price_monthly_amount = excluded.rental_price_monthly_amount,
@@ -322,7 +340,8 @@ export class PropertyImporter {
           draft.maintenanceFeeMonthlyThb ?? null,
           draft.amenities,
           now,
-          now
+          now,
+          draft.status
         ]
       );
       await client.query(
@@ -659,6 +678,20 @@ function parseImportRows(content: string, payload: PropertyImportJobPayload): Im
   }
 
   return parseJsonRows(content);
+}
+
+export function parseImportedPropertyDraftsForDiagnostics(
+  content: string,
+  payload: Pick<PropertyImportJobPayload, "columnMapping" | "fieldMapping" | "importMode" | "source">
+) {
+  const importMode = payload.importMode ?? "hybrid";
+
+  return parseImportRows(content, payload as PropertyImportJobPayload).map((row) =>
+    toImportedPropertyDraft(row, {
+      relaxed: importMode === "concierge_index_only",
+      storeRawPayload: importMode === "concierge_index_only"
+    })
+  );
 }
 
 function parseJsonRows(content: string): ImportRow[] {
@@ -1026,52 +1059,69 @@ function parseCsvRows(content: string, columnMapping: Record<string, string> | u
   });
 }
 
-function toImportedPropertyDraft(row: ImportRow): ImportedPropertyDraft {
-  const title = getString(row.values.title);
+function toImportedPropertyDraft(row: ImportRow, options: ImportDraftOptions = {}): ImportedPropertyDraft {
+  const externalId = getString(
+    getAlias(row.values, ["externalid", "external_id", "sourceid", "source_id", "reference_code", "referencecode", "listingid", "listing_id"])
+  );
+  const market = getEnumValue(normalizeEnumValue(getString(getAlias(row.values, ["market", "district"]))), supportedMarkets, "pattaya");
+  const kind = getEnumValue(normalizeEnumValue(getString(getAlias(row.values, ["kind", "property_type", "propertytype"]))), supportedKinds, "condo");
+  const projectName = getString(getAlias(row.values, ["projectname", "project_name", "development", "compound"]));
+  const bedrooms = getInteger(row.values.bedrooms, 0);
+  const areaSqm = getNumber(getAlias(row.values, ["areasqm", "area_sqm", "area", "size_sqm", "sizesqm"]), 1);
+  const title = getString(row.values.title) ?? (options.relaxed ? buildRelaxedImportTitle(row, { areaSqm, bedrooms, externalId, kind, market, projectName }) : undefined);
 
   if (!title) {
     throw new Error("Missing title");
   }
 
-  const market = getEnumValue(getString(row.values.market), supportedMarkets, "pattaya");
-
   return {
-    address: getString(row.values.address),
-    amenities: getAmenities(row.values.amenities),
-    areaSqm: getNumber(getAlias(row.values, ["areasqm", "area_sqm", "area"]), 1),
+    address: getAddress(row.values),
+    amenities: getAmenities(getAlias(row.values, ["amenities", "features"]), row.values),
+    areaSqm,
     availableFrom: getString(getAlias(row.values, ["availablefrom", "available_from", "available_start"])),
     availableUntil: getString(getAlias(row.values, ["availableuntil", "available_until", "available_end"])),
     bathrooms: getInteger(row.values.bathrooms, 0),
-    beachDistanceMeters: getOptionalInteger(getAlias(row.values, ["beachdistancemeters", "beach_distance_meters"])),
-    bedrooms: getInteger(row.values.bedrooms, 0),
-    customAttributes: getCustomAttributes(row.values.__customAttributes),
+    beachDistanceMeters: getOptionalInteger(
+      getAlias(row.values, ["beachdistancemeters", "beach_distance_meters", "distance_to_beach_m", "distancetobeachm"])
+    ),
+    bedrooms,
+    customAttributes: [...getCustomAttributes(row.values.__customAttributes), ...getCsvCustomAttributes(row.values)],
     description: getString(row.values.description),
-    externalId: getString(getAlias(row.values, ["externalid", "external_id", "sourceid", "source_id", "listingid", "listing_id"])),
+    externalId,
     floor: getOptionalInteger(row.values.floor),
     foreignQuota: getString(getAlias(row.values, ["foreignquota", "foreign_quota", "quota"])),
-    kind: getEnumValue(getString(row.values.kind), supportedKinds, "condo"),
-    listingType: getEnumValue(getString(getAlias(row.values, ["listingtype", "listing_type"])), supportedListingTypes, "sale_or_rent"),
+    kind,
+    latitude: getOptionalNumber(row.values.latitude),
+    listingType: getEnumValue(
+      normalizeListingType(getString(getAlias(row.values, ["listingtype", "listing_type", "deal_type", "dealtype"]))),
+      supportedListingTypes,
+      "sale_or_rent"
+    ),
+    longitude: getOptionalNumber(row.values.longitude),
     maintenanceFeeMonthlyThb: getOptionalNumber(
       getAlias(row.values, ["maintenancefeemonthlythb", "maintenance_fee_monthly_thb", "maintenance"])
     ),
     market,
-    minimumRentalMonths: getOptionalInteger(getAlias(row.values, ["minimumrentalmonths", "minimum_rental_months", "min_rental_months"])),
+    minimumRentalMonths: getOptionalInteger(
+      getAlias(row.values, ["minimumrentalmonths", "minimum_rental_months", "min_rental_months", "min_long_term_months"])
+    ),
     monthlyRentEstimateThb: getOptionalNumber(
       getAlias(row.values, ["monthlyrentestimatethb", "monthly_rent_estimate_thb", "rentestimate"])
     ),
     priceCurrency: getString(getAlias(row.values, ["pricecurrency", "price_currency"])),
-    priceThb: getNumber(getAlias(row.values, ["pricethb", "price_thb", "price"]), 0),
+    priceThb: getNumber(getAlias(row.values, ["pricethb", "price_thb", "price", "sale_price_thb", "salepricethb"]), 0),
     projectDeveloper: getString(getAlias(row.values, ["projectdeveloper", "project_developer", "developer"])),
-    projectName: getString(getAlias(row.values, ["projectname", "project_name", "development", "compound"])),
+    projectName,
     projectStatus: getEnumValue(
-      getString(getAlias(row.values, ["projectstatus", "project_status", "construction_status"])),
+      normalizeEnumValue(getString(getAlias(row.values, ["projectstatus", "project_status", "construction_status"]))),
       supportedProjectStatuses,
       "completed"
     ),
-    rawPayload: getRawPayload(row.values.__rawPayload),
+    rawPayload: options.storeRawPayload ? sanitizeRawPayload(row.values) : getRawPayload(row.values.__rawPayload),
     rentalPriceMonthlyThb: getOptionalNumber(
-      getAlias(row.values, ["rentalpricemonthlythb", "rental_price_monthly_thb", "monthly_rent"])
+      getAlias(row.values, ["rentalpricemonthlythb", "rental_price_monthly_thb", "monthly_rent", "rent_long_term_thb_month"])
     ),
+    status: getEnumValue(normalizeStatus(getString(row.values.status)), supportedPropertyStatuses, "draft"),
     title
   };
 }
@@ -1145,6 +1195,97 @@ function normalizeProjectName(value: string) {
     .replace(/[^\p{Letter}\p{Number}]+/gu, "");
 }
 
+function buildRelaxedImportTitle(
+  row: ImportRow,
+  context: {
+    areaSqm: number;
+    bedrooms: number;
+    externalId?: string;
+    kind: PropertyKind;
+    market: ThailandMarket;
+    projectName?: string;
+  }
+) {
+  const reference = context.externalId ? ` ${context.externalId}` : ` row ${row.rowNumber}`;
+  const bedroomLabel = context.bedrooms > 0 ? `${context.bedrooms}BR ` : "";
+  const areaLabel = context.areaSqm > 1 ? `${context.areaSqm} sqm ` : "";
+  const location = [getString(row.values.subdistrict), formatMarketLabel(context.market)].filter(Boolean).join(" - ");
+  const parts = [
+    `${bedroomLabel}${areaLabel}${formatPropertyKindLabel(context.kind)}`.trim(),
+    context.projectName ? `at ${context.projectName}` : undefined,
+    location ? `in ${location}` : undefined
+  ].filter(Boolean);
+
+  return `${parts.join(" ")}${reference}`;
+}
+
+function formatPropertyKindLabel(kind: PropertyKind) {
+  return kind.replace(/_/g, " ");
+}
+
+function formatMarketLabel(market: ThailandMarket) {
+  return market
+    .split("-")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function normalizeEnumValue(value: string | undefined) {
+  return value?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function normalizeListingType(value: string | undefined): PropertyListingType | undefined {
+  const normalized = normalizeEnumValue(value)?.replace(/&/g, "_").replace(/_+/g, "_");
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (["sale_and_rent", "sale_rent", "sales_and_rent", "buy_and_rent", "for_sale_and_rent"].includes(normalized)) {
+    return "sale_or_rent";
+  }
+
+  if (["sale", "for_sale", "buy", "purchase"].includes(normalized)) {
+    return "sale";
+  }
+
+  if (["rent", "rental", "for_rent", "lease"].includes(normalized)) {
+    return "rent";
+  }
+
+  return normalized as PropertyListingType;
+}
+
+function normalizeStatus(value: string | undefined): PropertyStatus | undefined {
+  const normalized = normalizeEnumValue(value);
+
+  if (!normalized) {
+    return undefined;
+  }
+
+  if (["active", "available", "published", "live"].includes(normalized)) {
+    return "available";
+  }
+
+  if (["reserved", "booked", "pending"].includes(normalized)) {
+    return "reserved";
+  }
+
+  if (["sold"].includes(normalized)) {
+    return "sold";
+  }
+
+  if (["rented", "leased"].includes(normalized)) {
+    return "rented";
+  }
+
+  if (["archived", "inactive", "unavailable"].includes(normalized)) {
+    return "archived";
+  }
+
+  return normalized as PropertyStatus;
+}
+
 function getEnumValue<const T extends readonly string[]>(value: string | undefined, values: T, fallback: T[number]): T[number] {
   return values.includes(value as T[number]) ? (value as T[number]) : fallback;
 }
@@ -1175,23 +1316,89 @@ function getOptionalInteger(value: unknown) {
   return numberValue === undefined ? undefined : Math.trunc(numberValue);
 }
 
-function getAmenities(value: unknown) {
-  if (Array.isArray(value)) {
-    return value.map((item) => String(item).trim()).filter(Boolean);
+function getAddress(values: Record<string, unknown>) {
+  const explicit = getString(values.address);
+
+  if (explicit) {
+    return explicit;
   }
 
-  return String(value ?? "")
-    .split(/[|,]/)
+  return [getString(values.subdistrict), getString(values.district)].filter(Boolean).join(", ") || undefined;
+}
+
+function getAmenities(value: unknown, values: Record<string, unknown> = {}): string[] {
+  const flags = [
+    { amenity: "pet-friendly", value: values.pet_friendly },
+    { amenity: "furnished", value: values.furnished },
+    { amenity: "sea-view", value: values.sea_view },
+    { amenity: "pool-view", value: values.pool_view },
+    { amenity: "private-pool", value: values.private_pool },
+    { amenity: "parking", value: values.parking }
+  ]
+    .filter((flag) => isTruthyCsvValue(flag.value))
+    .map((flag) => flag.amenity);
+
+  if (Array.isArray(value)) {
+    return Array.from(new Set([...value.map((item) => String(item).trim()).filter(Boolean), ...flags]));
+  }
+
+  const parsed = String(value ?? "")
+    .split(/[|,;]/)
     .map((item) => item.trim())
     .filter(Boolean);
+
+  return Array.from(new Set([...parsed, ...flags]));
+}
+
+function isTruthyCsvValue(value: unknown) {
+  return /^(?:yes|true|1|available|fully furnished)$/i.test(String(value ?? "").trim());
 }
 
 function getCustomAttributes(value: unknown): ImportedCustomAttribute[] {
   return Array.isArray(value) ? value.filter(isImportedCustomAttribute) : [];
 }
 
+function getCsvCustomAttributes(values: Record<string, unknown>): ImportedCustomAttribute[] {
+  const definitions: Array<{
+    key: string;
+    label: string;
+    sourceKey: string;
+    type: ListingSourceCustomAttributeType;
+    searchable?: boolean;
+  }> = [
+    { key: "short_term_rent_thb_month", label: "Short-term rent THB/month", sourceKey: "rent_short_term_thb_month", type: "number" },
+    { key: "min_short_term_months", label: "Minimum short-term rental months", sourceKey: "min_short_term_months", type: "number" },
+    { key: "deposit_months", label: "Deposit months", sourceKey: "deposit_months", type: "number" },
+    { key: "pet_policy_notes", label: "Pet policy notes", sourceKey: "pet_policy_notes", type: "text" },
+    { key: "ownership", label: "Ownership", sourceKey: "ownership", type: "text" },
+    { key: "contact_channel", label: "Contact channel", sourceKey: "contact_channel", type: "enum" }
+  ];
+
+  return definitions
+    .map((definition) => {
+      const value = values[definition.sourceKey];
+
+      if (value === undefined || value === null || String(value).trim() === "") {
+        return undefined;
+      }
+
+      return {
+        key: definition.key,
+        label: definition.label,
+        searchable: definition.searchable ?? true,
+        type: definition.type,
+        value: coerceCustomAttributeValue(value, definition.type)
+      } satisfies ImportedCustomAttribute;
+    })
+    .filter((attribute): attribute is ImportedCustomAttribute => Boolean(attribute));
+}
+
 function getRawPayload(value: unknown): Record<string, unknown> | undefined {
   return typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+}
+
+function sanitizeRawPayload(values: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(values).filter(([key]) => !key.startsWith("__")));
 }
 
 function isImportedCustomAttribute(value: unknown): value is ImportedCustomAttribute {
@@ -1231,11 +1438,12 @@ function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
     `Listing type: ${formatListingType(draft.listingType)}`,
     `Property kind: ${draft.kind}`,
     `Market: ${draft.market}`,
+    `Status: ${draft.status}`,
     draft.address ? `Address or landmark: ${draft.address}` : undefined,
     draft.projectName ? `Project: ${draft.projectName}` : undefined,
     draft.projectDeveloper ? `Developer: ${draft.projectDeveloper}` : undefined,
     draft.projectStatus ? `Project status: ${draft.projectStatus}` : undefined,
-    `Price: ${draft.priceCurrency ?? "THB"} ${draft.priceThb}`,
+    draft.priceThb > 0 ? `Price: ${draft.priceCurrency ?? "THB"} ${draft.priceThb}` : undefined,
     draft.rentalPriceMonthlyThb ? `Monthly rent: THB ${draft.rentalPriceMonthlyThb}` : undefined,
     draft.monthlyRentEstimateThb ? `Estimated monthly rent: THB ${draft.monthlyRentEstimateThb}` : undefined,
     draft.maintenanceFeeMonthlyThb ? `Maintenance fee: THB ${draft.maintenanceFeeMonthlyThb} per month` : undefined,

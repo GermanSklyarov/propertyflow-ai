@@ -28,8 +28,8 @@ describe("listing import mapping", () => {
         "Property Name",
         "City",
         "Deal Type",
-        "Sale Price",
-        "Monthly Rent",
+        "sale_price_thb",
+        "rent_long_term_thb_month",
         "Images",
         "Rent Available Until",
         "Minimum Stay",
@@ -47,8 +47,8 @@ describe("listing import mapping", () => {
       maintenanceFeeMonthlyThb: "Common Fee",
       market: "City",
       minimumRentalMonths: "Minimum Stay",
-      priceThb: "Sale Price",
-      rentalPriceMonthlyThb: "Monthly Rent",
+      priceThb: "sale_price_thb",
+      rentalPriceMonthlyThb: "rent_long_term_thb_month",
       title: "Property Name"
     });
   });

@@ -34,4 +34,20 @@ describe("listing CSV import", () => {
     expect(result.rows).toEqual([]);
     expect(result.issues).toEqual([{ rowNumber: 2, reason: "Missing title" }]);
   });
+
+  it("parses THB price and long-term monthly rent from source-specific column names", () => {
+    const result = parseListingImportCsv(
+      [
+        "title,deal_type,sale_price_thb,rent_short_term_thb_month,rent_long_term_thb_month,size_sqm",
+        "Pratumnak Condo,Sale & Rent,4700000,34000,24000,27.3"
+      ].join("\n")
+    );
+
+    expect(result.issues).toEqual([]);
+    expect(buildCreatePropertyRequest(result.rows[0])).toMatchObject({
+      areaSqm: 27.3,
+      price: { amount: 4700000, currency: "THB" },
+      rentalPriceMonthly: { amount: 24000, currency: "THB" }
+    });
+  });
 });

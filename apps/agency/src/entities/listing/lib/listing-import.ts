@@ -61,11 +61,18 @@ export function parseListingImportCsv(csv: string): ListingImportParseResult {
 
 export function buildCreatePropertyRequest(row: ListingImportRow): CreatePropertyRequest {
   const market = getEnumValue(row.values.market, supportedMarkets, "pattaya");
-  const listingType = getEnumValue(row.values.listingtype ?? row.values.listing_type, supportedListingTypes, "sale_or_rent");
-  const kind = getEnumValue(row.values.kind, supportedKinds, "condo");
-  const priceThb = getNumber(row.values.pricethb ?? row.values.price_thb ?? row.values.price, 0);
+  const listingType = getEnumValue(
+    normalizeListingType(row.values.listingtype ?? row.values.listing_type ?? row.values.deal_type),
+    supportedListingTypes,
+    "sale_or_rent"
+  );
+  const kind = getEnumValue(normalizeEnumValue(row.values.kind ?? row.values.property_type), supportedKinds, "condo");
+  const priceThb = getNumber(row.values.pricethb ?? row.values.price_thb ?? row.values.sale_price_thb ?? row.values.price, 0);
   const rentalPriceMonthlyThb = getOptionalNumber(
-    row.values.rentalpricemonthlythb ?? row.values.rental_price_monthly_thb ?? row.values.monthly_rent
+    row.values.rentalpricemonthlythb ??
+      row.values.rental_price_monthly_thb ??
+      row.values.monthly_rent ??
+      row.values.rent_long_term_thb_month
   );
   const monthlyRentEstimateThb = getOptionalNumber(
     row.values.monthlyrentestimatethb ?? row.values.monthly_rent_estimate_thb ?? row.values.rentestimate
@@ -86,7 +93,7 @@ export function buildCreatePropertyRequest(row: ListingImportRow): CreatePropert
     address: row.values.address || undefined,
     bedrooms: getInteger(row.values.bedrooms, 0),
     bathrooms: getInteger(row.values.bathrooms, 0),
-    areaSqm: getNumber(row.values.areasqm ?? row.values.area_sqm ?? row.values.area, 1),
+    areaSqm: getNumber(row.values.areasqm ?? row.values.area_sqm ?? row.values.size_sqm ?? row.values.area, 1),
     floor: getOptionalInteger(row.values.floor),
     beachDistanceMeters: getOptionalInteger(row.values.beachdistancemeters ?? row.values.beach_distance_meters),
     ...(monthlyRentEstimateThb !== undefined ? { monthlyRentEstimate: { amount: monthlyRentEstimateThb, currency: "THB" } } : {}),
@@ -145,6 +152,20 @@ function parseCsvRecords(csv: string) {
 
 function normalizeHeader(value: string) {
   return value.trim().toLowerCase().replace(/[\s-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+}
+
+function normalizeEnumValue(value: string | undefined) {
+  return value?.trim().toLowerCase().replace(/[\s-]+/g, "_");
+}
+
+function normalizeListingType(value: string | undefined) {
+  const normalized = normalizeEnumValue(value)?.replace(/&/g, "_").replace(/_+/g, "_");
+
+  if (["sale_and_rent", "sale_rent", "for_sale_and_rent"].includes(normalized ?? "")) {
+    return "sale_or_rent";
+  }
+
+  return normalized;
 }
 
 function getEnumValue<const T extends readonly string[]>(value: string | undefined, values: T, fallback: T[number]): T[number] {

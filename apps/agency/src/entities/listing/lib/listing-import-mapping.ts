@@ -111,11 +111,20 @@ export const listingImportColumnSynonyms: Record<ListingImportTemplateColumn, st
   market: ["market", "city", "area", "location", "province", "destination"],
   minimumRentalMonths: ["minimumrentalmonths", "minimum_rental_months", "min_rental_months", "minimum_stay", "lease_term"],
   priceCurrency: ["pricecurrency", "price_currency", "currency"],
-  priceThb: ["pricethb", "price_thb", "price", "sale_price", "asking_price", "purchase_price"],
+  priceThb: ["pricethb", "price_thb", "price", "sale_price", "sale_price_thb", "asking_price", "purchase_price"],
   projectDeveloper: ["projectdeveloper", "project_developer", "developer", "developer_name"],
   projectName: ["projectname", "project_name", "project", "development", "compound", "village"],
   projectStatus: ["projectstatus", "project_status", "construction_status", "completion_status"],
-  rentalPriceMonthlyThb: ["rentalpricemonthlythb", "rental_price_monthly_thb", "monthly_rent", "rent", "rental_price"],
+  rentalPriceMonthlyThb: [
+    "rentalpricemonthlythb",
+    "rental_price_monthly_thb",
+    "monthly_rent",
+    "rent_long_term_thb_month",
+    "long_term_rent",
+    "long_term_monthly_rent",
+    "rent",
+    "rental_price"
+  ],
   status: ["status", "availability", "listing_status"],
   title: ["title", "name", "property_name", "listing_title", "unit_name"]
 };
