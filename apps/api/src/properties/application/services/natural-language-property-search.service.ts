@@ -69,7 +69,7 @@ export class NaturalLanguagePropertySearchService {
       )
     ).filter((item): item is PropertySnapshot => item !== null).filter(isRecommendableProperty);
     const rankedIndexed = await this.applyVectorRanking(tenantId, request.query, indexedItems);
-    const fallbackItems = rankedIndexed.items.length
+    const fallbackItems = rankedIndexed.items.length >= 3
       ? []
       : (await this.properties.search(tenantId, {
           ...interpretation.filters,
@@ -77,17 +77,21 @@ export class NaturalLanguagePropertySearchService {
           offset: 0,
           query: request.query,
           sort: "ai-fit"
-        })).filter(isRecommendableProperty);
-    const rankedFallback = rankedIndexed.items.length
+        }))
+          .filter(isRecommendableProperty)
+          .filter((item) => !rankedIndexed.items.some((indexedItem) => indexedItem.id === item.id));
+    const rankedFallback = rankedIndexed.items.length >= 3
       ? { items: [] as PropertySnapshot[], vectorApplied: false }
       : await this.applyVectorRanking(tenantId, request.query, fallbackItems);
-    const items = rankedIndexed.items.length ? rankedIndexed.items : rankedFallback.items;
+    const items = rankedIndexed.items.length ? [...rankedIndexed.items, ...rankedFallback.items] : rankedFallback.items;
     const vectorApplied = rankedIndexed.vectorApplied || rankedFallback.vectorApplied;
     const rankingExplanation = [
       interpretation.rankingExplanation,
-      rankedIndexed.items.length
+      rankedIndexed.items.length >= 3
         ? undefined
-        : "Postgres filtered search was used as a fallback because the indexed search returned no recommendable available listings.",
+        : rankedIndexed.items.length
+          ? "Postgres filtered search supplemented the indexed shortlist with additional recommendable available listings."
+          : "Postgres filtered search was used as a fallback because the indexed search returned no recommendable available listings.",
       vectorApplied
         ? "pgvector semantic similarity reranked recommendable available listings for Concierge fit."
         : undefined
@@ -102,7 +106,7 @@ export class NaturalLanguagePropertySearchService {
       },
       rankingExplanation,
       items,
-      total: rankedIndexed.items.length ? Math.min(indexedResult.total, rankedIndexed.items.length) : rankedFallback.items.length
+      total: rankedIndexed.items.length ? Math.max(indexedResult.total, items.length) : rankedFallback.items.length
     };
   }
 

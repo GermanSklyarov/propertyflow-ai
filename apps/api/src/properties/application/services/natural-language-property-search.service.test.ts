@@ -133,6 +133,59 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.rankingExplanation).toContain("Postgres filtered search was used as a fallback");
   });
 
+  it("supplements a thin indexed shortlist with structured sale matches", async () => {
+    const indexedOnly = propertyFactory({
+      id: "property-wongamat",
+      listingType: "sale_or_rent",
+      price: { amount: 3_450_000, currency: "THB" },
+      title: "Wongamat Sea View Residence"
+    });
+    const jomtien = propertyFactory({
+      id: "property-jomtien",
+      listingType: "sale",
+      price: { amount: 4_850_000, currency: "THB" },
+      title: "Jomtien Family Corner Condo"
+    });
+    const pratumnak = propertyFactory({
+      id: "property-pratumnak",
+      listingType: "sale",
+      price: { amount: 2_950_000, currency: "THB" },
+      title: "Pratumnak Investment One-Bed"
+    });
+    const repository = {
+      findById: async () => indexedOnly,
+      search: async () => [indexedOnly, jomtien, pratumnak]
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "buy investment condo pattaya under 5m" },
+        index: "propertyflow-properties-v1",
+        items: [{ propertyId: indexedOnly.id }],
+        total: 1
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "i want to buy a condo in pattaya for investment under 5m, what can you recommend?"
+    });
+
+    expect(result.filters).toMatchObject({
+      listingType: "sale",
+      market: "pattaya",
+      maxPriceThb: 5_000_000
+    });
+    expect(result.items.map((item) => item.title)).toEqual([
+      "Wongamat Sea View Residence",
+      "Jomtien Family Corner Condo",
+      "Pratumnak Investment One-Bed"
+    ]);
+    expect(result.rankingExplanation).toContain("Postgres filtered search supplemented the indexed shortlist");
+  });
+
   it("does not recommend unavailable indexed listings", async () => {
     const available = propertyFactory({ id: "property-available", status: "available" });
     const sold = propertyFactory({ id: "property-sold", status: "sold" });

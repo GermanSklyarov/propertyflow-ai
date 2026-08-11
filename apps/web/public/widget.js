@@ -598,11 +598,18 @@
     var emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     var phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
     var telegramMatch = text.match(/(?:telegram|телеграм)\s+(@[A-Z0-9_]{5,32})/i) || text.match(/(^|\s)(@[A-Z0-9_]{5,32})\b/i);
+    var lineMatch = text.match(/(?:line(?:\s+id)?|ไลน์)\s+(@?[A-Z0-9_.-]{3,40})/i);
+    var messengerContact = telegramMatch
+      ? "Telegram " + (telegramMatch[1] || telegramMatch[2]).trim()
+      : lineMatch
+        ? "LINE " + lineMatch[1].trim()
+        : "";
+    var lineName = lineMatch && lineMatch[1] ? lineMatch[1].replace(/^@/, "").split(/[_.-]+/)[0] : "";
 
     return {
       email: emailMatch ? emailMatch[0].trim() : "",
-      name: "",
-      phone: phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : telegramMatch ? "Telegram " + (telegramMatch[1] || telegramMatch[2]).trim() : ""
+      name: lineName ? lineName.charAt(0).toUpperCase() + lineName.slice(1).toLowerCase() : "",
+      phone: phoneMatch ? phoneMatch[0].replace(/[^\d+]/g, "") : messengerContact
     };
   }
 
