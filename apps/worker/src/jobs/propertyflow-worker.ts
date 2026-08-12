@@ -1,7 +1,7 @@
-import { Worker, type Job } from "bullmq";
+import { Queue, Worker, type Job } from "bullmq";
 import { Redis } from "ioredis";
 import { Client } from "@opensearch-project/opensearch";
-import { KnowledgeEmbeddingGenerator } from "@propertyflow/domain";
+import { KnowledgeEmbeddingGenerator, defaultKnowledgeEmbeddingConfig } from "@propertyflow/domain";
 import { Pool } from "pg";
 import {
   type BackgroundJobName,
@@ -45,6 +45,10 @@ type PropertyAiDescriptionJob = Job<
 type PropertyImageAnalysisJob = Job<PropertyImageAnalysisJobPayload, unknown, "properties.images.analyze">;
 type PropertySearchIndexJob = Job<PropertySearchIndexJobPayload, unknown, "properties.search.index">;
 type SavedSearchAlertDigestJob = Job<SavedSearchAlertDigestJobPayload, unknown, "saved_search.alerts.digest">;
+type AutoEmbeddingRefreshResult = {
+  autoEmbeddingRefreshQueued: boolean;
+  autoEmbeddingRefreshJobId?: string;
+};
 
 interface SavedSearchAlertRow {
   id: string;
@@ -59,6 +63,7 @@ export class PropertyflowWorker {
   private readonly propertyImporter: PropertyImporter;
   private readonly searchIndexer: PropertySearchIndexer;
   private readonly connection: Redis;
+  private readonly queue: Queue<BackgroundJobPayload, unknown, BackgroundJobName>;
   private readonly worker: Worker<BackgroundJobPayload, unknown, BackgroundJobName>;
 
   constructor() {
@@ -85,6 +90,19 @@ export class PropertyflowWorker {
       maxRetriesPerRequest: null
     });
 
+    this.queue = new Queue<BackgroundJobPayload, unknown, BackgroundJobName>(PROPERTYFLOW_JOBS_QUEUE, {
+      connection: this.connection,
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: {
+          type: "exponential",
+          delay: 5_000
+        },
+        removeOnComplete: 500,
+        removeOnFail: 1_000
+      }
+    });
+
     this.worker = new Worker<BackgroundJobPayload, unknown, BackgroundJobName>(
       PROPERTYFLOW_JOBS_QUEUE,
       (job) => this.process(job),
@@ -109,6 +127,7 @@ export class PropertyflowWorker {
 
   async close(): Promise<void> {
     await this.worker.close();
+    await this.queue.close();
     await this.pool.end();
     this.connection.disconnect();
   }
@@ -143,6 +162,7 @@ export class PropertyflowWorker {
   private async importProperties(job: PropertyImportJob): Promise<Record<string, unknown>> {
     try {
       const result = await this.propertyImporter.import(job);
+      const embeddingRefresh = await this.queueEmbeddingRefreshAfterImport(job, result);
 
       if (
         !isPropertyImportResult(result) ||
@@ -150,8 +170,12 @@ export class PropertyflowWorker {
         result.importMode === "crm_inventory" ||
         result.propertyIds.length === 0
       ) {
-        await this.markListingSourceSyncCompleted(job, result);
-        return result;
+        const completedResult = {
+          ...result,
+          ...embeddingRefresh
+        };
+        await this.markListingSourceSyncCompleted(job, completedResult);
+        return completedResult;
       }
 
       const indexFailures: Array<{ propertyId: string; reason: string }> = [];
@@ -171,6 +195,7 @@ export class PropertyflowWorker {
 
       const completedResult = {
         ...result,
+        ...embeddingRefresh,
         indexed,
         indexFailures: indexFailures.slice(0, 25)
       };
@@ -182,6 +207,36 @@ export class PropertyflowWorker {
       await this.markListingSourceSyncFailed(job, error);
       throw error;
     }
+  }
+
+  private async queueEmbeddingRefreshAfterImport(
+    job: PropertyImportJob,
+    result: Record<string, unknown>
+  ): Promise<AutoEmbeddingRefreshResult> {
+    if (
+      !isPropertyImportResult(result) ||
+      result.dryRun ||
+      result.importMode === "crm_inventory" ||
+      result.knowledgeDocumentsCreated === 0
+    ) {
+      return { autoEmbeddingRefreshQueued: false };
+    }
+
+    const config = defaultKnowledgeEmbeddingConfig();
+    const queuedJob = await this.queue.add("knowledge.chunks.embed", {
+      tenantId: job.data.tenantId,
+      requestedByUserId: job.data.requestedByUserId,
+      provider: config.provider,
+      model: config.model,
+      dimensions: config.dimensions,
+      limit: Math.min(Math.max(result.knowledgeDocumentsCreated * 4, 25), 500),
+      refreshExisting: false
+    });
+
+    return {
+      autoEmbeddingRefreshQueued: true,
+      autoEmbeddingRefreshJobId: String(queuedJob.id)
+    };
   }
 
   private async markListingSourceSyncCompleted(
@@ -876,11 +931,13 @@ function resolveErrorMessage(error: unknown): string {
 function isPropertyImportResult(value: Record<string, unknown>): value is Record<string, unknown> & {
   dryRun: boolean;
   importMode: "crm_inventory" | "concierge_index_only" | "hybrid";
+  knowledgeDocumentsCreated: number;
   propertyIds: string[];
 } {
   return (
     Array.isArray(value.propertyIds) &&
     typeof value.dryRun === "boolean" &&
+    typeof value.knowledgeDocumentsCreated === "number" &&
     (value.importMode === "crm_inventory" || value.importMode === "concierge_index_only" || value.importMode === "hybrid")
   );
 }
