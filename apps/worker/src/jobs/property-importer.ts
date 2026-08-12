@@ -102,6 +102,7 @@ export interface PropertyImportResult {
   propertyIds: string[];
   rowsMissingExternalId: number;
   rowsWithExternalId: number;
+  searchRecordsCreated: number;
   skipped: number;
   source: PropertyImportJobPayload["source"];
   tenantId: string;
@@ -126,6 +127,7 @@ export class PropertyImporter {
     const propertyIds: string[] = [];
     const importMode = job.data.importMode ?? "hybrid";
     const shouldCreateCrmInventory = importMode !== "concierge_index_only" && !job.data.dryRun;
+    const shouldCreateConciergeSearchRecords = importMode === "concierge_index_only" && !job.data.dryRun;
     const shouldCreateAiKnowledge = importMode !== "crm_inventory" && !job.data.dryRun;
     let imported = 0;
     let knowledgeDocumentsCreated = 0;
@@ -147,7 +149,7 @@ export class PropertyImporter {
           rowsMissingExternalId += 1;
         }
 
-        if (shouldCreateCrmInventory) {
+        if (shouldCreateCrmInventory || shouldCreateConciergeSearchRecords) {
           propertyIds.push(await this.insertProperty(job.data.tenantId, draft));
         }
 
@@ -179,7 +181,7 @@ export class PropertyImporter {
       source: job.data.source,
       dryRun: job.data.dryRun ?? false,
       importMode,
-      crmRecordsCreated: propertyIds.length,
+      crmRecordsCreated: shouldCreateCrmInventory ? propertyIds.length : 0,
       aiIndexCandidates: shouldCreateAiKnowledge ? knowledgeDocumentsCreated : 0,
       fieldMappingApplied: Boolean(job.data.fieldMapping),
       imported,
@@ -189,6 +191,7 @@ export class PropertyImporter {
       propertyIds,
       rowsMissingExternalId,
       rowsWithExternalId,
+      searchRecordsCreated: propertyIds.length,
       sourceConfigId: job.data.sourceConfigId,
       total: rows.length
     };
@@ -1328,7 +1331,7 @@ function getAddress(values: Record<string, unknown>) {
 
 function getAmenities(value: unknown, values: Record<string, unknown> = {}): string[] {
   const flags = [
-    { amenity: "pet-friendly", value: values.pet_friendly },
+    { amenity: "pet-friendly", value: hasPetFriendlySignal(values) },
     { amenity: "furnished", value: values.furnished },
     { amenity: "sea-view", value: values.sea_view },
     { amenity: "pool-view", value: values.pool_view },
@@ -1348,6 +1351,35 @@ function getAmenities(value: unknown, values: Record<string, unknown> = {}): str
     .filter(Boolean);
 
   return Array.from(new Set([...parsed, ...flags]));
+}
+
+function hasPetFriendlySignal(values: Record<string, unknown>) {
+  const explicitValue = getFirstPresentValue(values, [
+    "pet_friendly",
+    "petfriendly",
+    "pets_allowed",
+    "petsallowed",
+    "allows_pets",
+    "allowspets",
+    "pet_allowed",
+    "petallowed",
+    "dogs_allowed",
+    "dogsallowed",
+    "cats_allowed",
+    "catsallowed"
+  ]);
+
+  if (isTruthyCsvValue(explicitValue)) {
+    return true;
+  }
+
+  const policy = getString(getFirstPresentValue(values, ["pet_policy", "petpolicy", "pet_policy_notes", "petpolicynotes", "pets_policy", "pet_notes"]));
+
+  return Boolean(policy && /(?:allowed|allow|yes|ok|friendly|dogs?|cats?|pets?|можно|разреш|да|สัตว์เลี้ยง|允许|允許|可养|可養)/i.test(policy));
+}
+
+function getFirstPresentValue(values: Record<string, unknown>, keys: string[]) {
+  return keys.map((key) => values[key]).find((value) => value !== undefined && value !== null && String(value).trim() !== "");
 }
 
 function isTruthyCsvValue(value: unknown) {

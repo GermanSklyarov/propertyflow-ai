@@ -111,7 +111,7 @@ export function ListingImportJobsPanel({ initialJobs, queuedJobId }: ListingImpo
                   <strong>{result.dryRun ? "Dry-run complete" : formatImportMode(result.importMode)}</strong>
                   <span>
                     {result.imported} imported · {result.skipped} skipped · {result.crmRecordsCreated} CRM records ·{" "}
-                    {result.knowledgeDocumentsCreated} knowledge docs · {result.aiIndexCandidates} AI candidates ·{" "}
+                    {result.searchRecordsCreated} search records · {result.knowledgeDocumentsCreated} knowledge docs · {result.aiIndexCandidates} AI candidates ·{" "}
                     {result.indexed} indexed · {result.total} rows
                   </span>
                 </div>
@@ -173,6 +173,7 @@ function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undef
   const aiIndexCandidates = getProgressNumber(job.result.aiIndexCandidates);
   const crmRecordsCreated = getProgressNumber(job.result.crmRecordsCreated);
   const knowledgeDocumentsCreated = getProgressNumber(job.result.knowledgeDocumentsCreated);
+  const searchRecordsCreated = getProgressNumber(job.result.searchRecordsCreated);
   const importMode = getImportMode(job.result.importMode);
   const rowsMissingExternalId = getProgressNumber(job.result.rowsMissingExternalId);
   const rowsWithExternalId = getProgressNumber(job.result.rowsWithExternalId);
@@ -190,6 +191,7 @@ function getImportResult(job: BackgroundJobMonitorItem): ImportJobResult | undef
     issues,
     rowsMissingExternalId,
     rowsWithExternalId,
+    searchRecordsCreated,
     skipped,
     total
   };
@@ -214,6 +216,7 @@ interface ImportJobResult {
   issues: ImportIssue[];
   rowsMissingExternalId: number;
   rowsWithExternalId: number;
+  searchRecordsCreated: number;
   skipped: number;
   total: number;
 }
