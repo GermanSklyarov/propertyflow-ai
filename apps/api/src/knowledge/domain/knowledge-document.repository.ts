@@ -15,9 +15,14 @@ export interface KnowledgeDocumentTagFilterRequest extends KnowledgeDocumentSear
   tag?: string;
 }
 
+export interface KnowledgeDocumentSearchResult {
+  items: KnowledgeDocumentSnapshot[];
+  total: number;
+}
+
 export interface KnowledgeDocumentRepository {
   save(tenantId: string, request: CreateKnowledgeDocumentRequest): Promise<KnowledgeDocumentSnapshot>;
-  search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentSnapshot[]>;
+  search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentSearchResult>;
   searchChunks(
     tenantId: string,
     request: KnowledgeChunkSearchRequest,

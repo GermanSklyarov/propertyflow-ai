@@ -79,6 +79,8 @@ export function KnowledgeBasePage({
   embeddingHealth,
   jobs,
   listingKnowledgeDocuments = [],
+  listingKnowledgeOpen = false,
+  listingKnowledgeShowMoreHref,
   listingKnowledgeTotal = 0,
   listingImportResult,
   listingSources,
@@ -95,6 +97,8 @@ export function KnowledgeBasePage({
   embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
   listingKnowledgeDocuments?: KnowledgeDocumentSnapshot[];
+  listingKnowledgeOpen?: boolean;
+  listingKnowledgeShowMoreHref?: string;
   listingKnowledgeTotal?: number;
   listingImportResult?: { error?: "empty"; jobId?: string };
   listingSources: ListingSourceSnapshot[];
@@ -120,6 +124,7 @@ export function KnowledgeBasePage({
   const sourceModeSummary = summarizeKnowledgeSourceModes(operationalSourceGroups);
   const sourceReadiness = summarizeKnowledgeSourceReadiness(operationalSourceGroups);
   const listingImportJobs = (sourceJobs ?? jobs).filter((job) => job.name === "properties.import");
+  const hasMoreListingKnowledge = listingKnowledgeDocuments.length < listingKnowledgeTotal;
   const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness, {
     starterLaunchReady: starterReadiness.launchReady,
     starterNextAction: starterReadiness.nextAction,
@@ -311,21 +316,34 @@ export function KnowledgeBasePage({
         </section>
 
         {listingKnowledgeDocuments.length ? (
-          <section className={styles.panel} id="concierge-listing-imports">
-            <div className={styles.panelHeader}>
+          <details
+            className={`${styles.panel} ${styles.listingKnowledgePanel}`}
+            id="concierge-listing-imports"
+            open={listingKnowledgeOpen}
+          >
+            <summary className={styles.listingKnowledgeSummary}>
               <div>
                 <p className="section-kicker">Concierge listing imports</p>
                 <h2 className={styles.panelTitle}>Listings feeding AI Concierge</h2>
               </div>
-              <span className={styles.statusBadge}>{listingKnowledgeDocuments.length} loaded</span>
-            </div>
+              <span className={styles.statusBadge}>
+                {listingKnowledgeDocuments.length}/{listingKnowledgeTotal || listingKnowledgeDocuments.length} loaded
+              </span>
+            </summary>
 
             <div className={styles.listingKnowledgeGrid}>
               {listingKnowledgeDocuments.map((document) => (
                 <ListingKnowledgeCard document={document} key={document.id} />
               ))}
             </div>
-          </section>
+
+            {hasMoreListingKnowledge && listingKnowledgeShowMoreHref ? (
+              <a className={styles.listingKnowledgeMore} href={listingKnowledgeShowMoreHref}>
+                Show more listings
+                <ArrowRight size={15} />
+              </a>
+            ) : null}
+          </details>
         ) : null}
 
         <section className={styles.layout}>

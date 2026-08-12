@@ -13,6 +13,7 @@ import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
 import type {
   KnowledgeDocumentRepository,
+  KnowledgeDocumentSearchResult,
   KnowledgeDocumentTagFilterRequest
 } from "../../domain/knowledge-document.repository.js";
 
@@ -100,10 +101,10 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     return this.toSnapshot(result.rows[0]);
   }
 
-  async search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentSnapshot[]> {
+  async search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentSearchResult> {
     const clauses = ["tenant_id = $1"];
     const values: unknown[] = [tenantId];
-    const limit = Math.min(Math.max(request.limit ?? 20, 1), 50);
+    const limit = Math.min(Math.max(request.limit ?? 20, 1), 200);
 
     const addValue = (value: unknown): string => {
       values.push(value);
@@ -143,12 +144,24 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
         from knowledge_documents
         where ${clauses.join(" and ")}
         order by updated_at desc
-        limit ${addValue(limit)}
+        limit $${values.length + 1}
+      `,
+      [...values, limit]
+    );
+
+    const countResult = await this.pool.query<{ count: string }>(
+      `
+        select count(*)::int as count
+        from knowledge_documents
+        where ${clauses.join(" and ")}
       `,
       values
     );
 
-    return result.rows.map((row) => this.toSnapshot(row));
+    return {
+      items: result.rows.map((row) => this.toSnapshot(row)),
+      total: Number(countResult.rows[0]?.count ?? 0)
+    };
   }
 
   async searchChunks(

@@ -33,11 +33,11 @@ export class KnowledgeDocumentService {
   }
 
   async search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentListResponse> {
-    const items = await this.documents.search(tenantId, request);
+    const result = await this.documents.search(tenantId, request);
 
     return {
-      items,
-      total: items.length
+      items: result.items,
+      total: result.total
     };
   }
 
