@@ -8,7 +8,10 @@ import {
 } from "@shared/api/agency-client";
 import { queryKeys } from "@shared/query/query-keys";
 
-export function knowledgeDocumentsQueryOptions(request: { limit?: number } = { limit: 24 }, tenantId?: string) {
+export function knowledgeDocumentsQueryOptions(
+  request: { excludeTag?: string; limit?: number; tag?: string } = { limit: 24 },
+  tenantId?: string
+) {
   return queryOptions({
     queryKey: queryKeys.knowledge.list(request, tenantId),
     queryFn: () => listKnowledgeDocuments(request, { tenantId })

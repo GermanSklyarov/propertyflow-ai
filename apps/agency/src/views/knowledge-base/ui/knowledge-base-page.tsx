@@ -78,6 +78,8 @@ export function KnowledgeBasePage({
   documents,
   embeddingHealth,
   jobs,
+  listingKnowledgeDocuments = [],
+  listingKnowledgeTotal = 0,
   listingImportResult,
   listingSources,
   notice,
@@ -92,6 +94,8 @@ export function KnowledgeBasePage({
   documents: KnowledgeDocumentSnapshot[];
   embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
+  listingKnowledgeDocuments?: KnowledgeDocumentSnapshot[];
+  listingKnowledgeTotal?: number;
   listingImportResult?: { error?: "empty"; jobId?: string };
   listingSources: ListingSourceSnapshot[];
   notice?: { message: string; tone: "success" | "warning" };
@@ -100,16 +104,17 @@ export function KnowledgeBasePage({
   sourceJobs?: BackgroundJobMonitorItem[];
   total: number;
 }) {
+  const allKnowledgeDocuments = [...documents, ...listingKnowledgeDocuments];
   const kindCount = new Set(documents.map((document) => document.kind)).size;
   const localeCount = new Set(documents.map((document) => document.locale)).size;
   const taggedCount = documents.filter((document) => document.tags.length > 0).length;
   const activeKnowledgeJobs = jobs.filter((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed").length;
-  const starterReadiness = buildKnowledgeStarterReadiness(documents, activeKnowledgeJobs);
+  const starterReadiness = buildKnowledgeStarterReadiness(allKnowledgeDocuments, activeKnowledgeJobs);
   const runtimeSourceGroups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
-    documents,
+    documents: allKnowledgeDocuments,
     jobs: sourceJobs ?? jobs,
     listingSources,
-    totalDocuments: total
+    totalDocuments: total + listingKnowledgeTotal
   });
   const operationalSourceGroups = filterOperationalKnowledgeSourceGroups(runtimeSourceGroups);
   const sourceModeSummary = summarizeKnowledgeSourceModes(operationalSourceGroups);
@@ -202,7 +207,7 @@ export function KnowledgeBasePage({
         </section>
 
         <section className={styles.kpiGrid} aria-label="Knowledge base overview">
-          <KpiCard icon={<BookOpenText size={18} />} label="Documents" note="Tenant knowledge" value={total} />
+          <KpiCard icon={<BookOpenText size={18} />} label="Documents" note="Agency docs" value={total} />
           <KpiCard icon={<FileText size={18} />} label="Content kinds" note="RAG routing" value={kindCount} />
           <KpiCard icon={<Languages size={18} />} label="Locales" note="Multilingual advice" value={localeCount} />
           <KpiCard icon={<Tags size={18} />} label="Tagged docs" note="Retrieval hints" value={taggedCount} />
@@ -305,6 +310,24 @@ export function KnowledgeBasePage({
           <KnowledgeJobsPanel jobs={jobs} />
         </section>
 
+        {listingKnowledgeDocuments.length ? (
+          <section className={styles.panel} id="concierge-listing-imports">
+            <div className={styles.panelHeader}>
+              <div>
+                <p className="section-kicker">Concierge listing imports</p>
+                <h2 className={styles.panelTitle}>Listings feeding AI Concierge</h2>
+              </div>
+              <span className={styles.statusBadge}>{listingKnowledgeDocuments.length} loaded</span>
+            </div>
+
+            <div className={styles.listingKnowledgeGrid}>
+              {listingKnowledgeDocuments.map((document) => (
+                <ListingKnowledgeCard document={document} key={document.id} />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
         <section className={styles.layout}>
           <details className={`${styles.panel} ${styles.createSourcePanel}`} id="create-knowledge-document" open={createSourceOpen}>
             <summary className={styles.createSourceSummary}>
@@ -370,6 +393,89 @@ function KpiCard({ icon, label, note, value }: { icon: ReactNode; label: string;
       <small>{note}</small>
     </article>
   );
+}
+
+function ListingKnowledgeCard({ document }: { document: KnowledgeDocumentSnapshot }) {
+  const summary = summarizeListingKnowledgeDocument(document);
+
+  return (
+    <article className={styles.listingKnowledgeCard}>
+      <div className={styles.listingKnowledgeTop}>
+        <span>{document.locale.toUpperCase()}</span>
+        <span>Listing</span>
+        {summary.status ? <span>{summary.status}</span> : null}
+      </div>
+      <h3>{document.title}</h3>
+      <dl className={styles.listingKnowledgeFacts}>
+        {summary.facts.map((fact) => (
+          <div key={fact.label}>
+            <dt>{fact.label}</dt>
+            <dd>{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {summary.description ? <p>{summary.description}</p> : null}
+      {summary.amenities.length ? (
+        <div className={styles.listingKnowledgeTags}>
+          {summary.amenities.map((amenity) => (
+            <span key={amenity}>{amenity}</span>
+          ))}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function summarizeListingKnowledgeDocument(document: KnowledgeDocumentSnapshot) {
+  const fields = parseKnowledgeBodyFields(document.body);
+  const facts = [
+    compactFact("Market", fields.get("Market")),
+    compactFact("Type", fields.get("Listing type")),
+    compactFact("Price", fields.get("Price")),
+    compactFact("Rent", fields.get("Monthly rent") ?? fields.get("Long-term monthly rent")),
+    compactFact("Area", fields.get("Area")),
+    compactFact("Bedrooms", fields.get("Bedrooms")),
+    compactFact("Beach", fields.get("Beach distance")),
+    compactFact("Quota", fields.get("Foreign quota"))
+  ].filter((fact): fact is { label: string; value: string } => Boolean(fact));
+  const amenities = splitList(fields.get("Amenities")).slice(0, 5);
+
+  return {
+    amenities,
+    description: fields.get("Description"),
+    facts: facts.slice(0, 8),
+    status: fields.get("Status")
+  };
+}
+
+function compactFact(label: string, value?: string) {
+  return value ? { label, value } : undefined;
+}
+
+function parseKnowledgeBodyFields(body: string) {
+  return body.split("\n").reduce((fields, line) => {
+    const separatorIndex = line.indexOf(":");
+
+    if (separatorIndex > 0) {
+      const key = line.slice(0, separatorIndex).trim();
+      const value = line.slice(separatorIndex + 1).trim();
+
+      if (key && value && key !== "Full source payload for agency-specific constraints") {
+        fields.set(key, value);
+      }
+    }
+
+    return fields;
+  }, new Map<string, string>());
+}
+
+function splitList(value?: string) {
+  return value
+    ? value
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    : [];
 }
 
 function Signal({ icon, label, copy }: { icon: ReactNode; label: string; copy: string }) {

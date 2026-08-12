@@ -392,7 +392,17 @@ export function buildRuntimeKnowledgeSourceGroups(
   const readyUploadedKnowledgeDocuments = input.documents.filter((document) => !document.tags.includes("property-listing") && isAiReadyDocument(document)).length;
   const recentImportKnowledgeDocuments = input.jobs
     .filter((job) => job.name === "properties.import")
-    .reduce((total, job) => total + getResultNumber(job.result, "knowledgeDocumentsCreated"), 0);
+    .reduce(
+      (total, job) =>
+        total +
+        Math.max(
+          getResultNumber(job.result, "knowledgeDocumentsCreated"),
+          getResultNumber(job.result, "searchRecordsCreated"),
+          getProgressNumber(job.progress, "knowledgeDocumentsCreated"),
+          getProgressNumber(job.progress, "imported")
+        ),
+      0
+    );
   const listingSources = input.listingSources ?? [];
   const activeListingSources = listingSources.filter((source) => source.status !== "disabled");
   const activeRestSources = activeListingSources.filter((source) => source.type === "rest-api");
@@ -688,11 +698,22 @@ function isActiveIngestionJob(job: BackgroundJobMonitorItem) {
 
 function hasTerminalImportResult(job: BackgroundJobMonitorItem) {
   return (
+    Boolean(job.finishedAt) ||
+    getProgressNumber(job.progress, "percent") >= 100 ||
     getResultNumber(job.result, "imported") > 0 ||
     getResultNumber(job.result, "knowledgeDocumentsCreated") > 0 ||
+    getResultNumber(job.result, "searchRecordsCreated") > 0 ||
     getResultNumber(job.result, "skipped") > 0 ||
     getResultNumber(job.result, "total") > 0
   );
+}
+
+function getProgressNumber(progress: BackgroundJobMonitorItem["progress"], key: string) {
+  if (!progress || typeof progress !== "object" || Array.isArray(progress)) {
+    return 0;
+  }
+
+  return getResultNumber(progress, key);
 }
 
 function isAiReadyDocument(document: KnowledgeDocumentSnapshot) {

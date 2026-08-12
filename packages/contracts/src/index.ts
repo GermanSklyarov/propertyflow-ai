@@ -1418,6 +1418,8 @@ export interface KnowledgeDocumentSearchRequest {
   query?: string;
   locale?: KnowledgeDocumentSnapshot["locale"];
   kind?: KnowledgeDocumentKind;
+  tag?: string;
+  excludeTag?: string;
   limit?: number;
 }
 

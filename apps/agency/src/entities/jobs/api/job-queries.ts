@@ -7,10 +7,11 @@ const defaultJobStates = ["active", "waiting", "completed", "failed"] satisfies 
 
 export function backgroundJobsQueryOptions(
   request: { limit?: number; states?: BackgroundJobState[] } = { limit: 12, states: defaultJobStates },
-  tenantId?: string
+  tenantId?: string,
+  options: { revalidateSeconds?: number | false } = {}
 ) {
   return queryOptions({
     queryKey: queryKeys.jobs.list(request, tenantId),
-    queryFn: () => listBackgroundJobs(request, { tenantId })
+    queryFn: () => listBackgroundJobs(request, { ...options, tenantId })
   });
 }

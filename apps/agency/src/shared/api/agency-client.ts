@@ -1116,7 +1116,7 @@ export async function getSavedSearchAlertAnalytics(): Promise<SavedSearchAlertAn
 }
 
 export async function listKnowledgeDocuments(
-  request: { limit?: number } = { limit: 24 },
+  request: { excludeTag?: string; limit?: number; tag?: string } = { limit: 24 },
   options: AgencyApiOptions = {}
 ): Promise<KnowledgeDocumentListResponse> {
   const response = await fetch(`${apiBaseUrl}/knowledge-documents${toQueryString(request)}`, {

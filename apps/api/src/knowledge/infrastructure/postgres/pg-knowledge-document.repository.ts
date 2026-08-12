@@ -11,7 +11,10 @@ import type {
 import type { KnowledgeEmbeddingResult } from "@propertyflow/domain";
 import type { Pool } from "pg";
 import { PG_POOL } from "../../../database/database.constants.js";
-import type { KnowledgeDocumentRepository } from "../../domain/knowledge-document.repository.js";
+import type {
+  KnowledgeDocumentRepository,
+  KnowledgeDocumentTagFilterRequest
+} from "../../domain/knowledge-document.repository.js";
 
 interface KnowledgeDocumentRow {
   id: string;
@@ -97,7 +100,7 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
     return this.toSnapshot(result.rows[0]);
   }
 
-  async search(tenantId: string, request: KnowledgeDocumentSearchRequest): Promise<KnowledgeDocumentSnapshot[]> {
+  async search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentSnapshot[]> {
     const clauses = ["tenant_id = $1"];
     const values: unknown[] = [tenantId];
     const limit = Math.min(Math.max(request.limit ?? 20, 1), 50);
@@ -113,6 +116,14 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
 
     if (request.kind) {
       clauses.push(`kind = ${addValue(request.kind)}`);
+    }
+
+    if (request.tag) {
+      clauses.push(`${addValue(request.tag)} = any(tags)`);
+    }
+
+    if (request.excludeTag) {
+      clauses.push(`not (${addValue(request.excludeTag)} = any(tags))`);
     }
 
     const terms = this.searchTerms(request.query);

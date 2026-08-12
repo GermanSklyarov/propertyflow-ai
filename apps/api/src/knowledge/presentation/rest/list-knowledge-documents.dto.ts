@@ -19,6 +19,14 @@ export class ListKnowledgeDocumentsDto implements KnowledgeDocumentSearchRequest
   kind?: KnowledgeDocumentKind;
 
   @IsOptional()
+  @IsString()
+  tag?: string;
+
+  @IsOptional()
+  @IsString()
+  excludeTag?: string;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

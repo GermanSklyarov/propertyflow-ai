@@ -1,20 +1,20 @@
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  CreateKnowledgeDocumentRequest,
   CreateKnowledgeDocumentUploadRequest,
   CreateKnowledgeDocumentUploadResponse,
-  CreateKnowledgeDocumentRequest,
   KnowledgeChunkSearchRequest,
   KnowledgeChunkSearchResponse,
   KnowledgeDocumentListResponse,
-  KnowledgeEmbeddingHealthSnapshot,
-  KnowledgeDocumentSearchRequest,
-  KnowledgeDocumentSnapshot
+  KnowledgeDocumentSnapshot,
+  KnowledgeEmbeddingHealthSnapshot
 } from "@propertyflow/contracts";
 import { KnowledgeEmbeddingGenerator } from "@propertyflow/domain";
 import { ObjectStorageService } from "../../storage/object-storage.service.js";
 import {
   KNOWLEDGE_DOCUMENT_REPOSITORY,
-  type KnowledgeDocumentRepository
+  type KnowledgeDocumentRepository,
+  type KnowledgeDocumentTagFilterRequest
 } from "../domain/knowledge-document.repository.js";
 
 @Injectable()
@@ -32,7 +32,7 @@ export class KnowledgeDocumentService {
     });
   }
 
-  async search(tenantId: string, request: KnowledgeDocumentSearchRequest): Promise<KnowledgeDocumentListResponse> {
+  async search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentListResponse> {
     const items = await this.documents.search(tenantId, request);
 
     return {

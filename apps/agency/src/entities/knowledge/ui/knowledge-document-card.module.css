@@ -1,5 +1,6 @@
 .card {
   display: grid;
+  min-width: 0;
   gap: 14px;
   border: 1px solid var(--line);
   background: #fff;
@@ -21,6 +22,7 @@
 .tagRow span {
   display: inline-flex;
   min-height: 28px;
+  min-width: 0;
   align-items: center;
   border: 1px solid rgb(15 118 110 / 14%);
   background: #edf8f4;
@@ -28,6 +30,7 @@
   color: var(--teal-dark);
   font-size: 0.72rem;
   font-weight: 900;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 
@@ -50,22 +53,31 @@
 }
 
 .card h3 {
+  min-width: 0;
   margin: 12px 0 0;
   color: var(--ink);
   font-size: 1.16rem;
   line-height: 1.18;
+  overflow-wrap: anywhere;
 }
 
 .card p {
+  display: -webkit-box;
+  min-width: 0;
   margin: 8px 0 12px;
   color: #475955;
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.5;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .readinessNote {
   display: grid;
+  min-width: 0;
   gap: 4px;
   border: 1px solid rgb(15 118 110 / 12%);
   background: #f7fbfa;
@@ -80,10 +92,12 @@
 
 .readinessNote span,
 .readinessNote small {
+  min-width: 0;
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 800;
   line-height: 1.38;
+  overflow-wrap: anywhere;
 }
 
 .readinessNote small {
@@ -101,9 +115,11 @@
 }
 
 .meta span {
+  min-width: 0;
   color: var(--muted);
   font-size: 0.76rem;
   font-weight: 900;
+  overflow-wrap: anywhere;
   text-transform: uppercase;
 }
 

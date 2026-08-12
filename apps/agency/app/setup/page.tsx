@@ -23,7 +23,7 @@ export default async function AgencyStarterSetupPage({
     const [tenant, documentsResult, jobsResult, embeddingHealth] = await Promise.all([
       queryClient.ensureQueryData(currentTenantQueryOptions(tenantId)),
       queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 80 }, tenantId)),
-      queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId)),
+      queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId, { revalidateSeconds: false })),
       queryClient.ensureQueryData(knowledgeEmbeddingHealthQueryOptions(tenantId))
     ]);
 

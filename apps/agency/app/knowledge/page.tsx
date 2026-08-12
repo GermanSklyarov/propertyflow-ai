@@ -46,8 +46,9 @@ export default async function AgencyKnowledgePage({
   const chatRequest = buildChatRequest(query);
 
   try {
-    const [documents, jobs, retrieval, embeddingHealth, listingSources] = await Promise.all([
-      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ limit: 24 }, tenantId)),
+    const [documents, listingKnowledgeDocuments, jobs, retrieval, embeddingHealth, listingSources] = await Promise.all([
+      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ excludeTag: "property-listing", limit: 24 }, tenantId)),
+      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ tag: "property-listing", limit: 24 }, tenantId)),
       queryClient.ensureQueryData(backgroundJobsQueryOptions({ limit: 20 }, tenantId)),
       queryClient.ensureQueryData(knowledgeChunkSearchQueryOptions(retrievalRequest, tenantId)),
       queryClient.ensureQueryData(knowledgeEmbeddingHealthQueryOptions(tenantId)),
@@ -65,6 +66,8 @@ export default async function AgencyKnowledgePage({
         documents={documents.items}
         jobs={knowledgeJobs}
         embeddingHealth={embeddingHealth}
+        listingKnowledgeDocuments={listingKnowledgeDocuments.items}
+        listingKnowledgeTotal={listingKnowledgeDocuments.total}
         listingImportResult={listingImportResult}
         listingSources={listingSources.items}
         notice={buildKnowledgePageNotice(query)}

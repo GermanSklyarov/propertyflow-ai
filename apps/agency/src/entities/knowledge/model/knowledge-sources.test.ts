@@ -252,6 +252,32 @@ describe("knowledge sources model", () => {
     });
   });
 
+  it("does not keep CSV sources indexing when a finished import has only progress or search records", () => {
+    const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
+      documents: [],
+      jobs: [
+        backgroundJob({
+          name: "properties.import",
+          progress: { imported: 60, knowledgeDocumentsCreated: 60, percent: 100, total: 60 },
+          result: { searchRecordsCreated: 60 },
+          state: "active"
+        })
+      ],
+      totalDocuments: 0
+    });
+    const propertyFeed = groups.find((group) => group.type === "property_feed");
+    const coverage = buildKnowledgeSourceCoverage(groups);
+
+    expect(propertyFeed?.connectors[0]).toMatchObject({
+      runtimeNote: "Feeds Concierge without forcing CRM",
+      status: "connected"
+    });
+    expect(coverage.find((item) => item.type === "property_feed")).toMatchObject({
+      indexing: 0,
+      status: "connected"
+    });
+  });
+
   it("marks launch gate ready once at least one source feeds AI", () => {
     const groups = buildRuntimeKnowledgeSourceGroups(knowledgeSourceGroups, {
       documents: [knowledgeDocument({ tags: ["faq"] })],

@@ -1,11 +1,16 @@
 .page {
+  width: 100%;
   min-height: 100vh;
+  overflow-x: clip;
   background: #f5f7f3;
   color: var(--ink);
 }
 
 .shell {
   display: grid;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   gap: 20px;
   max-width: 1440px;
   margin: 0 auto;
@@ -14,6 +19,7 @@
 
 .header {
   display: flex;
+  min-width: 0;
   flex-wrap: wrap;
   align-items: flex-end;
   justify-content: space-between;
@@ -232,7 +238,7 @@
   display: grid;
   min-width: 0;
   gap: 8px;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
 }
 
 .requirementDone,
@@ -295,6 +301,7 @@
 
 .kpiGrid {
   display: grid;
+  min-width: 0;
   gap: 12px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -343,6 +350,7 @@
 
 .panel,
 .sidePanel {
+  min-width: 0;
   border: 1px solid var(--line);
   background: var(--panel-strong);
   padding: 16px;
@@ -461,6 +469,102 @@
 .documentList {
   display: grid;
   gap: 10px;
+}
+
+.listingKnowledgeGrid {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+}
+
+.listingKnowledgeCard {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 14px;
+}
+
+.listingKnowledgeTop,
+.listingKnowledgeTags {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.listingKnowledgeTop span,
+.listingKnowledgeTags span {
+  display: inline-flex;
+  min-height: 28px;
+  min-width: 0;
+  align-items: center;
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 0 9px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+  text-transform: uppercase;
+}
+
+.listingKnowledgeCard h3 {
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: 1.08rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.listingKnowledgeFacts {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 126px), 1fr));
+  margin: 0;
+}
+
+.listingKnowledgeFacts div {
+  min-width: 0;
+  border: 1px solid rgb(15 118 110 / 10%);
+  background: #f7fbfa;
+  padding: 9px;
+}
+
+.listingKnowledgeFacts dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.listingKnowledgeFacts dd {
+  min-width: 0;
+  margin: 4px 0 0;
+  color: var(--ink);
+  font-size: 0.84rem;
+  font-weight: 850;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+.listingKnowledgeCard p {
+  display: -webkit-box;
+  min-width: 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 750;
+  line-height: 1.45;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .sourcesGrid {
@@ -1832,7 +1936,8 @@
 
 .sourceGroupAction {
   display: inline-flex;
-  min-width: max-content;
+  min-width: 0;
+  max-width: 100%;
   min-height: 34px;
   align-items: center;
   justify-content: center;
