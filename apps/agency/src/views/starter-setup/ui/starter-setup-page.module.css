@@ -309,7 +309,7 @@
 .blockerItem {
   display: grid;
   min-width: 0;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
+  grid-template-columns: 22px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   border: 1px solid rgb(180 83 9 / 20%);
@@ -337,28 +337,28 @@
 
 .blockerItem strong,
 .blockerItem small {
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .blockerItem strong {
-  white-space: nowrap;
+  line-height: 1.1;
 }
 
 .blockerItem small {
   color: var(--muted);
   font-weight: 800;
   line-height: 1.35;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
 }
 
 .blockerItem b {
+  grid-column: 2;
+  justify-self: end;
   border: 1px solid rgb(15 118 110 / 18%);
   background: #edf8f4;
   padding: 8px 10px;
   font-size: 0.72rem;
+  line-height: 1;
+  text-align: center;
   text-transform: uppercase;
 }
 
