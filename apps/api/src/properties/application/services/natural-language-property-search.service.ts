@@ -35,7 +35,11 @@ const AMENITY_PATTERNS: Array<[string, RegExp]> = [
   ["gym", /(?:\b(?:gym|fitness)\b|фитнес|спортзал|тренажерный зал|ฟิตเนส|健身房|健身)/],
   ["sea-view", /(?:\b(?:sea view|ocean view)\b|вид на море|с видом на море|панорам[а-я ]+мор|วิวทะเล|เห็นทะเล|海景|看海)/],
   ["fast-internet", /(?:\b(?:fast internet|good internet)\b|быстрый интернет|хороший интернет|อินเทอร์เน็ต|เน็ตแรง|网络|網絡|高速网|高速網)/],
-  ["coworking", /(?:\bcoworking\b|коворкинг|коворкинги|โคเวิร์ก|โคเวิร์ค|共享办公|共享辦公)/]
+  ["coworking", /(?:\bcoworking\b|коворкинг|коворкинги|โคเวิร์ก|โคเวิร์ค|共享办公|共享辦公)/],
+  [
+    "pet-friendly",
+    /(?:\b(?:pet|pets|pet-friendly|pet friendly|dog|dogs|cat|cats|animal|animals)\b|с\s+животн|животн|питомц|собак|кошк|สัตว์เลี้ยง|หมา|สุนัข|แมว|宠物|寵物|狗|猫|貓)/
+  ]
 ];
 
 const LIFESTYLE_PATTERNS: Array<[string, RegExp]> = [
@@ -43,7 +47,8 @@ const LIFESTYLE_PATTERNS: Array<[string, RegExp]> = [
   ["cafes", /(?:кафе|coffee|restaurants|рестораны|ร้านกาแฟ|ร้านอาหาร|咖啡|餐厅|餐廳)/],
   ["beach-life", /(?:пляж|beach|мор|sea|ทะเล|ชายหาด|海边|海邊|海滩|海灘)/],
   ["remote-work", /(?:internet|интернет|coworking|коворкинг|remote|удален|ออนไลน์|เน็ต|远程|遠程|网络|網絡|共享办公|共享辦公)/],
-  ["shopping", /(?:terminal 21|shopping|mall|торгов|ห้าง|商场|商場|购物|購物)/]
+  ["shopping", /(?:terminal 21|shopping|mall|торгов|ห้าง|商场|商場|购物|購物)/],
+  ["pet-friendly", /(?:\b(?:pet|pets|pet-friendly|pet friendly|dog|dogs|cat|cats)\b|животн|питомц|собак|кошк|สัตว์เลี้ยง|宠物|寵物|狗|猫|貓)/]
 ];
 
 @Injectable()
@@ -67,7 +72,10 @@ export class NaturalLanguagePropertySearchService {
       await Promise.all(
         indexedResult.items.map((item) => this.properties.findById(tenantId, item.propertyId))
       )
-    ).filter((item): item is PropertySnapshot => item !== null).filter(isRecommendableProperty);
+    )
+      .filter((item): item is PropertySnapshot => item !== null)
+      .filter(isRecommendableProperty)
+      .filter((item) => matchesStrictFilters(item, interpretation.filters));
     const rankedIndexed = await this.applyVectorRanking(tenantId, request.query, indexedItems);
     const fallbackItems = rankedIndexed.items.length >= 3
       ? []
@@ -79,6 +87,7 @@ export class NaturalLanguagePropertySearchService {
           sort: "ai-fit"
         }))
           .filter(isRecommendableProperty)
+          .filter((item) => matchesStrictFilters(item, interpretation.filters))
           .filter((item) => !rankedIndexed.items.some((indexedItem) => indexedItem.id === item.id));
     const rankedFallback = rankedIndexed.items.length >= 3
       ? { items: [] as PropertySnapshot[], vectorApplied: false }
@@ -364,6 +373,34 @@ function isRecommendableProperty(property: PropertySnapshot): boolean {
     (property.price.amount >= 100_000 || (property.rentalPriceMonthly?.amount ?? 0) >= 1_000) &&
     !/(^|\s)(smoke|starter import)\b/i.test(property.title)
   );
+}
+
+function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearchRequest): boolean {
+  if (filters.requiredAmenities?.some((amenity) => !property.amenities.includes(amenity))) {
+    return false;
+  }
+
+  if (filters.listingType === "rent" && !["rent", "sale_or_rent"].includes(property.listingType)) {
+    return false;
+  }
+
+  if (filters.listingType === "sale" && !["sale", "sale_or_rent"].includes(property.listingType)) {
+    return false;
+  }
+
+  if (filters.market && property.market !== filters.market) {
+    return false;
+  }
+
+  if (filters.maxMonthlyRentThb !== undefined && (property.rentalPriceMonthly?.amount ?? Number.POSITIVE_INFINITY) > filters.maxMonthlyRentThb) {
+    return false;
+  }
+
+  if (filters.maxPriceThb !== undefined && property.price.amount > filters.maxPriceThb) {
+    return false;
+  }
+
+  return true;
 }
 
 function hybridScore(

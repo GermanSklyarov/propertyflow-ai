@@ -69,6 +69,23 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(interpretation.filters).not.toHaveProperty("maxPriceThb");
   });
 
+  it("treats pets and dogs as a strict pet-friendly amenity requirement", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query: "find me a condo in pattaya under 30k/month, i am going to live with 2 dogs, so it has to be pet-friendly"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      listingType: "rent",
+      market: "pattaya",
+      maxMonthlyRentThb: 30_000,
+      requiredAmenities: ["pet-friendly"]
+    });
+    expect(interpretation.rankingExplanation).toContain("requiredAmenities=pet-friendly");
+  });
+
   it("does not treat recommend as a rental intent when buy is explicit", () => {
     const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 
@@ -224,7 +241,12 @@ describe("NaturalLanguagePropertySearchService", () => {
       price: { amount: 0, currency: "THB" },
       title: "Starter Import Real Listing starter-import-73d24796"
     });
-    const available = propertyFactory({ id: "property-available", title: "Central Pattaya Rental Loft" });
+    const available = propertyFactory({
+      id: "property-available",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+      title: "Central Pattaya Rental Loft"
+    });
     const repository = {
       findById: async (_tenantId: string, propertyId: string) =>
         propertyId === smoke.id ? smoke : propertyId === incomplete.id ? incomplete : available,
@@ -252,6 +274,62 @@ describe("NaturalLanguagePropertySearchService", () => {
     });
 
     expect(result.items.map((item) => item.id)).toEqual([available.id]);
+  });
+
+  it("only recommends pet-friendly listings when the visitor needs pets allowed", async () => {
+    const petFriendlyIndexed = propertyFactory({
+      amenities: ["pet-friendly", "pool"],
+      id: "pet-friendly-indexed",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+      title: "Pet Friendly Wongamat Condo"
+    });
+    const notPetFriendlyIndexed = propertyFactory({
+      amenities: ["pool", "gym"],
+      id: "not-pet-friendly-indexed",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+      title: "Central Pattaya Rental Loft"
+    });
+    const petFriendlyFallback = propertyFactory({
+      amenities: ["pet-friendly", "sea-view"],
+      id: "pet-friendly-fallback",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 26_000, currency: "THB" },
+      title: "Jomtien Pet Friendly Studio"
+    });
+    const byId = new Map([
+      [petFriendlyIndexed.id, petFriendlyIndexed],
+      [notPetFriendlyIndexed.id, notPetFriendlyIndexed],
+      [petFriendlyFallback.id, petFriendlyFallback]
+    ]);
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) => byId.get(propertyId) ?? null,
+      search: async () => [petFriendlyFallback, notPetFriendlyIndexed]
+    };
+    const indexedSearch = {
+      search: async (_tenantId: string, request: { requiredAmenities?: string[] }) => ({
+        filters: request,
+        index: "propertyflow-properties-v1",
+        items: [
+          { propertyId: petFriendlyIndexed.id },
+          { propertyId: notPetFriendlyIndexed.id }
+        ],
+        total: 2
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "i need a room in pattaya that is suitable for living with pets"
+    });
+
+    expect(result.filters.requiredAmenities).toEqual(["pet-friendly"]);
+    expect(result.filters.lifestyleSignals).toContain("pet-friendly");
+    expect(result.items.map((item) => item.id)).toEqual([petFriendlyIndexed.id, petFriendlyFallback.id]);
   });
 
   it("uses pgvector similarity to rerank recommendable indexed listings", async () => {
