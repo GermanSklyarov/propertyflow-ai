@@ -459,11 +459,22 @@ function summarizeRequestSuitability(
 
 function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
   const requestedAmenities = detectRequestedWidgetAmenities(requestMessage);
+  const preferBudgetPrice = isBudgetPriceRequest(requestMessage);
+  const preferLuxuryFit = isLuxuryRequest(requestMessage);
+  const preferValueForMoney = isValueForMoneyRequest(requestMessage);
   const preferLargerArea = isSpaciousRequest(requestMessage);
   const preferCloseBeach = hasSpecificLocationPreference(requestMessage) && /\b(?:beach|sea|near|close|walk)\b|пляж|море/i.test(requestMessage);
   const preferFamilyFit = isFamilyRequest(requestMessage) || isSchoolRequest(requestMessage);
 
-  if (!requestedAmenities.length && !preferLargerArea && !preferCloseBeach && !preferFamilyFit) {
+  if (
+    !requestedAmenities.length &&
+    !preferBudgetPrice &&
+    !preferLuxuryFit &&
+    !preferValueForMoney &&
+    !preferLargerArea &&
+    !preferCloseBeach &&
+    !preferFamilyFit
+  ) {
     return properties;
   }
 
@@ -474,6 +485,27 @@ function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestM
         countMatchedAmenities(right.property, requestedAmenities) - countMatchedAmenities(left.property, requestedAmenities);
       if (amenityDelta !== 0) {
         return amenityDelta;
+      }
+
+      if (preferBudgetPrice) {
+        const priceDelta = widgetComparablePrice(left.property) - widgetComparablePrice(right.property);
+        if (priceDelta !== 0) {
+          return priceDelta;
+        }
+      }
+
+      if (preferLuxuryFit) {
+        const luxuryDelta = widgetLuxuryFitScore(right.property) - widgetLuxuryFitScore(left.property);
+        if (luxuryDelta !== 0) {
+          return luxuryDelta;
+        }
+      }
+
+      if (preferValueForMoney) {
+        const valueDelta = widgetValueForMoneyScore(right.property) - widgetValueForMoneyScore(left.property);
+        if (valueDelta !== 0) {
+          return valueDelta;
+        }
       }
 
       if (preferFamilyFit) {
@@ -564,6 +596,37 @@ function widgetFamilyFitScore(property: PropertySnapshot): number {
   const familyAmenities = countMatchedAmenities(property, ["kids playground", "playground", "school", "kindergarten", "family pool", "garden"]);
 
   return familyAmenities * 3 + Math.min(property.bedrooms, 3) * 1.5 + Math.min(property.areaSqm / 25, 4);
+}
+
+function widgetComparablePrice(property: PropertySnapshot): number {
+  return property.rentalPriceMonthly?.amount ?? property.price.amount;
+}
+
+function widgetValueForMoneyScore(property: PropertySnapshot): number {
+  const pricePerSqm = widgetComparablePrice(property) / Math.max(property.areaSqm, 1);
+  const amenityBonus = Math.min(property.amenities.length, 8) * 0.15;
+
+  return Math.min(1_000_000 / Math.max(pricePerSqm, 1) + amenityBonus, 10);
+}
+
+function widgetLuxuryFitScore(property: PropertySnapshot): number {
+  const premiumAmenityScore = countMatchedAmenities(property, [
+    "sea-view",
+    "beachfront",
+    "private pool",
+    "jacuzzi",
+    "sauna",
+    "concierge",
+    "high floor",
+    "covered parking",
+    "gym",
+    "coworking",
+    "high-speed internet"
+  ]);
+  const priceSignal = Math.min(widgetComparablePrice(property) / 5_000_000, 3);
+  const areaSignal = Math.min(property.areaSqm / 80, 2);
+
+  return premiumAmenityScore * 1.5 + priceSignal + areaSignal;
 }
 
 function buildFamilySuitabilityNote(
@@ -666,6 +729,18 @@ function isFamilyRequest(message: string) {
 
 function isSchoolRequest(message: string) {
   return /\b(?:school|kindergarten)\b|школ|садик|โรงเรียน|学校|學校/i.test(message);
+}
+
+function isBudgetPriceRequest(message: string) {
+  return /\b(?:budget-friendly|budget option|cheap|cheaper|affordable|low price|lowest price|economy|inexpensive)\b|бюджетн|дешев|недорог|подешевле|ประหยัด|ถูก|ราคาไม่แพง|便宜|实惠|實惠/i.test(message);
+}
+
+function isLuxuryRequest(message: string) {
+  return /\b(?:luxury|premium|elite|high-end|upscale|exclusive|best quality)\b|элит|премиум|люкс|дорог|ระดับพรีเมียม|หรู|豪华|豪華|高端/i.test(message);
+}
+
+function isValueForMoneyRequest(message: string) {
+  return /\b(?:best value|value for money|good deal|best deal|balanced|optimal|worth it)\b|цена.*качество|лучшее предложение|выгод|оптимальн|คุ้มค่า|性价比|性價比/i.test(message);
 }
 
 function hasAnyAmenity(property: PropertySnapshot, amenities: string[]) {

@@ -1126,6 +1126,74 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("amenities like sea-view");
   });
 
+  it("reranks public cards toward budget-friendly options", async () => {
+    const controller = publicWidgetControllerForProperties(
+      ["expensive", "cheap"],
+      new Map([
+        ["expensive", propertyFactory({ id: "expensive", price: { amount: 4_800_000, currency: "THB" }, title: "Pricier Pattaya Condo" })],
+        ["cheap", propertyFactory({ id: "cheap", price: { amount: 2_200_000, currency: "THB" }, title: "Affordable Pattaya Condo" })]
+      ])
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "show me budget-friendly affordable condos in Pattaya under 5m"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "Affordable Pattaya Condo",
+      "Pricier Pattaya Condo"
+    ]);
+  });
+
+  it("reranks public cards toward premium options", async () => {
+    const controller = publicWidgetControllerForProperties(
+      ["basic", "premium"],
+      new Map([
+        [
+          "basic",
+          propertyFactory({
+            amenities: ["pool"],
+            areaSqm: 60,
+            id: "basic",
+            price: { amount: 6_000_000, currency: "THB" },
+            title: "Large Basic Condo"
+          })
+        ],
+        [
+          "premium",
+          propertyFactory({
+            amenities: ["sea-view", "gym", "sauna", "covered parking"],
+            areaSqm: 52,
+            id: "premium",
+            price: { amount: 5_700_000, currency: "THB" },
+            title: "Premium Sea View Condo"
+          })
+        ]
+      ])
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "show me a premium luxury condo in Pattaya"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "Premium Sea View Condo",
+      "Large Basic Condo"
+    ]);
+  });
+
   it("prioritizes mandatory washing machine and family fit in public cards", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
@@ -2106,6 +2174,45 @@ function propertyRepository(overrides: Partial<PropertyRepository> = {}): Proper
     updateStatus: vi.fn(),
     ...overrides
   } as unknown as PropertyRepository;
+}
+
+function publicWidgetControllerForProperties(
+  matchedPropertyIds: string[],
+  propertiesById: Map<string, PropertySnapshot>
+): PublicWidgetChatController {
+  const tenant = tenantFactory({
+    id: "tenant-rag",
+    widget: {
+      ...tenantFactory().widget,
+      allowedOrigins: ["https://agency.example.com"]
+    }
+  });
+  const tenants = {
+    assertPublicWidgetOriginAllowed: vi.fn(),
+    getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+    recordPublicWidgetAsk: vi.fn()
+  } as unknown as TenantService;
+  const chat = {
+    ask: vi.fn().mockResolvedValue(
+      chatResponse({
+        answer: `I found ${matchedPropertyIds.length} matching listings.`,
+        matchedPropertyIds,
+        suggestedActions: ["compare-results", "open-map", "save-search"]
+      })
+    )
+  } as unknown as AiChatService;
+
+  return new PublicWidgetChatController(
+    tenants,
+    chat,
+    { create: vi.fn() } as unknown as LeadService,
+    propertyRepository({
+      findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+        Promise.resolve(propertiesById.get(propertyId) ?? null)
+      )
+    }),
+    rateLimitService()
+  );
 }
 
 function rateLimitService(): PublicWidgetRateLimitService {

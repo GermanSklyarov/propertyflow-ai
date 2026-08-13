@@ -24,8 +24,12 @@ interface BudgetSignal {
 }
 
 interface RankingPreferences {
+  preferBeachProximity: boolean;
+  preferBudgetPrice: boolean;
   preferFamilyFit: boolean;
   preferLargerArea: boolean;
+  preferLuxuryFit: boolean;
+  preferValueForMoney: boolean;
   preferWashingMachine: boolean;
 }
 
@@ -221,8 +225,8 @@ export class NaturalLanguagePropertySearchService {
       rankingPreferences,
       rankingExplanation:
         explanations.length > 0
-          ? `Rule-based interpreter extracted ${explanations.join("; ")}. OpenSearch ranks matching indexed listings by text relevance and recency.${rankingPreferences.preferLargerArea ? " Spacious requests are softly reranked toward larger layouts." : ""}`
-          : `Rule-based interpreter did not find strict filters; OpenSearch ranks tenant listings by text relevance and recency.${rankingPreferences.preferLargerArea ? " Spacious requests are softly reranked toward larger layouts." : ""}`,
+          ? `Rule-based interpreter extracted ${explanations.join("; ")}. OpenSearch ranks matching indexed listings by text relevance and recency.${describeRankingPreferences(rankingPreferences)}`
+          : `Rule-based interpreter did not find strict filters; OpenSearch ranks tenant listings by text relevance and recency.${describeRankingPreferences(rankingPreferences)}`,
       purpose
     };
   }
@@ -387,8 +391,12 @@ export class NaturalLanguagePropertySearchService {
 
   private detectRankingPreferences(query: string): RankingPreferences {
     return {
+      preferBeachProximity: /(?:\b(?:close to (?:the )?beach|near (?:the )?beach|walk(?:ing)? distance|beachfront|by the beach)\b|рядом.*пляж|у пляжа|пешком.*пляж|ใกล้.*ชายหาด|ติดทะเล|海边|海邊|海滩附近|海灘附近)/i.test(query),
+      preferBudgetPrice: /(?:\b(?:budget-friendly|budget option|cheap|cheaper|affordable|low price|lowest price|economy|inexpensive)\b|бюджетн|дешев|недорог|подешевле|ประหยัด|ถูก|ราคาไม่แพง|便宜|实惠|實惠)/i.test(query),
       preferFamilyFit: /(?:school|kindergarten|children|kids|child|family|школ|дет|семь|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/i.test(query),
       preferLargerArea: /(?:\b(?:spacious|roomy|large|larger|big|bigger|more space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點)/i.test(query),
+      preferLuxuryFit: /(?:\b(?:luxury|premium|elite|high-end|upscale|exclusive|best quality)\b|элит|премиум|люкс|дорог|ระดับพรีเมียม|หรู|豪华|豪華|高端)/i.test(query),
+      preferValueForMoney: /(?:\b(?:best value|value for money|good deal|best deal|balanced|optimal|worth it)\b|цена.*качество|лучшее предложение|выгод|оптимальн|คุ้มค่า|性价比|性價比)/i.test(query),
       preferWashingMachine: /(?:\b(?:washing machine|washer|laundry machine)\b|стиральн|стиралк|เครื่องซักผ้า|洗衣机|洗衣機)/i.test(query)
     };
   }
@@ -461,7 +469,7 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
 }
 
 function rankByQueryPreferences(items: PropertySnapshot[], preferences: RankingPreferences): PropertySnapshot[] {
-  if (!preferences.preferFamilyFit && !preferences.preferLargerArea && !preferences.preferWashingMachine) {
+  if (!hasRankingPreferences(preferences)) {
     return items;
   }
 
@@ -476,6 +484,27 @@ function compareByQueryPreferences(left: PropertySnapshot, right: PropertySnapsh
     }
   }
 
+  if (preferences.preferBudgetPrice) {
+    const priceDelta = comparablePrice(left) - comparablePrice(right);
+    if (priceDelta !== 0) {
+      return priceDelta;
+    }
+  }
+
+  if (preferences.preferLuxuryFit) {
+    const luxuryDelta = luxuryFitScore(right) - luxuryFitScore(left);
+    if (luxuryDelta !== 0) {
+      return luxuryDelta;
+    }
+  }
+
+  if (preferences.preferValueForMoney) {
+    const valueDelta = valueForMoneyScore(right) - valueForMoneyScore(left);
+    if (valueDelta !== 0) {
+      return valueDelta;
+    }
+  }
+
   if (preferences.preferFamilyFit) {
     const familyDelta = familyFitScore(right) - familyFitScore(left);
     if (familyDelta !== 0) {
@@ -485,6 +514,14 @@ function compareByQueryPreferences(left: PropertySnapshot, right: PropertySnapsh
 
   if (preferences.preferLargerArea && right.areaSqm !== left.areaSqm) {
     return right.areaSqm - left.areaSqm;
+  }
+
+  if (preferences.preferBeachProximity) {
+    const leftDistance = left.beachDistanceMeters ?? Number.POSITIVE_INFINITY;
+    const rightDistance = right.beachDistanceMeters ?? Number.POSITIVE_INFINITY;
+    if (leftDistance !== rightDistance) {
+      return leftDistance - rightDistance;
+    }
   }
 
   return 0;
@@ -506,11 +543,67 @@ function hybridScore(
 }
 
 function preferenceScore(property: PropertySnapshot, preferences: RankingPreferences): number {
+  const budgetScore = preferences.preferBudgetPrice ? 1 / Math.max(comparablePrice(property), 1) * 1_000_000 : 0;
+  const luxuryScore = preferences.preferLuxuryFit ? luxuryFitScore(property) / 10 : 0;
+  const valueScore = preferences.preferValueForMoney ? valueForMoneyScore(property) / 10 : 0;
   const washerScore = preferences.preferWashingMachine && hasAmenity(property, "washing machine") ? 0.4 : 0;
   const familyScore = preferences.preferFamilyFit ? familyFitScore(property) / 10 : 0;
   const areaScore = preferences.preferLargerArea ? Math.min(property.areaSqm / 80, 1) : 0;
+  const beachScore =
+    preferences.preferBeachProximity && property.beachDistanceMeters !== undefined
+      ? Math.max(0, 1 - property.beachDistanceMeters / 3000)
+      : 0;
 
-  return Math.min(washerScore + familyScore + areaScore, 1);
+  return Math.min(budgetScore + luxuryScore + valueScore + washerScore + familyScore + areaScore + beachScore, 1);
+}
+
+function hasRankingPreferences(preferences: RankingPreferences): boolean {
+  return Object.values(preferences).some(Boolean);
+}
+
+function describeRankingPreferences(preferences: RankingPreferences): string {
+  const labels = [
+    preferences.preferBudgetPrice ? "budget price" : undefined,
+    preferences.preferLuxuryFit ? "premium fit" : undefined,
+    preferences.preferValueForMoney ? "value for money" : undefined,
+    preferences.preferWashingMachine ? "washing machine" : undefined,
+    preferences.preferFamilyFit ? "family fit" : undefined,
+    preferences.preferLargerArea ? "larger layouts" : undefined,
+    preferences.preferBeachProximity ? "beach proximity" : undefined
+  ].filter(Boolean);
+
+  return labels.length ? ` Relative preferences softly rerank toward ${labels.join(", ")}.` : "";
+}
+
+function comparablePrice(property: PropertySnapshot): number {
+  return property.rentalPriceMonthly?.amount ?? property.price.amount;
+}
+
+function valueForMoneyScore(property: PropertySnapshot): number {
+  const pricePerSqm = comparablePrice(property) / Math.max(property.areaSqm, 1);
+  const amenityBonus = Math.min(property.amenities.length, 8) * 0.15;
+
+  return Math.min(1_000_000 / Math.max(pricePerSqm, 1) + amenityBonus, 10);
+}
+
+function luxuryFitScore(property: PropertySnapshot): number {
+  const premiumAmenityScore = countAmenityMatches(property, [
+    "sea-view",
+    "beachfront",
+    "private pool",
+    "jacuzzi",
+    "sauna",
+    "concierge",
+    "high floor",
+    "covered parking",
+    "gym",
+    "coworking",
+    "high-speed internet"
+  ]);
+  const priceSignal = Math.min(comparablePrice(property) / 5_000_000, 3);
+  const areaSignal = Math.min(property.areaSqm / 80, 2);
+
+  return premiumAmenityScore * 1.5 + priceSignal + areaSignal;
 }
 
 function familyFitScore(property: PropertySnapshot): number {

@@ -544,7 +544,7 @@ describe("NaturalLanguagePropertySearchService", () => {
       requiredAmenities: ["sea-view"]
     });
     expect(result.items.map((item) => item.id)).toEqual(["larger-sea-view", "mid-size", "compact-near-beach"]);
-    expect(result.rankingExplanation).toContain("Spacious requests are softly reranked toward larger layouts.");
+    expect(result.rankingExplanation).toContain("larger layouts");
   });
 
   it("keeps larger layouts ahead of compact vector matches for spacious requests", async () => {
@@ -598,6 +598,84 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.items.map((item) => item.id)).toEqual(["larger-sea-view", "compact-vector-favorite"]);
   });
 
+  it("reranks budget requests toward cheaper matching listings", async () => {
+    const cheap = propertyFactory({ id: "cheap", price: { amount: 2_200_000, currency: "THB" }, title: "Affordable Pattaya Condo" });
+    const expensive = propertyFactory({ id: "expensive", price: { amount: 4_800_000, currency: "THB" }, title: "Pricier Pattaya Condo" });
+    const service = searchServiceForItems([expensive, cheap]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "show me budget-friendly affordable condos in Pattaya under 5m"
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual(["cheap", "expensive"]);
+    expect(result.rankingExplanation).toContain("budget price");
+  });
+
+  it("reranks premium requests toward luxury signals", async () => {
+    const basic = propertyFactory({
+      amenities: ["pool"],
+      areaSqm: 60,
+      id: "basic",
+      price: { amount: 6_000_000, currency: "THB" },
+      title: "Large Basic Condo"
+    });
+    const premium = propertyFactory({
+      amenities: ["sea-view", "gym", "sauna", "covered parking"],
+      areaSqm: 52,
+      id: "premium",
+      price: { amount: 5_700_000, currency: "THB" },
+      title: "Premium Sea View Condo"
+    });
+    const service = searchServiceForItems([basic, premium]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "show me a premium luxury condo in Pattaya"
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual(["premium", "basic"]);
+    expect(result.rankingExplanation).toContain("premium fit");
+  });
+
+  it("reranks best-value requests toward larger lower-price-per-sqm listings", async () => {
+    const poorValue = propertyFactory({
+      areaSqm: 32,
+      id: "poor-value",
+      price: { amount: 4_500_000, currency: "THB" },
+      title: "Compact Expensive Condo"
+    });
+    const goodValue = propertyFactory({
+      areaSqm: 70,
+      id: "good-value",
+      price: { amount: 4_900_000, currency: "THB" },
+      title: "Large Value Condo"
+    });
+    const service = searchServiceForItems([poorValue, goodValue]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "show me the best value for money condo in Pattaya under 5m"
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual(["good-value", "poor-value"]);
+    expect(result.rankingExplanation).toContain("value for money");
+  });
+
+  it("reranks beach-proximity requests toward closer listings", async () => {
+    const far = propertyFactory({ beachDistanceMeters: 900, id: "far", title: "Farther Condo" });
+    const close = propertyFactory({ beachDistanceMeters: 150, id: "close", title: "Close Beach Condo" });
+    const service = searchServiceForItems([far, close]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "show me a condo near the beach in Pattaya"
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual(["close", "far"]);
+    expect(result.rankingExplanation).toContain("beach proximity");
+  });
+
   it("uses pgvector similarity to rerank recommendable indexed listings", async () => {
     const weakLexicalFirst = propertyFactory({ id: "11111111-1111-1111-1111-111111111111", title: "Generic City Condo" });
     const semanticBest = propertyFactory({ id: "22222222-2222-2222-2222-222222222222", title: "Beachfront Sea View Condo" });
@@ -634,6 +712,26 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.rankingExplanation).toContain("pgvector semantic similarity reranked");
   });
 });
+
+function searchServiceForItems(items: PropertySnapshot[]): NaturalLanguagePropertySearchService {
+  const byId = new Map(items.map((item) => [item.id, item]));
+  const repository = {
+    findById: async (_tenantId: string, propertyId: string) => byId.get(propertyId) ?? null,
+    search: async () => items
+  };
+  const indexedSearch = {
+    search: async () => ({
+      filters: { query: "relative preference search" },
+      index: "propertyflow-properties-v1",
+      items: items.map((item) => ({ propertyId: item.id })),
+      total: items.length
+    })
+  };
+
+  return new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+    rankCandidates: async () => []
+  } as never);
+}
 
 function propertyFactory(overrides: Partial<PropertySnapshot> = {}): PropertySnapshot {
   return {
