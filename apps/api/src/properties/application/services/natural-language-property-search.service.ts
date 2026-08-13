@@ -24,7 +24,9 @@ interface BudgetSignal {
 }
 
 interface RankingPreferences {
+  preferFamilyFit: boolean;
   preferLargerArea: boolean;
+  preferWashingMachine: boolean;
 }
 
 const MARKET_PATTERNS: Array<[ThailandMarket, RegExp]> = [
@@ -53,6 +55,7 @@ const LIFESTYLE_PATTERNS: Array<[string, RegExp]> = [
   ["beach-life", /(?:пляж|beach|мор|sea|ทะเล|ชายหาด|海边|海邊|海滩|海灘)/],
   ["remote-work", /(?:internet|интернет|coworking|коворкинг|remote|удален|ออนไลน์|เน็ต|远程|遠程|网络|網絡|共享办公|共享辦公)/],
   ["shopping", /(?:terminal 21|shopping|mall|торгов|ห้าง|商场|商場|购物|購物)/],
+  ["school-access", /(?:school|kindergarten|children|kids|child|family|школ|дет|семь|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/],
   ["pet-friendly", /(?:\b(?:pet|pets|pet-friendly|pet friendly|dog|dogs|cat|cats)\b|животн|питомц|собак|кошк|สัตว์เลี้ยง|宠物|寵物|狗|猫|貓)/]
 ];
 
@@ -170,13 +173,13 @@ export class NaturalLanguagePropertySearchService {
       explanations.push(`market=${market}`);
     }
 
-    const listingType = this.detectListingType(normalized);
+    const budget = this.detectBudgetThb(normalized);
+    const listingType = this.detectListingType(normalized, budget);
     if (listingType) {
       filters.listingType = listingType;
       explanations.push(`listingType=${listingType}`);
     }
 
-    const budget = this.detectBudgetThb(normalized);
     if (budget && (listingType === "rent" || budget.cadence === "monthly")) {
       filters.maxMonthlyRentThb = budget.amountThb;
       explanations.push(`maxMonthlyRentThb=${budget.amountThb}`);
@@ -185,7 +188,8 @@ export class NaturalLanguagePropertySearchService {
       explanations.push(`maxPriceThb=${budget.amountThb}`);
     }
 
-    const minBedrooms = this.detectMinBedrooms(normalized);
+    const purpose = request.purpose ?? this.detectPurpose(normalized);
+    const minBedrooms = this.detectMinBedrooms(normalized) ?? (purpose === "family" ? 2 : undefined);
     if (minBedrooms !== undefined) {
       filters.minBedrooms = minBedrooms;
       explanations.push(`minBedrooms=${minBedrooms}`);
@@ -203,13 +207,12 @@ export class NaturalLanguagePropertySearchService {
       explanations.push(`maxBeachDistanceMeters=${beachDistance}`);
     }
 
-    const requiredAmenities = this.detectAmenities(normalized);
+    const requiredAmenities = Array.from(new Set([...this.detectAmenities(normalized), ...this.detectRequiredAmenities(normalized)]));
     if (requiredAmenities.length) {
       filters.requiredAmenities = requiredAmenities;
       explanations.push(`requiredAmenities=${requiredAmenities.join(",")}`);
     }
 
-    const purpose = request.purpose ?? this.detectPurpose(normalized);
     const rankingPreferences = this.detectRankingPreferences(normalized);
 
     return {
@@ -282,7 +285,7 @@ export class NaturalLanguagePropertySearchService {
     return undefined;
   }
 
-  private detectListingType(query: string): PropertySearchRequest["listingType"] | undefined {
+  private detectListingType(query: string, budget?: BudgetSignal): PropertySearchRequest["listingType"] | undefined {
     const investmentSaleIntent = /(?:rent out|yield|roi|invest|investment|сдач|доход|инвест|ลงทุน|ผลตอบแทน|投资|投資|收益|回报|回報)/.test(query);
     const rentalIntent = /(?:снять|сним|арендовать|аренда|\brent\b|\brental\b|\blease\b|\bmonthly\b|\bper month\b|\bmonth\b|месяц|мес|เช่า|ให้เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月)/.test(query);
     const saleIntent = /(?:купить|покуп|продаж|buy|purchase|sale|ownership|ซื้อ|ขาย|买|買|购买|購買|出售)/.test(query) || investmentSaleIntent;
@@ -296,6 +299,10 @@ export class NaturalLanguagePropertySearchService {
     }
 
     if (saleIntent) {
+      return "sale";
+    }
+
+    if (budget && budget.cadence !== "monthly" && budget.amountThb >= 1_000_000) {
       return "sale";
     }
 
@@ -338,6 +345,20 @@ export class NaturalLanguagePropertySearchService {
     return AMENITY_PATTERNS.filter(([, pattern]) => pattern.test(query)).map(([amenity]) => amenity);
   }
 
+  private detectRequiredAmenities(query: string): string[] {
+    const requiredAmenities: string[] = [];
+
+    if (
+      /\b(?:definitely|must have|required|mandatory|has to have)\b.{0,40}\b(?:washing machine|washer|laundry machine)\b|\b(?:washing machine|washer|laundry machine)\b.{0,40}\b(?:definitely|required|mandatory|must)\b/i.test(
+        query
+      )
+    ) {
+      requiredAmenities.push("washing machine");
+    }
+
+    return requiredAmenities;
+  }
+
   private detectPurpose(query: string): PropertyPurpose | undefined {
     if (/(инвест|доходн|invest|investment|roi|yield|rent out|сдач|ลงทุน|ผลตอบแทน|ปล่อยเช่า|投资|投資|收益|回报|回報|出租收益)/.test(query)) {
       return "investment";
@@ -347,7 +368,7 @@ export class NaturalLanguagePropertySearchService {
       return "relocation";
     }
 
-    if (/(family|семь|семей|школ|ครอบครัว|เด็ก|โรงเรียน|家庭|家人|孩子|学校|學校)/.test(query)) {
+    if (/(family|children|child|kids|kid|семь|семей|школ|дет|ครอบครัว|เด็ก|โรงเรียน|家庭|家人|孩子|学校|學校)/.test(query)) {
       return "family";
     }
 
@@ -366,7 +387,9 @@ export class NaturalLanguagePropertySearchService {
 
   private detectRankingPreferences(query: string): RankingPreferences {
     return {
-      preferLargerArea: /(?:\b(?:spacious|roomy|large|larger|big|bigger|more space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點)/i.test(query)
+      preferFamilyFit: /(?:school|kindergarten|children|kids|child|family|школ|дет|семь|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/i.test(query),
+      preferLargerArea: /(?:\b(?:spacious|roomy|large|larger|big|bigger|more space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點)/i.test(query),
+      preferWashingMachine: /(?:\b(?:washing machine|washer|laundry machine)\b|стиральн|стиралк|เครื่องซักผ้า|洗衣机|洗衣機)/i.test(query)
     };
   }
 
@@ -419,11 +442,26 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
     return false;
   }
 
+  if (filters.minBedrooms !== undefined && property.bedrooms < filters.minBedrooms) {
+    return false;
+  }
+
+  if (filters.minAreaSqm !== undefined && property.areaSqm < filters.minAreaSqm) {
+    return false;
+  }
+
+  if (
+    filters.maxBeachDistanceMeters !== undefined &&
+    (property.beachDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxBeachDistanceMeters
+  ) {
+    return false;
+  }
+
   return true;
 }
 
 function rankByQueryPreferences(items: PropertySnapshot[], preferences: RankingPreferences): PropertySnapshot[] {
-  if (!preferences.preferLargerArea) {
+  if (!preferences.preferFamilyFit && !preferences.preferLargerArea && !preferences.preferWashingMachine) {
     return items;
   }
 
@@ -431,11 +469,25 @@ function rankByQueryPreferences(items: PropertySnapshot[], preferences: RankingP
 }
 
 function compareByQueryPreferences(left: PropertySnapshot, right: PropertySnapshot, preferences: RankingPreferences): number {
-  if (!preferences.preferLargerArea) {
-    return 0;
+  if (preferences.preferWashingMachine) {
+    const washerDelta = Number(hasAmenity(right, "washing machine")) - Number(hasAmenity(left, "washing machine"));
+    if (washerDelta !== 0) {
+      return washerDelta;
+    }
   }
 
-  return right.areaSqm - left.areaSqm;
+  if (preferences.preferFamilyFit) {
+    const familyDelta = familyFitScore(right) - familyFitScore(left);
+    if (familyDelta !== 0) {
+      return familyDelta;
+    }
+  }
+
+  if (preferences.preferLargerArea && right.areaSqm !== left.areaSqm) {
+    return right.areaSqm - left.areaSqm;
+  }
+
+  return 0;
 }
 
 function hybridScore(
@@ -454,9 +506,30 @@ function hybridScore(
 }
 
 function preferenceScore(property: PropertySnapshot, preferences: RankingPreferences): number {
-  if (!preferences.preferLargerArea) {
-    return 0;
-  }
+  const washerScore = preferences.preferWashingMachine && hasAmenity(property, "washing machine") ? 0.4 : 0;
+  const familyScore = preferences.preferFamilyFit ? familyFitScore(property) / 10 : 0;
+  const areaScore = preferences.preferLargerArea ? Math.min(property.areaSqm / 80, 1) : 0;
 
-  return Math.min(property.areaSqm / 80, 1);
+  return Math.min(washerScore + familyScore + areaScore, 1);
+}
+
+function familyFitScore(property: PropertySnapshot): number {
+  const familyAmenityScore = countAmenityMatches(property, [
+    "kids playground",
+    "playground",
+    "school",
+    "kindergarten",
+    "family pool",
+    "garden"
+  ]);
+
+  return familyAmenityScore * 3 + Math.min(property.bedrooms, 3) * 1.5 + Math.min(property.areaSqm / 25, 4);
+}
+
+function countAmenityMatches(property: PropertySnapshot, requestedAmenities: string[]): number {
+  return requestedAmenities.filter((amenity) => property.amenities.some((propertyAmenity) => propertyAmenity.toLowerCase() === amenity)).length;
+}
+
+function hasAmenity(property: PropertySnapshot, amenity: string): boolean {
+  return property.amenities.some((propertyAmenity) => propertyAmenity.toLowerCase() === amenity);
 }

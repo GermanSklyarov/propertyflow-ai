@@ -103,6 +103,45 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(interpretation.purpose).toBe("investment");
   });
 
+  it("treats million budget with children and washing machine as a family purchase search", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query:
+        "I need an apartment in Pattaya for living with children, ideally near a school and definitely with a washing machine. What can you offer? Budget under 5m"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      listingType: "sale",
+      market: "pattaya",
+      minBedrooms: 2,
+      maxPriceThb: 5_000_000,
+      requiredAmenities: ["washing machine"]
+    });
+    expect(interpretation.purpose).toBe("family");
+    expect(interpretation.rankingPreferences.preferFamilyFit).toBe(true);
+  });
+
+  it("treats non-mandatory washing machine as a ranking preference", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query:
+        "I need an apartment in Pattaya for living with children, ideally near a school and with a washing machine. Budget under 5m"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      listingType: "sale",
+      market: "pattaya",
+      minBedrooms: 2,
+      maxPriceThb: 5_000_000
+    });
+    expect(interpretation.filters.requiredAmenities ?? []).not.toContain("washing machine");
+    expect(interpretation.rankingPreferences.preferWashingMachine).toBe(true);
+  });
+
   it("extracts Chinese sale and investment filters", () => {
     const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 
@@ -330,6 +369,126 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.filters.requiredAmenities).toEqual(["pet-friendly"]);
     expect(result.filters.lifestyleSignals).toContain("pet-friendly");
     expect(result.items.map((item) => item.id)).toEqual([petFriendlyIndexed.id, petFriendlyFallback.id]);
+  });
+
+  it("requires washing machine and reranks family search results by child-friendly fit", async () => {
+    const noWasher = propertyFactory({
+      amenities: ["pool", "gym", "kids playground"],
+      id: "no-washer",
+      listingType: "sale",
+      price: { amount: 3_500_000, currency: "THB" },
+      title: "Family Amenities Without Washer"
+    });
+    const washerCompact = propertyFactory({
+      amenities: ["washing machine"],
+      areaSqm: 34.6,
+      bedrooms: 0,
+      id: "washer-compact",
+      listingType: "sale",
+      price: { amount: 3_200_000, currency: "THB" },
+      title: "Studio Condo at AD Hyatt Condominium"
+    });
+    const washerFamily = propertyFactory({
+      amenities: ["washing machine", "kids playground", "garden"],
+      areaSqm: 58,
+      bedrooms: 2,
+      id: "washer-family",
+      listingType: "sale",
+      price: { amount: 4_800_000, currency: "THB" },
+      title: "2BR Family Condo near School"
+    });
+    const byId = new Map([
+      [noWasher.id, noWasher],
+      [washerCompact.id, washerCompact],
+      [washerFamily.id, washerFamily]
+    ]);
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) => byId.get(propertyId) ?? null,
+      search: async () => [washerCompact, noWasher, washerFamily]
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "family purchase with washing machine" },
+        index: "propertyflow-properties-v1",
+        items: [
+          { propertyId: noWasher.id },
+          { propertyId: washerCompact.id },
+          { propertyId: washerFamily.id }
+        ],
+        total: 3
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query:
+        "I need an apartment in Pattaya for living with children, ideally near a school and definitely with a washing machine. Budget under 5m"
+    });
+
+    expect(result.filters).toMatchObject({
+      listingType: "sale",
+      market: "pattaya",
+      minBedrooms: 2,
+      maxPriceThb: 5_000_000,
+      requiredAmenities: ["washing machine"]
+    });
+    expect(result.filters.lifestyleSignals).toContain("school-access");
+    expect(result.items.map((item) => item.id)).toEqual(["washer-family"]);
+  });
+
+  it("keeps family listings without washer when washer is only preferred", async () => {
+    const noWasherFamily = propertyFactory({
+      amenities: ["kids playground", "garden"],
+      areaSqm: 62,
+      bedrooms: 2,
+      id: "no-washer-family",
+      listingType: "sale",
+      price: { amount: 4_500_000, currency: "THB" },
+      title: "2BR Family Condo without Washer"
+    });
+    const washerFamily = propertyFactory({
+      amenities: ["washing machine", "kids playground"],
+      areaSqm: 54,
+      bedrooms: 2,
+      id: "washer-family",
+      listingType: "sale",
+      price: { amount: 4_800_000, currency: "THB" },
+      title: "2BR Family Condo with Washer"
+    });
+    const byId = new Map([
+      [noWasherFamily.id, noWasherFamily],
+      [washerFamily.id, washerFamily]
+    ]);
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) => byId.get(propertyId) ?? null,
+      search: async () => [noWasherFamily, washerFamily]
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "family purchase with washing machine" },
+        index: "propertyflow-properties-v1",
+        items: [
+          { propertyId: noWasherFamily.id },
+          { propertyId: washerFamily.id }
+        ],
+        total: 2
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query:
+        "I need an apartment in Pattaya for living with children, ideally near a school and with a washing machine. Budget under 5m"
+    });
+
+    expect(result.filters.requiredAmenities ?? []).not.toContain("washing machine");
+    expect(result.items.map((item) => item.id)).toEqual(["washer-family", "no-washer-family"]);
   });
 
   it("softly reranks spacious requests toward larger layouts", async () => {

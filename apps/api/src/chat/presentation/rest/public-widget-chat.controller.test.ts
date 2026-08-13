@@ -1064,6 +1064,196 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("amenities like sea-view");
   });
 
+  it("prioritizes mandatory washing machine and family fit in public cards", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 4 matching listings.",
+          matchedPropertyIds: ["wongamat", "edge", "ad-hyatt", "family-washer"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "wongamat",
+        propertyFactory({
+          amenities: ["sea-view", "pool", "gym"],
+          areaSqm: 42,
+          bedrooms: 1,
+          id: "wongamat",
+          price: { amount: 3_500_000, currency: "THB" },
+          title: "Wongamat Sea View Residence"
+        })
+      ],
+      [
+        "edge",
+        propertyFactory({
+          amenities: ["gym", "kids playground", "key card access"],
+          areaSqm: 35.4,
+          bedrooms: 1,
+          id: "edge",
+          price: { amount: 4_200_000, currency: "THB" },
+          title: "1BR Condo at Edge Central Pattaya - Central Pattaya"
+        })
+      ],
+      [
+        "ad-hyatt",
+        propertyFactory({
+          amenities: ["shuttle service", "kids playground", "washing machine"],
+          areaSqm: 34.6,
+          bedrooms: 0,
+          id: "ad-hyatt",
+          price: { amount: 3_100_000, currency: "THB" },
+          title: "Studio Condo at AD Hyatt Condominium - Naklua"
+        })
+      ],
+      [
+        "family-washer",
+        propertyFactory({
+          amenities: ["washing machine", "kids playground", "garden"],
+          areaSqm: 58,
+          bedrooms: 2,
+          id: "family-washer",
+          price: { amount: 4_900_000, currency: "THB" },
+          title: "2BR Family Condo near School"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message:
+          "I need an apartment in Pattaya for living with children—ideally near a school and definitely with a washing machine. What can you offer? Budget under 5m"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "2BR Family Condo near School"
+    ]);
+    expect(response.answer).toContain("I found 1 matching listing. Here is the top match I can show now.");
+    expect(response.answer).toContain("amenities like washing machine");
+    expect(response.answer).toContain("For living with children");
+    expect(response.answer).toContain("School proximity is not confirmed");
+    expect(response.answer).not.toContain("tell me whether you want to rent or buy");
+    expect(response.answer).not.toContain("your budget");
+  });
+
+  it("keeps washer as a soft preference when it is not mandatory", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 3 matching listings.",
+          matchedPropertyIds: ["no-washer-family", "washer-family", "studio-washer"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "no-washer-family",
+        propertyFactory({
+          amenities: ["kids playground", "garden"],
+          areaSqm: 62,
+          bedrooms: 2,
+          id: "no-washer-family",
+          price: { amount: 4_500_000, currency: "THB" },
+          title: "2BR Family Condo without Washer"
+        })
+      ],
+      [
+        "washer-family",
+        propertyFactory({
+          amenities: ["washing machine", "kids playground"],
+          areaSqm: 54,
+          bedrooms: 2,
+          id: "washer-family",
+          price: { amount: 4_800_000, currency: "THB" },
+          title: "2BR Family Condo with Washer"
+        })
+      ],
+      [
+        "studio-washer",
+        propertyFactory({
+          amenities: ["washing machine"],
+          areaSqm: 38,
+          bedrooms: 0,
+          id: "studio-washer",
+          price: { amount: 3_200_000, currency: "THB" },
+          title: "Studio Condo with Washer"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message:
+          "I need an apartment in Pattaya for living with children—ideally near a school and with a washing machine. What can you offer? Budget under 5m"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).not.toContain("I do not have additional public listing cards");
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "2BR Family Condo with Washer",
+      "2BR Family Condo without Washer"
+    ]);
+    expect(response.answer).toContain("amenities like washing machine");
+  });
+
   it("preserves property follow-up answers instead of rewriting them as a new search", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

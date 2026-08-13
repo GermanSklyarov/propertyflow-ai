@@ -213,11 +213,12 @@ export class PublicWidgetChatController {
     const visiblePropertyIds = propertyIds.filter((propertyId) => !excludedPropertyIds.has(propertyId));
     const idsToLoad = visiblePropertyIds.length ? visiblePropertyIds : propertyIds;
     const properties = await Promise.all(idsToLoad.slice(0, 8).map((propertyId) => this.properties.findById(tenant.id, propertyId)));
+    const searchContext = buildWidgetSearchContextMessage(payload);
     const publicProperties = properties
       .filter((property): property is PropertySnapshot => Boolean(property))
       .filter(isPublicWidgetRecommendableProperty);
-    const searchContext = buildWidgetSearchContextMessage(payload);
-    const rankedPublicProperties = rankWidgetPropertiesForRequest(publicProperties, searchContext);
+    const strictPublicProperties = filterByRequiredWidgetAmenities(publicProperties, searchContext);
+    const rankedPublicProperties = rankWidgetPropertiesForRequest(strictPublicProperties, searchContext);
     const matchedProperties = rankedPublicProperties.slice(0, 3);
 
     return {
@@ -228,7 +229,7 @@ export class PublicWidgetChatController {
         title: property.title,
         url: buildListingUrl(baseOrigin, listingUrlTemplate, property.id)
       })),
-      totalMatches: publicProperties.length
+      totalMatches: strictPublicProperties.length
     };
   }
 }
@@ -388,11 +389,13 @@ function summarizeRequestSuitability(
 ): string | undefined {
   const asksForPets = isPetRequest(requestMessage);
   const asksForSpacious = isSpaciousRequest(requestMessage);
+  const asksForFamily = isFamilyRequest(requestMessage);
+  const asksForSchool = isSchoolRequest(requestMessage);
   const petFriendlyCount = properties.filter((property) => hasAnyAmenity(property, ["pet-friendly", "pets-allowed"])).length;
   const spaciousCount = properties.filter((property) => property.bedrooms >= 2 || property.areaSqm >= 60).length;
   const compactCount = properties.length - spaciousCount;
 
-  if (!asksForPets && !asksForSpacious) {
+  if (!asksForPets && !asksForSpacious && !asksForFamily && !asksForSchool) {
     return undefined;
   }
 
@@ -404,6 +407,12 @@ function summarizeRequestSuitability(
   };
   const spaceTradeoff = asksForSpacious && compactCount > 0 ? ` ${spaceTradeoffLabels[locale] ?? spaceTradeoffLabels.en}` : "";
 
+  const familyNote = buildFamilySuitabilityNote(properties, locale, asksForSchool);
+
+  if (!asksForPets && (asksForFamily || asksForSchool) && !asksForSpacious) {
+    return familyNote;
+  }
+
   if (!asksForPets) {
     const spaciousLabels: Record<TenantWidgetLanguage, string> = {
       en: `Space is the main trade-off: ${compactCount}/${properties.length} shown options are compact, so I would verify usable layout and ask the agent for larger studios or 1-bedrooms.`,
@@ -412,7 +421,7 @@ function summarizeRequestSuitability(
       zh: `主要取舍是面积：展示房源中 ${compactCount}/${properties.length} 个偏紧凑，建议确认实际格局，并请经纪人继续找更大的 studio 或一居室。`
     };
 
-    return spaciousLabels[locale] ?? spaciousLabels.en;
+    return [spaciousLabels[locale] ?? spaciousLabels.en, familyNote].filter(Boolean).join(" ");
   }
 
   const petLabels: Record<TenantWidgetLanguage, string> = {
@@ -434,15 +443,16 @@ function summarizeRequestSuitability(
         : `如果要和宠物一起住，宠物政策仍需经纪人确认。${spaciousCount}/${properties.length} 个展示房源有 2+ 卧室或 60+ 平米，但看房前应先确认楼规。${spaceTradeoff}`
   };
 
-  return petLabels[locale] ?? petLabels.en;
+  return [petLabels[locale] ?? petLabels.en, familyNote].filter(Boolean).join(" ");
 }
 
 function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
   const requestedAmenities = detectRequestedWidgetAmenities(requestMessage);
   const preferLargerArea = isSpaciousRequest(requestMessage);
   const preferCloseBeach = hasSpecificLocationPreference(requestMessage) && /\b(?:beach|sea|near|close|walk)\b|пляж|море/i.test(requestMessage);
+  const preferFamilyFit = isFamilyRequest(requestMessage) || isSchoolRequest(requestMessage);
 
-  if (!requestedAmenities.length && !preferLargerArea && !preferCloseBeach) {
+  if (!requestedAmenities.length && !preferLargerArea && !preferCloseBeach && !preferFamilyFit) {
     return properties;
   }
 
@@ -453,6 +463,13 @@ function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestM
         countMatchedAmenities(right.property, requestedAmenities) - countMatchedAmenities(left.property, requestedAmenities);
       if (amenityDelta !== 0) {
         return amenityDelta;
+      }
+
+      if (preferFamilyFit) {
+        const familyDelta = widgetFamilyFitScore(right.property) - widgetFamilyFitScore(left.property);
+        if (familyDelta !== 0) {
+          return familyDelta;
+        }
       }
 
       if (preferLargerArea && right.property.areaSqm !== left.property.areaSqm) {
@@ -472,12 +489,30 @@ function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestM
     .map(({ property }) => property);
 }
 
+function filterByRequiredWidgetAmenities(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
+  const requiredAmenities = detectRequiredWidgetAmenities(requestMessage);
+  const asksForFamilySized = isFamilyRequest(requestMessage) || isSchoolRequest(requestMessage);
+
+  const filtered = requiredAmenities.length
+    ? properties.filter((property) => countMatchedAmenities(property, requiredAmenities) === requiredAmenities.length)
+    : properties;
+  const familySized = asksForFamilySized
+    ? filtered.filter((property) => property.bedrooms >= 2 || property.areaSqm >= 50)
+    : [];
+
+  return familySized.length ? familySized : filtered.length ? filtered : properties;
+}
+
 function detectRequestedWidgetAmenities(message: string): string[] {
   const normalized = message.toLowerCase();
   const amenities: string[] = [];
 
   if (/\b(?:sea view|ocean view)\b|вид на море|วิวทะเล|海景|看海/i.test(normalized)) {
     amenities.push("sea-view");
+  }
+
+  if (/\b(?:washing machine|washer|laundry machine)\b|стиральн|стиралк|เครื่องซักผ้า|洗衣机|洗衣機/i.test(normalized)) {
+    amenities.push("washing machine");
   }
 
   if (isPetRequest(normalized)) {
@@ -495,8 +530,61 @@ function detectRequestedWidgetAmenities(message: string): string[] {
   return amenities;
 }
 
+function detectRequiredWidgetAmenities(message: string): string[] {
+  const normalized = message.toLowerCase();
+  const amenities: string[] = [];
+
+  if (
+    /\b(?:definitely|must have|required|mandatory|has to have)\b.{0,40}\b(?:washing machine|washer|laundry machine)\b|\b(?:washing machine|washer|laundry machine)\b.{0,40}\b(?:definitely|required|mandatory|must)\b/i.test(
+      normalized
+    )
+  ) {
+    amenities.push("washing machine");
+  }
+
+  return amenities;
+}
+
 function countMatchedAmenities(property: PropertySnapshot, requestedAmenities: string[]): number {
   return requestedAmenities.filter((amenity) => hasAnyAmenity(property, amenity === "pet-friendly" ? ["pet-friendly", "pets-allowed"] : [amenity])).length;
+}
+
+function widgetFamilyFitScore(property: PropertySnapshot): number {
+  const familyAmenities = countMatchedAmenities(property, ["kids playground", "playground", "school", "kindergarten", "family pool", "garden"]);
+
+  return familyAmenities * 3 + Math.min(property.bedrooms, 3) * 1.5 + Math.min(property.areaSqm / 25, 4);
+}
+
+function buildFamilySuitabilityNote(
+  properties: PropertySnapshot[],
+  locale: TenantWidgetLanguage,
+  asksForSchool: boolean
+): string | undefined {
+  if (!properties.length) {
+    return undefined;
+  }
+
+  const familySignalCount = properties.filter((property) =>
+    hasAnyAmenity(property, ["kids playground", "playground", "school", "kindergarten", "family pool", "garden"])
+  ).length;
+  const largerLayoutCount = properties.filter((property) => property.bedrooms >= 2 || property.areaSqm >= 50).length;
+
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: asksForSchool
+      ? `For living with children, ${familySignalCount}/${properties.length} shown options have family-friendly signals and ${largerLayoutCount}/${properties.length} offer 2+ bedrooms or 50+ sqm. School proximity is not confirmed in the imported listing facts, so the agent should verify nearby schools and commute time.`
+      : `For living with children, ${familySignalCount}/${properties.length} shown options have family-friendly signals and ${largerLayoutCount}/${properties.length} offer 2+ bedrooms or 50+ sqm.`,
+    ru: asksForSchool
+      ? `Для проживания с детьми: ${familySignalCount}/${properties.length} показанных вариантов имеют family-friendly сигналы, ${largerLayoutCount}/${properties.length} дают 2+ спальни или 50+ кв.м. Близость к школе не подтверждена в импортированных данных, агенту стоит проверить школы и время в пути.`
+      : `Для проживания с детьми: ${familySignalCount}/${properties.length} показанных вариантов имеют family-friendly сигналы, ${largerLayoutCount}/${properties.length} дают 2+ спальни или 50+ кв.м.`,
+    th: asksForSchool
+      ? `สำหรับการอยู่กับเด็ก ${familySignalCount}/${properties.length} รายการมีสัญญาณเหมาะกับครอบครัว และ ${largerLayoutCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 50+ ตร.ม. ระยะถึงโรงเรียนยังไม่ได้ยืนยันในข้อมูลนำเข้า ควรให้เอเจนต์ตรวจสอบโรงเรียนและเวลาเดินทาง`
+      : `สำหรับการอยู่กับเด็ก ${familySignalCount}/${properties.length} รายการมีสัญญาณเหมาะกับครอบครัว และ ${largerLayoutCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 50+ ตร.ม.`,
+    zh: asksForSchool
+      ? `如果和孩子一起住，${familySignalCount}/${properties.length} 个展示房源有家庭友好信号，${largerLayoutCount}/${properties.length} 个有 2+ 卧室或 50+ 平米。导入房源事实里尚未确认学校距离，建议经纪人核实附近学校和通勤时间。`
+      : `如果和孩子一起住，${familySignalCount}/${properties.length} 个展示房源有家庭友好信号，${largerLayoutCount}/${properties.length} 个有 2+ 卧室或 50+ 平米。`
+  };
+
+  return labels[locale] ?? labels.en;
 }
 
 function buildRecommendationClarificationPrompt(message: string, locale: TenantWidgetLanguage): string | undefined {
@@ -561,6 +649,14 @@ function isSpaciousRequest(message: string) {
   );
 }
 
+function isFamilyRequest(message: string) {
+  return /\b(?:children|child|kids|kid|family|families)\b|дет|ребен|ребён|семь|ครอบครัว|เด็ก|家庭|孩子/i.test(message);
+}
+
+function isSchoolRequest(message: string) {
+  return /\b(?:school|kindergarten)\b|школ|садик|โรงเรียน|学校|學校/i.test(message);
+}
+
 function hasAnyAmenity(property: PropertySnapshot, amenities: string[]) {
   const propertyAmenities = new Set(property.amenities.map((amenity) => amenity.toLowerCase()));
 
@@ -580,6 +676,10 @@ function detectWidgetListingIntent(message: string): WidgetPriceMode | undefined
     return "sale";
   }
 
+  if (!rentalIntent && hasPurchaseBudgetSignal(normalized)) {
+    return "sale";
+  }
+
   return undefined;
 }
 
@@ -589,6 +689,10 @@ function hasRentalIntent(message: string) {
 
 function hasSaleIntent(message: string) {
   return /\b(?:buy|purchase|sale|ownership|freehold|invest|investment)\b|купить|покуп|продаж|собствен|инвест|ซื้อ|ขาย|买|買|购买|購買|投资|投資/i.test(message);
+}
+
+function hasPurchaseBudgetSignal(message: string) {
+  return /\b(?:under|below|max|maximum|budget)?\s*\d+(?:[.,]\d+)?\s*(?:m|million)\b|до\s*\d+(?:[.,]\d+)?\s*млн/i.test(message);
 }
 
 function hasBudgetSignal(message: string) {
