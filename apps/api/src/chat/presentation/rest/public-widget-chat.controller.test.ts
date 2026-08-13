@@ -863,6 +863,114 @@ describe("PublicWidgetChatController", () => {
     ]);
   });
 
+  it("keeps pet and spacious context when a visitor refines the search", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 1 matching listing.",
+          matchedPropertyIds: ["property-1", "property-2", "property-3"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          amenities: ["pet-friendly", "balcony", "24h security", "communal pool"],
+          areaSqm: 25.6,
+          bedrooms: 1,
+          id: "property-1",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 20_000, currency: "THB" },
+          title: "1BR Condo at Lumpini Ville Naklua - Naklua"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          amenities: ["pet-friendly", "garden", "kids playground", "24h security"],
+          areaSqm: 34,
+          bedrooms: 1,
+          id: "property-2",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 19_000, currency: "THB" },
+          title: "1BR Condo at The Ville Jomtien - East Pattaya"
+        })
+      ],
+      [
+        "property-3",
+        propertyFactory({
+          amenities: ["pet-friendly", "gym", "coworking space", "European kitchen"],
+          areaSqm: 31.6,
+          bedrooms: 1,
+          id: "property-3",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 25_000, currency: "THB" },
+          title: "1BR Condo at City Garden Pratumnak - Pratumnak"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          {
+            role: "user",
+            text: "I'm looking for a room in Pattaya for living with 2 dogs, what can you recommend?"
+          },
+          {
+            role: "assistant",
+            text: "To narrow this down, tell me whether you want to rent or buy, your budget, preferred area or beach distance, and timing."
+          }
+        ],
+        locale: "en",
+        message:
+          "i mean i would like to rent 1 bedroom or a studio, but quite spacious, beach distance is not important, budget is under 30k, i would like to move in next month"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("I found 3 matching listings. Here are the top 3 I can show now.");
+    expect(response.answer).toContain("19k-25k THB/mo");
+    expect(response.answer).toContain("25.6-34 sqm");
+    expect(response.answer).toContain("3/3 shown options have pet-friendly signals");
+    expect(response.answer).toContain("0/3 offer 2+ bedrooms or 60+ sqm");
+    expect(response.answer).toContain("compact for two dogs");
+    expect(response.answer).toContain("larger pet-friendly studios or 1-bedrooms");
+    expect(response.answer).not.toContain("I found 1 matching listing. Here are the top 3");
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "1BR Condo at Lumpini Ville Naklua - Naklua",
+      "1BR Condo at The Ville Jomtien - East Pattaya",
+      "1BR Condo at City Garden Pratumnak - Pratumnak"
+    ]);
+  });
+
   it("preserves property follow-up answers instead of rewriting them as a new search", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

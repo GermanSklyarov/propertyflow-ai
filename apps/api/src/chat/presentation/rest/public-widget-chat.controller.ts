@@ -217,10 +217,11 @@ export class PublicWidgetChatController {
       .filter((property): property is PropertySnapshot => Boolean(property))
       .filter(isPublicWidgetRecommendableProperty);
     const matchedProperties = publicProperties.slice(0, 3);
+    const searchContext = buildWidgetSearchContextMessage(payload);
 
     return {
       candidateMatches: visiblePropertyIds.length,
-      fitSummary: buildListingFitSummary(matchedProperties, locale, resolveWidgetPriceMode(payload?.message), payload?.message),
+      fitSummary: buildListingFitSummary(matchedProperties, locale, resolveWidgetPriceMode(searchContext), searchContext),
       listings: matchedProperties.map((property) => ({
         propertyId: property.id,
         title: property.title,
@@ -229,6 +230,17 @@ export class PublicWidgetChatController {
       totalMatches: publicProperties.length
     };
   }
+}
+
+function buildWidgetSearchContextMessage(payload?: PublicWidgetAskDto): string {
+  const recentUserMessages = (payload?.conversation ?? [])
+    .filter((turn) => turn.role === "user")
+    .map((turn) => turn.text.trim())
+    .filter(Boolean)
+    .slice(-4);
+  const currentMessage = payload?.message?.trim();
+
+  return [...recentUserMessages, ...(currentMessage ? [currentMessage] : [])].join(". ");
 }
 
 function getShownListingIds(conversation?: AiChatTurn[]): Set<string> {
@@ -316,15 +328,14 @@ function buildListingCardIntro(
   totalMatches?: number,
   candidateMatches?: number
 ): string {
-  const parsedMatchCount = Number(answer.match(/\b(\d{1,4})\b/)?.[1]);
-  const publicMatchCount = totalMatches ?? shownCount;
+  const parsedMatchCountValue = Number(answer.match(/\b(\d{1,4})\b/)?.[1]);
+  const parsedMatchCount = Number.isFinite(parsedMatchCountValue) ? parsedMatchCountValue : undefined;
+  const publicMatchCount = Math.max(totalMatches ?? shownCount, shownCount);
   const shouldUsePublicCount =
-    Number.isFinite(parsedMatchCount) &&
-    candidateMatches !== undefined &&
-    parsedMatchCount === candidateMatches &&
-    publicMatchCount < candidateMatches;
-  const countText =
-    shouldUsePublicCount || !Number.isFinite(parsedMatchCount) ? String(publicMatchCount) : String(parsedMatchCount);
+    parsedMatchCount === undefined ||
+    parsedMatchCount < shownCount ||
+    (candidateMatches !== undefined && parsedMatchCount === candidateMatches && publicMatchCount < candidateMatches);
+  const countText = String(shouldUsePublicCount ? publicMatchCount : parsedMatchCount);
   const labels: Record<TenantWidgetLanguage, string> = {
     en: `I found ${countText} matching listing${countText === "1" ? "" : "s"}. ${
       shownCount === 1 ? "Here is the top match I can show now." : `Here are the top ${shownCount} I can show now.`
@@ -374,33 +385,55 @@ function summarizeRequestSuitability(
   locale: TenantWidgetLanguage,
   requestMessage: string
 ): string | undefined {
-  if (!isPetRequest(requestMessage)) {
+  const asksForPets = isPetRequest(requestMessage);
+  const asksForSpacious = isSpaciousRequest(requestMessage);
+  const petFriendlyCount = properties.filter((property) => hasAnyAmenity(property, ["pet-friendly", "pets-allowed"])).length;
+  const spaciousCount = properties.filter((property) => property.bedrooms >= 2 || property.areaSqm >= 60).length;
+  const compactCount = properties.length - spaciousCount;
+
+  if (!asksForPets && !asksForSpacious) {
     return undefined;
   }
 
-  const petFriendlyCount = properties.filter((property) => hasAnyAmenity(property, ["pet-friendly", "pets-allowed"])).length;
-  const spaciousCount = properties.filter((property) => property.bedrooms >= 2 || property.areaSqm >= 60).length;
+  const spaceTradeoffLabels: Record<TenantWidgetLanguage, string> = {
+    en: `Space is the main trade-off: ${compactCount}/${properties.length} shown options are compact for two dogs, so I would verify usable layout and ask the agent for larger pet-friendly studios or 1-bedrooms.`,
+    ru: `Главный компромисс - площадь: ${compactCount}/${properties.length} показанных вариантов компактные для двух собак, поэтому стоит проверить удобство планировки и попросить агента найти более просторные pet-friendly студии или 1-bedroom.`,
+    th: `ข้อควรระวังคือพื้นที่: ${compactCount}/${properties.length} รายการที่แสดงค่อนข้างกะทัดรัดสำหรับสุนัขสองตัว จึงควรตรวจผังห้องจริงและให้เอเจนต์หาสตูดิโอหรือ 1 ห้องนอนที่กว้างและเลี้ยงสัตว์ได้เพิ่มเติม`,
+    zh: `主要取舍是面积：展示房源中 ${compactCount}/${properties.length} 个对两只狗来说偏紧凑，建议确认实际格局，并请经纪人继续找更大的宠物友好 studio 或一居室。`
+  };
+  const spaceTradeoff = asksForSpacious && compactCount > 0 ? ` ${spaceTradeoffLabels[locale] ?? spaceTradeoffLabels.en}` : "";
 
-  const labels: Record<TenantWidgetLanguage, string> = {
+  if (!asksForPets) {
+    const spaciousLabels: Record<TenantWidgetLanguage, string> = {
+      en: `Space is the main trade-off: ${compactCount}/${properties.length} shown options are compact, so I would verify usable layout and ask the agent for larger studios or 1-bedrooms.`,
+      ru: `Главный компромисс - площадь: ${compactCount}/${properties.length} показанных вариантов компактные, поэтому стоит проверить удобство планировки и попросить агента найти более просторные студии или 1-bedroom.`,
+      th: `ข้อควรระวังคือพื้นที่: ${compactCount}/${properties.length} รายการที่แสดงค่อนข้างกะทัดรัด จึงควรตรวจผังห้องจริงและให้เอเจนต์หาสตูดิโอหรือ 1 ห้องนอนที่กว้างเพิ่มเติม`,
+      zh: `主要取舍是面积：展示房源中 ${compactCount}/${properties.length} 个偏紧凑，建议确认实际格局，并请经纪人继续找更大的 studio 或一居室。`
+    };
+
+    return spaciousLabels[locale] ?? spaciousLabels.en;
+  }
+
+  const petLabels: Record<TenantWidgetLanguage, string> = {
     en:
       petFriendlyCount > 0
-        ? `For living with pets, ${petFriendlyCount}/${properties.length} shown options have pet-friendly signals and ${spaciousCount}/${properties.length} offer 2+ bedrooms or 60+ sqm. Please confirm building pet rules, dog size limits, and deposit before booking.`
-        : `For living with pets, pet policy still needs agent confirmation. ${spaciousCount}/${properties.length} shown options offer 2+ bedrooms or 60+ sqm, but the building rules should be checked before booking.`,
+        ? `For living with pets, ${petFriendlyCount}/${properties.length} shown options have pet-friendly signals and ${spaciousCount}/${properties.length} offer 2+ bedrooms or 60+ sqm. Please confirm building pet rules, dog size limits, and deposit before booking.${spaceTradeoff}`
+        : `For living with pets, pet policy still needs agent confirmation. ${spaciousCount}/${properties.length} shown options offer 2+ bedrooms or 60+ sqm, but the building rules should be checked before booking.${spaceTradeoff}`,
     ru:
       petFriendlyCount > 0
-        ? `Для проживания с питомцами: ${petFriendlyCount}/${properties.length} показанных вариантов имеют pet-friendly сигнал, ${spaciousCount}/${properties.length} дают 2+ спальни или 60+ кв.м. Перед просмотром стоит подтвердить правила здания, ограничения по размеру собак и депозит.`
-        : `Для проживания с питомцами pet policy нужно подтвердить с агентом. ${spaciousCount}/${properties.length} показанных вариантов дают 2+ спальни или 60+ кв.м, но правила здания стоит проверить до просмотра.`,
+        ? `Для проживания с питомцами: ${petFriendlyCount}/${properties.length} показанных вариантов имеют pet-friendly сигнал, ${spaciousCount}/${properties.length} дают 2+ спальни или 60+ кв.м. Перед просмотром стоит подтвердить правила здания, ограничения по размеру собак и депозит.${spaceTradeoff}`
+        : `Для проживания с питомцами pet policy нужно подтвердить с агентом. ${spaciousCount}/${properties.length} показанных вариантов дают 2+ спальни или 60+ кв.м, но правила здания стоит проверить до просмотра.${spaceTradeoff}`,
     th:
       petFriendlyCount > 0
-        ? `สำหรับการอยู่กับสัตว์เลี้ยง ${petFriendlyCount}/${properties.length} รายการมีสัญญาณว่าเลี้ยงสัตว์ได้ และ ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม. ควรยืนยันกฎสัตว์เลี้ยง ขนาดสุนัข และเงินมัดจำก่อนนัดชม`
-        : `สำหรับการอยู่กับสัตว์เลี้ยง ต้องให้เอเจนต์ยืนยันนโยบายสัตว์เลี้ยงก่อน ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม.`,
+        ? `สำหรับการอยู่กับสัตว์เลี้ยง ${petFriendlyCount}/${properties.length} รายการมีสัญญาณว่าเลี้ยงสัตว์ได้ และ ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม. ควรยืนยันกฎสัตว์เลี้ยง ขนาดสุนัข และเงินมัดจำก่อนนัดชม${spaceTradeoff}`
+        : `สำหรับการอยู่กับสัตว์เลี้ยง ต้องให้เอเจนต์ยืนยันนโยบายสัตว์เลี้ยงก่อน ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม.${spaceTradeoff}`,
     zh:
       petFriendlyCount > 0
-        ? `如果要和宠物一起住，${petFriendlyCount}/${properties.length} 个展示房源有宠物友好信号，${spaciousCount}/${properties.length} 个有 2+ 卧室或 60+ 平米。看房前请确认楼规、狗狗体型限制和押金。`
-        : `如果要和宠物一起住，宠物政策仍需经纪人确认。${spaciousCount}/${properties.length} 个展示房源有 2+ 卧室或 60+ 平米，但看房前应先确认楼规。`
+        ? `如果要和宠物一起住，${petFriendlyCount}/${properties.length} 个展示房源有宠物友好信号，${spaciousCount}/${properties.length} 个有 2+ 卧室或 60+ 平米。看房前请确认楼规、狗狗体型限制和押金。${spaceTradeoff}`
+        : `如果要和宠物一起住，宠物政策仍需经纪人确认。${spaciousCount}/${properties.length} 个展示房源有 2+ 卧室或 60+ 平米，但看房前应先确认楼规。${spaceTradeoff}`
   };
 
-  return labels[locale] ?? labels.en;
+  return petLabels[locale] ?? petLabels.en;
 }
 
 function buildRecommendationClarificationPrompt(message: string, locale: TenantWidgetLanguage): string | undefined {
@@ -455,6 +488,12 @@ function buildRecommendationClarificationPrompt(message: string, locale: TenantW
 
 function isPetRequest(message: string) {
   return /\b(?:pet|pets|dog|dogs|cat|cats|animal|animals)\b|с\s+животн|животн|питомц|собак|кошк|สัตว์เลี้ยง|หมา|สุนัข|แมว|宠物|寵物|狗|猫|貓/i.test(
+    message
+  );
+}
+
+function isSpaciousRequest(message: string) {
+  return /\b(?:spacious|roomy|large|larger|big|bigger|space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點/i.test(
     message
   );
 }
