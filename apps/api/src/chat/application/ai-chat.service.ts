@@ -31,6 +31,11 @@ import {
 } from "./ai-chat-response.js";
 import { buildAiChatSearchResponseDraft } from "./ai-chat-search-response.js";
 import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from "./ai-text-generator.js";
+import {
+  comparePropertiesToLocationTarget,
+  formatDistance,
+  resolveLocationComparisonTarget
+} from "./location-intelligence.js";
 
 export interface AiChatAskOptions {
   persona?: AiConciergePersona;
@@ -316,6 +321,31 @@ function buildRecentListingComparisonAnswer(
   message: string,
   comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>
 ): string {
+  if (comparison === "poi-distance") {
+    const target = resolveLocationComparisonTarget(message, properties[0]?.market);
+
+    if (!target) {
+      return "I can compare only the options we just discussed, but I could not match that place to the current city map data yet.";
+    }
+
+    const distances = comparePropertiesToLocationTarget(properties, target);
+    const closest = distances[0];
+    const targetLabel = target.kind === "poi" ? target.poi.label : target.label;
+    const comparisonLines = distances
+      .map(({ distanceMeters, property, targetLabel: propertyTargetLabel }) =>
+        target.kind === "poi"
+          ? `${property.title}: about ${formatDistance(distanceMeters)} from ${targetLabel}`
+          : `${property.title}: about ${formatDistance(distanceMeters)} from ${propertyTargetLabel}`
+      )
+      .join(" ");
+
+    return closest
+      ? `Among the options we just discussed, ${closest.property.title} is closest to ${targetLabel} at about ${formatDistance(
+          closest.distanceMeters
+        )}. ${comparisonLines}`
+      : `I can compare only the options we just discussed, but none of those listings has usable coordinates.`;
+  }
+
   if (comparison === "beach-distance") {
     const withKnownDistance = properties.filter((property) => property.beachDistanceMeters !== undefined);
     const closest = [...withKnownDistance].sort((left, right) => left.beachDistanceMeters! - right.beachDistanceMeters!)[0];
@@ -399,6 +429,7 @@ function comparisonLabel(comparison: NonNullable<ReturnType<typeof planAiChatRet
     investment: "investment",
     living: "living",
     pets: "living with pets",
+    "poi-distance": "city infrastructure access",
     relocation: "relocation",
     value: "value for money"
   };
@@ -430,6 +461,10 @@ function comparisonFacts(
 
   if (comparison === "relocation") {
     return `${property.areaSqm} sqm, ${beach}, ${amenities}`;
+  }
+
+  if (comparison === "poi-distance") {
+    return `${property.areaSqm} sqm, ${property.location.latitude},${property.location.longitude}, ${amenities}`;
   }
 
   if (comparison === "value") {

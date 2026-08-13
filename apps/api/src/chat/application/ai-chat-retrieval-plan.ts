@@ -1,5 +1,6 @@
 import type { AiChatRequest } from "@propertyflow/contracts";
 import { classifyAiChatIntent, type AiChatIntent } from "./ai-chat-intent.js";
+import { isLocationInfrastructureQuestion } from "./location-intelligence.js";
 
 const recentSetReferencePattern =
   /\b(them|these|those|options|listings|ones)\b|из них|этих|вариант|предлож|ตัวเลือก|รายการ|เหล่านี้|พวกนี้|这些|這些|这几个|這幾個|其中|房源|选项|選項/i;
@@ -26,7 +27,7 @@ const propertyDetailQuestionPattern =
   /pet|dog|cat|fee|maintenance|quota|foreign|ownership|floor|sqm|size|balcony|furniture|internet|parking|quiet|noise|view|yield|roi|rent|rental|beach|walk|school|family|питом|собак|кош|комис|квот|этаж|площад|балкон|мебел|интернет|парков|тих|шум|вид|доход|аренд|пляж|семь|школ|宠物|狗|猫|貓|费用|費用|楼层|樓層|面积|面積|阳台|陽台|家具|网络|網絡|停车|停車|安静|噪音|景观|景觀|租金|海滩|海灘|家庭|学校|學校|สัตว์เลี้ยง|หมา|แมว|ค่าส่วนกลาง|ชั้น|พื้นที่|ระเบียง|เฟอร์นิเจอร์|อินเทอร์เน็ต|ที่จอดรถ|เงียบ|วิว|ค่าเช่า|ชายหาด|ครอบครัว|โรงเรียน/i;
 
 export interface AiChatRetrievalPlan {
-  comparison?: "beach-distance" | "investment" | "living" | "pets" | "relocation" | "value";
+  comparison?: "beach-distance" | "investment" | "living" | "pets" | "poi-distance" | "relocation" | "value";
   intent: AiChatIntent;
   mode: "clarify-reference" | "listing-comparison" | "listing-search" | "property-detail";
   propertyId?: string;
@@ -78,7 +79,12 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
       intent: {
         ...intent,
         includeAdvice: intent.includeAdvice || comparison === "investment",
-        includeNeighborhood: intent.includeNeighborhood || comparison === "beach-distance" || comparison === "relocation" || comparison === "living"
+        includeNeighborhood:
+          intent.includeNeighborhood ||
+          comparison === "beach-distance" ||
+          comparison === "poi-distance" ||
+          comparison === "relocation" ||
+          comparison === "living"
       },
       mode: "listing-comparison",
       reason: "comparison-follow-up"
@@ -295,6 +301,10 @@ function resolveRecentListingComparison(request: AiChatRequest): AiChatRetrieval
 
   if (!referencesRecentSet || moreListingsPattern.test(message)) {
     return undefined;
+  }
+
+  if (isLocationInfrastructureQuestion(message)) {
+    return "poi-distance";
   }
 
   if (beachDistanceComparisonPattern.test(message)) {

@@ -634,6 +634,74 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("Once Pattaya");
   });
 
+  it("compares shortlist options against named city POIs using coordinates", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          id: "property-1",
+          location: { latitude: 12.836, longitude: 100.99 },
+          title: "Studio Condo at Huai Yai Villas - Huai Yai"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          id: "property-2",
+          location: { latitude: 12.765, longitude: 100.898 },
+          title: "Studio Condo at Del Mare Bangsaray - Bang Saray"
+        })
+      ],
+      [
+        "property-3",
+        propertyFactory({
+          id: "property-3",
+          location: { latitude: 12.976, longitude: 100.884 },
+          title: "Studio Condo at Club Royal - Naklua"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Studio Condo at Huai Yai Villas - Huai Yai" },
+            { propertyId: "property-2", title: "Studio Condo at Del Mare Bangsaray - Bang Saray" },
+            { propertyId: "property-3", title: "Studio Condo at Club Royal - Naklua" }
+          ],
+          role: "assistant",
+          text: "I found 8 matching listings. Here are the top 3 I can show now."
+        }
+      ],
+      locale: "en",
+      message: "which one of them is closer to walking street?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["property-1", "property-2", "property-3"]);
+    expect(response.answer).toContain("Studio Condo at Club Royal - Naklua is closest to Walking Street");
+    expect(response.answer).toContain("Studio Condo at Club Royal - Naklua: about");
+    expect(response.answer).toContain("from Walking Street");
+    expect(response.answer).toContain("Studio Condo at Del Mare Bangsaray - Bang Saray: about");
+  });
+
   it("compares shortlist options for investment using listing facts", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([

@@ -312,6 +312,30 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("recognizes named city POI distance comparisons for recent options", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Studio Condo at Huai Yai Villas - Huai Yai" },
+              { propertyId: "property-2", title: "Studio Condo at Del Mare Bangsaray - Bang Saray" },
+              { propertyId: "property-3", title: "Studio Condo at Club Royal - Naklua" }
+            ],
+            role: "assistant",
+            text: "I found three options."
+          }
+        ],
+        locale: "en",
+        message: "which one of them is closer to walking street?"
+      })
+    ).toMatchObject({
+      comparison: "poi-distance",
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
+    });
+  });
+
   it("compares recent options for investment instead of starting a new search", () => {
     expect(
       planAiChatRetrieval({
