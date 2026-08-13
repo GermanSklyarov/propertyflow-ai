@@ -545,6 +545,95 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("Wongamat Sea View Residence");
   });
 
+  it("recommends value for money from the previous shortlist instead of searching again", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          areaSqm: 31.9,
+          beachDistanceMeters: 10776,
+          id: "property-1",
+          listingType: "rent",
+          price: { amount: 2_800_000, currency: "THB" },
+          rentalPriceMonthly: { amount: 14000, currency: "THB" },
+          title: "Studio Condo at Huai Yai Villas - Huai Yai"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          areaSqm: 34.4,
+          beachDistanceMeters: 1731,
+          id: "property-2",
+          listingType: "rent",
+          price: { amount: 3_000_000, currency: "THB" },
+          rentalPriceMonthly: { amount: 17000, currency: "THB" },
+          title: "Studio Condo at Del Mare Bangsaray - Bang Saray"
+        })
+      ],
+      [
+        "property-3",
+        propertyFactory({
+          areaSqm: 36.8,
+          beachDistanceMeters: 1020,
+          id: "property-3",
+          listingType: "rent",
+          price: { amount: 3_100_000, currency: "THB" },
+          rentalPriceMonthly: { amount: 18000, currency: "THB" },
+          title: "Studio Condo at Club Royal - Naklua"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Studio Condo at Huai Yai Villas - Huai Yai" },
+            { propertyId: "property-2", title: "Studio Condo at Del Mare Bangsaray - Bang Saray" },
+            { propertyId: "property-3", title: "Studio Condo at Club Royal - Naklua" }
+          ],
+          role: "assistant",
+          text: "I found 8 matching listings. Here are the top 3 I can show now."
+        },
+        { role: "user", text: "which one of them is closer to the beach?" },
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Studio Condo at Huai Yai Villas - Huai Yai" },
+            { propertyId: "property-2", title: "Studio Condo at Del Mare Bangsaray - Bang Saray" },
+            { propertyId: "property-3", title: "Studio Condo at Club Royal - Naklua" }
+          ],
+          role: "assistant",
+          text: "Club Royal is closest to the beach."
+        }
+      ],
+      locale: "en",
+      message: "I'm not sure, which one would you recommend in terms of value for money?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["property-1", "property-2", "property-3"]);
+    expect(response.answer).toContain("Studio Condo at Club Royal - Naklua looks strongest for value for money");
+    expect(response.answer).toContain("Studio Condo at Huai Yai Villas - Huai Yai: 14000 THB/mo");
+    expect(response.answer).not.toContain("Once Pattaya");
+  });
+
   it("compares shortlist options for investment using listing facts", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([

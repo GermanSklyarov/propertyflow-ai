@@ -335,6 +335,30 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("compares recent options for value for money instead of starting a new search", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" },
+              { propertyId: "property-3", title: "Option C" }
+            ],
+            role: "assistant",
+            text: "I found three options."
+          }
+        ],
+        locale: "en",
+        message: "I'm not sure, which one would you recommend in terms of value for money?"
+      })
+    ).toMatchObject({
+      comparison: "value",
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
+    });
+  });
+
   it("compares recent options for relocation and living with pets", () => {
     expect(
       planAiChatRetrieval({

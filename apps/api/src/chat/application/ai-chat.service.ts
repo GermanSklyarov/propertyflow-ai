@@ -375,6 +375,16 @@ function scorePropertyForComparison(
     ].reduce((sum, value) => sum + value, 0);
   }
 
+  if (comparison === "value") {
+    const monthlyRent = property.rentalPriceMonthly?.amount ?? property.monthlyRentEstimate?.amount;
+    const costBasis = monthlyRent ?? property.price.amount / 1_000_000;
+    const areaValue = costBasis > 0 ? property.areaSqm / costBasis : 0;
+    const beachBonus =
+      property.beachDistanceMeters === undefined ? 0 : property.beachDistanceMeters <= 1200 ? 2 : property.beachDistanceMeters <= 2500 ? 1 : 0;
+
+    return areaValue + beachBonus + (hasAny("sea-view", "washing machine", "pool", "gym", "high-speed internet", "fiber-internet") ? 0.5 : 0);
+  }
+
   return [
     property.bedrooms >= 2 ? 2 : 0,
     property.areaSqm >= 45 ? 2 : 0,
@@ -389,7 +399,8 @@ function comparisonLabel(comparison: NonNullable<ReturnType<typeof planAiChatRet
     investment: "investment",
     living: "living",
     pets: "living with pets",
-    relocation: "relocation"
+    relocation: "relocation",
+    value: "value for money"
   };
 
   return labels[comparison];
@@ -419,6 +430,16 @@ function comparisonFacts(
 
   if (comparison === "relocation") {
     return `${property.areaSqm} sqm, ${beach}, ${amenities}`;
+  }
+
+  if (comparison === "value") {
+    const monthlyRent = property.rentalPriceMonthly
+      ? `${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo`
+      : property.monthlyRentEstimate
+        ? `estimated rent ${property.monthlyRentEstimate.amount} ${property.monthlyRentEstimate.currency}/mo`
+        : `${property.price.amount} ${property.price.currency}`;
+
+    return `${monthlyRent}, ${property.areaSqm} sqm, ${beach}, ${amenities}`;
   }
 
   return `${property.areaSqm} sqm, ${property.bedrooms} bedroom${property.bedrooms === 1 ? "" : "s"}, ${beach}, ${amenities}`;
