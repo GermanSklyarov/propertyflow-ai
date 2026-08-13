@@ -74,6 +74,45 @@ describe("ai-chat-search-response", () => {
     );
   });
 
+  it("explains why pet-friendly recommendations fit living with dogs", () => {
+    const petHouse = propertyFactory({
+      amenities: ["pet-friendly", "garden", "parking"],
+      areaSqm: 120,
+      bedrooms: 3,
+      kind: "villa",
+      title: "Jomtien Pet Garden House"
+    });
+    const petCondo = propertyFactory({
+      amenities: ["pet-friendly", "pool"],
+      areaSqm: 65,
+      bedrooms: 2,
+      id: "property-2",
+      kind: "condo",
+      title: "Pratumnak Pet Condo"
+    });
+    const draft = buildAiChatSearchResponseDraft({
+      dueDiligence: { contextLines: [], insights: [] },
+      items: [petHouse, petCondo],
+      knowledge: [],
+      matches: [petHouse, petCondo],
+      requestMessage: "i need a room in pattaya for living with 2 dogs",
+      search: searchFactory({
+        filters: {
+          market: "pattaya",
+          requiredAmenities: ["pet-friendly"],
+          lifestyleSignals: ["pet-friendly"]
+        },
+        items: [petHouse, petCondo]
+      })
+    });
+
+    expect(draft.deterministicDraft).toContain("I am prioritizing the pet requirement");
+    expect(draft.deterministicDraft).toContain("pet-friendly signal");
+    expect(draft.deterministicDraft).toContain("2+ bedrooms or at least 60 sqm");
+    expect(draft.deterministicDraft).toContain("breed/size limits");
+    expect(draft.deterministicDraft).toContain("property types shown: villa, condo");
+  });
+
   it("builds no-match guidance with knowledge context when inventory is missing", () => {
     const draft = buildAiChatSearchResponseDraft({
       dueDiligence: { contextLines: [], insights: [] },

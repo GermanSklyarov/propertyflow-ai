@@ -124,6 +124,7 @@ export class AiChatService {
       items,
       knowledge,
       matches,
+      requestMessage: request.message,
       search
     });
 

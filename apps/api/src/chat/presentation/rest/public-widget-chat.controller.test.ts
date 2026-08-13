@@ -783,6 +783,82 @@ describe("PublicWidgetChatController", () => {
     ]);
   });
 
+  it("explains pet-friendly fit in public listing summaries", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 16 matching listings.",
+          matchedPropertyIds: ["property-1", "property-2"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          amenities: ["pet-friendly", "garden", "parking"],
+          areaSqm: 120,
+          bedrooms: 3,
+          id: "property-1",
+          kind: "villa",
+          title: "Jomtien Pet Garden Villa"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          amenities: ["pet-friendly", "pool"],
+          areaSqm: 65,
+          bedrooms: 2,
+          id: "property-2",
+          title: "Pratumnak Pet Condo"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "i need a room in pattaya for living with 2 dogs"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("pet-friendly signals");
+    expect(response.answer).toContain("2+ bedrooms or 60+ sqm");
+    expect(response.answer).toContain("dog size limits");
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "Jomtien Pet Garden Villa",
+      "Pratumnak Pet Condo"
+    ]);
+  });
+
   it("preserves property follow-up answers instead of rewriting them as a new search", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

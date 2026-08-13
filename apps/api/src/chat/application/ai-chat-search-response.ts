@@ -22,6 +22,7 @@ export function buildAiChatSearchResponseDraft(options: {
   items: PropertySnapshot[];
   knowledge: KnowledgeDocumentChunkSnapshot[];
   matches: PropertySnapshot[];
+  requestMessage?: string;
   search: NaturalLanguagePropertySearchResponse;
 }): AiChatResponseDraft {
   return options.matches.length ? buildMatchedSearchDraft(options) : buildNoMatchSearchDraft(options);
@@ -75,11 +76,18 @@ function buildMatchedSearchDraft(options: {
   items: PropertySnapshot[];
   knowledge: KnowledgeDocumentChunkSnapshot[];
   matches: PropertySnapshot[];
+  requestMessage?: string;
   search: NaturalLanguagePropertySearchResponse;
 }): AiChatResponseDraft {
+  const suitabilityExplanation = buildSearchSuitabilityExplanation({
+    matches: options.matches,
+    requestMessage: options.requestMessage,
+    search: options.search
+  });
   const answer = [
     `I found ${options.items.length} matching listing${options.items.length === 1 ? "" : "s"}.`,
     `Top matches: ${options.matches.map((property) => shortPropertyLine(property)).join(" ")}`,
+    suitabilityExplanation,
     searchExplanation(options.search),
     options.knowledge.length
       ? `Relevant knowledge: ${options.knowledge.map((chunk) => knowledgeLine(chunk)).join(" ")}`
@@ -110,4 +118,44 @@ function searchExplanation(search: NaturalLanguagePropertySearchResponse): strin
   }
 
   return "The indexed search returned no hits, so I used the structured PostgreSQL filters as a fallback.";
+}
+
+function buildSearchSuitabilityExplanation(options: {
+  matches: PropertySnapshot[];
+  requestMessage?: string;
+  search: NaturalLanguagePropertySearchResponse;
+}): string | undefined {
+  const normalized = options.requestMessage?.toLowerCase() ?? "";
+  const requiredAmenities = new Set(options.search.filters.requiredAmenities ?? []);
+  const lifestyleSignals = new Set(options.search.filters.lifestyleSignals ?? []);
+  const asksForPets =
+    requiredAmenities.has("pet-friendly") ||
+    lifestyleSignals.has("pet-friendly") ||
+    /\b(pet|pets|dog|dogs|cat|cats)\b|питом|собак|кош|สัตว์เลี้ยง|หมา|แมว|宠物|寵物|狗|猫|貓/i.test(normalized);
+
+  if (asksForPets) {
+    const petConfirmedCount = options.matches.filter((property) => hasAmenity(property, ["pet-friendly", "pets-allowed"])).length;
+    const spaciousMatches = options.matches.filter((property) => property.bedrooms >= 2 || property.areaSqm >= 60).length;
+    const propertyKinds = summarizeDistinctValues(options.matches.map((property) => property.kind));
+    const spaceNote = spaciousMatches
+      ? `${spaciousMatches} of the shown options have 2+ bedrooms or at least 60 sqm, which is more practical for living with pets`
+      : "the shown options are the closest matches, but their space should be checked carefully for pets";
+    const petSignalNote = petConfirmedCount
+      ? `${petConfirmedCount} of the shown options include a pet-friendly signal in the imported listing facts`
+      : "I do not see a confirmed pet-friendly signal on the shown options, so the agent must verify building rules before you rely on them";
+
+    return `I am prioritizing the pet requirement: ${petSignalNote}; ${spaceNote}${propertyKinds ? `; property types shown: ${propertyKinds}` : ""}. For two dogs, please confirm current building pet rules, breed/size limits, and any pet deposit before booking.`;
+  }
+
+  return undefined;
+}
+
+function hasAmenity(property: PropertySnapshot, amenities: string[]) {
+  const propertyAmenities = new Set(property.amenities.map((amenity) => amenity.toLowerCase()));
+
+  return amenities.some((amenity) => propertyAmenities.has(amenity));
+}
+
+function summarizeDistinctValues(values: string[]) {
+  return Array.from(new Set(values.filter(Boolean))).slice(0, 3).join(", ");
 }

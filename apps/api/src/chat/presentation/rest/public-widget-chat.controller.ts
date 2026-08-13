@@ -220,7 +220,7 @@ export class PublicWidgetChatController {
 
     return {
       candidateMatches: visiblePropertyIds.length,
-      fitSummary: buildListingFitSummary(matchedProperties, locale, resolveWidgetPriceMode(payload?.message)),
+      fitSummary: buildListingFitSummary(matchedProperties, locale, resolveWidgetPriceMode(payload?.message), payload?.message),
       listings: matchedProperties.map((property) => ({
         propertyId: property.id,
         title: property.title,
@@ -340,7 +340,8 @@ function buildListingCardIntro(
 function buildListingFitSummary(
   properties: PropertySnapshot[],
   locale: TenantWidgetLanguage,
-  priceMode: WidgetPriceMode = "sale"
+  priceMode: WidgetPriceMode = "sale",
+  requestMessage = ""
 ): string {
   if (!properties.length) {
     return "";
@@ -353,7 +354,8 @@ function buildListingFitSummary(
   const areaSummary = summarizeArea(properties, locale);
   const beachSummary = summarizeBeachDistance(properties, locale);
   const amenities = summarizeAmenities(properties);
-  const details = [priceRange, bedroomSummary, areaSummary, beachSummary, amenities].filter(Boolean);
+  const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
+  const details = [suitability, priceRange, bedroomSummary, areaSummary, beachSummary, amenities].filter(Boolean);
 
   const overviewLabels: Record<TenantWidgetLanguage, string> = {
     en: `These ${kind} options fit the ${market} search${details.length ? ` because they include ${details.join(", ")}` : ""}. Open the cards to compare exact photos, availability, and viewing details.`,
@@ -364,6 +366,52 @@ function buildListingFitSummary(
   const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale, priceMode));
 
   return [overviewLabels[locale] ?? overviewLabels.en, ...cardDescriptions].filter(Boolean).join("\n");
+}
+
+function summarizeRequestSuitability(
+  properties: PropertySnapshot[],
+  locale: TenantWidgetLanguage,
+  requestMessage: string
+): string | undefined {
+  if (!isPetRequest(requestMessage)) {
+    return undefined;
+  }
+
+  const petFriendlyCount = properties.filter((property) => hasAnyAmenity(property, ["pet-friendly", "pets-allowed"])).length;
+  const spaciousCount = properties.filter((property) => property.bedrooms >= 2 || property.areaSqm >= 60).length;
+
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en:
+      petFriendlyCount > 0
+        ? `${petFriendlyCount}/${properties.length} shown options have pet-friendly signals and ${spaciousCount}/${properties.length} offer 2+ bedrooms or 60+ sqm; please confirm building pet rules, dog size limits, and deposit`
+        : `pet policy still needs agent confirmation; ${spaciousCount}/${properties.length} shown options offer 2+ bedrooms or 60+ sqm`,
+    ru:
+      petFriendlyCount > 0
+        ? `${petFriendlyCount}/${properties.length} показанных вариантов имеют pet-friendly сигнал, ${spaciousCount}/${properties.length} дают 2+ спальни или 60+ кв.м; нужно подтвердить правила здания, ограничения по размеру собак и депозит`
+        : `pet policy нужно подтвердить с агентом; ${spaciousCount}/${properties.length} показанных вариантов дают 2+ спальни или 60+ кв.м`,
+    th:
+      petFriendlyCount > 0
+        ? `${petFriendlyCount}/${properties.length} รายการมีสัญญาณว่าเลี้ยงสัตว์ได้ และ ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม.; ควรยืนยันกฎสัตว์เลี้ยง ขนาดสุนัข และเงินมัดจำ`
+        : `ต้องให้เอเจนต์ยืนยันกฎสัตว์เลี้ยง; ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม.`,
+    zh:
+      petFriendlyCount > 0
+        ? `${petFriendlyCount}/${properties.length} 个展示房源有宠物友好信号，${spaciousCount}/${properties.length} 个有 2+ 卧室或 60+ 平米；请确认楼规、狗狗体型限制和押金`
+        : `宠物政策仍需经纪人确认；${spaciousCount}/${properties.length} 个展示房源有 2+ 卧室或 60+ 平米`
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
+function isPetRequest(message: string) {
+  return /\b(?:pet|pets|dog|dogs|cat|cats|animal|animals)\b|с\s+животн|животн|питомц|собак|кошк|สัตว์เลี้ยง|หมา|สุนัข|แมว|宠物|寵物|狗|猫|貓/i.test(
+    message
+  );
+}
+
+function hasAnyAmenity(property: PropertySnapshot, amenities: string[]) {
+  const propertyAmenities = new Set(property.amenities.map((amenity) => amenity.toLowerCase()));
+
+  return amenities.some((amenity) => propertyAmenities.has(amenity));
 }
 
 function resolveWidgetPriceMode(message = ""): WidgetPriceMode {
