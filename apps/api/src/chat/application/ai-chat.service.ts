@@ -34,7 +34,7 @@ import { AI_TEXT_GENERATOR, type AiConciergePersona, type AiTextGenerator } from
 import {
   comparePropertiesToLocationTarget,
   formatDistance,
-  resolveLocationComparisonTarget
+  LocationIntelligenceService
 } from "./location-intelligence.js";
 
 export interface AiChatAskOptions {
@@ -53,7 +53,9 @@ export class AiChatService {
     @Inject(NeighborhoodIntelligenceService)
     private readonly neighborhoodIntelligence: NeighborhoodIntelligenceService,
     @Inject(KnowledgeDocumentService) private readonly knowledge: KnowledgeDocumentService,
-    @Inject(AI_TEXT_GENERATOR) private readonly textGenerator: AiTextGenerator
+    @Inject(AI_TEXT_GENERATOR) private readonly textGenerator: AiTextGenerator,
+    @Inject(LocationIntelligenceService)
+    private readonly locationIntelligence: LocationIntelligenceService = new LocationIntelligenceService()
   ) {}
 
   async ask(tenantId: string, request: AiChatRequest, options: AiChatAskOptions = {}): Promise<AiChatResponse> {
@@ -158,7 +160,12 @@ export class AiChatService {
       return buildClarifyPropertyReferenceResponse(request);
     }
 
-    const answer = buildRecentListingComparisonAnswer(properties, request.message, planComparison(request));
+    const answer = await buildRecentListingComparisonAnswer(
+      properties,
+      request.message,
+      planComparison(request),
+      this.locationIntelligence
+    );
     const citations = properties.map((property) => propertyCitation(property));
 
     return this.buildResponse({
@@ -316,16 +323,17 @@ function planComparison(request: AiChatRequest): NonNullable<ReturnType<typeof p
   return planAiChatRetrieval(request).comparison ?? "beach-distance";
 }
 
-function buildRecentListingComparisonAnswer(
+async function buildRecentListingComparisonAnswer(
   properties: PropertySnapshot[],
   message: string,
-  comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>
-): string {
+  comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>,
+  locationIntelligence: LocationIntelligenceService
+): Promise<string> {
   if (comparison === "poi-distance") {
-    const target = resolveLocationComparisonTarget(message, properties[0]?.market);
+    const target = await locationIntelligence.resolveComparisonTarget(message, properties[0]?.market);
 
     if (!target) {
-      return "I can compare only the options we just discussed, but I could not match that place to the current city map data yet.";
+      return "I can compare only the options we just discussed, but I could not match that place to the current city map data yet. If the agency configures a map geocoding provider, I can estimate distances to more arbitrary landmarks.";
     }
 
     const distances = comparePropertiesToLocationTarget(properties, target);

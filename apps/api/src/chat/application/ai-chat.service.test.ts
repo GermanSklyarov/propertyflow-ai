@@ -4,6 +4,7 @@ import type { KnowledgeDocumentChunkSnapshot } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import { AiChatService } from "./ai-chat.service.js";
 import { OpenAiTextGenerator, type AiTextGenerator } from "./ai-text-generator.js";
+import type { LocationIntelligenceService } from "./location-intelligence.js";
 
 describe("AiChatService", () => {
   afterEach(() => {
@@ -12,6 +13,9 @@ describe("AiChatService", () => {
     delete process.env.AI_CHAT_MODEL;
     delete process.env.GEMINI_API_KEY;
     delete process.env.GEMINI_CHAT_MODEL;
+    delete process.env.GOOGLE_MAPS_API_KEY;
+    delete process.env.MAPBOX_ACCESS_TOKEN;
+    delete process.env.MAP_GEOCODING_PROVIDER;
     vi.restoreAllMocks();
   });
 
@@ -702,6 +706,121 @@ describe("AiChatService", () => {
     expect(response.answer).toContain("Studio Condo at Del Mare Bangsaray - Bang Saray: about");
   });
 
+  it("compares shortlist options against arbitrary geocoded landmarks when map provider is configured", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          id: "property-1",
+          location: { latitude: 12.94, longitude: 100.88 },
+          title: "Central Pattaya Studio"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          id: "property-2",
+          location: { latitude: 12.972, longitude: 100.889 },
+          title: "Naklua Landmark Studio"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const locationIntelligence = {
+      resolveComparisonTarget: vi.fn().mockResolvedValue({
+        kind: "poi",
+        poi: {
+          aliases: ["Sanctuary of Truth"],
+          category: "landmark",
+          id: "geocoded-sanctuary-of-truth",
+          label: "Sanctuary of Truth",
+          location: { latitude: 12.9723, longitude: 100.8894 },
+          market: "pattaya"
+        }
+      })
+    } as unknown as LocationIntelligenceService;
+    const service = serviceFactory({
+      locationIntelligence,
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Central Pattaya Studio" },
+            { propertyId: "property-2", title: "Naklua Landmark Studio" }
+          ],
+          role: "assistant",
+          text: "I found two options."
+        }
+      ],
+      locale: "en",
+      message: "which one of them is closer to Sanctuary of Truth?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(locationIntelligence.resolveComparisonTarget).toHaveBeenCalledWith("which one of them is closer to Sanctuary of Truth?", "pattaya");
+    expect(response.answer).toContain("Naklua Landmark Studio is closest to Sanctuary of Truth");
+    expect(response.answer).toContain("Central Pattaya Studio: about");
+    expect(response.matchedPropertyIds).toEqual(["property-1", "property-2"]);
+  });
+
+  it("explains map provider setup when arbitrary landmark geocoding is unavailable", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      locationIntelligence: {
+        resolveComparisonTarget: vi.fn().mockResolvedValue(undefined)
+      } as unknown as LocationIntelligenceService,
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertyFactory({ id: propertyId, title: propertyId }))
+        ),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Option A" },
+            { propertyId: "property-2", title: "Option B" }
+          ],
+          role: "assistant",
+          text: "I found two options."
+        }
+      ],
+      locale: "en",
+      message: "which one of them is closer to a place not in the map?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.answer).toContain("could not match that place to the current city map data yet");
+    expect(response.answer).toContain("map geocoding provider");
+  });
+
   it("compares shortlist options for investment using listing facts", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([
@@ -1249,6 +1368,7 @@ function serviceFactory(overrides: {
   knowledge?: {
     searchChunks: ReturnType<typeof vi.fn>;
   };
+  locationIntelligence?: LocationIntelligenceService;
   properties?: {
     findById: ReturnType<typeof vi.fn>;
     search: ReturnType<typeof vi.fn>;
@@ -1319,7 +1439,8 @@ function serviceFactory(overrides: {
     naturalLanguageSearch as never,
     neighborhood as never,
     knowledge as never,
-    overrides.textGenerator
+    overrides.textGenerator,
+    overrides.locationIntelligence
   );
 }
 

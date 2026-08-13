@@ -1,3 +1,4 @@
+import { Injectable, Logger } from "@nestjs/common";
 import type { GeoPoint, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 
 export type LocationComparisonTarget =
@@ -25,6 +26,7 @@ export type CityPoiCategory =
   | "airport"
   | "beach"
   | "hospital"
+  | "landmark"
   | "mall"
   | "nightlife"
   | "park"
@@ -142,6 +144,7 @@ const CATEGORY_ALIASES: Record<CityPoiCategory, string[]> = {
   airport: ["airport", "аэропорт", "สนามบิน", "机场", "機場"],
   beach: ["beach", "sea", "пляж", "море", "ชายหาด", "ทะเล", "海滩", "海灘", "海边", "海邊"],
   hospital: ["hospital", "clinic", "больница", "госпиталь", "клиника", "โรงพยาบาล", "医院", "醫院"],
+  landmark: ["landmark", "attraction", "temple", "market", "достопримечательность", "храм", "рынок", "สถานที่", "วัด", "景点", "景點"],
   mall: ["mall", "shopping", "shopping mall", "center", "centre", "тц", "молл", "торговый", "ห้าง", "ศูนย์การค้า", "商场", "商場"],
   nightlife: ["nightlife", "bars", "walking street", "bar street", "ночная жизнь", "бары", "ผับ", "บาร์", "酒吧", "夜生活"],
   park: ["park", "парк", "สวน", "公园", "公園"],
@@ -151,8 +154,78 @@ const CATEGORY_ALIASES: Record<CityPoiCategory, string[]> = {
   transport: ["station", "bus station", "terminal", "transport", "станция", "автовокзал", "สถานี", "车站", "車站"]
 };
 
+const MARKET_SEARCH_LABELS: Record<ThailandMarket, string> = {
+  bangkok: "Bangkok, Thailand",
+  "hua-hin": "Hua Hin, Thailand",
+  "koh-samui": "Koh Samui, Thailand",
+  pattaya: "Pattaya, Thailand",
+  phuket: "Phuket, Thailand"
+};
+
+interface GeocodedPlace {
+  label: string;
+  location: GeoPoint;
+}
+
+@Injectable()
+export class LocationIntelligenceService {
+  private readonly logger = new Logger(LocationIntelligenceService.name);
+
+  async resolveComparisonTarget(message: string, market?: ThailandMarket): Promise<LocationComparisonTarget | undefined> {
+    const localTarget = resolveLocationComparisonTarget(message, market);
+
+    if (localTarget) {
+      return localTarget;
+    }
+
+    const query = extractLocationQuery(message);
+
+    if (!query) {
+      return undefined;
+    }
+
+    const geocodedPlace = await this.geocode(query, market);
+
+    if (!geocodedPlace) {
+      return undefined;
+    }
+
+    return {
+      kind: "poi",
+      poi: {
+        aliases: [query],
+        category: "landmark",
+        id: `geocoded-${stablePlaceId(geocodedPlace.label)}`,
+        label: geocodedPlace.label,
+        location: geocodedPlace.location,
+        market: market ?? "pattaya"
+      }
+    };
+  }
+
+  private async geocode(query: string, market?: ThailandMarket): Promise<GeocodedPlace | undefined> {
+    const provider = resolveMapGeocodingProvider();
+
+    if (provider === "none") {
+      return undefined;
+    }
+
+    try {
+      if (provider === "google") {
+        return await geocodeWithGoogle(query, market);
+      }
+
+      return await geocodeWithMapbox(query, market);
+    } catch (error) {
+      this.logger.warn(`Map geocoding failed: ${error instanceof Error ? error.message : String(error)}`);
+
+      return undefined;
+    }
+  }
+}
+
 export function isLocationInfrastructureQuestion(message: string): boolean {
-  return Boolean(resolveLocationComparisonTarget(message));
+  return Boolean(resolveLocationComparisonTarget(message) || extractLocationQuery(message));
 }
 
 export function resolveLocationComparisonTarget(message: string, market?: ThailandMarket): LocationComparisonTarget | undefined {
@@ -249,4 +322,148 @@ function normalizeLocationText(value: string): string {
     .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function extractLocationQuery(message: string): string | undefined {
+  const normalizedWhitespace = message.replace(/\s+/g, " ").trim();
+  const patterns = [
+    /\b(?:close|closer|closest|near|nearer|nearest|distance|far|farther|farthest)\s+(?:to|from)\s+(.+?)(?:\?|$)/i,
+    /\b(?:to|from)\s+(.+?)(?:\?|$)/i,
+    /(?:рядом|ближе|близко|далеко)\s+(?:к|до|от)\s+(.+?)(?:\?|$)/i
+  ];
+  const value = patterns
+    .map((pattern) => normalizedWhitespace.match(pattern)?.[1])
+    .find((match): match is string => Boolean(match?.trim()));
+
+  if (!value) {
+    return undefined;
+  }
+
+  const cleaned = value
+    .replace(/\b(?:among|between|these|those|them|options|listings|ones|which one|which of them|which option)\b/gi, " ")
+    .replace(/\b(?:is|are|the|a|an|more|most)\b/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned || CATEGORY_ALIASES.beach.some((alias) => normalizeLocationText(cleaned) === normalizeLocationText(alias))) {
+    return undefined;
+  }
+
+  return cleaned;
+}
+
+function resolveMapGeocodingProvider(): "google" | "mapbox" | "none" {
+  const requestedProvider = process.env.MAP_GEOCODING_PROVIDER?.trim().toLowerCase();
+
+  if (requestedProvider === "google" || (!requestedProvider && process.env.GOOGLE_MAPS_API_KEY?.trim())) {
+    return "google";
+  }
+
+  if (requestedProvider === "mapbox" || (!requestedProvider && process.env.MAPBOX_ACCESS_TOKEN?.trim())) {
+    return "mapbox";
+  }
+
+  return "none";
+}
+
+async function geocodeWithGoogle(query: string, market?: ThailandMarket): Promise<GeocodedPlace | undefined> {
+  const apiKey = process.env.GOOGLE_MAPS_API_KEY?.trim();
+
+  if (!apiKey) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams({
+    address: buildGeocodingQuery(query, market),
+    key: apiKey,
+    region: "th"
+  });
+  const response = await fetchJson<{ results?: Array<{ formatted_address?: string; geometry?: { location?: { lat?: number; lng?: number } } }> }>(
+    `https://maps.googleapis.com/maps/api/geocode/json?${params.toString()}`
+  );
+  const first = response.results?.[0];
+
+  if (!first) {
+    return undefined;
+  }
+
+  const location = first?.geometry?.location;
+
+  if (typeof location?.lat !== "number" || typeof location.lng !== "number") {
+    return undefined;
+  }
+
+  return {
+    label: first.formatted_address?.split(",")[0]?.trim() || query,
+    location: { latitude: location.lat, longitude: location.lng }
+  };
+}
+
+async function geocodeWithMapbox(query: string, market?: ThailandMarket): Promise<GeocodedPlace | undefined> {
+  const accessToken = process.env.MAPBOX_ACCESS_TOKEN?.trim();
+
+  if (!accessToken) {
+    return undefined;
+  }
+
+  const params = new URLSearchParams({
+    access_token: accessToken,
+    country: "TH",
+    limit: "1"
+  });
+  const encodedQuery = encodeURIComponent(buildGeocodingQuery(query, market));
+  const response = await fetchJson<{ features?: Array<{ center?: [number, number]; text?: string; place_name?: string }> }>(
+    `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodedQuery}.json?${params.toString()}`
+  );
+  const first = response.features?.[0];
+
+  if (!first) {
+    return undefined;
+  }
+
+  const center = first?.center;
+
+  if (!Array.isArray(center) || typeof center[0] !== "number" || typeof center[1] !== "number") {
+    return undefined;
+  }
+
+  return {
+    label: first.text?.trim() || first.place_name?.split(",")[0]?.trim() || query,
+    location: { latitude: center[1], longitude: center[0] }
+  };
+}
+
+async function fetchJson<T>(url: string): Promise<T> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 2_500);
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        accept: "application/json"
+      },
+      signal: controller.signal
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+
+    return (await response.json()) as T;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildGeocodingQuery(query: string, market?: ThailandMarket): string {
+  const marketLabel = market ? MARKET_SEARCH_LABELS[market] : "Thailand";
+  const normalizedQuery = query.toLowerCase();
+
+  return normalizedQuery.includes("thailand") || normalizedQuery.includes(marketLabel.toLowerCase())
+    ? query
+    : `${query}, ${marketLabel}`;
+}
+
+function stablePlaceId(value: string): string {
+  return normalizeLocationText(value).replace(/\s+/g, "-").slice(0, 64) || "place";
 }

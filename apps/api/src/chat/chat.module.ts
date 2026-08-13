@@ -8,6 +8,7 @@ import { AuthModule } from "../shared/auth/auth.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
 import { AI_TEXT_GENERATOR, OpenAiTextGenerator } from "./application/ai-text-generator.js";
 import { AiChatService } from "./application/ai-chat.service.js";
+import { LocationIntelligenceService } from "./application/location-intelligence.js";
 import { PublicWidgetRateLimitService } from "./application/public-widget-rate-limit.service.js";
 import { ChatController } from "./presentation/rest/chat.controller.js";
 import { PublicWidgetChatController } from "./presentation/rest/public-widget-chat.controller.js";
@@ -15,6 +16,11 @@ import { PublicWidgetChatController } from "./presentation/rest/public-widget-ch
 @Module({
   imports: [AuditModule, AuthModule, KnowledgeModule, LeadsModule, PropertiesModule, SearchObservabilityModule, TenantsModule],
   controllers: [ChatController, PublicWidgetChatController],
-  providers: [AiChatService, PublicWidgetRateLimitService, { provide: AI_TEXT_GENERATOR, useClass: OpenAiTextGenerator }]
+  providers: [
+    AiChatService,
+    LocationIntelligenceService,
+    PublicWidgetRateLimitService,
+    { provide: AI_TEXT_GENERATOR, useClass: OpenAiTextGenerator }
+  ]
 })
 export class ChatModule {}

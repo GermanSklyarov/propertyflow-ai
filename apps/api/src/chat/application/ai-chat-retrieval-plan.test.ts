@@ -336,6 +336,29 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("routes arbitrary landmark distance comparisons for recent options", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Option A" },
+              { propertyId: "property-2", title: "Option B" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "which one of them is closer to Sanctuary of Truth?"
+      })
+    ).toMatchObject({
+      comparison: "poi-distance",
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
+    });
+  });
+
   it("compares recent options for investment instead of starting a new search", () => {
     expect(
       planAiChatRetrieval({
