@@ -853,6 +853,10 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("pet-friendly signals");
     expect(response.answer).toContain("2+ bedrooms or 60+ sqm");
     expect(response.answer).toContain("dog size limits");
+    expect(response.answer).toContain("whether you want to rent or buy");
+    expect(response.answer).toContain("your budget");
+    expect(response.answer).toContain("preferred area or beach distance");
+    expect(response.answer).toContain("timing");
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
       "Jomtien Pet Garden Villa",
       "Pratumnak Pet Condo"

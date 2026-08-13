@@ -348,14 +348,15 @@ function buildListingFitSummary(
   }
 
   const market = formatMarketLabel(properties[0]?.market);
-  const kind = formatKindLabel(properties[0]?.kind);
+  const kind = formatKindSummary(properties);
   const priceRange = formatPriceRange(properties, priceMode);
   const bedroomSummary = summarizeBedrooms(properties, locale);
   const areaSummary = summarizeArea(properties, locale);
   const beachSummary = summarizeBeachDistance(properties, locale);
   const amenities = summarizeAmenities(properties);
   const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
-  const details = [suitability, priceRange, bedroomSummary, areaSummary, beachSummary, amenities].filter(Boolean);
+  const details = [priceRange, bedroomSummary, areaSummary, beachSummary, amenities].filter(Boolean);
+  const clarificationPrompt = buildRecommendationClarificationPrompt(requestMessage, locale);
 
   const overviewLabels: Record<TenantWidgetLanguage, string> = {
     en: `These ${kind} options fit the ${market} search${details.length ? ` because they include ${details.join(", ")}` : ""}. Open the cards to compare exact photos, availability, and viewing details.`,
@@ -365,7 +366,7 @@ function buildListingFitSummary(
   };
   const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale, priceMode));
 
-  return [overviewLabels[locale] ?? overviewLabels.en, ...cardDescriptions].filter(Boolean).join("\n");
+  return [overviewLabels[locale] ?? overviewLabels.en, suitability, clarificationPrompt, ...cardDescriptions].filter(Boolean).join("\n");
 }
 
 function summarizeRequestSuitability(
@@ -383,20 +384,70 @@ function summarizeRequestSuitability(
   const labels: Record<TenantWidgetLanguage, string> = {
     en:
       petFriendlyCount > 0
-        ? `${petFriendlyCount}/${properties.length} shown options have pet-friendly signals and ${spaciousCount}/${properties.length} offer 2+ bedrooms or 60+ sqm; please confirm building pet rules, dog size limits, and deposit`
-        : `pet policy still needs agent confirmation; ${spaciousCount}/${properties.length} shown options offer 2+ bedrooms or 60+ sqm`,
+        ? `For living with pets, ${petFriendlyCount}/${properties.length} shown options have pet-friendly signals and ${spaciousCount}/${properties.length} offer 2+ bedrooms or 60+ sqm. Please confirm building pet rules, dog size limits, and deposit before booking.`
+        : `For living with pets, pet policy still needs agent confirmation. ${spaciousCount}/${properties.length} shown options offer 2+ bedrooms or 60+ sqm, but the building rules should be checked before booking.`,
     ru:
       petFriendlyCount > 0
-        ? `${petFriendlyCount}/${properties.length} показанных вариантов имеют pet-friendly сигнал, ${spaciousCount}/${properties.length} дают 2+ спальни или 60+ кв.м; нужно подтвердить правила здания, ограничения по размеру собак и депозит`
-        : `pet policy нужно подтвердить с агентом; ${spaciousCount}/${properties.length} показанных вариантов дают 2+ спальни или 60+ кв.м`,
+        ? `Для проживания с питомцами: ${petFriendlyCount}/${properties.length} показанных вариантов имеют pet-friendly сигнал, ${spaciousCount}/${properties.length} дают 2+ спальни или 60+ кв.м. Перед просмотром стоит подтвердить правила здания, ограничения по размеру собак и депозит.`
+        : `Для проживания с питомцами pet policy нужно подтвердить с агентом. ${spaciousCount}/${properties.length} показанных вариантов дают 2+ спальни или 60+ кв.м, но правила здания стоит проверить до просмотра.`,
     th:
       petFriendlyCount > 0
-        ? `${petFriendlyCount}/${properties.length} รายการมีสัญญาณว่าเลี้ยงสัตว์ได้ และ ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม.; ควรยืนยันกฎสัตว์เลี้ยง ขนาดสุนัข และเงินมัดจำ`
-        : `ต้องให้เอเจนต์ยืนยันกฎสัตว์เลี้ยง; ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม.`,
+        ? `สำหรับการอยู่กับสัตว์เลี้ยง ${petFriendlyCount}/${properties.length} รายการมีสัญญาณว่าเลี้ยงสัตว์ได้ และ ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม. ควรยืนยันกฎสัตว์เลี้ยง ขนาดสุนัข และเงินมัดจำก่อนนัดชม`
+        : `สำหรับการอยู่กับสัตว์เลี้ยง ต้องให้เอเจนต์ยืนยันนโยบายสัตว์เลี้ยงก่อน ${spaciousCount}/${properties.length} รายการมี 2+ ห้องนอนหรือ 60+ ตร.ม.`,
     zh:
       petFriendlyCount > 0
-        ? `${petFriendlyCount}/${properties.length} 个展示房源有宠物友好信号，${spaciousCount}/${properties.length} 个有 2+ 卧室或 60+ 平米；请确认楼规、狗狗体型限制和押金`
-        : `宠物政策仍需经纪人确认；${spaciousCount}/${properties.length} 个展示房源有 2+ 卧室或 60+ 平米`
+        ? `如果要和宠物一起住，${petFriendlyCount}/${properties.length} 个展示房源有宠物友好信号，${spaciousCount}/${properties.length} 个有 2+ 卧室或 60+ 平米。看房前请确认楼规、狗狗体型限制和押金。`
+        : `如果要和宠物一起住，宠物政策仍需经纪人确认。${spaciousCount}/${properties.length} 个展示房源有 2+ 卧室或 60+ 平米，但看房前应先确认楼规。`
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
+function buildRecommendationClarificationPrompt(message: string, locale: TenantWidgetLanguage): string | undefined {
+  const intent = detectWidgetListingIntent(message);
+  const missing: Array<"budget" | "intent" | "location" | "timing"> = [];
+
+  if (!intent) {
+    missing.push("intent");
+  }
+
+  if (!hasBudgetSignal(message)) {
+    missing.push("budget");
+  }
+
+  if (!hasSpecificLocationPreference(message)) {
+    missing.push("location");
+  }
+
+  if (!hasTimingSignal(message)) {
+    missing.push("timing");
+  }
+
+  if (missing.length < 2) {
+    return undefined;
+  }
+
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: intent === "rent"
+      ? "To narrow this down, tell me your monthly budget, preferred area or beach distance, move-in date, and contract length."
+      : intent === "sale"
+        ? "To narrow this down, tell me your purchase budget, preferred area or beach distance, ownership quota, and approximate purchase timing."
+        : "To narrow this down, tell me whether you want to rent or buy, your budget, preferred area or beach distance, and timing.",
+    ru: intent === "rent"
+      ? "Чтобы сузить подборку, уточните месячный бюджет, желаемый район или расстояние до пляжа, дату въезда и срок контракта."
+      : intent === "sale"
+        ? "Чтобы сузить подборку, уточните бюджет покупки, желаемый район или расстояние до пляжа, квоту владения и примерный срок покупки."
+        : "Чтобы сузить подборку, уточните, интересует аренда или покупка, бюджет, желаемый район или расстояние до пляжа и сроки.",
+    th: intent === "rent"
+      ? "เพื่อคัดให้แม่นขึ้น บอกงบเช่ารายเดือน โซนหรือระยะถึงชายหาด วันที่ต้องการเข้าอยู่ และระยะสัญญาได้ไหม"
+      : intent === "sale"
+        ? "เพื่อคัดให้แม่นขึ้น บอกงบซื้อ โซนหรือระยะถึงชายหาด โควตาการถือครอง และช่วงเวลาที่อยากซื้อได้ไหม"
+        : "เพื่อคัดให้แม่นขึ้น บอกว่าต้องการเช่าหรือซื้อ งบ โซนหรือระยะถึงชายหาด และช่วงเวลาที่ต้องการได้ไหม",
+    zh: intent === "rent"
+      ? "为了更准确筛选，请告诉我月租预算、偏好区域或到海边距离、入住时间和租期。"
+      : intent === "sale"
+        ? "为了更准确筛选，请告诉我购房预算、偏好区域或到海边距离、产权配额以及大概购买时间。"
+        : "为了更准确筛选，请告诉我是租还是买、预算、偏好区域或到海边距离，以及时间安排。"
   };
 
   return labels[locale] ?? labels.en;
@@ -414,13 +465,46 @@ function hasAnyAmenity(property: PropertySnapshot, amenities: string[]) {
   return amenities.some((amenity) => propertyAmenities.has(amenity));
 }
 
+function detectWidgetListingIntent(message: string): WidgetPriceMode | undefined {
+  const normalized = message.toLowerCase();
+  const rentalIntent = hasRentalIntent(normalized);
+  const saleIntent = hasSaleIntent(normalized);
+
+  if (rentalIntent && !saleIntent) {
+    return "rent";
+  }
+
+  if (saleIntent && !rentalIntent) {
+    return "sale";
+  }
+
+  return undefined;
+}
+
+function hasRentalIntent(message: string) {
+  return /\b(?:rent|rental|lease|monthly|per month)\b|аренд|снять|เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月/i.test(message);
+}
+
+function hasSaleIntent(message: string) {
+  return /\b(?:buy|purchase|sale|ownership|freehold|invest|investment)\b|купить|покуп|продаж|собствен|инвест|ซื้อ|ขาย|买|買|购买|購買|投资|投資/i.test(message);
+}
+
+function hasBudgetSignal(message: string) {
+  return /(?:\d+(?:[.,]\d+)?\s*(?:m|million|k|thousand|млн|тыс|ล้าน|万|萬)|\d[\d\s,.]*\s*(?:thb|baht|บาท|泰铢|泰銖|бат))/i.test(message);
+}
+
+function hasSpecificLocationPreference(message: string) {
+  return /\b(?:jomtien|wongamat|pratumnak|naklua|central|east pattaya|na jomtien|beach|sea|walk|quiet|near)\b|джомтьен|вонгамат|пратамнак|наклуа|центр|пляж|море|тих|ใกล้|ชายหาด|ทะเล|海|海边|海邊|海滩|海灘|安静/i.test(message);
+}
+
+function hasTimingSignal(message: string) {
+  return /\b(?:today|tomorrow|weekend|next week|month|year|move-in|move in|contract|lease term|soon|later|future|january|february|march|april|may|june|july|august|september|october|november|december)\b|сегодня|завтра|выходн|месяц|год|заезд|въезд|контракт|скоро|позже|อนาคต|เดือน|ปี|入住|合同|月份|明天|今天/i.test(message);
+}
+
 function resolveWidgetPriceMode(message = ""): WidgetPriceMode {
   const normalized = message.toLowerCase();
-  const rentalIntent = /\b(?:rent|rental|lease|monthly|per month)\b|аренд|снять|เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月/i.test(normalized);
-  const saleIntent =
-    /\b(?:buy|purchase|sale|ownership|freehold|invest|investment)\b|купить|покуп|продаж|собствен|инвест|ซื้อ|ขาย|买|買|购买|購買|投资|投資/i.test(
-      normalized
-    );
+  const rentalIntent = hasRentalIntent(normalized);
+  const saleIntent = hasSaleIntent(normalized);
 
   return rentalIntent && !saleIntent ? "rent" : "sale";
 }
@@ -447,6 +531,12 @@ function formatKindLabel(kind?: PropertySnapshot["kind"]): string {
   };
 
   return kind ? labels[kind] ?? kind : "property";
+}
+
+function formatKindSummary(properties: PropertySnapshot[]): string {
+  const kinds = Array.from(new Set(properties.map((property) => property.kind)));
+
+  return kinds.length === 1 ? formatKindLabel(kinds[0]) : "property";
 }
 
 function formatPriceRange(properties: PropertySnapshot[], priceMode: WidgetPriceMode = "sale"): string {
