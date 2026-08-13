@@ -216,8 +216,9 @@ export class PublicWidgetChatController {
     const publicProperties = properties
       .filter((property): property is PropertySnapshot => Boolean(property))
       .filter(isPublicWidgetRecommendableProperty);
-    const matchedProperties = publicProperties.slice(0, 3);
     const searchContext = buildWidgetSearchContextMessage(payload);
+    const rankedPublicProperties = rankWidgetPropertiesForRequest(publicProperties, searchContext);
+    const matchedProperties = rankedPublicProperties.slice(0, 3);
 
     return {
       candidateMatches: visiblePropertyIds.length,
@@ -364,7 +365,7 @@ function buildListingFitSummary(
   const bedroomSummary = summarizeBedrooms(properties, locale);
   const areaSummary = summarizeArea(properties, locale);
   const beachSummary = summarizeBeachDistance(properties, locale);
-  const amenities = summarizeAmenities(properties);
+  const amenities = summarizeAmenities(properties, requestMessage);
   const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
   const details = [priceRange, bedroomSummary, areaSummary, beachSummary, amenities].filter(Boolean);
   const clarificationPrompt = buildRecommendationClarificationPrompt(requestMessage, locale);
@@ -434,6 +435,68 @@ function summarizeRequestSuitability(
   };
 
   return petLabels[locale] ?? petLabels.en;
+}
+
+function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
+  const requestedAmenities = detectRequestedWidgetAmenities(requestMessage);
+  const preferLargerArea = isSpaciousRequest(requestMessage);
+  const preferCloseBeach = hasSpecificLocationPreference(requestMessage) && /\b(?:beach|sea|near|close|walk)\b|пляж|море/i.test(requestMessage);
+
+  if (!requestedAmenities.length && !preferLargerArea && !preferCloseBeach) {
+    return properties;
+  }
+
+  return properties
+    .map((property, index) => ({ index, property }))
+    .sort((left, right) => {
+      const amenityDelta =
+        countMatchedAmenities(right.property, requestedAmenities) - countMatchedAmenities(left.property, requestedAmenities);
+      if (amenityDelta !== 0) {
+        return amenityDelta;
+      }
+
+      if (preferLargerArea && right.property.areaSqm !== left.property.areaSqm) {
+        return right.property.areaSqm - left.property.areaSqm;
+      }
+
+      if (preferCloseBeach) {
+        const leftDistance = left.property.beachDistanceMeters ?? Number.POSITIVE_INFINITY;
+        const rightDistance = right.property.beachDistanceMeters ?? Number.POSITIVE_INFINITY;
+        if (leftDistance !== rightDistance) {
+          return leftDistance - rightDistance;
+        }
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ property }) => property);
+}
+
+function detectRequestedWidgetAmenities(message: string): string[] {
+  const normalized = message.toLowerCase();
+  const amenities: string[] = [];
+
+  if (/\b(?:sea view|ocean view)\b|вид на море|วิวทะเล|海景|看海/i.test(normalized)) {
+    amenities.push("sea-view");
+  }
+
+  if (isPetRequest(normalized)) {
+    amenities.push("pet-friendly");
+  }
+
+  if (/\b(?:pool|swimming pool)\b|бассейн|泳池|游泳池/i.test(normalized)) {
+    amenities.push("pool");
+  }
+
+  if (/\b(?:gym|fitness)\b|фитнес|健身/i.test(normalized)) {
+    amenities.push("gym");
+  }
+
+  return amenities;
+}
+
+function countMatchedAmenities(property: PropertySnapshot, requestedAmenities: string[]): number {
+  return requestedAmenities.filter((amenity) => hasAnyAmenity(property, amenity === "pet-friendly" ? ["pet-friendly", "pets-allowed"] : [amenity])).length;
 }
 
 function buildRecommendationClarificationPrompt(message: string, locale: TenantWidgetLanguage): string | undefined {
@@ -675,8 +738,15 @@ function summarizeBeachDistance(properties: PropertySnapshot[], locale: TenantWi
   return labels[locale] ?? labels.en;
 }
 
-function summarizeAmenities(properties: PropertySnapshot[]): string {
-  const amenities = Array.from(new Set(properties.flatMap((property) => property.amenities ?? []).filter(Boolean))).slice(0, 3);
+function summarizeAmenities(properties: PropertySnapshot[], requestMessage = ""): string {
+  const allAmenities = Array.from(new Set(properties.flatMap((property) => property.amenities ?? []).filter(Boolean)));
+  const requestedAmenities = detectRequestedWidgetAmenities(requestMessage).filter((amenity) =>
+    properties.some((property) => hasAnyAmenity(property, amenity === "pet-friendly" ? ["pet-friendly", "pets-allowed"] : [amenity]))
+  );
+  const amenities = [
+    ...requestedAmenities,
+    ...allAmenities.filter((amenity) => !requestedAmenities.includes(amenity))
+  ].slice(0, 3);
 
   return amenities.length ? `amenities like ${amenities.join(", ")}` : "";
 }

@@ -332,6 +332,113 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.items.map((item) => item.id)).toEqual([petFriendlyIndexed.id, petFriendlyFallback.id]);
   });
 
+  it("softly reranks spacious requests toward larger layouts", async () => {
+    const compactNearBeach = propertyFactory({
+      areaSqm: 27.3,
+      amenities: ["sea-view"],
+      id: "compact-near-beach",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+      title: "1BR Condo at Siam Oriental Tropical Garden"
+    });
+    const midSize = propertyFactory({
+      areaSqm: 29.8,
+      amenities: ["sea-view"],
+      id: "mid-size",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+      title: "1BR Condo at The Cliff"
+    });
+    const largerSeaView = propertyFactory({
+      areaSqm: 42,
+      amenities: ["sea-view", "pool", "gym"],
+      id: "larger-sea-view",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+      title: "Wongamat Sea View Residence"
+    });
+    const repository = {
+      findById: async () => null,
+      search: async () => [compactNearBeach, midSize, largerSeaView]
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "spacious sea view rental under 30k" },
+        index: "propertyflow-properties-v1",
+        items: [],
+        total: 0
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "I'm looking for a spacious studio in Pattaya close to the beach and with sea view for rent under 30k/month"
+    });
+
+    expect(result.filters).toMatchObject({
+      listingType: "rent",
+      market: "pattaya",
+      maxMonthlyRentThb: 30_000,
+      requiredAmenities: ["sea-view"]
+    });
+    expect(result.items.map((item) => item.id)).toEqual(["larger-sea-view", "mid-size", "compact-near-beach"]);
+    expect(result.rankingExplanation).toContain("Spacious requests are softly reranked toward larger layouts.");
+  });
+
+  it("keeps larger layouts ahead of compact vector matches for spacious requests", async () => {
+    const compactVectorFavorite = propertyFactory({
+      areaSqm: 27.3,
+      amenities: ["sea-view"],
+      id: "compact-vector-favorite",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+      title: "Compact Beach Studio"
+    });
+    const largerSeaView = propertyFactory({
+      areaSqm: 42,
+      amenities: ["sea-view"],
+      id: "larger-sea-view",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+      title: "Wongamat Sea View Residence"
+    });
+    const byId = new Map([
+      [compactVectorFavorite.id, compactVectorFavorite],
+      [largerSeaView.id, largerSeaView]
+    ]);
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) => byId.get(propertyId) ?? null,
+      search: async () => []
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "spacious sea view rental under 30k" },
+        index: "propertyflow-properties-v1",
+        items: [
+          { propertyId: compactVectorFavorite.id },
+          { propertyId: largerSeaView.id }
+        ],
+        total: 2
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => [
+        { propertyId: compactVectorFavorite.id, rank: 1, similarityScore: 0.99 },
+        { propertyId: largerSeaView.id, rank: 2, similarityScore: 0.4 }
+      ]
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "I'm looking for a spacious studio in Pattaya close to the beach and with sea view for rent under 30k/month"
+    });
+
+    expect(result.items.map((item) => item.id)).toEqual(["larger-sea-view", "compact-vector-favorite"]);
+  });
+
   it("uses pgvector similarity to rerank recommendable indexed listings", async () => {
     const weakLexicalFirst = propertyFactory({ id: "11111111-1111-1111-1111-111111111111", title: "Generic City Condo" });
     const semanticBest = propertyFactory({ id: "22222222-2222-2222-2222-222222222222", title: "Beachfront Sea View Condo" });

@@ -13,6 +13,7 @@ import { PropertyVectorSearchService } from "./property-vector-search.service.js
 interface InterpretationResult {
   interpretedIntent: string;
   filters: PropertySearchRequest;
+  rankingPreferences: RankingPreferences;
   rankingExplanation: string;
   purpose?: PropertyPurpose;
 }
@@ -20,6 +21,10 @@ interface InterpretationResult {
 interface BudgetSignal {
   amountThb: number;
   cadence?: "monthly";
+}
+
+interface RankingPreferences {
+  preferLargerArea: boolean;
 }
 
 const MARKET_PATTERNS: Array<[ThailandMarket, RegExp]> = [
@@ -76,7 +81,7 @@ export class NaturalLanguagePropertySearchService {
       .filter((item): item is PropertySnapshot => item !== null)
       .filter(isRecommendableProperty)
       .filter((item) => matchesStrictFilters(item, interpretation.filters));
-    const rankedIndexed = await this.applyVectorRanking(tenantId, request.query, indexedItems);
+    const rankedIndexed = await this.applyRanking(tenantId, request.query, indexedItems, interpretation.rankingPreferences);
     const fallbackItems = rankedIndexed.items.length >= 3
       ? []
       : (await this.properties.search(tenantId, {
@@ -91,7 +96,7 @@ export class NaturalLanguagePropertySearchService {
           .filter((item) => !rankedIndexed.items.some((indexedItem) => indexedItem.id === item.id));
     const rankedFallback = rankedIndexed.items.length >= 3
       ? { items: [] as PropertySnapshot[], vectorApplied: false }
-      : await this.applyVectorRanking(tenantId, request.query, fallbackItems);
+      : await this.applyRanking(tenantId, request.query, fallbackItems, interpretation.rankingPreferences);
     const items = rankedIndexed.items.length ? [...rankedIndexed.items, ...rankedFallback.items] : rankedFallback.items;
     const vectorApplied = rankedIndexed.vectorApplied || rankedFallback.vectorApplied;
     const rankingExplanation = [
@@ -119,10 +124,11 @@ export class NaturalLanguagePropertySearchService {
     };
   }
 
-  private async applyVectorRanking(
+  private async applyRanking(
     tenantId: string,
     query: string,
-    items: PropertySnapshot[]
+    items: PropertySnapshot[],
+    preferences: RankingPreferences
   ): Promise<{ items: PropertySnapshot[]; vectorApplied: boolean }> {
     if (items.length < 2) {
       return { items, vectorApplied: false };
@@ -131,7 +137,7 @@ export class NaturalLanguagePropertySearchService {
     const ranks = await this.vectorSearch.rankCandidates(tenantId, query, items.map((item) => item.id));
 
     if (!ranks.length) {
-      return { items, vectorApplied: false };
+      return { items: rankByQueryPreferences(items, preferences), vectorApplied: false };
     }
 
     const lexicalScoreById = new Map(items.map((item, index) => [item.id, (items.length - index) / items.length]));
@@ -139,8 +145,13 @@ export class NaturalLanguagePropertySearchService {
 
     return {
       items: [...items].sort((left, right) => {
-        const leftScore = hybridScore(left.id, lexicalScoreById, vectorScoreById);
-        const rightScore = hybridScore(right.id, lexicalScoreById, vectorScoreById);
+        const preferenceOrder = compareByQueryPreferences(left, right, preferences);
+        if (preferenceOrder !== 0) {
+          return preferenceOrder;
+        }
+
+        const leftScore = hybridScore(left, lexicalScoreById, vectorScoreById, preferences);
+        const rightScore = hybridScore(right, lexicalScoreById, vectorScoreById, preferences);
 
         return rightScore - leftScore;
       }),
@@ -199,14 +210,16 @@ export class NaturalLanguagePropertySearchService {
     }
 
     const purpose = request.purpose ?? this.detectPurpose(normalized);
+    const rankingPreferences = this.detectRankingPreferences(normalized);
 
     return {
       interpretedIntent: this.describeIntent(request.query, purpose, filters),
       filters,
+      rankingPreferences,
       rankingExplanation:
         explanations.length > 0
-          ? `Rule-based interpreter extracted ${explanations.join("; ")}. OpenSearch ranks matching indexed listings by text relevance and recency.`
-          : "Rule-based interpreter did not find strict filters; OpenSearch ranks tenant listings by text relevance and recency.",
+          ? `Rule-based interpreter extracted ${explanations.join("; ")}. OpenSearch ranks matching indexed listings by text relevance and recency.${rankingPreferences.preferLargerArea ? " Spacious requests are softly reranked toward larger layouts." : ""}`
+          : `Rule-based interpreter did not find strict filters; OpenSearch ranks tenant listings by text relevance and recency.${rankingPreferences.preferLargerArea ? " Spacious requests are softly reranked toward larger layouts." : ""}`,
       purpose
     };
   }
@@ -351,6 +364,12 @@ export class NaturalLanguagePropertySearchService {
     return LIFESTYLE_PATTERNS.filter(([, pattern]) => pattern.test(normalized)).map(([signal]) => signal);
   }
 
+  private detectRankingPreferences(query: string): RankingPreferences {
+    return {
+      preferLargerArea: /(?:\b(?:spacious|roomy|large|larger|big|bigger|more space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點)/i.test(query)
+    };
+  }
+
   private describeIntent(query: string, purpose: PropertyPurpose | undefined, filters: PropertySearchRequest): string {
     const parts = [`Search for properties matching: "${query}"`];
 
@@ -403,13 +422,41 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
   return true;
 }
 
-function hybridScore(
-  propertyId: string,
-  lexicalScoreById: Map<string, number>,
-  vectorScoreById: Map<string, number>
-): number {
-  const lexicalScore = lexicalScoreById.get(propertyId) ?? 0;
-  const vectorScore = vectorScoreById.get(propertyId);
+function rankByQueryPreferences(items: PropertySnapshot[], preferences: RankingPreferences): PropertySnapshot[] {
+  if (!preferences.preferLargerArea) {
+    return items;
+  }
 
-  return vectorScore === undefined ? lexicalScore * 0.35 : vectorScore * 0.65 + lexicalScore * 0.35;
+  return [...items].sort((left, right) => compareByQueryPreferences(left, right, preferences));
+}
+
+function compareByQueryPreferences(left: PropertySnapshot, right: PropertySnapshot, preferences: RankingPreferences): number {
+  if (!preferences.preferLargerArea) {
+    return 0;
+  }
+
+  return right.areaSqm - left.areaSqm;
+}
+
+function hybridScore(
+  property: PropertySnapshot,
+  lexicalScoreById: Map<string, number>,
+  vectorScoreById: Map<string, number>,
+  preferences: RankingPreferences
+): number {
+  const lexicalScore = lexicalScoreById.get(property.id) ?? 0;
+  const vectorScore = vectorScoreById.get(property.id);
+  const softPreferenceScore = preferenceScore(property, preferences);
+
+  return vectorScore === undefined
+    ? lexicalScore * 0.3 + softPreferenceScore * 0.7
+    : vectorScore * 0.55 + lexicalScore * 0.25 + softPreferenceScore * 0.2;
+}
+
+function preferenceScore(property: PropertySnapshot, preferences: RankingPreferences): number {
+  if (!preferences.preferLargerArea) {
+    return 0;
+  }
+
+  return Math.min(property.areaSqm / 80, 1);
 }

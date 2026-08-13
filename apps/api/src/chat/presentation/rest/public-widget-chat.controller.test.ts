@@ -965,10 +965,103 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("larger pet-friendly studios or 1-bedrooms");
     expect(response.answer).not.toContain("I found 1 matching listing. Here are the top 3");
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
-      "1BR Condo at Lumpini Ville Naklua - Naklua",
       "1BR Condo at The Ville Jomtien - East Pattaya",
-      "1BR Condo at City Garden Pratumnak - Pratumnak"
+      "1BR Condo at City Garden Pratumnak - Pratumnak",
+      "1BR Condo at Lumpini Ville Naklua - Naklua"
     ]);
+  });
+
+  it("reranks public cards by explicit spacious and sea-view criteria", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 3 matching listings.",
+          matchedPropertyIds: ["the-cliff", "siam-oriental", "wongamat"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "the-cliff",
+        propertyFactory({
+          amenities: ["key card access", "European kitchen", "washing machine"],
+          areaSqm: 29.8,
+          beachDistanceMeters: 707,
+          id: "the-cliff",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+          title: "1BR Condo at The Cliff - Pratumnak"
+        })
+      ],
+      [
+        "siam-oriental",
+        propertyFactory({
+          amenities: ["balcony", "European kitchen", "24h security"],
+          areaSqm: 27.3,
+          beachDistanceMeters: 134,
+          id: "siam-oriental",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+          title: "1BR Condo at Siam Oriental Tropical Garden - Pratumnak"
+        })
+      ],
+      [
+        "wongamat",
+        propertyFactory({
+          amenities: ["sea-view", "pool", "gym"],
+          areaSqm: 42,
+          beachDistanceMeters: 220,
+          id: "wongamat",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+          title: "Wongamat Sea View Residence"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "I'm looking for a spacious studio close to the beach and with sea view for rent under 30k/month"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "Wongamat Sea View Residence",
+      "1BR Condo at The Cliff - Pratumnak",
+      "1BR Condo at Siam Oriental Tropical Garden - Pratumnak"
+    ]);
+    expect(response.answer.indexOf("Wongamat Sea View Residence:")).toBeLessThan(
+      response.answer.indexOf("1BR Condo at The Cliff - Pratumnak:")
+    );
+    expect(response.answer).toContain("amenities like sea-view");
   });
 
   it("preserves property follow-up answers instead of rewriting them as a new search", async () => {
