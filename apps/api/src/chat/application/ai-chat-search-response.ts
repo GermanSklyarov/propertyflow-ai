@@ -107,7 +107,7 @@ function buildMatchedSearchDraft(options: {
     ),
     deterministicDraft: answer,
     insights: options.dueDiligence.insights,
-    matchedPropertyIds: options.items.slice(0, 8).map((property) => property.id),
+    matchedPropertyIds: options.items.slice(0, 24).map((property) => property.id),
     suggestedActions: ["compare-results", "open-map", "save-search"]
   };
 }

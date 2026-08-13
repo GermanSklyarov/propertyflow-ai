@@ -198,7 +198,7 @@ describe("PublicWidgetChatController", () => {
       "https://agency.example.com"
     );
 
-    expect(response.answer).toContain("I found 9 matching listings. Here is the top match I can show now.");
+    expect(response.answer).toContain("I found 1 matching listing. Here is the top match I can show now.");
     expect(response.answer).toContain("2.9M THB");
     expect(response.answer).toContain("1 bedroom");
     expect(response.answer).toContain("42 sqm");
@@ -271,6 +271,68 @@ describe("PublicWidgetChatController", () => {
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Jomtien Compact One-Bed"]);
     expect(response.answer).toContain("Here is the top match");
     expect(response.answer).toContain("Jomtien Compact One-Bed");
+  });
+
+  it("excludes listing links from prior assistant text when showing more options", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const shownId = "10000000-0000-4000-8000-000000000001";
+    const nextId = "10000000-0000-4000-8000-000000000002";
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 60 matching listings.",
+          matchedPropertyIds: [shownId, nextId],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [shownId, propertyFactory({ id: shownId, title: "Already Shown Family Condo" })],
+      [nextId, propertyFactory({ id: nextId, title: "Next Family Condo" })]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          {
+            role: "assistant",
+            text: `Already Shown Family Condo http://localhost:3002/listings/${shownId}`
+          }
+        ],
+        locale: "en",
+        message: "show me more options"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Next Family Condo"]);
+    expect(response.answer).toContain("I found 1 matching listing. Here is the top match I can show now.");
+    expect(response.answer).not.toContain("Already Shown Family Condo:");
+    expect(response.answer).not.toContain("I found 60 matching listings");
   });
 
   it("shows all public listing cards when the visitor asks for all options", async () => {
@@ -772,7 +834,7 @@ describe("PublicWidgetChatController", () => {
       "https://agency.example.com"
     );
 
-    expect(response.answer).toContain("I found 9 matching listings. Here are the top 2 I can show now.");
+    expect(response.answer).toContain("I found 2 matching listings. Here are the top 2 I can show now.");
     expect(response.answer).toContain("These condo options fit the Pattaya search");
     expect(response.answer).toContain("Pratumnak Investment One-Bed:");
     expect(response.answer).toContain("Terminal 21 Walkable Studio:");

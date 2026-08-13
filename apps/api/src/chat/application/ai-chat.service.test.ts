@@ -806,13 +806,11 @@ describe("AiChatService", () => {
 
   it("keeps additional search candidate ids available for public widget cards", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const searchItems = Array.from({ length: 12 }, (_, index) =>
+      propertyFactory({ id: `property-${index + 1}`, title: `Search Candidate ${index + 1}` })
+    );
     const service = serviceFactory({
-      searchItems: [
-        propertyFactory({ id: "property-1", title: "Terminal 21 Walkable Studio" }),
-        propertyFactory({ id: "property-2", title: "Central Pattaya Rental Loft" }),
-        propertyFactory({ id: "property-3", title: "Smoke Beach Condo smoke-eb330e15" }),
-        propertyFactory({ id: "property-4", title: "Wongamat Sea View Residence" })
-      ],
+      searchItems,
       textGenerator: {
         isConfigured: vi.fn().mockReturnValue(false),
         generate: vi.fn()
@@ -835,7 +833,7 @@ describe("AiChatService", () => {
       message: "show me all options"
     });
 
-    expect(response.matchedPropertyIds).toEqual(["property-1", "property-2", "property-3", "property-4"]);
+    expect(response.matchedPropertyIds).toEqual(searchItems.map((property) => property.id));
   });
 
   it("returns a chat response when a referenced listing is no longer available", async () => {

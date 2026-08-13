@@ -248,9 +248,19 @@ function buildWidgetSearchContextMessage(payload?: PublicWidgetAskDto): string {
 function getShownListingIds(conversation?: AiChatTurn[]): Set<string> {
   return new Set(
     (conversation ?? [])
-      .flatMap((turn) => turn.recommendedListings ?? [])
-      .map((listing) => listing.propertyId.trim())
+      .flatMap((turn) => [
+        ...(turn.recommendedListings ?? []).map((listing) => listing.propertyId),
+        ...extractListingIdsFromText(turn.text)
+      ])
+      .map((propertyId) => propertyId.trim())
       .filter(Boolean)
+  );
+}
+
+function extractListingIdsFromText(text: string): string[] {
+  return Array.from(
+    text.matchAll(/\/listings\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/gi),
+    (match) => match[1] ?? ""
   );
 }
 
@@ -336,6 +346,7 @@ function buildListingCardIntro(
   const shouldUsePublicCount =
     parsedMatchCount === undefined ||
     parsedMatchCount < shownCount ||
+    parsedMatchCount > publicMatchCount ||
     (candidateMatches !== undefined && parsedMatchCount === candidateMatches && publicMatchCount < candidateMatches);
   const countText = String(shouldUsePublicCount ? publicMatchCount : parsedMatchCount);
   const labels: Record<TenantWidgetLanguage, string> = {
