@@ -434,6 +434,29 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("treats broad-search refinements as a new listing search instead of a selected listing detail", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "3BR House at Dusit Grand Park 2" },
+              { propertyId: "property-2", title: "3BR Villa at Dusit Grand Park 2" }
+            ],
+            role: "assistant",
+            text: "I found 16 matching listings."
+          }
+        ],
+        locale: "en",
+        message:
+          "i mean i would like to rent 1 bedroom or a studio, but quite spacious, beach distance is not important, budget is under 30k, i would like to move in next month"
+      })
+    ).toMatchObject({
+      mode: "listing-search",
+      reason: "search-request"
+    });
+  });
+
   it("keeps ordinary listing requests on listing search", () => {
     expect(
       planAiChatRetrieval({

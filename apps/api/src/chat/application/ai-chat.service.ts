@@ -111,20 +111,24 @@ export class AiChatService {
     request: AiChatRequest,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
-    const search = await this.retrieveListingSearch(tenantId, request);
+    const effectiveRequest = {
+      ...request,
+      message: resolveEffectiveSearchMessage(request)
+    };
+    const search = await this.retrieveListingSearch(tenantId, effectiveRequest);
     const fallbackItems = search.items.length
       ? []
       : await this.properties.search(tenantId, search.filters);
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
-    const knowledge = isMoreListingsRequest(request.message) ? [] : await this.retrieveKnowledge(tenantId, request);
+    const knowledge = isMoreListingsRequest(request.message) ? [] : await this.retrieveKnowledge(tenantId, effectiveRequest);
     const dueDiligence = await this.retrieveDueDiligence(tenantId, matches);
     const draft = buildAiChatSearchResponseDraft({
       dueDiligence,
       items,
       knowledge,
       matches,
-      requestMessage: request.message,
+      requestMessage: effectiveRequest.message,
       search
     });
 
@@ -186,20 +190,15 @@ export class AiChatService {
     tenantId: string,
     request: AiChatRequest
   ): Promise<NaturalLanguagePropertySearchResponse> {
-    const searchRequest = {
-      ...request,
-      message: resolveEffectiveSearchMessage(request)
-    };
-
     try {
       return await this.naturalLanguageSearch.search(tenantId, {
-        locale: searchRequest.locale,
-        query: searchRequest.message,
-        market: searchRequest.market,
-        purpose: searchRequest.purpose
+        locale: request.locale,
+        query: request.message,
+        market: request.market,
+        purpose: request.purpose
       });
     } catch (error) {
-      const fallback = this.interpretStructuredSearchFallback(searchRequest);
+      const fallback = this.interpretStructuredSearchFallback(request);
 
       this.logger.warn(
         `AI chat listing search failed for tenant ${tenantId}: ${error instanceof Error ? error.message : String(error)}`
@@ -426,24 +425,85 @@ function comparisonFacts(
 }
 
 function resolveEffectiveSearchMessage(request: AiChatRequest): string {
-  if (!isMoreListingsRequest(request.message)) {
+  if (looksLikeSearchRefinement(request.message)) {
+    return mergeSearchRefinement(request, request.message);
+  }
+
+  if (!isSearchContinuationRequest(request.message)) {
     return request.message;
   }
 
-  return [...(request.conversation ?? [])]
+  const previousUserTurns = [...(request.conversation ?? [])]
     .reverse()
-    .find((turn) => turn.role === "user" && !isMoreListingsRequest(turn.text) && looksLikeSearchRequest(turn.text))
-    ?.text ?? request.message;
+    .filter((turn) => turn.role === "user" && !isThinSearchContinuation(turn.text));
+
+  const latestRefinement = previousUserTurns.find((turn) => looksLikeSearchRefinement(turn.text))?.text;
+
+  if (latestRefinement) {
+    return mergeSearchRefinement(request, latestRefinement);
+  }
+
+  return previousUserTurns.find((turn) => looksLikeSearchRequest(turn.text))?.text ?? request.message;
+}
+
+function mergeSearchRefinement(request: AiChatRequest, refinement: string): string {
+  const baseSearch = [...(request.conversation ?? [])]
+    .reverse()
+    .filter((turn) => turn.role === "user" && turn.text !== refinement && !isThinSearchContinuation(turn.text))
+    .find((turn) => looksLikeSearchRequest(turn.text) && !looksLikeSearchRefinement(turn.text))?.text;
+
+  return baseSearch ? `${baseSearch}. Updated criteria: ${refinement}` : refinement;
+}
+
+function isSearchContinuationRequest(message: string): boolean {
+  return isMoreListingsRequest(message) || isAffirmativeSearchContinuation(message);
+}
+
+function isThinSearchContinuation(message: string): boolean {
+  const normalized = message.toLowerCase().replace(/\s+/g, " ").trim();
+
+  return isShortAffirmation(normalized) || /^(?:can i |could i |please )?(?:see|show|get)?\s*(?:more|all|another|other|next)(?: options?| listings?| ones?)?[\s?.!]*$/i.test(normalized);
 }
 
 function isMoreListingsRequest(message: string): boolean {
-  return /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i.test(
-    message
+  const normalized = message.toLowerCase().replace(/\s+/g, " ").trim();
+
+  return (
+    /\b(?:more|another|other|else|all|everything|next)\b/i.test(normalized) ||
+    normalized.includes("show more") ||
+    normalized.includes("show all") ||
+    normalized.includes("see more") ||
+    normalized.includes("see all") ||
+    /еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i.test(normalized)
+  );
+}
+
+function isAffirmativeSearchContinuation(message: string): boolean {
+  const normalized = message.toLowerCase().replace(/\s+/g, " ").trim();
+  const startsAffirmative = /^(?:yes|yeah|yep|please|sure|ok|okay|do it|go ahead|да|ага|давай|конечно|пожалуйста)\b/i.test(
+    normalized
+  );
+  const referencesSearch = /\b(?:fit|request|criteria|something|option|options|listing|listings|find|search)\b|подход|запрос|вариант|найд|поищ/i.test(
+    normalized
+  );
+
+  return startsAffirmative && referencesSearch;
+}
+
+function isShortAffirmation(message: string): boolean {
+  return /^(?:yes|yeah|yep|please|yes please|sure|ok|okay|do it|go ahead|да|ага|давай|конечно|пожалуйста)[\s,.!]*$/i.test(
+    message.trim()
   );
 }
 
 function looksLikeSearchRequest(message: string): boolean {
-  return /find|show|recommend|suggest|condo|apartment|house|villa|rent|buy|найд|подбер|покаж|кондо|квартир|дом|аренд|купить|หา|แนะนำ|คอนโด|ซื้อ|เช่า|找|推荐|推薦|公寓|买|買|租/i.test(
+  return /find|show|recommend|suggest|condo|apartment|room|house|villa|rent|rental|buy|budget|under|studio|bedroom|spacious|move|найд|подбер|покаж|кондо|квартир|дом|аренд|купить|หา|แนะนำ|คอนโด|ซื้อ|เช่า|找|推荐|推薦|公寓|买|買|租/i.test(
+    message
+  );
+}
+
+function looksLikeSearchRefinement(message: string): boolean {
+  return /\b(?:i mean|actually|instead|rather|rent|rental|lease|buy|purchase|budget|under|studio|bedroom|spacious|move in|move-in|next month|not important|does not matter|doesn't matter)\b|точнее|аренд|купить|бюджет|студ|спальн|въезд|заезд/i.test(
     message
   );
 }

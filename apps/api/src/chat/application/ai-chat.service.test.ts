@@ -711,6 +711,99 @@ describe("AiChatService", () => {
     expect(response.answer).toContain("Another Pattaya Condo");
   });
 
+  it("merges a concrete refinement with the previous broad search signals", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya", maxMonthlyRentThb: 30_000, requiredAmenities: ["pet-friendly"] },
+        interpretedIntent: "Pattaya pet-friendly rental under 30k",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "Pet Friendly Spacious Studio" })],
+        rankingExplanation: "Using broad pet-friendly request plus clarified rental criteria.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const refinement =
+      "i mean i would like to rent 1 bedroom or a studio, but quite spacious, beach distance is not important, budget is under 30k, i would like to move in next month";
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "i need a room in pattaya for living with 2 dogs" },
+        {
+          recommendedListings: [{ propertyId: "property-1", title: "3BR House at Dusit Grand Park 2" }],
+          role: "assistant",
+          text: "I found 16 matching listings."
+        }
+      ],
+      locale: "en",
+      message: refinement
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "en",
+      market: undefined,
+      purpose: undefined,
+      query: `i need a room in pattaya for living with 2 dogs. Updated criteria: ${refinement}`
+    });
+  });
+
+  it("reuses the last concrete refinement when the visitor confirms a new search", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya", maxMonthlyRentThb: 30_000, requiredAmenities: ["pet-friendly"] },
+        interpretedIntent: "Pattaya pet-friendly rental under 30k",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "Pet Friendly Spacious Studio" })],
+        rankingExplanation: "Continuing with the clarified rental criteria.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const refinement =
+      "i mean i would like to rent 1 bedroom or a studio, but quite spacious, beach distance is not important, budget is under 30k, i would like to move in next month";
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "i need a room in pattaya for living with 2 dogs" },
+        {
+          recommendedListings: [{ propertyId: "property-1", title: "3BR House at Dusit Grand Park 2" }],
+          role: "assistant",
+          text: "I found 16 matching listings."
+        },
+        { role: "user", text: refinement },
+        {
+          recommendedListings: [{ propertyId: "property-1", title: "3BR House at Dusit Grand Park 2" }],
+          role: "assistant",
+          text: "Would you like me to search for new listings that fit these updated criteria?"
+        }
+      ],
+      locale: "en",
+      message: "yes, please, find something that fits my request"
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "en",
+      market: undefined,
+      purpose: undefined,
+      query: `i need a room in pattaya for living with 2 dogs. Updated criteria: ${refinement}`
+    });
+    expect(response.answer).toContain("Pet Friendly Spacious Studio");
+  });
+
   it("keeps additional search candidate ids available for public widget cards", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const service = serviceFactory({

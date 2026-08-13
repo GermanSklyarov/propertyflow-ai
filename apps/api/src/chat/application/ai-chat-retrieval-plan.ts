@@ -14,6 +14,8 @@ const livingComparisonPattern = /living|live|family|school|kid|retire|для с�
 const petsComparisonPattern = /\bpets?\b|\bdogs?\b|\bcats?\b|собак|кош|питом|สัตว์เลี้ยง|หมา|แมว|宠物|寵物|狗|猫|貓/i;
 const moreListingsPattern =
   /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i;
+const newSearchRefinementPattern =
+  /\b(?:i mean|actually|instead|rather|no,?|not important|does not matter|doesn't matter|rent|rental|lease|buy|purchase|budget|under|studio|1 bedroom|one bedroom|move in|move-in|next month|spacious)\b|точнее|вообще|лучше|аренд|купить|бюджет|студ|спальн|въезд|заезд|месяц/i;
 const viewingSlotFollowUpPattern =
   /\b(?:today|tomorrow|day after tomorrow|next week|this weekend|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|am|pm|a\.m\.?|p\.m\.?|morning|afternoon|evening|tonight|\d{1,2}(?::\d{2})?|\d{1,2}\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))\b|in\s+\d+\s+days?|через\s+\d+\s+дн|послезавтра|сегодня|завтра|следующ|выходн|понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|утром|днем|вечером|час|โมง|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์|วันเสาร์|วันอาทิตย์|上午|下午|晚上|明天|今天|后天|後天|周一|週一|周二|週二|周三|週三|周四|週四|周五|週五|周六|週六|周日|週日/i;
 const contextualPropertyReferencePattern =
@@ -33,6 +35,17 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
   const intent = classifyAiChatIntent(request.message);
   const namedPropertyId = resolveNamedPropertyId(request);
   const selectedPropertyId = resolveSelectedPropertyIdFromConversation(request);
+
+  if (isSearchRefinement(request)) {
+    return {
+      intent: {
+        ...intent,
+        route: "search"
+      },
+      mode: "listing-search",
+      reason: "search-request"
+    };
+  }
 
   if (request.propertyId) {
     return {
@@ -224,6 +237,12 @@ function isPropertyDetailQuestion(request: AiChatRequest): boolean {
   const message = normalizeReferenceText(request.message);
 
   return recommendations.length > 0 && !moreListingsPattern.test(message) && propertyDetailQuestionPattern.test(message);
+}
+
+function isSearchRefinement(request: AiChatRequest): boolean {
+  const recommendations = getRecentRecommendations(request);
+
+  return recommendations.length > 0 && newSearchRefinementPattern.test(request.message);
 }
 
 function resolveReferencedPropertyId(request: AiChatRequest, referencedListingIndex: number): string | undefined {
