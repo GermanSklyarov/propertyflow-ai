@@ -209,6 +209,68 @@ describe("PublicWidgetChatController", () => {
     expect(response.recommendedListings).toHaveLength(1);
   });
 
+  it("does not ask for rental budget again when the refinement already includes it", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 7 matching listings.",
+          matchedPropertyIds: ["property-1"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockResolvedValue(
+          propertyFactory({
+            amenities: ["pool", "washing machine"],
+            areaSqm: 34,
+            bedrooms: 0,
+            id: "property-1",
+            listingType: "rent",
+            rentalPriceMonthly: { amount: 18_000, currency: "THB" },
+            title: "Studio Condo at Club Royal - Naklua"
+          })
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          { role: "user", text: "find me a cheap condo in pattaya" },
+          { role: "assistant", text: "To narrow this down, tell me whether you want to rent or buy, your budget, preferred area or beach distance, and timing." }
+        ],
+        locale: "en",
+        message: "i mean for rent, budget under 20k"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("18k THB/mo");
+    expect(response.answer).not.toContain("monthly budget");
+    expect(response.answer).toContain("preferred area or beach distance");
+    expect(response.answer).toContain("move-in date and contract length");
+  });
+
   it("explains why rentals fit a Central Pattaya location request with target distances", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
@@ -460,7 +522,7 @@ describe("PublicWidgetChatController", () => {
     );
 
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Jomtien Compact One-Bed"]);
-    expect(response.answer).toContain("Here is the top match");
+    expect(response.answer).toContain("Showing the next 1 option that still match your previous request.");
     expect(response.answer).toContain("Jomtien Compact One-Bed");
   });
 
@@ -521,7 +583,7 @@ describe("PublicWidgetChatController", () => {
     );
 
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Next Family Condo"]);
-    expect(response.answer).toContain("I found 1 matching listing. Here is the top match I can show now.");
+    expect(response.answer).toContain("Showing the next 1 option that still match your previous request.");
     expect(response.answer).not.toContain("Already Shown Family Condo:");
     expect(response.answer).not.toContain("I found 60 matching listings");
   });

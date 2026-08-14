@@ -158,7 +158,7 @@ export class PublicWidgetChatController {
 
     return {
       ...response,
-      answer: normalizePublicWidgetAnswer(response.answer, recommendations, locale, response.suggestedActions),
+      answer: normalizePublicWidgetAnswer(response.answer, recommendations, locale, response.suggestedActions, payload.message),
       conciergeMode: tenant.subscriptionPlan,
       locale,
       recommendedListings: recommendations.listings,
@@ -313,7 +313,8 @@ function normalizePublicWidgetAnswer(
   answer: string,
   recommendations: PublicWidgetRecommendationBundle,
   locale: TenantWidgetLanguage,
-  suggestedActions: string[]
+  suggestedActions: string[],
+  requestMessage = ""
 ): string {
   const normalizedAnswer = stripMarkdownEmphasis(answer).trim();
 
@@ -331,7 +332,8 @@ function normalizePublicWidgetAnswer(
       recommendations.listings.length,
       locale,
       recommendations.totalMatches,
-      recommendations.candidateMatches
+      recommendations.candidateMatches,
+      isMoreListingsRequest(requestMessage) && !isAllListingsRequest(requestMessage)
     ),
     recommendations.fitSummary
   ]
@@ -355,7 +357,7 @@ function buildNoAdditionalListingCardsMessage(locale: TenantWidgetLanguage): str
 }
 
 function isMoreListingsRequest(message: string): boolean {
-  return /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i.test(
+  return /\b(?:more|another|other|else|all|everything|show\s+all|see\s+all)\b|\bnext\s+(?:options?|listings?|ones?)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i.test(
     message
   );
 }
@@ -375,7 +377,8 @@ function buildListingCardIntro(
   shownCount: number,
   locale: TenantWidgetLanguage,
   totalMatches?: number,
-  candidateMatches?: number
+  candidateMatches?: number,
+  isMoreRequest = false
 ): string {
   const parsedMatchCountValue = Number(answer.match(/\b(\d{1,4})\b/)?.[1]);
   const parsedMatchCount = Number.isFinite(parsedMatchCountValue) ? parsedMatchCountValue : undefined;
@@ -386,6 +389,17 @@ function buildListingCardIntro(
     parsedMatchCount > publicMatchCount ||
     (candidateMatches !== undefined && parsedMatchCount === candidateMatches && publicMatchCount < candidateMatches);
   const countText = String(shouldUsePublicCount ? publicMatchCount : parsedMatchCount);
+  if (isMoreRequest) {
+    const moreLabels: Record<TenantWidgetLanguage, string> = {
+      en: `Showing the next ${shownCount} option${shownCount === 1 ? "" : "s"} that still match your previous request.`,
+      ru: `Показываю следующие ${shownCount} вариант${shownCount === 1 ? "" : "а"}, которые всё ещё подходят под ваш запрос.`,
+      th: `กำลังแสดงอีก ${shownCount} ตัวเลือกถัดไปที่ยังตรงกับคำขอก่อนหน้า`,
+      zh: `继续显示接下来 ${shownCount} 个仍符合上一条需求的选项。`
+    };
+
+    return moreLabels[locale] ?? moreLabels.en;
+  }
+
   const labels: Record<TenantWidgetLanguage, string> = {
     en: `I found ${countText} matching listing${countText === "1" ? "" : "s"}. ${
       shownCount === 1 ? "Here is the top match I can show now." : `Here are the top ${shownCount} I can show now.`
@@ -796,30 +810,82 @@ function buildRecommendationClarificationPrompt(message: string, locale: TenantW
     return undefined;
   }
 
-  const labels: Record<TenantWidgetLanguage, string> = {
-    en: intent === "rent"
-      ? "To narrow this down, tell me your monthly budget, preferred area or beach distance, move-in date, and contract length."
-      : intent === "sale"
-        ? "To narrow this down, tell me your purchase budget, preferred area or beach distance, ownership quota, and approximate purchase timing."
-        : "To narrow this down, tell me whether you want to rent or buy, your budget, preferred area or beach distance, and timing.",
-    ru: intent === "rent"
-      ? "Чтобы сузить подборку, уточните месячный бюджет, желаемый район или расстояние до пляжа, дату въезда и срок контракта."
-      : intent === "sale"
-        ? "Чтобы сузить подборку, уточните бюджет покупки, желаемый район или расстояние до пляжа, квоту владения и примерный срок покупки."
-        : "Чтобы сузить подборку, уточните, интересует аренда или покупка, бюджет, желаемый район или расстояние до пляжа и сроки.",
-    th: intent === "rent"
-      ? "เพื่อคัดให้แม่นขึ้น บอกงบเช่ารายเดือน โซนหรือระยะถึงชายหาด วันที่ต้องการเข้าอยู่ และระยะสัญญาได้ไหม"
-      : intent === "sale"
-        ? "เพื่อคัดให้แม่นขึ้น บอกงบซื้อ โซนหรือระยะถึงชายหาด โควตาการถือครอง และช่วงเวลาที่อยากซื้อได้ไหม"
-        : "เพื่อคัดให้แม่นขึ้น บอกว่าต้องการเช่าหรือซื้อ งบ โซนหรือระยะถึงชายหาด และช่วงเวลาที่ต้องการได้ไหม",
-    zh: intent === "rent"
-      ? "为了更准确筛选，请告诉我月租预算、偏好区域或到海边距离、入住时间和租期。"
-      : intent === "sale"
-        ? "为了更准确筛选，请告诉我购房预算、偏好区域或到海边距离、产权配额以及大概购买时间。"
-        : "为了更准确筛选，请告诉我是租还是买、预算、偏好区域或到海边距离，以及时间安排。"
+  return buildMissingCriteriaPrompt(missing, intent, locale);
+}
+
+function buildMissingCriteriaPrompt(
+  missing: Array<"budget" | "intent" | "location" | "timing">,
+  intent: WidgetPriceMode | undefined,
+  locale: TenantWidgetLanguage
+): string {
+  const criteria = missing
+    .map((criterion) => formatMissingCriterion(criterion, intent, locale))
+    .filter(Boolean);
+
+  const joinedCriteria = joinLocalizedList(criteria, locale);
+  const prefixes: Record<TenantWidgetLanguage, string> = {
+    en: "To narrow this down, tell me",
+    ru: "Чтобы сузить подборку, уточните",
+    th: "เพื่อคัดให้แม่นขึ้น บอก",
+    zh: "为了更准确筛选，请告诉我"
   };
 
-  return labels[locale] ?? labels.en;
+  return `${prefixes[locale] ?? prefixes.en} ${joinedCriteria}.`;
+}
+
+function formatMissingCriterion(
+  criterion: "budget" | "intent" | "location" | "timing",
+  intent: WidgetPriceMode | undefined,
+  locale: TenantWidgetLanguage
+): string {
+  const labels: Record<TenantWidgetLanguage, Record<typeof criterion, string>> = {
+    en: {
+      budget: intent === "rent" ? "your monthly budget" : intent === "sale" ? "your purchase budget" : "your budget",
+      intent: "whether you want to rent or buy",
+      location: "preferred area or beach distance",
+      timing: intent === "rent" ? "move-in date and contract length" : "timing"
+    },
+    ru: {
+      budget: intent === "rent" ? "месячный бюджет" : intent === "sale" ? "бюджет покупки" : "бюджет",
+      intent: "интересует аренда или покупка",
+      location: "желаемый район или расстояние до пляжа",
+      timing: intent === "rent" ? "дату въезда и срок контракта" : "сроки"
+    },
+    th: {
+      budget: intent === "rent" ? "งบเช่ารายเดือน" : intent === "sale" ? "งบซื้อ" : "งบ",
+      intent: "ว่าต้องการเช่าหรือซื้อ",
+      location: "โซนหรือระยะถึงชายหาด",
+      timing: intent === "rent" ? "วันที่ต้องการเข้าอยู่และระยะสัญญา" : "ช่วงเวลาที่ต้องการ"
+    },
+    zh: {
+      budget: intent === "rent" ? "月租预算" : intent === "sale" ? "购房预算" : "预算",
+      intent: "是租还是买",
+      location: "偏好区域或到海边距离",
+      timing: intent === "rent" ? "入住时间和租期" : "时间安排"
+    }
+  };
+
+  return labels[locale]?.[criterion] ?? labels.en[criterion];
+}
+
+function joinLocalizedList(items: string[], locale: TenantWidgetLanguage): string {
+  if (items.length <= 1) {
+    return items[0] ?? "";
+  }
+
+  if (locale === "zh") {
+    return items.length === 2 ? `${items[0]}和${items[1]}` : `${items.slice(0, -1).join("、")}以及${items[items.length - 1]}`;
+  }
+
+  if (locale === "th") {
+    return items.length === 2 ? `${items[0]}และ${items[1]}` : `${items.slice(0, -1).join("、")} และ${items[items.length - 1]}`;
+  }
+
+  if (locale === "ru") {
+    return items.length === 2 ? `${items[0]} и ${items[1]}` : `${items.slice(0, -1).join(", ")} и ${items[items.length - 1]}`;
+  }
+
+  return items.length === 2 ? `${items[0]} and ${items[1]}` : `${items.slice(0, -1).join(", ")}, and ${items[items.length - 1]}`;
 }
 
 function isPetRequest(message: string) {

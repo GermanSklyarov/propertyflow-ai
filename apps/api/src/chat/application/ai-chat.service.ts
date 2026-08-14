@@ -542,7 +542,8 @@ function isMoreListingsRequest(message: string): boolean {
   const normalized = message.toLowerCase().replace(/\s+/g, " ").trim();
 
   return (
-    /\b(?:more|another|other|else|all|everything|next)\b/i.test(normalized) ||
+    /\b(?:more|another|other|else|all|everything)\b/i.test(normalized) ||
+    /\bnext\s+(?:options?|listings?|ones?)\b/i.test(normalized) ||
     normalized.includes("show more") ||
     normalized.includes("show all") ||
     normalized.includes("see more") ||
