@@ -1030,6 +1030,48 @@ describe("AiChatService", () => {
     });
   });
 
+  it("keeps rental location context when the visitor narrows the layout to studio or 1 bedroom", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya", minBedrooms: 0, maxBedrooms: 1 },
+        interpretedIntent: "Central Pattaya studio or 1 bedroom rental",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "1BR Condo at Grand Avenue Residence" })],
+        rankingExplanation: "Using central Pattaya rental context plus updated bedroom cap.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const refinement = "show me only 1 bedroom or studio";
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "find me a condo for rent near central pattaya" },
+        {
+          recommendedListings: [{ propertyId: "property-1", title: "4BR Townhouse at Centric Sea Pattaya" }],
+          role: "assistant",
+          text: "I found 8 matching listings."
+        }
+      ],
+      locale: "en",
+      message: refinement
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "en",
+      market: undefined,
+      purpose: undefined,
+      query: `find me a condo for rent near central pattaya. Updated criteria: ${refinement}`
+    });
+  });
+
   it("reuses the last concrete refinement when the visitor confirms a new search", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const naturalLanguageSearch = {

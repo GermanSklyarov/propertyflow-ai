@@ -209,6 +209,10 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         return false;
       }
 
+      if (filters.maxBedrooms !== undefined && property.bedrooms > filters.maxBedrooms) {
+        return false;
+      }
+
       if (filters.minBathrooms && property.bathrooms < filters.minBathrooms) {
         return false;
       }

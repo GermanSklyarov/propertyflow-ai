@@ -253,7 +253,8 @@ export class PublicWidgetChatController {
     const publicProperties = properties
       .filter((property): property is PropertySnapshot => Boolean(property))
       .filter(isPublicWidgetRecommendableProperty);
-    const strictPublicProperties = filterByRequiredWidgetAmenities(publicProperties, searchContext);
+    const layoutMatchedProperties = filterByWidgetLayoutRequirements(publicProperties, searchContext);
+    const strictPublicProperties = filterByRequiredWidgetAmenities(layoutMatchedProperties, searchContext);
     const rankedPublicProperties = rankWidgetPropertiesForRequest(strictPublicProperties, searchContext);
     const matchedProperties = rankedPublicProperties.slice(0, 3);
 
@@ -594,6 +595,68 @@ function filterByRequiredWidgetAmenities(properties: PropertySnapshot[], request
   return familySized.length ? familySized : filtered.length ? filtered : properties;
 }
 
+function filterByWidgetLayoutRequirements(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
+  const bedroomRange = detectWidgetBedroomRange(requestMessage);
+  if (bedroomRange.minBedrooms === undefined && bedroomRange.maxBedrooms === undefined) {
+    return properties;
+  }
+
+  const filtered = properties.filter((property) => {
+    if (bedroomRange.minBedrooms !== undefined && property.bedrooms < bedroomRange.minBedrooms) {
+      return false;
+    }
+
+    if (bedroomRange.maxBedrooms !== undefined && property.bedrooms > bedroomRange.maxBedrooms) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return filtered.length ? filtered : properties;
+}
+
+function detectWidgetBedroomRange(message: string): { minBedrooms?: number; maxBedrooms?: number } {
+  const normalized = message.toLowerCase();
+  const studioPattern = String.raw`(?:\b(?:studio)\b|студия|студию|สตูดิโอ|开间|開間|单间|單間)`;
+  const oneBedroomPattern = String.raw`(?:\b(?:1|one)\s*(?:bedroom|bedrooms|br|bed|beds)\b|однушк|однокомнат|1\s*спальн)`;
+  const studioOrOneBedroom = new RegExp(
+    `(?:${studioPattern}.{0,40}(?:or|/|или).{0,40}${oneBedroomPattern}|${oneBedroomPattern}.{0,40}(?:or|/|или).{0,40}${studioPattern})`,
+    "i"
+  );
+
+  if (studioOrOneBedroom.test(normalized)) {
+    return { minBedrooms: 0, maxBedrooms: 1 };
+  }
+
+  const explicit = normalized.match(/(\d+)\s*(?:bedroom|bedrooms|br|спальн|спальни|спален|ห้องนอน|卧室|臥室|房间|房間|房)/);
+  if (explicit?.[1]) {
+    const bedrooms = Number(explicit[1]);
+    const exactRequest = hasExactWidgetBedroomQualifier(normalized, explicit[0]);
+    return exactRequest ? { minBedrooms: bedrooms, maxBedrooms: bedrooms } : { minBedrooms: bedrooms };
+  }
+
+  if (new RegExp(studioPattern, "i").test(normalized)) {
+    const exactRequest = hasExactWidgetBedroomQualifier(normalized, "studio");
+    return exactRequest ? { minBedrooms: 0, maxBedrooms: 0 } : { minBedrooms: 0 };
+  }
+
+  return {};
+}
+
+function hasExactWidgetBedroomQualifier(query: string, layoutTerm: string): boolean {
+  const escapedLayoutTerm = escapeRegExp(layoutTerm.trim());
+
+  return new RegExp(
+    `(?:\\b(?:only|exactly|just)\\s+${escapedLayoutTerm}\\b|\\b${escapedLayoutTerm}\\s+(?:only|exactly|just)\\b|только\\s+${escapedLayoutTerm}|${escapedLayoutTerm}\\s+только|именно\\s+${escapedLayoutTerm}|ровно\\s+${escapedLayoutTerm})`,
+    "i"
+  ).test(query);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function detectRequestedWidgetAmenities(message: string): string[] {
   const normalized = message.toLowerCase();
   const amenities: string[] = [];
@@ -917,17 +980,22 @@ function formatMoneyAmount(value: number): string {
 }
 
 function summarizeBedrooms(properties: PropertySnapshot[], locale: TenantWidgetLanguage): string {
-  const bedrooms = Array.from(new Set(properties.map((property) => property.bedrooms ?? 0).filter((value) => value > 0))).sort(
-    (left, right) => left - right
-  );
+  const bedrooms = Array.from(new Set(properties.map((property) => property.bedrooms ?? 0))).sort((left, right) => left - right);
 
   if (!bedrooms.length) {
     return "";
   }
 
-  const value = bedrooms.length === 1 ? String(bedrooms[0]) : `${bedrooms[0]}-${bedrooms[bedrooms.length - 1]}`;
+  const value =
+    bedrooms.length === 1
+      ? bedrooms[0] === 0
+        ? "studio"
+        : String(bedrooms[0])
+      : bedrooms[0] === 0
+        ? `studio-${bedrooms[bedrooms.length - 1]}`
+        : `${bedrooms[0]}-${bedrooms[bedrooms.length - 1]}`;
   const labels: Record<TenantWidgetLanguage, string> = {
-    en: `${value} bedroom${value === "1" ? "" : "s"}`,
+    en: value === "studio" ? "studio layouts" : `${value} bedroom${value === "1" ? "" : "s"}`,
     ru: `${value} спальн.`,
     th: `${value} ห้องนอน`,
     zh: `${value} 间卧室`

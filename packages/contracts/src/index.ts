@@ -857,6 +857,7 @@ export interface PropertySearchRequest {
   minMonthlyRentThb?: number;
   maxMonthlyRentThb?: number;
   minBedrooms?: number;
+  maxBedrooms?: number;
   minBathrooms?: number;
   minAreaSqm?: number;
   maxBeachDistanceMeters?: number;
@@ -934,6 +935,7 @@ export interface PropertySearchFilters {
   minMonthlyRentThb?: number;
   maxMonthlyRentThb?: number;
   minBedrooms?: number;
+  maxBedrooms?: number;
   minBathrooms?: number;
   minAreaSqm?: number;
   maxBeachDistanceMeters?: number;

@@ -282,6 +282,64 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.rankingExplanation).toContain('Map geocoding resolved "Boyz Town" once');
   });
 
+  it("treats studio or 1 bedroom refinements as an upper bedroom cap", async () => {
+    const twoBedroom = propertyFactory({
+      bedrooms: 2,
+      id: "two-bedroom",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+      title: "2BR Condo at Grand Avenue Residence"
+    });
+    const oneBedroom = propertyFactory({
+      bedrooms: 1,
+      id: "one-bedroom",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 30_000, currency: "THB" },
+      title: "1BR Condo at Grand Avenue Residence"
+    });
+    const studio = propertyFactory({
+      bedrooms: 0,
+      id: "studio",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 18_000, currency: "THB" },
+      title: "Studio Condo at The Base Central Pattaya"
+    });
+    const byId = new Map([
+      [twoBedroom.id, twoBedroom],
+      [oneBedroom.id, oneBedroom],
+      [studio.id, studio]
+    ]);
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) => byId.get(propertyId) ?? null,
+      search: async () => [twoBedroom, oneBedroom, studio]
+    };
+    const indexedSearch = {
+      search: async () => ({
+        filters: { query: "rent near central pattaya, only 1 bedroom or studio" },
+        index: "propertyflow-properties-v1",
+        items: [{ propertyId: twoBedroom.id }, { propertyId: oneBedroom.id }, { propertyId: studio.id }],
+        total: 3
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "find me a condo for rent near central pattaya. Updated criteria: show me only 1 bedroom or studio"
+    });
+
+    expect(result.filters).toMatchObject({
+      listingType: "rent",
+      market: "pattaya",
+      minBedrooms: 0,
+      maxBedrooms: 1
+    });
+    expect(result.items.map((item) => item.id)).toEqual(["one-bedroom", "studio"]);
+    expect(result.items).not.toContainEqual(expect.objectContaining({ bedrooms: 2 }));
+  });
+
   it("supplements a thin indexed shortlist with structured sale matches", async () => {
     const indexedOnly = propertyFactory({
       id: "property-wongamat",
@@ -773,6 +831,7 @@ describe("NaturalLanguagePropertySearchService", () => {
     const central = propertyFactory({
       address: "Central Pattaya",
       amenities: ["24h security", "covered parking"],
+      bedrooms: 0,
       id: "central-nightlife",
       location: { latitude: 12.928, longitude: 100.874 },
       title: "Central Pattaya Nightlife Studio"

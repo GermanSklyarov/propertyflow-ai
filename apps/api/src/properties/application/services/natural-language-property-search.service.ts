@@ -207,10 +207,15 @@ export class NaturalLanguagePropertySearchService {
     }
 
     const purpose = request.purpose ?? this.detectPurpose(normalized);
-    const minBedrooms = this.detectMinBedrooms(normalized) ?? (purpose === "family" ? 2 : undefined);
+    const bedroomRange = this.detectBedroomRange(normalized);
+    const minBedrooms = bedroomRange.minBedrooms ?? (purpose === "family" ? 2 : undefined);
     if (minBedrooms !== undefined) {
       filters.minBedrooms = minBedrooms;
       explanations.push(`minBedrooms=${minBedrooms}`);
+    }
+    if (bedroomRange.maxBedrooms !== undefined) {
+      filters.maxBedrooms = bedroomRange.maxBedrooms;
+      explanations.push(`maxBedrooms=${bedroomRange.maxBedrooms}`);
     }
 
     const minAreaSqm = this.detectMinAreaSqm(normalized);
@@ -359,17 +364,30 @@ export class NaturalLanguagePropertySearchService {
     return undefined;
   }
 
-  private detectMinBedrooms(query: string): number | undefined {
+  private detectBedroomRange(query: string): { minBedrooms?: number; maxBedrooms?: number } {
+    const studioPattern = String.raw`(?:\b(?:studio)\b|студия|студию|สตูดิโอ|开间|開間|单间|單間)`;
+    const oneBedroomPattern = String.raw`(?:\b(?:1|one)\s*(?:bedroom|bedrooms|br|bed|beds)\b|однушк|однокомнат|1\s*спальн)`;
+    const studioOrOneBedroom = new RegExp(
+      `(?:${studioPattern}.{0,40}(?:or|/|или).{0,40}${oneBedroomPattern}|${oneBedroomPattern}.{0,40}(?:or|/|или).{0,40}${studioPattern})`,
+      "i"
+    );
+    if (studioOrOneBedroom.test(query)) {
+      return { minBedrooms: 0, maxBedrooms: 1 };
+    }
+
     const explicit = query.match(/(\d+)\s*(?:bedroom|bedrooms|br|спальн|спальни|спален|ห้องนอน|卧室|臥室|房间|房間|房)/);
     if (explicit?.[1]) {
-      return Number(explicit[1]);
+      const bedrooms = Number(explicit[1]);
+      const exactRequest = hasExactBedroomQualifier(query, explicit[0]);
+      return exactRequest ? { minBedrooms: bedrooms, maxBedrooms: bedrooms } : { minBedrooms: bedrooms };
     }
 
-    if (/(?:\b(?:studio)\b|студия|студию|สตูดิโอ|开间|開間|单间|單間)/.test(query)) {
-      return 0;
+    if (new RegExp(studioPattern, "i").test(query)) {
+      const exactRequest = hasExactBedroomQualifier(query, "studio");
+      return exactRequest ? { minBedrooms: 0, maxBedrooms: 0 } : { minBedrooms: 0 };
     }
 
-    return undefined;
+    return {};
   }
 
   private detectMinAreaSqm(query: string): number | undefined {
@@ -480,6 +498,19 @@ function isRecommendableProperty(property: PropertySnapshot): boolean {
   );
 }
 
+function hasExactBedroomQualifier(query: string, layoutTerm: string): boolean {
+  const escapedLayoutTerm = escapeRegExp(layoutTerm.trim());
+
+  return new RegExp(
+    `(?:\\b(?:only|exactly|just)\\s+${escapedLayoutTerm}\\b|\\b${escapedLayoutTerm}\\s+(?:only|exactly|just)\\b|только\\s+${escapedLayoutTerm}|${escapedLayoutTerm}\\s+только|именно\\s+${escapedLayoutTerm}|ровно\\s+${escapedLayoutTerm})`,
+    "i"
+  ).test(query);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearchRequest): boolean {
   if (filters.requiredAmenities?.some((amenity) => !property.amenities.includes(amenity))) {
     return false;
@@ -506,6 +537,10 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
   }
 
   if (filters.minBedrooms !== undefined && property.bedrooms < filters.minBedrooms) {
+    return false;
+  }
+
+  if (filters.maxBedrooms !== undefined && property.bedrooms > filters.maxBedrooms) {
     return false;
   }
 

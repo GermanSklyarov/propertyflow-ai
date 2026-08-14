@@ -157,6 +157,10 @@ export class IndexedPropertySearchService {
       filters.push({ range: { bedrooms: { gte: request.minBedrooms } } });
     }
 
+    if (request.maxBedrooms !== undefined) {
+      filters.push({ range: { bedrooms: { lte: request.maxBedrooms } } });
+    }
+
     if (request.minBathrooms !== undefined) {
       filters.push({ range: { bathrooms: { gte: request.minBathrooms } } });
     }

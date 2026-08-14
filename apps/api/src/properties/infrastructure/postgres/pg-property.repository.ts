@@ -411,6 +411,10 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`p.bedrooms >= ${addValue(filters.minBedrooms)}`);
     }
 
+    if (filters.maxBedrooms !== undefined) {
+      clauses.push(`p.bedrooms <= ${addValue(filters.maxBedrooms)}`);
+    }
+
     if (filters.minBathrooms !== undefined) {
       clauses.push(`p.bathrooms >= ${addValue(filters.minBathrooms)}`);
     }

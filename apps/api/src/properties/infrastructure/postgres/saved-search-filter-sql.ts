@@ -35,6 +35,10 @@ export function savedSearchFiltersMatchPropertySql(searchAlias: string, property
       or ${propertyAlias}.bedrooms >= (${searchAlias}.filters->>'minBedrooms')::integer
     )
     and (
+      not ${searchAlias}.filters ? 'maxBedrooms'
+      or ${propertyAlias}.bedrooms <= (${searchAlias}.filters->>'maxBedrooms')::integer
+    )
+    and (
       not ${searchAlias}.filters ? 'minBathrooms'
       or ${propertyAlias}.bathrooms >= (${searchAlias}.filters->>'minBathrooms')::integer
     )

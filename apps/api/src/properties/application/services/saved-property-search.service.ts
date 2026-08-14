@@ -385,6 +385,11 @@ export class SavedPropertySearchService {
       reasons.push(`Has ${property.bedrooms} bedrooms for the requested layout.`);
     }
 
+    if (filters.maxBedrooms !== undefined && property.bedrooms <= filters.maxBedrooms) {
+      score += 5;
+      reasons.push(`Fits the requested bedroom cap of ${filters.maxBedrooms}.`);
+    }
+
     if (filters.minBathrooms && property.bathrooms >= filters.minBathrooms) {
       score += 4;
       reasons.push(`Has ${property.bathrooms} bathrooms.`);

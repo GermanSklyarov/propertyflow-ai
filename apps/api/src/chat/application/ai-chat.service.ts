@@ -514,7 +514,7 @@ function mergeSearchRefinement(request: AiChatRequest, refinement: string): stri
   const baseSearch = [...(request.conversation ?? [])]
     .reverse()
     .filter((turn) => turn.role === "user" && turn.text !== refinement && !isThinSearchContinuation(turn.text))
-    .find((turn) => looksLikeSearchRequest(turn.text) && !looksLikeSearchRefinement(turn.text))?.text;
+    .find((turn) => looksLikeSearchRequest(turn.text))?.text;
 
   return baseSearch ? `${baseSearch}. Updated criteria: ${refinement}` : refinement;
 }
@@ -567,7 +567,7 @@ function looksLikeSearchRequest(message: string): boolean {
 }
 
 function looksLikeSearchRefinement(message: string): boolean {
-  return /\b(?:i mean|actually|instead|rather|rent|rental|lease|buy|purchase|budget|under|studio|bedroom|spacious|move in|move-in|next month|not important|does not matter|doesn't matter)\b|точнее|аренд|купить|бюджет|студ|спальн|въезд|заезд/i.test(
+  return /\b(?:i mean|actually|instead|rather|only|exactly|just|rent|rental|lease|buy|purchase|budget|under|studio|bedroom|spacious|move in|move-in|next month|not important|does not matter|doesn't matter)\b|точнее|только|именно|ровно|аренд|купить|бюджет|студ|спальн|въезд|заезд/i.test(
     message
   );
 }

@@ -60,6 +60,12 @@ export class SearchPropertiesDto implements Omit<PropertySearchRequest, "near"> 
   @Type(() => Number)
   @IsInt()
   @Min(0)
+  maxBedrooms?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   minBathrooms?: number;
 
   @IsOptional()
@@ -168,6 +174,7 @@ export function toPropertySearchRequest(query: SearchPropertiesDto): PropertySea
     minMonthlyRentThb: toOptionalNumber(query.minMonthlyRentThb),
     maxMonthlyRentThb: toOptionalNumber(query.maxMonthlyRentThb),
     minBedrooms: toOptionalNumber(query.minBedrooms),
+    maxBedrooms: toOptionalNumber(query.maxBedrooms),
     minBathrooms: toOptionalNumber(query.minBathrooms),
     minAreaSqm: toOptionalNumber(query.minAreaSqm),
     maxBeachDistanceMeters: toOptionalNumber(query.maxBeachDistanceMeters),

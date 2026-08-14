@@ -60,6 +60,13 @@ export class SavedPropertySearchFiltersDto implements PropertySearchRequest {
   @Type(() => Number)
   @IsInt()
   @Min(0)
+  maxBedrooms?: number;
+
+  @ApiProperty({ required: false, minimum: 0 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
   minBathrooms?: number;
 
   @ApiProperty({ required: false, minimum: 1 })
