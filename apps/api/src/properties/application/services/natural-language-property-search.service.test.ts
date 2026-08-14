@@ -769,6 +769,111 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.rankingExplanation).toContain("beach proximity");
   });
 
+  it("recognizes adults-only nightlife stays and applies nightlife geo/ranking preferences", async () => {
+    const central = propertyFactory({
+      address: "Central Pattaya",
+      amenities: ["24h security", "covered parking"],
+      id: "central-nightlife",
+      location: { latitude: 12.928, longitude: 100.874 },
+      title: "Central Pattaya Nightlife Studio"
+    });
+    const quiet = propertyFactory({
+      address: "Huai Yai",
+      amenities: ["garden"],
+      id: "quiet-retreat",
+      location: { latitude: 12.84, longitude: 100.98 },
+      title: "Quiet Garden Studio"
+    });
+    const service = searchServiceForItems([quiet, central]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      market: "pattaya",
+      query: "adults only studio near nightlife in Pattaya"
+    });
+
+    expect(result.filters.lifestyleSignals).toContain("nightlife");
+    expect(result.filters.near).toMatchObject({ latitude: 12.9279, longitude: 100.8738 });
+    expect(result.filters.radiusMeters).toBe(3000);
+    expect(result.items.map((item) => item.id)).toEqual(["central-nightlife"]);
+    expect(result.rankingExplanation).toContain("nightlife access");
+  });
+
+  it("recognizes freelancer and digital nomad searches and reranks toward remote-work fit", async () => {
+    const basic = propertyFactory({
+      amenities: ["pool"],
+      id: "basic",
+      title: "Basic Studio"
+    });
+    const remoteReady = propertyFactory({
+      amenities: ["fast-internet", "fiber-internet", "coworking", "workspace"],
+      areaSqm: 52,
+      id: "remote-ready",
+      title: "Digital Nomad Coworking Condo"
+    });
+    const service = searchServiceForItems([basic, remoteReady]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "freelancer digital nomad condo in Pattaya with good internet"
+    });
+
+    expect(result.filters.lifestyleSignals).toContain("remote-work");
+    expect(result.filters.requiredAmenities).toContain("fast-internet");
+    expect(result.items.map((item) => item.id)).toEqual(["remote-ready"]);
+    expect(result.rankingExplanation).toContain("remote-work fit");
+  });
+
+  it("recognizes retiree comfort searches and reranks toward easy daily living", async () => {
+    const nightlifeStudio = propertyFactory({
+      amenities: ["pool"],
+      floor: 22,
+      id: "nightlife-studio",
+      title: "Central Party Studio"
+    });
+    const seniorComfort = propertyFactory({
+      amenities: ["elevator", "24h security", "shuttle service", "garden", "pool"],
+      floor: 4,
+      id: "senior-comfort",
+      title: "Retirement Comfort Condo"
+    });
+    const service = searchServiceForItems([nightlifeStudio, seniorComfort]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "condo in Pattaya for retired senior living"
+    });
+
+    expect(result.filters.lifestyleSignals).toContain("retiree-comfort");
+    expect(result.items.map((item) => item.id)).toEqual(["senior-comfort", "nightlife-studio"]);
+    expect(result.rankingExplanation).toContain("retiree comfort");
+  });
+
+  it("recognizes winter and long-stay searches and reranks toward practical long-stay amenities", async () => {
+    const shortStay = propertyFactory({
+      amenities: ["sea-view"],
+      beachDistanceMeters: 2500,
+      id: "short-stay",
+      title: "Short Stay View Studio"
+    });
+    const winterReady = propertyFactory({
+      amenities: ["washing machine", "balcony", "pool", "gym", "high-speed internet"],
+      beachDistanceMeters: 900,
+      id: "winter-ready",
+      title: "Winter Long-Stay Condo"
+    });
+    const service = searchServiceForItems([shortStay, winterReady]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "winter long stay condo in Pattaya for snowbird living"
+    });
+
+    expect(result.filters.lifestyleSignals).toContain("winter-stay");
+    expect(result.items.map((item) => item.id)).toEqual(["winter-ready", "short-stay"]);
+    expect(result.rankingExplanation).toContain("winter-stay comfort");
+  });
+
   it("uses pgvector similarity to rerank recommendable indexed listings", async () => {
     const weakLexicalFirst = propertyFactory({ id: "11111111-1111-1111-1111-111111111111", title: "Generic City Condo" });
     const semanticBest = propertyFactory({ id: "22222222-2222-2222-2222-222222222222", title: "Beachfront Sea View Condo" });

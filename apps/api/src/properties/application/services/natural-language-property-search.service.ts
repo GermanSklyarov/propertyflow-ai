@@ -30,8 +30,13 @@ interface RankingPreferences {
   preferFamilyFit: boolean;
   preferLargerArea: boolean;
   preferLuxuryFit: boolean;
+  preferNightlifeAccess: boolean;
+  preferQuietArea: boolean;
+  preferRemoteWorkFit: boolean;
+  preferRetireeComfort: boolean;
   preferValueForMoney: boolean;
   preferWashingMachine: boolean;
+  preferWinterStay: boolean;
 }
 
 const MARKET_PATTERNS: Array<[ThailandMarket, RegExp]> = [
@@ -58,7 +63,13 @@ const LIFESTYLE_PATTERNS: Array<[string, RegExp]> = [
   ["quiet-area", /(?:тих|спокойн|quiet|calm|เงียบ|สงบ|安静|安靜)/],
   ["cafes", /(?:кафе|coffee|restaurants|рестораны|ร้านกาแฟ|ร้านอาหาร|咖啡|餐厅|餐廳)/],
   ["beach-life", /(?:пляж|beach|мор|sea|ทะเล|ชายหาด|海边|海邊|海滩|海灘)/],
-  ["remote-work", /(?:internet|интернет|coworking|коворкинг|remote|удален|ออนไลน์|เน็ต|远程|遠程|网络|網絡|共享办公|共享辦公)/],
+  [
+    "remote-work",
+    /(?:internet|интернет|coworking|коворкинг|remote|удален|freelance|freelancer|digital nomad|ออนไลน์|เน็ต|远程|遠程|自由职业|自由職業|数字游民|數字遊民|网络|網絡|共享办公|共享辦公)/
+  ],
+  ["nightlife", /(?:nightlife|adults only|adult only|party|bars?|clubs?|entertainment|walking street|boyz town|ночн|бар|клуб|тусов|развлеч|ปาร์ตี้|บาร์|ผับ|酒吧|夜生活|娱乐|娛樂)/],
+  ["retiree-comfort", /(?:retiree|retired|retirement|senior|elderly|пенсионер|пенси[ию]|пожил|เกษียณ|ผู้สูงอายุ|退休|养老|養老|老年)/],
+  ["winter-stay", /(?:winter|wintering|snowbird|long stay|long-stay|зимовк|зимовать|зиму|зимн|ระยะยาว|过冬|過冬|避寒)/],
   ["shopping", /(?:terminal 21|shopping|mall|торгов|ห้าง|商场|商場|购物|購物)/],
   ["school-access", /(?:school|kindergarten|children|kids|child|family|школ|дет|семь|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/],
   ["pet-friendly", /(?:\b(?:pet|pets|pet-friendly|pet friendly|dog|dogs|cat|cats)\b|животн|питомц|собак|кошк|สัตว์เลี้ยง|宠物|寵物|狗|猫|貓)/]
@@ -244,20 +255,25 @@ export class NaturalLanguagePropertySearchService {
 
     const target = await this.locationIntelligence.resolveComparisonTarget(request.query, interpretation.filters.market ?? request.market);
 
-    if (!target || target.kind !== "poi") {
+    if (!target || (target.kind !== "poi" && target.category !== "nightlife")) {
       return interpretation;
     }
 
     const radiusMeters = detectRequestedRadiusMeters(this.normalize(request.query)) ?? defaultRadiusMetersForQuery(this.normalize(request.query));
+    const anchor = target.kind === "poi" ? target.poi : target.pois[0];
+
+    if (!anchor) {
+      return interpretation;
+    }
 
     return {
       ...interpretation,
       filters: {
         ...interpretation.filters,
-        near: target.poi.location,
+        near: anchor.location,
         radiusMeters
       },
-      rankingExplanation: `${interpretation.rankingExplanation} Map geocoding resolved "${target.poi.label}" once and applied radiusMeters=${radiusMeters} with geo filtering.`
+      rankingExplanation: `${interpretation.rankingExplanation} Map geocoding resolved "${anchor.label}" once and applied radiusMeters=${radiusMeters} with geo filtering.`
     };
   }
 
@@ -406,7 +422,11 @@ export class NaturalLanguagePropertySearchService {
       return "family";
     }
 
-    if (/(жить|live|living|winter|зим|อยู่เอง|อาศัย|过冬|過冬|自住|居住)/.test(query)) {
+    if (
+      /(жить|live|living|winter|зим|retiree|retired|retirement|senior|freelance|freelancer|digital nomad|snowbird|long stay|long-stay|อยู่เอง|อาศัย|เกษียณ|过冬|過冬|自住|居住|退休|养老|養老|数字游民|數字遊民)/.test(
+        query
+      )
+    ) {
       return "living";
     }
 
@@ -426,8 +446,13 @@ export class NaturalLanguagePropertySearchService {
       preferFamilyFit: /(?:school|kindergarten|children|kids|child|family|школ|дет|семь|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/i.test(query),
       preferLargerArea: /(?:\b(?:spacious|roomy|large|larger|big|bigger|more space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點)/i.test(query),
       preferLuxuryFit: /(?:\b(?:luxury|premium|elite|high-end|upscale|exclusive|best quality)\b|элит|премиум|люкс|дорог|ระดับพรีเมียม|หรู|豪华|豪華|高端)/i.test(query),
+      preferNightlifeAccess: /(?:nightlife|adults only|adult only|party|bars?|clubs?|entertainment|walking street|boyz town|ночн|бар|клуб|тусов|развлеч|ปาร์ตี้|บาร์|ผับ|酒吧|夜生活|娱乐|娛樂)/i.test(query),
+      preferQuietArea: /(?:quiet|calm|peaceful|тих|спокойн|เงียบ|สงบ|安静|安靜)/i.test(query),
+      preferRemoteWorkFit: /(?:internet|coworking|remote|freelance|freelancer|digital nomad|интернет|коворкинг|удален|фриланс|ออนไลน์|เน็ต|远程|遠程|自由职业|自由職業|数字游民|數字遊民|网络|網絡|共享办公|共享辦公)/i.test(query),
+      preferRetireeComfort: /(?:retiree|retired|retirement|senior|elderly|пенсионер|пенси[ию]|пожил|เกษียณ|ผู้สูงอายุ|退休|养老|養老|老年)/i.test(query),
       preferValueForMoney: /(?:\b(?:best value|value for money|good deal|best deal|balanced|optimal|worth it)\b|цена.*качество|лучшее предложение|выгод|оптимальн|คุ้มค่า|性价比|性價比)/i.test(query),
-      preferWashingMachine: /(?:\b(?:washing machine|washer|laundry machine)\b|стиральн|стиралк|เครื่องซักผ้า|洗衣机|洗衣機)/i.test(query)
+      preferWashingMachine: /(?:\b(?:washing machine|washer|laundry machine)\b|стиральн|стиралк|เครื่องซักผ้า|洗衣机|洗衣機)/i.test(query),
+      preferWinterStay: /(?:winter|wintering|snowbird|long stay|long-stay|зимовк|зимовать|зиму|зимн|ระยะยาว|过冬|過冬|避寒)/i.test(query)
     };
   }
 
@@ -587,6 +612,41 @@ function compareByQueryPreferences(left: PropertySnapshot, right: PropertySnapsh
     }
   }
 
+  if (preferences.preferRemoteWorkFit) {
+    const remoteWorkDelta = remoteWorkFitScore(right) - remoteWorkFitScore(left);
+    if (remoteWorkDelta !== 0) {
+      return remoteWorkDelta;
+    }
+  }
+
+  if (preferences.preferRetireeComfort) {
+    const retireeDelta = retireeComfortScore(right) - retireeComfortScore(left);
+    if (retireeDelta !== 0) {
+      return retireeDelta;
+    }
+  }
+
+  if (preferences.preferWinterStay) {
+    const winterDelta = winterStayScore(right) - winterStayScore(left);
+    if (winterDelta !== 0) {
+      return winterDelta;
+    }
+  }
+
+  if (preferences.preferNightlifeAccess) {
+    const nightlifeDelta = nightlifeFitScore(right) - nightlifeFitScore(left);
+    if (nightlifeDelta !== 0) {
+      return nightlifeDelta;
+    }
+  }
+
+  if (preferences.preferQuietArea) {
+    const quietDelta = quietFitScore(right) - quietFitScore(left);
+    if (quietDelta !== 0) {
+      return quietDelta;
+    }
+  }
+
   if (preferences.preferLargerArea && right.areaSqm !== left.areaSqm) {
     return right.areaSqm - left.areaSqm;
   }
@@ -623,13 +683,32 @@ function preferenceScore(property: PropertySnapshot, preferences: RankingPrefere
   const valueScore = preferences.preferValueForMoney ? valueForMoneyScore(property) / 10 : 0;
   const washerScore = preferences.preferWashingMachine && hasAmenity(property, "washing machine") ? 0.4 : 0;
   const familyScore = preferences.preferFamilyFit ? familyFitScore(property) / 10 : 0;
+  const remoteWorkScore = preferences.preferRemoteWorkFit ? remoteWorkFitScore(property) / 10 : 0;
+  const retireeScore = preferences.preferRetireeComfort ? retireeComfortScore(property) / 10 : 0;
+  const winterScore = preferences.preferWinterStay ? winterStayScore(property) / 10 : 0;
+  const nightlifeScore = preferences.preferNightlifeAccess ? nightlifeFitScore(property) / 10 : 0;
+  const quietScore = preferences.preferQuietArea ? quietFitScore(property) / 10 : 0;
   const areaScore = preferences.preferLargerArea ? Math.min(property.areaSqm / 80, 1) : 0;
   const beachScore =
     preferences.preferBeachProximity && property.beachDistanceMeters !== undefined
       ? Math.max(0, 1 - property.beachDistanceMeters / 3000)
       : 0;
 
-  return Math.min(budgetScore + luxuryScore + valueScore + washerScore + familyScore + areaScore + beachScore, 1);
+  return Math.min(
+    budgetScore +
+      luxuryScore +
+      valueScore +
+      washerScore +
+      familyScore +
+      remoteWorkScore +
+      retireeScore +
+      winterScore +
+      nightlifeScore +
+      quietScore +
+      areaScore +
+      beachScore,
+    1
+  );
 }
 
 function hasRankingPreferences(preferences: RankingPreferences): boolean {
@@ -643,6 +722,11 @@ function describeRankingPreferences(preferences: RankingPreferences): string {
     preferences.preferValueForMoney ? "value for money" : undefined,
     preferences.preferWashingMachine ? "washing machine" : undefined,
     preferences.preferFamilyFit ? "family fit" : undefined,
+    preferences.preferRemoteWorkFit ? "remote-work fit" : undefined,
+    preferences.preferRetireeComfort ? "retiree comfort" : undefined,
+    preferences.preferWinterStay ? "winter-stay comfort" : undefined,
+    preferences.preferNightlifeAccess ? "nightlife access" : undefined,
+    preferences.preferQuietArea ? "quiet area" : undefined,
     preferences.preferLargerArea ? "larger layouts" : undefined,
     preferences.preferBeachProximity ? "beach proximity" : undefined
   ].filter(Boolean);
@@ -692,6 +776,70 @@ function familyFitScore(property: PropertySnapshot): number {
   ]);
 
   return familyAmenityScore * 3 + Math.min(property.bedrooms, 3) * 1.5 + Math.min(property.areaSqm / 25, 4);
+}
+
+function remoteWorkFitScore(property: PropertySnapshot): number {
+  const remoteAmenityScore = countAmenityMatches(property, [
+    "fast-internet",
+    "fiber-internet",
+    "high-speed internet",
+    "coworking",
+    "coworking space",
+    "workspace",
+    "desk"
+  ]);
+
+  return remoteAmenityScore * 2.5 + Math.min(property.areaSqm / 30, 3) + (property.bedrooms >= 1 ? 1 : 0);
+}
+
+function retireeComfortScore(property: PropertySnapshot): number {
+  const comfortAmenityScore = countAmenityMatches(property, [
+    "elevator",
+    "lift",
+    "24h security",
+    "security",
+    "covered parking",
+    "shuttle service",
+    "garden",
+    "pool",
+    "gym"
+  ]);
+  const floorComfort = property.floor === undefined ? 0 : property.floor <= 8 ? 1 : 0.3;
+
+  return comfortAmenityScore * 1.6 + Math.min(property.areaSqm / 35, 3) + floorComfort;
+}
+
+function winterStayScore(property: PropertySnapshot): number {
+  const longStayAmenityScore = countAmenityMatches(property, [
+    "washing machine",
+    "balcony",
+    "pool",
+    "gym",
+    "fast-internet",
+    "fiber-internet",
+    "high-speed internet",
+    "coworking",
+    "covered parking"
+  ]);
+  const beachScore = property.beachDistanceMeters === undefined ? 0 : property.beachDistanceMeters <= 1500 ? 1.5 : 0;
+
+  return longStayAmenityScore * 1.4 + Math.min(property.areaSqm / 35, 3) + beachScore;
+}
+
+function nightlifeFitScore(property: PropertySnapshot): number {
+  const searchableText = `${property.title} ${property.address ?? ""} ${property.amenities.join(" ")}`.toLowerCase();
+  const areaScore = /central|walking street|boyz town|nightlife|bar|club|entertainment|pattaya beach/i.test(searchableText) ? 4 : 0;
+  const convenienceScore = countAmenityMatches(property, ["covered parking", "shuttle service", "24h security", "security"]) * 1.2;
+
+  return areaScore + convenienceScore + (property.bedrooms <= 1 ? 1 : 0);
+}
+
+function quietFitScore(property: PropertySnapshot): number {
+  const searchableText = `${property.title} ${property.address ?? ""} ${property.amenities.join(" ")}`.toLowerCase();
+  const quietSignal = /quiet|calm|garden|resort|family|jomtien|naklua|pratumnak|huai yai/i.test(searchableText) ? 3 : 0;
+  const centralPenalty = /walking street|boyz town|nightlife|bar|club/i.test(searchableText) ? -2 : 0;
+
+  return quietSignal + centralPenalty + countAmenityMatches(property, ["garden", "24h security", "security"]) * 1.2;
 }
 
 function countAmenityMatches(property: PropertySnapshot, requestedAmenities: string[]): number {

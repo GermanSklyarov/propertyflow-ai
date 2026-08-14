@@ -113,6 +113,102 @@ describe("ai-chat-search-response", () => {
     expect(draft.deterministicDraft).toContain("property types shown: villa, condo");
   });
 
+  it("explains remote-work fit for freelancer and digital nomad searches", () => {
+    const remoteReady = propertyFactory({
+      amenities: ["fiber-internet", "coworking space", "workspace"],
+      title: "Digital Nomad Coworking Condo"
+    });
+    const draft = buildAiChatSearchResponseDraft({
+      dueDiligence: { contextLines: [], insights: [] },
+      items: [remoteReady],
+      knowledge: [],
+      matches: [remoteReady],
+      requestMessage: "freelancer digital nomad condo with good internet",
+      search: searchFactory({
+        filters: {
+          lifestyleSignals: ["remote-work"],
+          market: "pattaya"
+        },
+        items: [remoteReady]
+      })
+    });
+
+    expect(draft.deterministicDraft).toContain("For remote work or freelancing");
+    expect(draft.deterministicDraft).toContain("internet/coworking signals");
+    expect(draft.deterministicDraft).toContain("verify actual internet provider");
+  });
+
+  it("explains adults-only nightlife fit without treating it like a family request", () => {
+    const nightlife = propertyFactory({
+      address: "Central Pattaya",
+      amenities: ["24h security", "covered parking"],
+      title: "Central Pattaya Nightlife Studio"
+    });
+    const draft = buildAiChatSearchResponseDraft({
+      dueDiligence: { contextLines: [], insights: [] },
+      items: [nightlife],
+      knowledge: [],
+      matches: [nightlife],
+      requestMessage: "adults only studio near nightlife and bars",
+      search: searchFactory({
+        filters: {
+          lifestyleSignals: ["nightlife"],
+          market: "pattaya"
+        },
+        items: [nightlife]
+      })
+    });
+
+    expect(draft.deterministicDraft).toContain("For an adults-only nightlife stay");
+    expect(draft.deterministicDraft).toContain("guest policy");
+    expect(draft.deterministicDraft).not.toContain("children");
+  });
+
+  it("explains retiree and winter-stay suitability", () => {
+    const retiree = propertyFactory({
+      amenities: ["elevator", "24h security", "shuttle service", "garden", "pool"],
+      title: "Retirement Comfort Condo"
+    });
+    const winter = propertyFactory({
+      amenities: ["washing machine", "balcony", "pool", "gym", "high-speed internet"],
+      id: "property-2",
+      title: "Winter Long-Stay Condo"
+    });
+    const retireeDraft = buildAiChatSearchResponseDraft({
+      dueDiligence: { contextLines: [], insights: [] },
+      items: [retiree],
+      knowledge: [],
+      matches: [retiree],
+      requestMessage: "condo for retired senior living",
+      search: searchFactory({
+        filters: {
+          lifestyleSignals: ["retiree-comfort"],
+          market: "pattaya"
+        },
+        items: [retiree]
+      })
+    });
+    const winterDraft = buildAiChatSearchResponseDraft({
+      dueDiligence: { contextLines: [], insights: [] },
+      items: [winter],
+      knowledge: [],
+      matches: [winter],
+      requestMessage: "winter long-stay condo",
+      search: searchFactory({
+        filters: {
+          lifestyleSignals: ["winter-stay"],
+          market: "pattaya"
+        },
+        items: [winter]
+      })
+    });
+
+    expect(retireeDraft.deterministicDraft).toContain("For retirement or senior living");
+    expect(retireeDraft.deterministicDraft).toContain("elevator reliability");
+    expect(winterDraft.deterministicDraft).toContain("For a winter or long-stay setup");
+    expect(winterDraft.deterministicDraft).toContain("utility costs and contract length");
+  });
+
   it("builds no-match guidance with knowledge context when inventory is missing", () => {
     const draft = buildAiChatSearchResponseDraft({
       dueDiligence: { contextLines: [], insights: [] },
