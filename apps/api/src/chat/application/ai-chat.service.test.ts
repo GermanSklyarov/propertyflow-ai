@@ -1072,6 +1072,138 @@ describe("AiChatService", () => {
     });
   });
 
+  it("merges Thai layout refinements with the previous rental search context", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya", minBedrooms: 0, maxBedrooms: 1 },
+        interpretedIntent: "Pattaya studio or 1 bedroom rental",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "Central Pattaya Studio" })],
+        rankingExplanation: "Using Thai refinement.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const refinement = "ขอเฉพาะ 1 ห้องนอนหรือสตูดิโอ";
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "หาคอนโดเช่าในพัทยาใกล้ central pattaya" },
+        { role: "assistant", text: "I found rentals near Central Pattaya." }
+      ],
+      locale: "th",
+      message: refinement
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "th",
+      market: undefined,
+      purpose: undefined,
+      query: `หาคอนโดเช่าในพัทยาใกล้ central pattaya. Updated criteria: ${refinement}`
+    });
+  });
+
+  it("merges Chinese layout refinements with the previous rental search context", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya", minBedrooms: 0, maxBedrooms: 1 },
+        interpretedIntent: "Pattaya studio or 1 bedroom rental",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "Central Pattaya Studio" })],
+        rankingExplanation: "Using Chinese refinement.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const refinement = "只看一室或开间";
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "找芭提雅 central pattaya 附近出租公寓" },
+        { role: "assistant", text: "I found rentals near Central Pattaya." }
+      ],
+      locale: "zh",
+      message: refinement
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "zh",
+      market: undefined,
+      purpose: undefined,
+      query: `找芭提雅 central pattaya 附近出租公寓. Updated criteria: ${refinement}`
+    });
+  });
+
+  it("reuses Thai and Chinese refinements after affirmative continuation messages", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya" },
+        interpretedIntent: "Continued refined search",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "Refined Rental" })],
+        rankingExplanation: "Using latest refinement.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "หาคอนโดเช่าในพัทยา" },
+        { role: "assistant", text: "I found rentals." },
+        { role: "user", text: "ขอเฉพาะ 1 ห้องนอนหรือสตูดิโอ" },
+        { role: "assistant", text: "Should I search again with this criteria?" }
+      ],
+      locale: "th",
+      message: "ได้ หาแบบที่ตรงเงื่อนไข"
+    });
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "找芭提雅出租公寓" },
+        { role: "assistant", text: "I found rentals." },
+        { role: "user", text: "只看一室或开间" },
+        { role: "assistant", text: "Should I search again with this criteria?" }
+      ],
+      locale: "zh",
+      message: "可以，找符合条件的房源"
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenNthCalledWith(1, "tenant-1", {
+      locale: "th",
+      market: undefined,
+      purpose: undefined,
+      query: "หาคอนโดเช่าในพัทยา. Updated criteria: ขอเฉพาะ 1 ห้องนอนหรือสตูดิโอ"
+    });
+    expect(naturalLanguageSearch.search).toHaveBeenNthCalledWith(2, "tenant-1", {
+      locale: "zh",
+      market: undefined,
+      purpose: undefined,
+      query: "找芭提雅出租公寓. Updated criteria: 只看一室或开间"
+    });
+  });
+
   it("reuses the last concrete refinement when the visitor confirms a new search", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const naturalLanguageSearch = {

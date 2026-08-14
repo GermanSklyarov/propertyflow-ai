@@ -526,7 +526,16 @@ function isSearchContinuationRequest(message: string): boolean {
 function isThinSearchContinuation(message: string): boolean {
   const normalized = message.toLowerCase().replace(/\s+/g, " ").trim();
 
-  return isShortAffirmation(normalized) || /^(?:can i |could i |please )?(?:see|show|get)?\s*(?:more|all|another|other|next)(?: options?| listings?| ones?)?[\s?.!]*$/i.test(normalized);
+  return (
+    isShortAffirmation(normalized) ||
+    /^(?:can i |could i |please )?(?:see|show|get)?\s*(?:more|all|another|other|next)(?: options?| listings?| ones?)?[\s?.!]*$/i.test(
+      normalized
+    ) ||
+    /^(?:ดู|แสดง|ขอ)?\s*(?:เพิ่ม|ทั้งหมด|ตัวเลือกอื่น|รายการอื่น|ถัดไป)[\s?.!]*$/i.test(normalized) ||
+    /^(?:看|显示|顯示|查看|给我看|給我看)?\s*(?:更多|全部|所有|其他|其它|下一个|下一個|下套|下一套)[\s?.!。！？]*$/i.test(
+      normalized
+    )
+  );
 }
 
 function isMoreListingsRequest(message: string): boolean {
@@ -538,36 +547,42 @@ function isMoreListingsRequest(message: string): boolean {
     normalized.includes("show all") ||
     normalized.includes("see more") ||
     normalized.includes("see all") ||
-    /еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i.test(normalized)
+    /еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|เพิ่ม|ทั้งหมด|ตัวเลือกอื่น|รายการอื่น|ถัดไป|其他|其它|更多|全部|所有|下一个|下一個|下一套/i.test(
+      normalized
+    )
   );
 }
 
 function isAffirmativeSearchContinuation(message: string): boolean {
   const normalized = message.toLowerCase().replace(/\s+/g, " ").trim();
-  const startsAffirmative = /^(?:yes|yeah|yep|please|sure|ok|okay|do it|go ahead|да|ага|давай|конечно|пожалуйста)\b/i.test(
-    normalized
-  );
-  const referencesSearch = /\b(?:fit|request|criteria|something|option|options|listing|listings|find|search)\b|подход|запрос|вариант|найд|поищ/i.test(
-    normalized
-  );
+  const startsAffirmative =
+    /^(?:yes|yeah|yep|please|sure|ok|okay|do it|go ahead|да|ага|давай|конечно|пожалуйста)\b/i.test(normalized) ||
+    /^(?:ใช่|ได้|โอเค|ตกลง|เอาเลย|ครับ|ค่ะ|คะ|กรุณา)/i.test(normalized) ||
+    /^(?:是|对|對|好|可以|行|请|請|麻烦|麻煩|开始|開始)/i.test(normalized);
+  const referencesSearch =
+    /\b(?:fit|request|criteria|something|option|options|listing|listings|find|search)\b|подход|запрос|вариант|найд|поищ/i.test(
+      normalized
+    ) ||
+    /ตรง|เหมาะ|คำขอ|เงื่อนไข|เกณฑ์|ตัวเลือก|รายการ|ประกาศ|หา|ค้นหา/i.test(normalized) ||
+    /符合|适合|適合|请求|請求|要求|条件|條件|选项|選項|房源|列表|找|搜索|搜尋/i.test(normalized);
 
   return startsAffirmative && referencesSearch;
 }
 
 function isShortAffirmation(message: string): boolean {
-  return /^(?:yes|yeah|yep|please|yes please|sure|ok|okay|do it|go ahead|да|ага|давай|конечно|пожалуйста)[\s,.!]*$/i.test(
+  return /^(?:yes|yeah|yep|please|yes please|sure|ok|okay|do it|go ahead|да|ага|давай|конечно|пожалуйста|ใช่|ได้|โอเค|ตกลง|เอาเลย|ครับ|ค่ะ|คะ|กรุณา|是|对|對|好|可以|行|请|請|麻烦|麻煩|开始|開始)[\s,.!。！]*$/i.test(
     message.trim()
   );
 }
 
 function looksLikeSearchRequest(message: string): boolean {
-  return /find|show|recommend|suggest|condo|apartment|room|house|villa|rent|rental|buy|budget|under|studio|bedroom|spacious|move|найд|подбер|покаж|кондо|квартир|дом|аренд|купить|หา|แนะนำ|คอนโด|ซื้อ|เช่า|找|推荐|推薦|公寓|买|買|租/i.test(
+  return /find|show|recommend|suggest|condo|apartment|room|house|villa|rent|rental|buy|budget|under|studio|bedroom|spacious|move|найд|подбер|покаж|кондо|квартир|дом|аренд|купить|หา|แนะนำ|คอนโด|อพาร์ตเมนต์|ห้อง|บ้าน|วิลล่า|ซื้อ|เช่า|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|ย้าย|找|推荐|推薦|显示|顯示|公寓|房子|别墅|別墅|买|買|购买|購買|租|出租|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|搬|入住/i.test(
     message
   );
 }
 
 function looksLikeSearchRefinement(message: string): boolean {
-  return /\b(?:i mean|actually|instead|rather|only|exactly|just|rent|rental|lease|buy|purchase|budget|under|studio|bedroom|spacious|move in|move-in|next month|not important|does not matter|doesn't matter)\b|точнее|только|именно|ровно|аренд|купить|бюджет|студ|спальн|въезд|заезд/i.test(
+  return /\b(?:i mean|actually|instead|rather|only|exactly|just|rent|rental|lease|buy|purchase|budget|under|studio|bedroom|spacious|move in|move-in|next month|not important|does not matter|doesn't matter)\b|точнее|только|именно|ровно|аренд|купить|бюджет|студ|спальн|въезд|заезд|จริงๆ|จริง ๆ|อันที่จริง|เปลี่ยนเป็น|แทน|เฉพาะ|เท่านั้น|พอดี|เช่า|ซื้อ|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|เข้าอยู่|เดือนหน้า|ไม่สำคัญ|ไม่เป็นไร|其实|其實|实际上|實際上|改成|换成|換成|只要|只看|仅|僅|只|正好|租|出租|买|買|购买|購買|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|入住|搬入|下个月|下個月|不重要|无所谓|無所謂/i.test(
     message
   );
 }
