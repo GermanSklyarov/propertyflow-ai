@@ -16,6 +16,7 @@ import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../../propertie
 import { TenantService } from "../../../tenants/application/tenant.service.js";
 import type { AiConciergePersona } from "../../application/ai-text-generator.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
+import { LocationIntelligenceService } from "../../application/location-intelligence.js";
 import { PublicWidgetRateLimitService } from "../../application/public-widget-rate-limit.service.js";
 import { PublicWidgetAskDto, PublicWidgetLeadDto } from "./public-widget-chat.dto.js";
 
@@ -31,6 +32,7 @@ interface PublicWidgetRecommendationBundle {
   candidateMatches?: number;
   fitSummary: string;
   listings: PublicWidgetRecommendedListing[];
+  locationTarget?: WidgetLocationTarget;
   totalMatches?: number;
 }
 
@@ -86,7 +88,9 @@ export class PublicWidgetChatController {
     @Inject(AiChatService) private readonly chat: AiChatService,
     @Inject(LeadService) private readonly leads: LeadService,
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
-    @Inject(PublicWidgetRateLimitService) private readonly rateLimits: PublicWidgetRateLimitService
+    @Inject(PublicWidgetRateLimitService) private readonly rateLimits: PublicWidgetRateLimitService,
+    @Inject(LocationIntelligenceService)
+    private readonly locationIntelligence: LocationIntelligenceService = new LocationIntelligenceService()
   ) {}
 
   @Post("ask/:tenantSlug")
@@ -269,18 +273,42 @@ export class PublicWidgetChatController {
       .filter(isPublicWidgetRecommendableProperty);
     const layoutMatchedProperties = filterByWidgetLayoutRequirements(publicProperties, searchContext);
     const strictPublicProperties = filterByRequiredWidgetAmenities(layoutMatchedProperties, searchContext);
-    const rankedPublicProperties = rankWidgetPropertiesForRequest(strictPublicProperties, searchContext);
+    const locationTarget = await this.resolveWidgetLocationTarget(searchContext, publicProperties[0]?.market ?? payload?.market);
+    const rankedPublicProperties = rankWidgetPropertiesForRequest(strictPublicProperties, searchContext, locationTarget);
     const matchedProperties = rankedPublicProperties.slice(0, 3);
 
     return {
       candidateMatches: visiblePropertyIds.length,
-      fitSummary: buildListingFitSummary(matchedProperties, locale, resolveWidgetPriceMode(searchContext), searchContext),
+      fitSummary: buildListingFitSummary(matchedProperties, locale, resolveWidgetPriceMode(searchContext), searchContext, locationTarget),
       listings: matchedProperties.map((property) => ({
         propertyId: property.id,
         title: property.title,
         url: buildListingUrl(baseOrigin, listingUrlTemplate, property.id)
       })),
+      locationTarget,
       totalMatches: strictPublicProperties.length
+    };
+  }
+
+  private async resolveWidgetLocationTarget(
+    message: string,
+    market?: PropertySnapshot["market"]
+  ): Promise<WidgetLocationTarget | undefined> {
+    const staticTarget = resolveStaticWidgetLocationTarget(message, market);
+    if (staticTarget) {
+      return staticTarget;
+    }
+
+    const target = await this.locationIntelligence.resolveComparisonTarget(message, market);
+    if (!target || target.kind !== "poi") {
+      return undefined;
+    }
+
+    return {
+      aliases: target.poi.aliases,
+      label: target.poi.label,
+      latitude: target.poi.location.latitude,
+      longitude: target.poi.location.longitude
     };
   }
 }
@@ -334,7 +362,7 @@ function normalizePublicWidgetAnswer(
   const normalizedAnswer = stripMarkdownEmphasis(answer).trim();
 
   if (!recommendations.listings.length && isListingCardSearchResponse(suggestedActions)) {
-    return buildNoPublicListingCardsMessage(locale, requestMessage, citations);
+    return buildNoPublicListingCardsMessage(locale, requestMessage, citations, recommendations.locationTarget);
   }
 
   if (!recommendations.listings.length || !isListingDiscoveryResponse(suggestedActions)) {
@@ -367,9 +395,10 @@ function isListingCardSearchResponse(suggestedActions: string[]): boolean {
 function buildNoPublicListingCardsMessage(
   locale: TenantWidgetLanguage,
   requestMessage: string,
-  citations: AiChatCitation[]
+  citations: AiChatCitation[],
+  locationTarget?: WidgetLocationTarget
 ): string {
-  const target = resolveWidgetLocationTarget(requestMessage);
+  const target = locationTarget ?? resolveStaticWidgetLocationTarget(requestMessage);
   const mapWasApplied = citations.some((citation) => /map geocoding resolved|radiusMeters|geo filtering/i.test(citation.label));
 
   if (target) {
@@ -461,7 +490,8 @@ function buildListingFitSummary(
   properties: PropertySnapshot[],
   locale: TenantWidgetLanguage,
   priceMode: WidgetPriceMode = "sale",
-  requestMessage = ""
+  requestMessage = "",
+  explicitLocationTarget?: WidgetLocationTarget
 ): string {
   if (!properties.length) {
     return "";
@@ -473,7 +503,7 @@ function buildListingFitSummary(
   const bedroomSummary = summarizeBedrooms(properties, locale);
   const areaSummary = summarizeArea(properties, locale);
   const beachSummary = summarizeBeachDistance(properties, locale);
-  const locationTarget = resolveWidgetLocationTarget(requestMessage, properties[0]?.market);
+  const locationTarget = explicitLocationTarget ?? resolveStaticWidgetLocationTarget(requestMessage, properties[0]?.market);
   const locationSummary = locationTarget ? summarizeLocationTargetDistance(properties, locationTarget, locale) : "";
   const amenities = summarizeAmenities(properties, requestMessage);
   const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
@@ -555,9 +585,13 @@ function summarizeRequestSuitability(
   return [petLabels[locale] ?? petLabels.en, familyNote].filter(Boolean).join(" ");
 }
 
-function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
+function rankWidgetPropertiesForRequest(
+  properties: PropertySnapshot[],
+  requestMessage: string,
+  explicitLocationTarget?: WidgetLocationTarget
+): PropertySnapshot[] {
   const requestedAmenities = detectRequestedWidgetAmenities(requestMessage);
-  const locationTarget = resolveWidgetLocationTarget(requestMessage, properties[0]?.market);
+  const locationTarget = explicitLocationTarget ?? resolveStaticWidgetLocationTarget(requestMessage, properties[0]?.market);
   const preferBudgetPrice = isBudgetPriceRequest(requestMessage);
   const preferLuxuryFit = isLuxuryRequest(requestMessage);
   const preferValueForMoney = isValueForMoneyRequest(requestMessage);
@@ -1222,7 +1256,7 @@ function buildListingCardDescription(
   return `${property.title}: ${detail}.`;
 }
 
-function resolveWidgetLocationTarget(message: string, market?: PropertySnapshot["market"]): WidgetLocationTarget | undefined {
+function resolveStaticWidgetLocationTarget(message: string, market?: PropertySnapshot["market"]): WidgetLocationTarget | undefined {
   const normalized = normalizeLocationText(message);
   const targets = market ? WIDGET_LOCATION_TARGETS[market] ?? [] : Object.values(WIDGET_LOCATION_TARGETS).flat();
 

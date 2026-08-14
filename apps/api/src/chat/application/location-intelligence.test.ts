@@ -91,4 +91,51 @@ describe("LocationIntelligenceService", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("Sanctuary+of+Truth%2C+Pattaya%2C+Thailand");
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("key=google-test-key");
   });
+
+  it("extracts Russian nedaleko landmarks cleanly and caches Google geocoding results", async () => {
+    process.env.GOOGLE_MAPS_API_KEY = "google-test-key";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              formatted_address: "75 6, Pattaya, Chon Buri, Thailand",
+              geometry: {
+                location: {
+                  lat: 12.9706,
+                  lng: 100.9902
+                }
+              }
+            }
+          ]
+        }),
+        { status: 200 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LocationIntelligenceService();
+    const message =
+      "подбери квартиру в аренду недалеко от Frost Magical Ice of Siam, я буду ходить туда кататься на ватрушке";
+
+    await expect(service.resolveComparisonTarget(message, "pattaya")).resolves.toMatchObject({
+      kind: "poi",
+      poi: {
+        label: "Frost Magical Ice of Siam",
+        location: {
+          latitude: 12.9706,
+          longitude: 100.9902
+        }
+      }
+    });
+    await expect(service.resolveComparisonTarget(message, "pattaya")).resolves.toMatchObject({
+      kind: "poi",
+      poi: {
+        label: "Frost Magical Ice of Siam"
+      }
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("Frost+Magical+Ice+of+Siam%2C+Pattaya%2C+Thailand");
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain("%D1%8F+%D0%B1%D1%83%D0%B4%D1%83");
+  });
 });

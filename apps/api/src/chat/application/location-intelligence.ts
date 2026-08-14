@@ -41,6 +41,15 @@ export interface PropertyLocationDistance {
   targetLabel: string;
 }
 
+interface GeocodeCacheEntry {
+  expiresAt: number;
+  result: GeocodedPlace | undefined;
+}
+
+const positiveGeocodeCacheTtlMs = 24 * 60 * 60 * 1000;
+const negativeGeocodeCacheTtlMs = 10 * 60 * 1000;
+const maxGeocodeCacheEntries = 500;
+
 const CITY_POIS: CityPoi[] = [
   {
     aliases: ["walking street", "pattaya walking street", "уокинг стрит", "волкинг стрит", "walkingstreet", "步行街"],
@@ -195,6 +204,7 @@ interface GeocodedPlace {
 @Injectable()
 export class LocationIntelligenceService {
   private readonly logger = new Logger(LocationIntelligenceService.name);
+  private readonly geocodeCache = new Map<string, GeocodeCacheEntry>();
 
   async resolveComparisonTarget(message: string, market?: ThailandMarket): Promise<LocationComparisonTarget | undefined> {
     const localTarget = resolveLocationComparisonTarget(message, market);
@@ -235,17 +245,42 @@ export class LocationIntelligenceService {
       return undefined;
     }
 
-    try {
-      if (provider === "google") {
-        return await geocodeWithGoogle(query, market);
-      }
+    const cacheKey = geocodeCacheKey(provider, query, market);
+    const cached = this.geocodeCache.get(cacheKey);
+    const now = Date.now();
+    if (cached && cached.expiresAt > now) {
+      return cached.result;
+    }
 
-      return await geocodeWithMapbox(query, market);
+    if (cached) {
+      this.geocodeCache.delete(cacheKey);
+    }
+
+    try {
+      const result = provider === "google" ? await geocodeWithGoogle(query, market) : await geocodeWithMapbox(query, market);
+      this.writeGeocodeCache(cacheKey, result);
+
+      return result;
     } catch (error) {
       this.logger.warn(`Map geocoding failed: ${error instanceof Error ? error.message : String(error)}`);
+      this.writeGeocodeCache(cacheKey, undefined);
 
       return undefined;
     }
+  }
+
+  private writeGeocodeCache(cacheKey: string, result: GeocodedPlace | undefined): void {
+    if (this.geocodeCache.size >= maxGeocodeCacheEntries) {
+      const oldestKey = this.geocodeCache.keys().next().value;
+      if (oldestKey) {
+        this.geocodeCache.delete(oldestKey);
+      }
+    }
+
+    this.geocodeCache.set(cacheKey, {
+      expiresAt: Date.now() + (result ? positiveGeocodeCacheTtlMs : negativeGeocodeCacheTtlMs),
+      result
+    });
   }
 }
 
@@ -352,10 +387,10 @@ function normalizeLocationText(value: string): string {
 function extractLocationQuery(message: string): string | undefined {
   const normalizedWhitespace = message.replace(/\s+/g, " ").trim();
   const patterns = [
-    /\b(?:close|closer|closest|near|nearer|nearest|distance|far|farther|farthest)\s+(?:to|from)\s+(.+?)(?:\?|$)/i,
-    /\b(?:near|around|nearby|by)\s+(.+?)(?:\?|$)/i,
-    /\b(?:to|from)\s+(.+?)(?:\?|$)/i,
-    /(?:рядом|ближе|близко|далеко)\s+(?:к|до|от)\s+(.+?)(?:\?|$)/i
+    /\b(?:close|closer|closest|near|nearer|nearest|distance|far|farther|farthest)\s+(?:to|from)\s+(.+?)(?:[,.;!?]|$)/i,
+    /\b(?:near|around|nearby|by)\s+(.+?)(?:[,.;!?]|$)/i,
+    /\b(?:to|from)\s+(.+?)(?:[,.;!?]|$)/i,
+    /(?:рядом|ближе|близко|недалеко|далеко)\s+(?:к|до|от)\s+(.+?)(?:[,.;!?]|$)/i
   ];
   const value = patterns
     .map((pattern) => normalizedWhitespace.match(pattern)?.[1])
@@ -376,6 +411,10 @@ function extractLocationQuery(message: string): string | undefined {
   }
 
   return cleaned;
+}
+
+function geocodeCacheKey(provider: "google" | "mapbox", query: string, market?: ThailandMarket): string {
+  return [provider, market ?? "any", normalizeLocationText(query)].join(":");
 }
 
 function resolveMapGeocodingProvider(): "google" | "mapbox" | "none" {
@@ -420,7 +459,7 @@ async function geocodeWithGoogle(query: string, market?: ThailandMarket): Promis
   }
 
   return {
-    label: first.formatted_address?.split(",")[0]?.trim() || query,
+    label: resolveGeocodedLabel(query, first.formatted_address?.split(",")[0]?.trim()),
     location: { latitude: location.lat, longitude: location.lng }
   };
 }
@@ -454,7 +493,7 @@ async function geocodeWithMapbox(query: string, market?: ThailandMarket): Promis
   }
 
   return {
-    label: first.text?.trim() || first.place_name?.split(",")[0]?.trim() || query,
+    label: resolveGeocodedLabel(query, first.text?.trim() || first.place_name?.split(",")[0]?.trim()),
     location: { latitude: center[1], longitude: center[0] }
   };
 }
@@ -488,6 +527,16 @@ function buildGeocodingQuery(query: string, market?: ThailandMarket): string {
   return normalizedQuery.includes("thailand") || normalizedQuery.includes(marketLabel.toLowerCase())
     ? query
     : `${query}, ${marketLabel}`;
+}
+
+function resolveGeocodedLabel(query: string, providerLabel?: string): string {
+  const label = providerLabel?.trim();
+
+  if (!label || /^[\d\s/.-]+$/.test(label)) {
+    return query;
+  }
+
+  return label;
 }
 
 function stablePlaceId(value: string): string {

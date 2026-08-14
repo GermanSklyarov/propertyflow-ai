@@ -326,6 +326,94 @@ describe("PublicWidgetChatController", () => {
     expect(response.recommendedListings).toEqual([]);
   });
 
+  it("uses geocoded widget landmarks for card distances and ranking", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 2 matching listings.",
+          matchedPropertyIds: ["far", "near"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "far",
+        propertyFactory({
+          id: "far",
+          listingType: "rent",
+          location: { latitude: 12.91, longitude: 100.88 },
+          rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+          title: "Far Jomtien Rental Condo"
+        })
+      ],
+      [
+        "near",
+        propertyFactory({
+          id: "near",
+          listingType: "rent",
+          location: { latitude: 12.9705, longitude: 100.9901 },
+          rentalPriceMonthly: { amount: 32_000, currency: "THB" },
+          title: "Frost Area Rental Condo"
+        })
+      ]
+    ]);
+    const locationIntelligence = {
+      resolveComparisonTarget: vi.fn().mockResolvedValue({
+        kind: "poi",
+        poi: {
+          aliases: ["Frost Magical Ice of Siam"],
+          category: "landmark",
+          id: "geocoded-frost-magical-ice-of-siam",
+          label: "Frost Magical Ice of Siam",
+          location: { latitude: 12.9706, longitude: 100.9902 },
+          market: "pattaya"
+        }
+      })
+    };
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService(),
+      locationIntelligence as never
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "find me a condo in Pattaya for rent close to Frost Magical Ice of Siam"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "Frost Area Rental Condo",
+      "Far Jomtien Rental Condo"
+    ]);
+    expect(response.answer).toContain("from Frost Magical Ice of Siam");
+    expect(response.answer.indexOf("Frost Area Rental Condo:")).toBeLessThan(response.answer.indexOf("Far Jomtien Rental Condo:"));
+  });
+
   it("explains why rentals fit a Central Pattaya location request with target distances", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

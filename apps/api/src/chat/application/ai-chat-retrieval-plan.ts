@@ -6,7 +6,7 @@ const recentSetReferencePattern =
   /\b(them|these|those|options|listings|ones)\b|из них|этих|вариант|предлож|ตัวเลือก|รายการ|เหล่านี้|พวกนี้|这些|這些|这几个|這幾個|其中|房源|选项|選項/i;
 
 const beachDistanceComparisonPattern =
-  /closer|closest|nearer|nearest|close to|distance|beach|пляж|мор|ใกล้|ที่สุด|ชายหาด|ทะเล|距离|距離|近|最近|海滩|海灘|海边|海邊/i;
+  /closer|closest|nearer|nearest|close to|distance|beach|пляж|мор|недалеко|близко|ใกล้|ที่สุด|ชายหาด|ทะเล|距离|距離|近|最近|海滩|海灘|海边|海邊/i;
 const shortlistComparisonPattern =
   /\b(?:compare|which|what|better|best|pick|choose|rank|recommend|suggest)\b|сравн|како[йе]|лучш|выбр|рекоменд|посовет|哪个|哪個|比较|比較|ดีกว่า|ดีที่สุด|เปรียบเทียบ/i;
 const investmentComparisonPattern = /investment|invest|yield|roi|rent|rental|доход|инвест|аренд|收益|投资|投資|出租|租金|ลงทุน|ปล่อยเช่า/i;
@@ -16,7 +16,7 @@ const petsComparisonPattern = /\bpets?\b|\bdogs?\b|\bcats?\b|собак|кош|�
 const valueComparisonPattern =
   /\b(?:value for money|best value|good value|best deal|good deal|worth it|balanced|optimal|price quality|price to quality)\b|цена.*качество|лучшее предложение|выгод|оптимальн|คุ้มค่า|性价比|性價比/i;
 const moreListingsPattern =
-  /\b(?:more|another|other|else|all|everything|next|show\s+all|see\s+all)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i;
+  /\b(?:more|another|other|else|all|everything|show\s+all|see\s+all)\b|\bnext\s+(?:options?|listings?|ones?)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i;
 const newSearchRefinementPattern =
   /\b(?:i mean|actually|instead|rather|no,?|not important|does not matter|doesn't matter|rent|rental|lease|buy|purchase|budget|under|studio|1 bedroom|one bedroom|move in|move-in|next month|spacious)\b|точнее|вообще|лучше|аренд|купить|бюджет|студ|спальн|въезд|заезд|месяц/i;
 const viewingSlotFollowUpPattern =
