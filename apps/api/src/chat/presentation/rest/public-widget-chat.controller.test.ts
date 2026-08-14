@@ -296,6 +296,14 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("closest option about");
     expect(response.answer).toContain("1BR Condo at Grand Avenue Residence - Central Pattaya: 30k THB/mo");
     expect(response.answer).toContain("from Central Pattaya, closest option about 1049m from the beach");
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "1BR Condo at Grand Avenue Residence - Central Pattaya",
+      "1BR Condo at City Garden Pratumnak - Pratumnak",
+      "1BR Condo at The Cliff - Pratumnak"
+    ]);
+    expect(response.answer.indexOf("1BR Condo at Grand Avenue Residence - Central Pattaya:")).toBeLessThan(
+      response.answer.indexOf("1BR Condo at City Garden Pratumnak - Pratumnak:")
+    );
   });
 
   it("shows unseen listing cards when the visitor asks for more options", async () => {

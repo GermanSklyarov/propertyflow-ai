@@ -497,6 +497,7 @@ function summarizeRequestSuitability(
 
 function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
   const requestedAmenities = detectRequestedWidgetAmenities(requestMessage);
+  const locationTarget = resolveWidgetLocationTarget(requestMessage, properties[0]?.market);
   const preferBudgetPrice = isBudgetPriceRequest(requestMessage);
   const preferLuxuryFit = isLuxuryRequest(requestMessage);
   const preferValueForMoney = isValueForMoneyRequest(requestMessage);
@@ -510,6 +511,7 @@ function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestM
     !preferLuxuryFit &&
     !preferValueForMoney &&
     !preferLargerArea &&
+    !locationTarget &&
     !preferCloseBeach &&
     !preferFamilyFit
   ) {
@@ -555,6 +557,14 @@ function rankWidgetPropertiesForRequest(properties: PropertySnapshot[], requestM
 
       if (preferLargerArea && right.property.areaSqm !== left.property.areaSqm) {
         return right.property.areaSqm - left.property.areaSqm;
+      }
+
+      if (locationTarget) {
+        const locationDelta =
+          distanceMeters(left.property.location, locationTarget) - distanceMeters(right.property.location, locationTarget);
+        if (locationDelta !== 0) {
+          return locationDelta;
+        }
       }
 
       if (preferCloseBeach) {
