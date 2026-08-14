@@ -209,6 +209,95 @@ describe("PublicWidgetChatController", () => {
     expect(response.recommendedListings).toHaveLength(1);
   });
 
+  it("explains why rentals fit a Central Pattaya location request with target distances", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 3 matching listings.",
+          matchedPropertyIds: ["city-garden", "the-cliff", "grand-avenue"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "city-garden",
+        propertyFactory({
+          areaSqm: 31.6,
+          beachDistanceMeters: 281,
+          id: "city-garden",
+          listingType: "rent",
+          location: { latitude: 12.925, longitude: 100.871 },
+          rentalPriceMonthly: { amount: 25_000, currency: "THB" },
+          title: "1BR Condo at City Garden Pratumnak - Pratumnak"
+        })
+      ],
+      [
+        "the-cliff",
+        propertyFactory({
+          areaSqm: 29.8,
+          beachDistanceMeters: 707,
+          id: "the-cliff",
+          listingType: "rent",
+          location: { latitude: 12.916, longitude: 100.86 },
+          rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+          title: "1BR Condo at The Cliff - Pratumnak"
+        })
+      ],
+      [
+        "grand-avenue",
+        propertyFactory({
+          areaSqm: 41.9,
+          beachDistanceMeters: 1049,
+          id: "grand-avenue",
+          listingType: "rent",
+          location: { latitude: 12.9308, longitude: 100.8831 },
+          rentalPriceMonthly: { amount: 30_000, currency: "THB" },
+          title: "1BR Condo at Grand Avenue Residence - Central Pattaya"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "find me a condo for rent near central pattaya"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("from Central Pattaya");
+    expect(response.answer).toContain("These condo options fit the Pattaya search because they include");
+    expect(response.answer).toContain("closest option about");
+    expect(response.answer).toContain("1BR Condo at Grand Avenue Residence - Central Pattaya: 30k THB/mo");
+    expect(response.answer).toContain("from Central Pattaya, closest option about 1049m from the beach");
+  });
+
   it("shows unseen listing cards when the visitor asks for more options", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

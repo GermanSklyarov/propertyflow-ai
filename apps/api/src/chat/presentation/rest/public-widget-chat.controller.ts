@@ -35,6 +35,42 @@ interface PublicWidgetRecommendationBundle {
 
 type WidgetPriceMode = "rent" | "sale";
 
+interface WidgetLocationTarget {
+  aliases: string[];
+  label: string;
+  latitude: number;
+  longitude: number;
+}
+
+const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], WidgetLocationTarget[]>> = {
+  pattaya: [
+    {
+      aliases: ["central pattaya", "central festival", "central pattaya mall", "центр паттайи", "центральная паттайя"],
+      label: "Central Pattaya",
+      latitude: 12.9348,
+      longitude: 100.8832
+    },
+    {
+      aliases: ["walking street", "pattaya walking street"],
+      label: "Walking Street",
+      latitude: 12.9279,
+      longitude: 100.8738
+    },
+    {
+      aliases: ["boyz town", "boyztown", "boys town"],
+      label: "Boyz Town",
+      latitude: 12.9298,
+      longitude: 100.8789
+    },
+    {
+      aliases: ["terminal 21", "terminal 21 pattaya"],
+      label: "Terminal 21 Pattaya",
+      latitude: 12.9497,
+      longitude: 100.889
+    }
+  ]
+};
+
 @Controller("public/v1/widget")
 @ApiTags("public-widget")
 export class PublicWidgetChatController {
@@ -377,9 +413,11 @@ function buildListingFitSummary(
   const bedroomSummary = summarizeBedrooms(properties, locale);
   const areaSummary = summarizeArea(properties, locale);
   const beachSummary = summarizeBeachDistance(properties, locale);
+  const locationTarget = resolveWidgetLocationTarget(requestMessage, properties[0]?.market);
+  const locationSummary = locationTarget ? summarizeLocationTargetDistance(properties, locationTarget, locale) : "";
   const amenities = summarizeAmenities(properties, requestMessage);
   const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
-  const details = [priceRange, bedroomSummary, areaSummary, beachSummary, amenities].filter(Boolean);
+  const details = [priceRange, bedroomSummary, areaSummary, locationSummary, beachSummary, amenities].filter(Boolean);
   const clarificationPrompt = buildRecommendationClarificationPrompt(requestMessage, locale);
 
   const overviewLabels: Record<TenantWidgetLanguage, string> = {
@@ -388,7 +426,7 @@ function buildListingFitSummary(
     th: `ตัวเลือก${kind}เหล่านี้เหมาะกับการค้นหาใน ${market}${details.length ? ` เพราะมี ${details.join(", ")}` : ""} เปิดการ์ดเพื่อดูรูป ความพร้อม และรายละเอียดนัดชม`,
     zh: `这些${kind}选项符合 ${market} 搜索${details.length ? `，因为包含${details.join("、")}` : ""}。打开卡片可查看照片、可售状态和看房细节。`
   };
-  const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale, priceMode));
+  const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale, priceMode, locationTarget));
 
   return [overviewLabels[locale] ?? overviewLabels.en, suitability, clarificationPrompt, ...cardDescriptions].filter(Boolean).join("\n");
 }
@@ -928,6 +966,32 @@ function summarizeBeachDistance(properties: PropertySnapshot[], locale: TenantWi
   return labels[locale] ?? labels.en;
 }
 
+function summarizeLocationTargetDistance(
+  properties: PropertySnapshot[],
+  target: WidgetLocationTarget,
+  locale: TenantWidgetLanguage
+): string {
+  const distances = properties.map((property) => distanceMeters(property.location, target));
+
+  if (!distances.length) {
+    return "";
+  }
+
+  const closest = Math.min(...distances);
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `closest option about ${formatDistance(closest)} from ${target.label}`,
+    ru: `ближайший вариант примерно ${formatDistance(closest)} от ${target.label}`,
+    th: `ตัวเลือกที่ใกล้ที่สุดประมาณ ${formatDistance(closest)} จาก ${target.label}`,
+    zh: `最近选项距离 ${target.label} 约 ${formatDistance(closest)}`
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
+function summarizeSingleLocationTargetDistance(property: PropertySnapshot, target?: WidgetLocationTarget): string {
+  return target ? `about ${formatDistance(distanceMeters(property.location, target))} from ${target.label}` : "";
+}
+
 function summarizeAmenities(properties: PropertySnapshot[], requestMessage = ""): string {
   const allAmenities = Array.from(new Set(properties.flatMap((property) => property.amenities ?? []).filter(Boolean)));
   const requestedAmenities = detectRequestedWidgetAmenities(requestMessage).filter((amenity) =>
@@ -953,18 +1017,65 @@ function isPublicWidgetRecommendableProperty(property: PropertySnapshot): boolea
 function buildListingCardDescription(
   property: PropertySnapshot,
   locale: TenantWidgetLanguage,
-  priceMode: WidgetPriceMode = "sale"
+  priceMode: WidgetPriceMode = "sale",
+  locationTarget?: WidgetLocationTarget
 ): string {
   const facts = [
     formatPriceRange([property], priceMode),
     summarizeBedrooms([property], locale),
     summarizeArea([property], locale),
+    summarizeSingleLocationTargetDistance(property, locationTarget),
     summarizeBeachDistance([property], locale),
     summarizeAmenities([property])
   ].filter(Boolean);
   const detail = facts.length ? facts.join(", ") : formatMarketLabel(property.market);
 
   return `${property.title}: ${detail}.`;
+}
+
+function resolveWidgetLocationTarget(message: string, market?: PropertySnapshot["market"]): WidgetLocationTarget | undefined {
+  const normalized = normalizeLocationText(message);
+  const targets = market ? WIDGET_LOCATION_TARGETS[market] ?? [] : Object.values(WIDGET_LOCATION_TARGETS).flat();
+
+  return targets.find((target) => target.aliases.some((alias) => normalized.includes(normalizeLocationText(alias))));
+}
+
+function distanceMeters(from: PropertySnapshot["location"], to: Pick<WidgetLocationTarget, "latitude" | "longitude">): number {
+  const earthRadiusMeters = 6_371_000;
+  const fromLatitude = toRadians(from.latitude);
+  const toLatitude = toRadians(to.latitude);
+  const latitudeDelta = toRadians(to.latitude - from.latitude);
+  const longitudeDelta = toRadians(to.longitude - from.longitude);
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+
+  return Math.round(earthRadiusMeters * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine)));
+}
+
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function formatDistance(distanceMeters: number): string {
+  if (distanceMeters >= 10_000) {
+    return `${Number((distanceMeters / 1000).toFixed(1))}km`;
+  }
+
+  if (distanceMeters >= 1000) {
+    return `${Number((distanceMeters / 1000).toFixed(2))}km`;
+  }
+
+  return `${distanceMeters}m`;
+}
+
+function normalizeLocationText(value: string): string {
+  return value
+    .toLowerCase()
+    .replaceAll("ё", "е")
+    .replace(/[^\p{L}\p{M}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 function resolveWidgetPersona(tenant: TenantSnapshot, locale: TenantWidgetLanguage): AiConciergePersona {
