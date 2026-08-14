@@ -51,6 +51,14 @@ const CITY_POIS: CityPoi[] = [
     market: "pattaya"
   },
   {
+    aliases: ["boyz town", "boyztown", "boyz town pattaya", "boys town", "бойз таун", "บอยซ์ทาวน์", "男孩城"],
+    category: "nightlife",
+    id: "pattaya-boyz-town",
+    label: "Boyz Town",
+    location: { latitude: 12.9298, longitude: 100.8789 },
+    market: "pattaya"
+  },
+  {
     aliases: ["bali hai pier", "bali hai", "балихай", "пир балихай", "ท่าเรือบาลีฮาย", "巴厘海码头"],
     category: "pier",
     id: "pattaya-bali-hai-pier",
@@ -328,6 +336,7 @@ function extractLocationQuery(message: string): string | undefined {
   const normalizedWhitespace = message.replace(/\s+/g, " ").trim();
   const patterns = [
     /\b(?:close|closer|closest|near|nearer|nearest|distance|far|farther|farthest)\s+(?:to|from)\s+(.+?)(?:\?|$)/i,
+    /\b(?:near|around|nearby|by)\s+(.+?)(?:\?|$)/i,
     /\b(?:to|from)\s+(.+?)(?:\?|$)/i,
     /(?:рядом|ближе|близко|далеко)\s+(?:к|до|от)\s+(.+?)(?:\?|$)/i
   ];

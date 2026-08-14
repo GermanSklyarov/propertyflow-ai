@@ -5,7 +5,8 @@ import type {
   NaturalLanguageSearchRequest,
   PropertySearchRequest
 } from "@propertyflow/contracts";
-import type { PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
+import type { GeoPoint, PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
+import { LocationIntelligenceService } from "../../../chat/application/location-intelligence.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 import { IndexedPropertySearchService } from "./indexed-property-search.service.js";
 import { PropertyVectorSearchService } from "./property-vector-search.service.js";
@@ -68,11 +69,13 @@ export class NaturalLanguagePropertySearchService {
   constructor(
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(IndexedPropertySearchService) private readonly indexedSearch: IndexedPropertySearchService,
-    @Inject(PropertyVectorSearchService) private readonly vectorSearch: PropertyVectorSearchService
+    @Inject(PropertyVectorSearchService) private readonly vectorSearch: PropertyVectorSearchService,
+    @Inject(LocationIntelligenceService)
+    private readonly locationIntelligence: LocationIntelligenceService = new LocationIntelligenceService()
   ) {}
 
   async search(tenantId: string, request: NaturalLanguageSearchRequest): Promise<NaturalLanguagePropertySearchResponse> {
-    const interpretation = this.interpret(request);
+    const interpretation = await this.enrichWithLocationFilters(request, this.interpret(request));
     const indexedRequest: IndexedPropertySearchRequest = {
       ...interpretation.filters,
       query: request.query,
@@ -228,6 +231,33 @@ export class NaturalLanguagePropertySearchService {
           ? `Rule-based interpreter extracted ${explanations.join("; ")}. OpenSearch ranks matching indexed listings by text relevance and recency.${describeRankingPreferences(rankingPreferences)}`
           : `Rule-based interpreter did not find strict filters; OpenSearch ranks tenant listings by text relevance and recency.${describeRankingPreferences(rankingPreferences)}`,
       purpose
+    };
+  }
+
+  private async enrichWithLocationFilters(
+    request: NaturalLanguageSearchRequest,
+    interpretation: InterpretationResult
+  ): Promise<InterpretationResult> {
+    if (interpretation.filters.near || interpretation.filters.radiusMeters !== undefined) {
+      return interpretation;
+    }
+
+    const target = await this.locationIntelligence.resolveComparisonTarget(request.query, interpretation.filters.market ?? request.market);
+
+    if (!target || target.kind !== "poi") {
+      return interpretation;
+    }
+
+    const radiusMeters = detectRequestedRadiusMeters(this.normalize(request.query)) ?? defaultRadiusMetersForQuery(this.normalize(request.query));
+
+    return {
+      ...interpretation,
+      filters: {
+        ...interpretation.filters,
+        near: target.poi.location,
+        radiusMeters
+      },
+      rankingExplanation: `${interpretation.rankingExplanation} Map geocoding resolved "${target.poi.label}" once and applied radiusMeters=${radiusMeters} with geo filtering.`
     };
   }
 
@@ -465,7 +495,52 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
     return false;
   }
 
+  if (filters.near && filters.radiusMeters !== undefined && distanceMeters(property.location, filters.near) > filters.radiusMeters) {
+    return false;
+  }
+
   return true;
+}
+
+function distanceMeters(from: GeoPoint, to: GeoPoint): number {
+  const earthRadiusMeters = 6_371_000;
+  const fromLatitude = toRadians(from.latitude);
+  const toLatitude = toRadians(to.latitude);
+  const latitudeDelta = toRadians(to.latitude - from.latitude);
+  const longitudeDelta = toRadians(to.longitude - from.longitude);
+  const haversine =
+    Math.sin(latitudeDelta / 2) ** 2 +
+    Math.cos(fromLatitude) * Math.cos(toLatitude) * Math.sin(longitudeDelta / 2) ** 2;
+
+  return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(haversine), Math.sqrt(1 - haversine));
+}
+
+function toRadians(value: number): number {
+  return (value * Math.PI) / 180;
+}
+
+function detectRequestedRadiusMeters(query: string): number | undefined {
+  const kilometerMatch = query.match(/(?:within|inside|radius|в радиусе|до|ไม่เกิน|ภายใน|范围|範圍)?\s*(\d+(?:[.,]\d+)?)\s*(?:km|kilometers?|км|กม|公里)/i);
+
+  if (kilometerMatch?.[1]) {
+    return Math.max(250, Math.min(20_000, Math.round(Number(kilometerMatch[1].replace(",", ".")) * 1000)));
+  }
+
+  const meterMatch = query.match(/(?:within|inside|radius|в радиусе|до|ไม่เกิน|ภายใน|范围|範圍)?\s*(\d{3,5})\s*(?:m|meters?|метр|м|เมตร|米)/i);
+
+  if (meterMatch?.[1]) {
+    return Math.max(250, Math.min(20_000, Number(meterMatch[1])));
+  }
+
+  return undefined;
+}
+
+function defaultRadiusMetersForQuery(query: string): number {
+  if (/\b(?:walk|walking|walkable|пешком|пешей|เดิน|步行)\b/i.test(query)) {
+    return 1000;
+  }
+
+  return 3000;
 }
 
 function rankByQueryPreferences(items: PropertySnapshot[], preferences: RankingPreferences): PropertySnapshot[] {

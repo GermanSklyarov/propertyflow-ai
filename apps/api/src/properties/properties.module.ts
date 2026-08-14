@@ -10,6 +10,7 @@ import { SearchObservabilityModule } from "../search-observability/search-observ
 import { AuthModule } from "../shared/auth/auth.module.js";
 import { StorageModule } from "../storage/storage.module.js";
 import { TenantsModule } from "../tenants/tenants.module.js";
+import { LocationIntelligenceService } from "../chat/application/location-intelligence.js";
 import { CreatePropertyHandler } from "./application/commands/create-property.handler.js";
 import { GetPropertyHandler } from "./application/queries/get-property.handler.js";
 import { ListPropertiesHandler } from "./application/queries/list-properties.handler.js";
@@ -83,6 +84,7 @@ const queryHandlers = [GetPropertyHandler, ListPropertiesHandler];
     IndexedPropertySearchService,
     InvestmentCalculatorService,
     ListingAssistantService,
+    LocationIntelligenceService,
     NaturalLanguagePropertySearchService,
     NeighborhoodIntelligenceService,
     PriceHistoryService,

@@ -189,6 +189,99 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.rankingExplanation).toContain("Postgres filtered search was used as a fallback");
   });
 
+  it("geocodes a named place once and applies radius filters before indexed and Postgres search", async () => {
+    const boyzTown = { latitude: 12.9298, longitude: 100.8789 };
+    const nearStudio = propertyFactory({
+      id: "near-studio",
+      kind: "condo",
+      listingType: "rent",
+      location: { latitude: 12.93, longitude: 100.879 },
+      rentalPriceMonthly: { amount: 18_000, currency: "THB" },
+      title: "Studio near Boyz Town"
+    });
+    const farStudio = propertyFactory({
+      id: "far-studio",
+      kind: "condo",
+      listingType: "rent",
+      location: { latitude: 12.99, longitude: 100.99 },
+      rentalPriceMonthly: { amount: 16_000, currency: "THB" },
+      title: "Far Studio"
+    });
+    const indexedRequests: unknown[] = [];
+    const postgresRequests: unknown[] = [];
+    let geocodeCalls = 0;
+    const repository = {
+      findById: async (_tenantId: string, propertyId: string) => propertyId === farStudio.id ? farStudio : null,
+      search: async (_tenantId: string, filters: unknown) => {
+        postgresRequests.push(filters);
+
+        return [nearStudio, farStudio];
+      }
+    };
+    const indexedSearch = {
+      search: async (_tenantId: string, filters: unknown) => {
+        indexedRequests.push(filters);
+
+        return {
+          filters,
+          index: "propertyflow-properties-v1",
+          items: [{ propertyId: farStudio.id }],
+          total: 1
+        };
+      }
+    };
+    const locationIntelligence = {
+      resolveComparisonTarget: async (message: string, market?: string) => {
+        geocodeCalls += 1;
+        expect(message).toBe("Studio near Boyz Town");
+        expect(market).toBe("pattaya");
+
+        return {
+          kind: "poi",
+          poi: {
+            aliases: ["Boyz Town"],
+            category: "nightlife",
+            id: "geocoded-boyz-town",
+            label: "Boyz Town",
+            location: boyzTown,
+            market: "pattaya"
+          }
+        };
+      }
+    };
+    const service = new NaturalLanguagePropertySearchService(repository as never, indexedSearch as never, {
+      rankCandidates: async () => []
+    } as never, locationIntelligence as never);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      market: "pattaya",
+      query: "Studio near Boyz Town"
+    });
+
+    expect(geocodeCalls).toBe(1);
+    expect(indexedRequests).toEqual([
+      expect.objectContaining({
+        near: boyzTown,
+        radiusMeters: 3000
+      })
+    ]);
+    expect(postgresRequests).toEqual([
+      expect.objectContaining({
+        near: boyzTown,
+        radiusMeters: 3000
+      })
+    ]);
+    expect(result.filters).toMatchObject({
+      market: "pattaya",
+      minBedrooms: 0,
+      near: boyzTown,
+      radiusMeters: 3000
+    });
+    expect(result.items.map((item) => item.id)).toEqual(["near-studio"]);
+    expect(result.rankingExplanation).toContain('Map geocoding resolved "Boyz Town" once');
+  });
+
   it("supplements a thin indexed shortlist with structured sale matches", async () => {
     const indexedOnly = propertyFactory({
       id: "property-wongamat",
