@@ -5,6 +5,7 @@ import type {
   PublicWidgetLeadResponse,
   PublicWidgetRecommendedListing,
   TenantSnapshot,
+  AiChatCitation,
   AiChatReferencedListing,
   AiChatTurn,
   TenantWidgetLanguage
@@ -67,6 +68,12 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
       label: "Terminal 21 Pattaya",
       latitude: 12.9497,
       longitude: 100.889
+    },
+    {
+      aliases: ["ramayana water park", "water park ramayana", "ramayana", "аквапарк рамаяна", "рамаяна"],
+      label: "Ramayana Water Park",
+      latitude: 12.75045,
+      longitude: 100.96204
     }
   ]
 };
@@ -158,7 +165,14 @@ export class PublicWidgetChatController {
 
     return {
       ...response,
-      answer: normalizePublicWidgetAnswer(response.answer, recommendations, locale, response.suggestedActions, payload.message),
+      answer: normalizePublicWidgetAnswer(
+        response.answer,
+        recommendations,
+        locale,
+        response.suggestedActions,
+        payload.message,
+        response.citations
+      ),
       conciergeMode: tenant.subscriptionPlan,
       locale,
       recommendedListings: recommendations.listings,
@@ -314,12 +328,13 @@ function normalizePublicWidgetAnswer(
   recommendations: PublicWidgetRecommendationBundle,
   locale: TenantWidgetLanguage,
   suggestedActions: string[],
-  requestMessage = ""
+  requestMessage = "",
+  citations: AiChatCitation[] = []
 ): string {
   const normalizedAnswer = stripMarkdownEmphasis(answer).trim();
 
-  if (!recommendations.listings.length && suggestedActions.includes("save-search")) {
-    return buildNoAdditionalListingCardsMessage(locale);
+  if (!recommendations.listings.length && isListingCardSearchResponse(suggestedActions)) {
+    return buildNoPublicListingCardsMessage(locale, requestMessage, citations);
   }
 
   if (!recommendations.listings.length || !isListingDiscoveryResponse(suggestedActions)) {
@@ -345,12 +360,42 @@ function isListingDiscoveryResponse(suggestedActions: string[]): boolean {
   return suggestedActions.includes("save-search");
 }
 
-function buildNoAdditionalListingCardsMessage(locale: TenantWidgetLanguage): string {
+function isListingCardSearchResponse(suggestedActions: string[]): boolean {
+  return isListingDiscoveryResponse(suggestedActions) || suggestedActions.includes("relax-filters");
+}
+
+function buildNoPublicListingCardsMessage(
+  locale: TenantWidgetLanguage,
+  requestMessage: string,
+  citations: AiChatCitation[]
+): string {
+  const target = resolveWidgetLocationTarget(requestMessage);
+  const mapWasApplied = citations.some((citation) => /map geocoding resolved|radiusMeters|geo filtering/i.test(citation.label));
+
+  if (target) {
+    const labels: Record<TenantWidgetLanguage, string> = {
+      en: mapWasApplied
+        ? `I recognized ${target.label} on the map and applied location filtering, but I do not have public condo cards that match this request within the current radius. This likely means the current inventory has no suitable condos close enough. I can broaden the radius or hand this to an agent for off-market options.`
+        : `I do not have public condo cards that match this request near ${target.label} right now. I can broaden the radius or hand this to an agent for off-market options.`,
+      ru: mapWasApplied
+        ? `Я распознала ${target.label} на карте и применила фильтр по расстоянию, но сейчас нет публичных карточек кондо, которые подходят под запрос в текущем радиусе. Скорее всего, в текущем инвентаре нет подходящих объектов достаточно близко. Можно расширить радиус или передать запрос агенту для off-market вариантов.`
+        : `Сейчас нет публичных карточек кондо рядом с ${target.label} под этот запрос. Можно расширить радиус или передать запрос агенту для off-market вариантов.`,
+      th: mapWasApplied
+        ? `ฉันระบุตำแหน่ง ${target.label} บนแผนที่และใช้ตัวกรองระยะทางแล้ว แต่ตอนนี้ยังไม่มีการ์ดคอนโดสาธารณะที่ตรงกับคำขอในรัศมีปัจจุบัน น่าจะหมายความว่า inventory ปัจจุบันไม่มีตัวเลือกที่ใกล้พอ สามารถขยายรัศมีหรือส่งต่อให้เอเจนต์หา off-market ได้`
+        : `ตอนนี้ยังไม่มีการ์ดคอนโดสาธารณะที่ตรงกับคำขอใกล้ ${target.label} สามารถขยายรัศมีหรือส่งต่อให้เอเจนต์หา off-market ได้`,
+      zh: mapWasApplied
+        ? `我已在地图中识别 ${target.label} 并应用距离筛选，但当前半径内没有符合条件的公开公寓卡片。这通常表示当前库存里没有足够近的合适房源。可以扩大半径，或交给经纪人寻找 off-market 选项。`
+        : `目前没有符合这个需求且靠近 ${target.label} 的公开公寓卡片。可以扩大半径，或交给经纪人寻找 off-market 选项。`
+    };
+
+    return labels[locale] ?? labels.en;
+  }
+
   const labels: Record<TenantWidgetLanguage, string> = {
-    en: "I do not have additional public listing cards to show for this search right now. You can adjust the budget, area, or requirements and I can look again.",
-    ru: "Сейчас у меня нет дополнительных публичных карточек по этому поиску. Можно изменить бюджет, район или требования, и я поищу заново.",
-    th: "ตอนนี้ยังไม่มีการ์ดประกาศเพิ่มเติมสำหรับการค้นหานี้ ลองปรับงบ ทำเล หรือเงื่อนไข แล้วฉันจะค้นหาให้อีกครั้ง",
-    zh: "目前这个搜索没有更多可公开展示的房源卡片。你可以调整预算、区域或条件，我再帮你重新查找。"
+    en: "I do not have public listing cards to show for this exact search right now. You can adjust the budget, area, radius, or requirements and I can look again.",
+    ru: "Сейчас нет публичных карточек под этот точный поиск. Можно изменить бюджет, район, радиус или требования, и я поищу заново.",
+    th: "ตอนนี้ยังไม่มีการ์ดประกาศสาธารณะที่ตรงกับการค้นหานี้ ลองปรับงบ ทำเล รัศมี หรือเงื่อนไข แล้วฉันจะค้นหาให้อีกครั้ง",
+    zh: "目前没有符合这个精确搜索的公开房源卡片。你可以调整预算、区域、半径或条件，我再帮你查找。"
   };
 
   return labels[locale] ?? labels.en;

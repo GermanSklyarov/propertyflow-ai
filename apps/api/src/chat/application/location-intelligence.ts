@@ -83,6 +83,23 @@ const CITY_POIS: CityPoi[] = [
     market: "pattaya"
   },
   {
+    aliases: [
+      "ramayana water park",
+      "water park ramayana",
+      "ramayana",
+      "рамаяна",
+      "аквапарк рамаяна",
+      "สวนน้ำรามายณะ",
+      "罗摩衍那水上乐园",
+      "羅摩衍那水上樂園"
+    ],
+    category: "landmark",
+    id: "pattaya-ramayana-water-park",
+    label: "Ramayana Water Park",
+    location: { latitude: 12.75045, longitude: 100.96204 },
+    market: "pattaya"
+  },
+  {
     aliases: ["bangkok hospital pattaya", "bph", "бангкок госпиталь", "โรงพยาบาลกรุงเทพพัทยา", "曼谷芭提雅医院"],
     category: "hospital",
     id: "pattaya-bangkok-hospital",

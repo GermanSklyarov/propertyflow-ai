@@ -26,6 +26,22 @@ describe("LocationIntelligenceService", () => {
     });
   });
 
+  it("resolves Ramayana Water Park locally without a map provider", async () => {
+    const service = new LocationIntelligenceService();
+
+    await expect(service.resolveComparisonTarget("condo for rent close to Water Park Ramayana", "pattaya")).resolves.toMatchObject({
+      kind: "poi",
+      poi: {
+        id: "pattaya-ramayana-water-park",
+        label: "Ramayana Water Park",
+        location: {
+          latitude: 12.75045,
+          longitude: 100.96204
+        }
+      }
+    });
+  });
+
   it("recognizes arbitrary landmark distance questions for provider-backed geocoding", () => {
     expect(isLocationInfrastructureQuestion("which one of them is closer to Sanctuary of Truth?")).toBe(true);
     expect(resolveLocationComparisonTarget("which one is closer to the beach?", "pattaya")).toBeUndefined();

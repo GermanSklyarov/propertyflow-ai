@@ -271,6 +271,61 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("move-in date and contract length");
   });
 
+  it("returns a complete deterministic no-card answer for landmark searches with no public listings", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer:
+            "I couldn't find any condos for rent directly close to Water Park Ramayana. Alternatively, I found a 1-",
+          citations: [
+            {
+              label:
+                'Rule-based interpreter extracted listingType=rent; market=pattaya. Map geocoding resolved "Ramayana Water Park" once and applied radiusMeters=3000 with geo filtering.',
+              source: "search"
+            }
+          ],
+          matchedPropertyIds: [],
+          suggestedActions: ["relax-filters", "ask-agent-for-off-market-options"]
+        })
+      )
+    } as unknown as AiChatService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "find me a condo in Pattaya for rent close to Water Park Ramayana"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("I recognized Ramayana Water Park on the map");
+    expect(response.answer).toContain("applied location filtering");
+    expect(response.answer).toContain("within the current radius");
+    expect(response.answer).not.toContain("Alternatively, I found a 1-");
+    expect(response.recommendedListings).toEqual([]);
+  });
+
   it("explains why rentals fit a Central Pattaya location request with target distances", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
@@ -786,7 +841,7 @@ describe("PublicWidgetChatController", () => {
     );
 
     expect(response.recommendedListings).toEqual([]);
-    expect(response.answer).toContain("I do not have additional public listing cards");
+    expect(response.answer).toContain("I do not have public listing cards");
     expect(response.answer).not.toContain("Top matches");
     expect(response.answer).not.toContain("Relevant knowledge");
     expect(response.answer).not.toContain("Smoke Beach Condo");
