@@ -138,4 +138,61 @@ describe("LocationIntelligenceService", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("Frost+Magical+Ice+of+Siam%2C+Pattaya%2C+Thailand");
     expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain("%D1%8F+%D0%B1%D1%83%D0%B4%D1%83");
   });
+
+  it("extracts Thai arbitrary landmark proximity queries for geocoding", async () => {
+    process.env.GOOGLE_MAPS_API_KEY = "google-test-key";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              formatted_address: "Frost Magical Ice of Siam, Pattaya, Chon Buri, Thailand",
+              geometry: { location: { lat: 12.9706, lng: 100.9902 } }
+            }
+          ]
+        }),
+        { status: 200 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LocationIntelligenceService();
+
+    await expect(service.resolveComparisonTarget("หาคอนโดเช่าใกล้ Frost Magical Ice of Siam", "pattaya")).resolves.toMatchObject({
+      kind: "poi",
+      poi: {
+        label: "Frost Magical Ice of Siam"
+      }
+    });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("Frost+Magical+Ice+of+Siam%2C+Pattaya%2C+Thailand");
+  });
+
+  it("extracts Chinese arbitrary landmark proximity queries for geocoding", async () => {
+    process.env.GOOGLE_MAPS_API_KEY = "google-test-key";
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          results: [
+            {
+              formatted_address: "Frost Magical Ice of Siam, Pattaya, Chon Buri, Thailand",
+              geometry: { location: { lat: 12.9706, lng: 100.9902 } }
+            }
+          ]
+        }),
+        { status: 200 }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LocationIntelligenceService();
+
+    await expect(service.resolveComparisonTarget("找靠近 Frost Magical Ice of Siam 的出租公寓", "pattaya")).resolves.toMatchObject({
+      kind: "poi",
+      poi: {
+        label: "Frost Magical Ice of Siam"
+      }
+    });
+
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("Frost+Magical+Ice+of+Siam%2C+Pattaya%2C+Thailand");
+    expect(String(fetchMock.mock.calls[0]?.[0])).not.toContain("%E7%9A%84%E5%87%BA%E7%A7%9F%E5%85%AC%E5%AF%93");
+  });
 });

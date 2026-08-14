@@ -980,7 +980,7 @@ function isSpaciousRequest(message: string) {
 }
 
 function isFamilyRequest(message: string) {
-  return /\b(?:children|child|kids|kid|family|families)\b|дет|ребен|ребён|семь|ครอบครัว|เด็ก|家庭|孩子/i.test(message);
+  return /\b(?:children|child|kids|kid|family|families)\b|реб[её]н|детьми|детск|дети|детей|семь[яеиюй]|ครอบครัว|เด็ก|家庭|孩子/i.test(message);
 }
 
 function isSchoolRequest(message: string) {

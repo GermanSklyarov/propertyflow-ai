@@ -414,6 +414,98 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer.indexOf("Frost Area Rental Condo:")).toBeLessThan(response.answer.indexOf("Far Jomtien Rental Condo:"));
   });
 
+  it("does not infer family living from Russian увидеть in winter-stay landmark requests", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 2 matching listings.",
+          matchedPropertyIds: ["large", "compact"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "large",
+        propertyFactory({
+          areaSqm: 198.6,
+          bedrooms: 4,
+          id: "large",
+          kind: "townhouse",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 68_000, currency: "THB" },
+          title: "4BR Townhouse at Siam Oriental Tropical Garden - Pratumnak"
+        })
+      ],
+      [
+        "compact",
+        propertyFactory({
+          areaSqm: 34,
+          bedrooms: 1,
+          id: "compact",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+          title: "1BR Condo near Frost Magical Ice of Siam"
+        })
+      ]
+    ]);
+    const locationIntelligence = {
+      resolveComparisonTarget: vi.fn().mockResolvedValue({
+        kind: "poi",
+        poi: {
+          aliases: ["Frost Magical Ice of Siam"],
+          category: "landmark",
+          id: "geocoded-frost-magical-ice-of-siam",
+          label: "Frost Magical Ice of Siam",
+          location: { latitude: 12.9706, longitude: 100.9902 },
+          market: "pattaya"
+        }
+      })
+    };
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService(),
+      locationIntelligence as never
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "ru",
+        message:
+          "Я хочу приехать на зимовку в Паттайю в ноябре, но иногда хочется увидеть снег, подбери квартиру в аренду недалеко от Frost Magical Ice of Siam"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "4BR Townhouse at Siam Oriental Tropical Garden - Pratumnak",
+      "1BR Condo near Frost Magical Ice of Siam"
+    ]);
+    expect(response.answer).not.toContain("Для проживания с детьми");
+    expect(response.answer).toContain("от Frost Magical Ice of Siam");
+  });
+
   it("explains why rentals fit a Central Pattaya location request with target distances", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

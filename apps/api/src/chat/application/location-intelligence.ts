@@ -390,7 +390,9 @@ function extractLocationQuery(message: string): string | undefined {
     /\b(?:close|closer|closest|near|nearer|nearest|distance|far|farther|farthest)\s+(?:to|from)\s+(.+?)(?:[,.;!?]|$)/i,
     /\b(?:near|around|nearby|by)\s+(.+?)(?:[,.;!?]|$)/i,
     /\b(?:to|from)\s+(.+?)(?:[,.;!?]|$)/i,
-    /(?:рядом|ближе|близко|недалеко|далеко)\s+(?:к|до|от)\s+(.+?)(?:[,.;!?]|$)/i
+    /(?:рядом|ближе|близко|недалеко|далеко)\s+(?:к|до|от)\s+(.+?)(?:[,.;!?]|$)/i,
+    /(?:ใกล้|ใกล้กับ|ใกล้ๆ|ใกล้ ๆ|รอบ|แถว|ใกล้เคียง|ห่างจาก|ระยะจาก)\s+(.+?)(?:[,.;!?，。！？]|$)/i,
+    /(?:靠近|近|附近|旁边|旁邊|周边|周邊|离|離|距离|距離)\s*(.+?)(?:[,.;!?，。！？]|$)/i
   ];
   const value = patterns
     .map((pattern) => normalizedWhitespace.match(pattern)?.[1])
@@ -403,6 +405,8 @@ function extractLocationQuery(message: string): string | undefined {
   const cleaned = value
     .replace(/\b(?:among|between|these|those|them|options|listings|ones|which one|which of them|which option)\b/gi, " ")
     .replace(/\b(?:is|are|the|a|an|more|most)\b/gi, " ")
+    .replace(/(?:ตัวเลือก|รายการ|ประกาศ|ห้อง|คอนโด|อันไหน|ไหน|เหล่านี้|พวกนี้|ที่พัก|อสังหา)/gi, " ")
+    .replace(/(?:这些|這些|那些|哪些|哪个|哪個|房源|选项|選項|公寓|出租|租房|买房|買房|附近的?|的)/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 
