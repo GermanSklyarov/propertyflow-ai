@@ -66,6 +66,12 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
       longitude: 100.8789
     },
     {
+      aliases: ["asia pattaya hotel", "asia pattaya beach hotel", "asia hotel pattaya", "отель asia pattaya", "азия паттайя отель"],
+      label: "Asia Pattaya Hotel",
+      latitude: 12.914206,
+      longitude: 100.858419
+    },
+    {
       aliases: ["terminal 21", "terminal 21 pattaya"],
       label: "Terminal 21 Pattaya",
       latitude: 12.9497,

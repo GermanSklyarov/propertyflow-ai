@@ -76,6 +76,23 @@ const CITY_POIS: CityPoi[] = [
     market: "pattaya"
   },
   {
+    aliases: [
+      "asia pattaya hotel",
+      "asia pattaya beach hotel",
+      "asia hotel pattaya",
+      "отель asia pattaya",
+      "азия паттайя отель",
+      "โรงแรมเอเชียพัทยา",
+      "亚洲芭提雅酒店",
+      "亞洲芭提雅酒店"
+    ],
+    category: "landmark",
+    id: "pattaya-asia-pattaya-hotel",
+    label: "Asia Pattaya Hotel",
+    location: { latitude: 12.914206, longitude: 100.858419 },
+    market: "pattaya"
+  },
+  {
     aliases: ["central festival", "central pattaya", "central pattaya mall", "централ фестиваль", "เซ็นทรัลพัทยา", "尚泰芭提雅"],
     category: "mall",
     id: "pattaya-central-festival",
@@ -263,7 +280,9 @@ export class LocationIntelligenceService {
       return result;
     } catch (error) {
       this.logger.warn(`Map geocoding failed: ${error instanceof Error ? error.message : String(error)}`);
-      this.writeGeocodeCache(cacheKey, undefined);
+      if (!(error instanceof Error) || error.name !== "AbortError") {
+        this.writeGeocodeCache(cacheKey, undefined);
+      }
 
       return undefined;
     }
@@ -505,7 +524,7 @@ async function geocodeWithMapbox(query: string, market?: ThailandMarket): Promis
 
 async function fetchJson<T>(url: string): Promise<T> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 2_500);
+  const timeout = setTimeout(() => controller.abort(), 6_000);
 
   try {
     const response = await fetch(url, {

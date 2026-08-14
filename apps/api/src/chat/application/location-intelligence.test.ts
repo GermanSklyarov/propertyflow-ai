@@ -42,6 +42,25 @@ describe("LocationIntelligenceService", () => {
     });
   });
 
+  it("resolves Asia Pattaya Hotel locally without a map provider", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LocationIntelligenceService();
+
+    await expect(service.resolveComparisonTarget("find me a condo next to Asia Pattaya Hotel", "pattaya")).resolves.toMatchObject({
+      kind: "poi",
+      poi: {
+        id: "pattaya-asia-pattaya-hotel",
+        label: "Asia Pattaya Hotel",
+        location: {
+          latitude: 12.914206,
+          longitude: 100.858419
+        }
+      }
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("recognizes arbitrary landmark distance questions for provider-backed geocoding", () => {
     expect(isLocationInfrastructureQuestion("which one of them is closer to Sanctuary of Truth?")).toBe(true);
     expect(resolveLocationComparisonTarget("which one is closer to the beach?", "pattaya")).toBeUndefined();

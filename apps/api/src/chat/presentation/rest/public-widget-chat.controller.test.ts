@@ -595,6 +595,76 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("Pratumnak Investment One-Bed");
   });
 
+  it("uses curated Asia Pattaya Hotel distances instead of falling back to generic Pattaya search", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 2 matching listings.",
+          matchedPropertyIds: ["north", "asia-near"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "north",
+        propertyFactory({
+          id: "north",
+          location: { latitude: 12.95, longitude: 100.889 },
+          title: "1BR Condo at Once Pattaya - North Pattaya"
+        })
+      ],
+      [
+        "asia-near",
+        propertyFactory({
+          id: "asia-near",
+          location: { latitude: 12.916, longitude: 100.86 },
+          title: "1BR Condo near Asia Pattaya Hotel"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "find me a condo next to Asia Pattaya Hotel"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "1BR Condo near Asia Pattaya Hotel",
+      "1BR Condo at Once Pattaya - North Pattaya"
+    ]);
+    expect(response.answer).toContain("from Asia Pattaya Hotel");
+    expect(response.answer).not.toContain("closest option about 2537m from the beach, amenities");
+  });
+
   it("explains why rentals fit a Central Pattaya location request with target distances", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
