@@ -32,6 +32,23 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(interpretation.rankingExplanation).not.toContain("family fit");
   });
 
+  it("does not treat Russian seven-day move-in timing as a family request", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "ru",
+      query: "подбери квартиру в паттайе в аренду рядом с волкинг стрит, въезжаю через семь дней"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      listingType: "rent",
+      market: "pattaya"
+    });
+    expect(interpretation.purpose).not.toBe("family");
+    expect(interpretation.filters).not.toHaveProperty("minBedrooms");
+    expect(interpretation.rankingExplanation).not.toContain("family fit");
+  });
+
   it("extracts Thai rental filters and lifestyle signals", async () => {
     const property = propertyFactory({ listingType: "rent", market: "phuket", rentalPriceMonthly: { amount: 40_000, currency: "THB" } });
     const repository = {

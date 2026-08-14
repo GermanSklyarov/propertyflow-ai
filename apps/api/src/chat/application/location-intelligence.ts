@@ -407,6 +407,7 @@ function extractLocationQuery(message: string): string | undefined {
     .replace(/\b(?:is|are|the|a|an|more|most)\b/gi, " ")
     .replace(/(?:ตัวเลือก|รายการ|ประกาศ|ห้อง|คอนโด|อันไหน|ไหน|เหล่านี้|พวกนี้|ที่พัก|อสังหา)/gi, " ")
     .replace(/(?:这些|這些|那些|哪些|哪个|哪個|房源|选项|選項|公寓|出租|租房|买房|買房|附近的?|的)/gi, " ")
+    .replace(/(?:ใกล้ที่สุด|ไกลที่สุด|ที่สุด|最近|最远|最遠|近|远|遠)$/gi, " ")
     .replace(/\s+/g, " ")
     .trim();
 

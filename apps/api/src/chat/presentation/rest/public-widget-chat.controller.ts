@@ -271,7 +271,9 @@ export class PublicWidgetChatController {
     const publicProperties = properties
       .filter((property): property is PropertySnapshot => Boolean(property))
       .filter(isPublicWidgetRecommendableProperty);
-    const layoutMatchedProperties = filterByWidgetLayoutRequirements(publicProperties, searchContext);
+    const listingIntentMatchedProperties = filterByWidgetListingIntent(publicProperties, searchContext);
+    const kindMatchedProperties = filterByWidgetKindRequirements(listingIntentMatchedProperties, searchContext);
+    const layoutMatchedProperties = filterByWidgetLayoutRequirements(kindMatchedProperties, searchContext);
     const strictPublicProperties = filterByRequiredWidgetAmenities(layoutMatchedProperties, searchContext);
     const locationTarget = await this.resolveWidgetLocationTarget(searchContext, publicProperties[0]?.market ?? payload?.market);
     const rankedPublicProperties = rankWidgetPropertiesForRequest(strictPublicProperties, searchContext, locationTarget);
@@ -688,6 +690,29 @@ function filterByRequiredWidgetAmenities(properties: PropertySnapshot[], request
   return familySized.length ? familySized : filtered.length ? filtered : properties;
 }
 
+function filterByWidgetListingIntent(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
+  const intent = detectWidgetListingIntent(requestMessage);
+  if (!intent) {
+    return properties;
+  }
+
+  const filtered = properties.filter((property) =>
+    intent === "rent" ? ["rent", "sale_or_rent"].includes(property.listingType) : ["sale", "sale_or_rent"].includes(property.listingType)
+  );
+
+  return filtered.length ? filtered : properties;
+}
+
+function filterByWidgetKindRequirements(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
+  if (!isApartmentLikeRequest(requestMessage)) {
+    return properties;
+  }
+
+  const filtered = properties.filter((property) => ["condo", "apartment"].includes(property.kind));
+
+  return filtered.length ? filtered : properties;
+}
+
 function filterByWidgetLayoutRequirements(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
   const bedroomRange = detectWidgetBedroomRange(requestMessage);
   if (bedroomRange.minBedrooms === undefined && bedroomRange.maxBedrooms === undefined) {
@@ -980,11 +1005,15 @@ function isSpaciousRequest(message: string) {
 }
 
 function isFamilyRequest(message: string) {
-  return /\b(?:children|child|kids|kid|family|families)\b|реб[её]н|детьми|детск|дети|детей|семь[яеиюй]|ครอบครัว|เด็ก|家庭|孩子/i.test(message);
+  return /\b(?:children|child|kids|kid|family|families)\b|реб[её]н|детьми|детск|дети|детей|семья|семьи|семье|семью|семей|ครอบครัว|เด็ก|家庭|孩子/i.test(message);
 }
 
 function isSchoolRequest(message: string) {
   return /\b(?:school|kindergarten)\b|школ|садик|โรงเรียน|学校|學校/i.test(message);
+}
+
+function isApartmentLikeRequest(message: string) {
+  return /\b(?:condo|apartment|flat|unit)\b|кондо|квартир|апартамент|ห้องชุด|คอนโด|公寓|单元|單元/i.test(message);
 }
 
 function isBudgetPriceRequest(message: string) {
@@ -1046,7 +1075,7 @@ function hasSpecificLocationPreference(message: string) {
 }
 
 function hasTimingSignal(message: string) {
-  return /\b(?:today|tomorrow|weekend|next week|month|year|move-in|move in|contract|lease term|soon|later|future|january|february|march|april|may|june|july|august|september|october|november|december)\b|сегодня|завтра|выходн|месяц|год|заезд|въезд|контракт|скоро|позже|อนาคต|เดือน|ปี|入住|合同|月份|明天|今天/i.test(message);
+  return /\b(?:today|tomorrow|weekend|next week|month|year|move-in|move in|contract|lease term|soon|later|future|january|february|march|april|may|june|july|august|september|october|november|december)\b|сегодня|завтра|выходн|месяц|год|заезд|въезд|въезж|через\s+(?:\d+|один|одну|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать)\s+дн|контракт|скоро|позже|อนาคต|เดือน|ปี|入住|合同|月份|明天|今天/i.test(message);
 }
 
 function resolveWidgetPriceMode(message = ""): WidgetPriceMode {
@@ -1486,12 +1515,12 @@ function parsePurchaseTiming(text: string): string | undefined {
 function parseMoveInDate(text: string): string | undefined {
   const normalized = text.toLowerCase();
 
-  if (!/(rent|rental|lease|move in|move-in|аренд|снять|заехать|въезд|เช่า|ย้ายเข้า|入住|租)/i.test(normalized)) {
+  if (!/(rent|rental|lease|move in|move-in|аренд|снять|заехать|въезд|въезж|เช่า|ย้ายเข้า|入住|租)/i.test(normalized)) {
     return undefined;
   }
 
   const match = normalized.match(
-    /(?:move[-\s]?in|available from|start from|from|заезд|въезд|заехать|с\s+|ย้ายเข้า|入住)\s+(today|tomorrow|next week|next month|this weekend|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|[0-9]{1,2}[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?|сегодня|завтра|на следующей неделе|в следующем месяце|เดือนหน้า|พรุ่งนี้|明天|下周|下週|下个月|下個月)/i
+    /(?:move[-\s]?in|available from|start from|from|заезд|въезд|въезжаю|въехать|заехать|с\s+|ย้ายเข้า|入住)\s+(today|tomorrow|next week|next month|this weekend|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|[0-9]{1,2}[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?|сегодня|завтра|на следующей неделе|в следующем месяце|через\s+(?:\d+|один|одну|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать)\s+дн\w*|เดือนหน้า|พรุ่งนี้|明天|下周|下週|下个月|下個月)/i
   );
 
   return match?.[1] ? normalizeQualificationValue(match[1]) : undefined;
@@ -1510,7 +1539,7 @@ function parsePurpose(text: string): string | undefined {
   const candidates = [
     { label: "Investment", pattern: /(investment|invest|rental yield|yield|инвест|доходн|ลงทุน|投资|投資|收益)/gi },
     { label: "Relocation", pattern: /(relocation|relocat|move to|переезд|релокац|ย้าย|搬家|移居)/gi },
-    { label: "Family living", pattern: /(family|school|семь|семья|школ|ครอบครัว|โรงเรียน|家庭|学校|學校)/gi },
+    { label: "Family living", pattern: /(family|school|семья|семьи|семье|семью|семей|школ|ครอบครัว|โรงเรียน|家庭|学校|學校)/gi },
     { label: "Personal use", pattern: /(personal use|for myself|live there|living|для себя|жить|อยู่อาศัย|自住|自己住)/gi }
   ];
   const latest = candidates

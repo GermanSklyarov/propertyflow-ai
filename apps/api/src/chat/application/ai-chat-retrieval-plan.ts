@@ -11,7 +11,7 @@ const shortlistComparisonPattern =
   /\b(?:compare|which|what|better|best|pick|choose|rank|recommend|suggest)\b|сравн|како[йе]|лучш|выбр|рекоменд|посовет|哪个|哪個|比较|比較|ดีกว่า|ดีที่สุด|เปรียบเทียบ/i;
 const investmentComparisonPattern = /investment|invest|yield|roi|rent|rental|доход|инвест|аренд|收益|投资|投資|出租|租金|ลงทุน|ปล่อยเช่า/i;
 const relocationComparisonPattern = /relocation|relocat|move|remote|internet|work|quiet|переезд|релокац|удален|интернет|тих|搬家|移居|网络|網絡|安静|ย้าย|ทำงาน|อินเทอร์เน็ต|เงียบ/i;
-const livingComparisonPattern = /living|live|family|school|kid|retire|для себя|жить|семь|школ|自住|家庭|学校|學校|อยู่อาศัย|ครอบครัว|โรงเรียน/i;
+const livingComparisonPattern = /living|live|family|school|kid|retire|для себя|жить|семь[яеиюй]|семей|школ|自住|家庭|学校|學校|อยู่อาศัย|ครอบครัว|โรงเรียน/i;
 const petsComparisonPattern = /\bpets?\b|\bdogs?\b|\bcats?\b|собак|кош|питом|สัตว์เลี้ยง|หมา|แมว|宠物|寵物|狗|猫|貓/i;
 const valueComparisonPattern =
   /\b(?:value for money|best value|good value|best deal|good deal|worth it|balanced|optimal|price quality|price to quality)\b|цена.*качество|лучшее предложение|выгод|оптимальн|คุ้มค่า|性价比|性價比/i;
@@ -20,11 +20,11 @@ const moreListingsPattern =
 const newSearchRefinementPattern =
   /\b(?:i mean|actually|instead|rather|no,?|not important|does not matter|doesn't matter|rent|rental|lease|buy|purchase|budget|under|studio|1 bedroom|one bedroom|move in|move-in|next month|spacious)\b|точнее|вообще|лучше|аренд|купить|бюджет|студ|спальн|въезд|заезд|месяц/i;
 const viewingSlotFollowUpPattern =
-  /\b(?:today|tomorrow|day after tomorrow|next week|this weekend|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|am|pm|a\.m\.?|p\.m\.?|morning|afternoon|evening|tonight|\d{1,2}(?::\d{2})?|\d{1,2}\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))\b|in\s+\d+\s+days?|через\s+\d+\s+дн|послезавтра|сегодня|завтра|следующ|выходн|понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|утром|днем|вечером|час|โมง|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์|วันเสาร์|วันอาทิตย์|上午|下午|晚上|明天|今天|后天|後天|周一|週一|周二|週二|周三|週三|周四|週四|周五|週五|周六|週六|周日|週日/i;
+  /\b(?:today|tomorrow|day after tomorrow|next week|this weekend|weekend|monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|am|pm|a\.m\.?|p\.m\.?|morning|afternoon|evening|tonight|\d{1,2}(?::\d{2})?|\d{1,2}\s*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec))\b|in\s+\d+\s+days?|через\s+(?:\d+|один|одну|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать)\s+дн|послезавтра|сегодня|завтра|следующ|выходн|понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье|утром|днем|вечером|час|โมง|พรุ่งนี้|วันนี้|วันจันทร์|วันอังคาร|วันพุธ|วันพฤหัส|วันศุกร์|วันเสาร์|วันอาทิตย์|上午|下午|晚上|明天|今天|后天|後天|周一|週一|周二|週二|周三|週三|周四|週四|周五|週五|周六|週六|周日|週日/i;
 const contextualPropertyReferencePattern =
   /\b(?:it|this\s+(?:condo|property|listing|option|unit|project|one)|that\s+(?:condo|property|listing|option|unit|project|one))\b|эт(?:от|а|о|у|ого|ой)?\s+(?:кондо|объект|вариант|квартир[ауы]?|проект)|\b(?:его|ее|её|он|она)\b|ห้องนี้|คอนโดนี้|ตัวเลือกนี้|รายการนี้|โครงการนี้|这个(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|這個(?:房源|公寓|项目|項目|单位|單位|选择|選擇)|这套|這套|它/i;
 const propertyDetailQuestionPattern =
-  /pet|dog|cat|fee|maintenance|quota|foreign|ownership|floor|sqm|size|balcony|furniture|internet|parking|quiet|noise|view|yield|roi|rent|rental|beach|walk|school|family|питом|собак|кош|комис|квот|этаж|площад|балкон|мебел|интернет|парков|тих|шум|вид|доход|аренд|пляж|семь|школ|宠物|狗|猫|貓|费用|費用|楼层|樓層|面积|面積|阳台|陽台|家具|网络|網絡|停车|停車|安静|噪音|景观|景觀|租金|海滩|海灘|家庭|学校|學校|สัตว์เลี้ยง|หมา|แมว|ค่าส่วนกลาง|ชั้น|พื้นที่|ระเบียง|เฟอร์นิเจอร์|อินเทอร์เน็ต|ที่จอดรถ|เงียบ|วิว|ค่าเช่า|ชายหาด|ครอบครัว|โรงเรียน/i;
+  /pet|dog|cat|fee|maintenance|quota|foreign|ownership|floor|sqm|size|balcony|furniture|internet|parking|quiet|noise|view|yield|roi|rent|rental|beach|walk|school|family|питом|собак|кош|комис|квот|этаж|площад|балкон|мебел|интернет|парков|тих|шум|вид|доход|аренд|пляж|семь[яеиюй]|семей|школ|宠物|狗|猫|貓|费用|費用|楼层|樓層|面积|面積|阳台|陽台|家具|网络|網絡|停车|停車|安静|噪音|景观|景觀|租金|海滩|海灘|家庭|学校|學校|สัตว์เลี้ยง|หมา|แมว|ค่าส่วนกลาง|ชั้น|พื้นที่|ระเบียง|เฟอร์นิเจอร์|อินเทอร์เน็ต|ที่จอดรถ|เงียบ|วิว|ค่าเช่า|ชายหาด|ครอบครัว|โรงเรียน/i;
 
 export interface AiChatRetrievalPlan {
   comparison?: "beach-distance" | "investment" | "living" | "pets" | "poi-distance" | "relocation" | "value";

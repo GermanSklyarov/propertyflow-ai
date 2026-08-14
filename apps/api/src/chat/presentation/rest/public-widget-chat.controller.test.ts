@@ -498,12 +498,101 @@ describe("PublicWidgetChatController", () => {
       "https://agency.example.com"
     );
 
-    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
-      "4BR Townhouse at Siam Oriental Tropical Garden - Pratumnak",
-      "1BR Condo near Frost Magical Ice of Siam"
-    ]);
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["1BR Condo near Frost Magical Ice of Siam"]);
     expect(response.answer).not.toContain("Для проживания с детьми");
     expect(response.answer).toContain("от Frost Magical Ice of Siam");
+    expect(response.answer).not.toContain("4BR Townhouse");
+  });
+
+  it("keeps Russian seven-day move-in timing and apartment rental intent out of family-sized cards", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 3 matching listings.",
+          matchedPropertyIds: ["townhouse", "rental-condo", "sale-condo"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "townhouse",
+        propertyFactory({
+          areaSqm: 198.6,
+          bedrooms: 4,
+          id: "townhouse",
+          kind: "townhouse",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 68_000, currency: "THB" },
+          title: "4BR Townhouse at Siam Oriental Tropical Garden - Pratumnak"
+        })
+      ],
+      [
+        "rental-condo",
+        propertyFactory({
+          areaSqm: 45,
+          bedrooms: 1,
+          id: "rental-condo",
+          kind: "condo",
+          listingType: "rent",
+          location: { latitude: 12.931, longitude: 100.878 },
+          rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+          title: "Central Pattaya Rental Loft"
+        })
+      ],
+      [
+        "sale-condo",
+        propertyFactory({
+          areaSqm: 38,
+          bedrooms: 1,
+          id: "sale-condo",
+          kind: "condo",
+          listingType: "sale",
+          price: { amount: 3_000_000, currency: "THB" },
+          title: "Pratumnak Investment One-Bed"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "ru",
+        message: "подбери мне какую-нибудь квартиру в паттайе в аренду рядом с волкинг стрит, въезжаю через семь дней"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Central Pattaya Rental Loft"]);
+    expect(response.answer).toContain("24k THB/mo");
+    expect(response.answer).not.toContain("Для проживания с детьми");
+    expect(response.answer).not.toContain("дату въезда");
+    expect(response.answer).not.toContain("4BR Townhouse");
+    expect(response.answer).not.toContain("Pratumnak Investment One-Bed");
   });
 
   it("explains why rentals fit a Central Pattaya location request with target distances", async () => {

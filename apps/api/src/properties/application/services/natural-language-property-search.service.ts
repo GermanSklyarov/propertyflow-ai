@@ -71,7 +71,7 @@ const LIFESTYLE_PATTERNS: Array<[string, RegExp]> = [
   ["retiree-comfort", /(?:retiree|retired|retirement|senior|elderly|пенсионер|пенси[ию]|пожил|เกษียณ|ผู้สูงอายุ|退休|养老|養老|老年)/],
   ["winter-stay", /(?:winter|wintering|snowbird|long stay|long-stay|зимовк|зимовать|зиму|зимн|ระยะยาว|过冬|過冬|避寒)/],
   ["shopping", /(?:terminal 21|shopping|mall|торгов|ห้าง|商场|商場|购物|購物)/],
-  ["school-access", /(?:school|kindergarten|children|kids|child|family|школ|реб[её]н|детьми|детск|дети|детей|семь[яеиюй]|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/],
+  ["school-access", /(?:school|kindergarten|children|kids|child|family|школ|реб[её]н|детьми|детск|дети|детей|семья|семьи|семье|семью|семей|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/],
   ["pet-friendly", /(?:\b(?:pet|pets|pet-friendly|pet friendly|dog|dogs|cat|cats)\b|животн|питомц|собак|кошк|สัตว์เลี้ยง|宠物|寵物|狗|猫|貓)/]
 ];
 
@@ -342,7 +342,7 @@ export class NaturalLanguagePropertySearchService {
 
   private detectListingType(query: string, budget?: BudgetSignal): PropertySearchRequest["listingType"] | undefined {
     const investmentSaleIntent = /(?:rent out|yield|roi|invest|investment|сдач|доход|инвест|ลงทุน|ผลตอบแทน|投资|投資|收益|回报|回報)/.test(query);
-    const rentalIntent = /(?:снять|сним|арендовать|аренда|\brent\b|\brental\b|\blease\b|\bmonthly\b|\bper month\b|\bmonth\b|месяц|мес|เช่า|ให้เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月)/.test(query);
+    const rentalIntent = /(?:снять|сним|аренд|аренду|\brent\b|\brental\b|\blease\b|\bmonthly\b|\bper month\b|\bmonth\b|месяц|мес|เช่า|ให้เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月)/.test(query);
     const saleIntent = /(?:купить|покуп|продаж|buy|purchase|sale|ownership|ซื้อ|ขาย|买|買|购买|購買|出售)/.test(query) || investmentSaleIntent;
 
     if (rentalIntent && saleIntent) {
@@ -436,7 +436,7 @@ export class NaturalLanguagePropertySearchService {
       return "relocation";
     }
 
-    if (/(family|children|child|kids|kid|семь[яеиюй]|семей|школ|реб[её]н|детьми|детск|дети|детей|ครอบครัว|เด็ก|โรงเรียน|家庭|家人|孩子|学校|學校)/.test(query)) {
+    if (/(family|children|child|kids|kid|семья|семьи|семье|семью|семей|школ|реб[её]н|детьми|детск|дети|детей|ครอบครัว|เด็ก|โรงเรียน|家庭|家人|孩子|学校|學校)/.test(query)) {
       return "family";
     }
 
@@ -461,7 +461,7 @@ export class NaturalLanguagePropertySearchService {
     return {
       preferBeachProximity: /(?:\b(?:close to (?:the )?beach|near (?:the )?beach|walk(?:ing)? distance|beachfront|by the beach)\b|рядом.*пляж|у пляжа|пешком.*пляж|ใกล้.*ชายหาด|ติดทะเล|海边|海邊|海滩附近|海灘附近)/i.test(query),
       preferBudgetPrice: /(?:\b(?:budget-friendly|budget option|cheap|cheaper|affordable|low price|lowest price|economy|inexpensive)\b|бюджетн|дешев|недорог|подешевле|ประหยัด|ถูก|ราคาไม่แพง|便宜|实惠|實惠)/i.test(query),
-      preferFamilyFit: /(?:school|kindergarten|children|kids|child|family|школ|реб[её]н|детьми|детск|дети|детей|семь[яеиюй]|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/i.test(query),
+      preferFamilyFit: /(?:school|kindergarten|children|kids|child|family|школ|реб[её]н|детьми|детск|дети|детей|семья|семьи|семье|семью|семей|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/i.test(query),
       preferLargerArea: /(?:\b(?:spacious|roomy|large|larger|big|bigger|more space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點)/i.test(query),
       preferLuxuryFit: /(?:\b(?:luxury|premium|elite|high-end|upscale|exclusive|best quality)\b|элит|премиум|люкс|дорог|ระดับพรีเมียม|หรู|豪华|豪華|高端)/i.test(query),
       preferNightlifeAccess: /(?:nightlife|adults only|adult only|party|bars?|clubs?|entertainment|walking street|boyz town|ночн|бар|клуб|тусов|развлеч|ปาร์ตี้|บาร์|ผับ|酒吧|夜生活|娱乐|娛樂)/i.test(query),
