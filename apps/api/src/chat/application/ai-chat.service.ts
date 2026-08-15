@@ -578,13 +578,13 @@ function isShortAffirmation(message: string): boolean {
 }
 
 function looksLikeSearchRequest(message: string): boolean {
-  return /find|show|recommend|suggest|condo|apartment|room|house|villa|rent|rental|buy|budget|under|studio|bedroom|spacious|move|найд|подбер|покаж|посовет|ищу|поиск|кондо|квартир|однушк|однокомнат|студи|дом|аренд|купить|หา|แนะนำ|คอนโด|อพาร์ตเมนต์|ห้อง|บ้าน|วิลล่า|ซื้อ|เช่า|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|ย้าย|找|推荐|推薦|显示|顯示|公寓|房子|别墅|別墅|买|買|购买|購買|租|出租|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|搬|入住/i.test(
+  return /find|show|recommend|suggest|condo|apartment|room|house|villa|rent|rental|buy|budget|under|studio|bedroom|spacious|move|jomtien|wongamat|naklua|pratumnak|pratamnak|найд|подбер|покаж|посовет|ищу|поиск|кондо|квартир|однушк|однокомнат|двушк|двухкомнат|трешк|трёшк|трехкомнат|трёхкомнат|студи|джомтьен|вонгамат|наклуа|пратамнак|дом|аренд|купить|หา|แนะนำ|คอนโด|อพาร์ตเมนต์|ห้อง|บ้าน|วิลล่า|ซื้อ|เช่า|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|ย้าย|จอมเทียน|วงศ์อมาตย์|นาเกลือ|พระตำหนัก|找|推荐|推薦|显示|顯示|公寓|房子|别墅|別墅|买|買|购买|購買|租|出租|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|搬|入住/i.test(
     message
   );
 }
 
 function looksLikeSearchRefinement(message: string): boolean {
-  return /\b(?:i mean|actually|instead|rather|only|exactly|just|rent|rental|lease|buy|purchase|budget|under|studio|bedroom|spacious|move in|move-in|next month|not important|does not matter|doesn't matter)\b|точнее|только|именно|ровно|аренд|купить|бюджет|студ|спальн|въезд|заезд|จริงๆ|จริง ๆ|อันที่จริง|เปลี่ยนเป็น|แทน|เฉพาะ|เท่านั้น|พอดี|เช่า|ซื้อ|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|เข้าอยู่|เดือนหน้า|ไม่สำคัญ|ไม่เป็นไร|其实|其實|实际上|實際上|改成|换成|換成|只要|只看|仅|僅|只|正好|租|出租|买|買|购买|購買|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|入住|搬入|下个月|下個月|不重要|无所谓|無所謂/i.test(
+  return /\b(?:i mean|actually|instead|rather|only|exactly|just|maybe|rent|rental|lease|buy|purchase|budget|under|studio|bedroom|spacious|move in|move-in|next month|not important|does not matter|doesn't matter|jomtien|wongamat|naklua|pratumnak|pratamnak)\b|может|а если|точнее|только|именно|ровно|аренд|купить|бюджет|студ|спальн|однушк|однокомнат|двушк|двухкомнат|трешк|трёшк|трехкомнат|трёхкомнат|джомтьен|вонгамат|наклуа|пратамнак|въезд|заезд|จริงๆ|จริง ๆ|อันที่จริง|เปลี่ยนเป็น|แทน|เฉพาะ|เท่านั้น|พอดี|เช่า|ซื้อ|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|เข้าอยู่|เดือนหน้า|ไม่สำคัญ|ไม่เป็นไร|จอมเทียน|วงศ์อมาตย์|นาเกลือ|พระตำหนัก|其实|其實|实际上|實際上|改成|换成|換成|只要|只看|仅|僅|只|正好|租|出租|买|買|购买|購買|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|入住|搬入|下个月|下個月|不重要|无所谓|無所謂/i.test(
     message
   );
 }

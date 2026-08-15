@@ -76,7 +76,7 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
       longitude: 100.8624
     },
     {
-      aliases: ["jomtien", "jomtien beach", "джомтьен", "джомтьене", "джомтьена"],
+      aliases: ["jomtien", "jomtien beach", "จอมเทียน", "หาดจอมเทียน", "джомтьен", "джомтьене", "джомтьена"],
       kind: "area",
       label: "Jomtien",
       latitude: 12.8958,
@@ -84,12 +84,100 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
       longitude: 100.8745
     },
     {
-      aliases: ["wongamat", "wongamat beach", "вонгамат", "вонгамате", "вонгамата"],
+      aliases: ["na jomtien", "na chom thian", "najomtien", "นาจอมเทียน"],
+      kind: "area",
+      label: "Na Jomtien",
+      latitude: 12.843,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
+      longitude: 100.909
+    },
+    {
+      aliases: ["wongamat", "wongamat beach", "วงศ์อมาตย์", "หาดวงศ์อมาตย์", "вонгамат", "вонгамате", "вонгамата"],
       kind: "area",
       label: "Wongamat",
       latitude: 12.9696,
       matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
       longitude: 100.8855
+    },
+    {
+      aliases: ["naklua", "na kluea", "นาเกลือ", "наклуа", "наклыа"],
+      kind: "area",
+      label: "Naklua",
+      latitude: 12.974,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
+      longitude: 100.903
+    },
+    {
+      aliases: ["north pattaya", "พัทยาเหนือ", "северная паттайя", "север паттайи"],
+      kind: "area",
+      label: "North Pattaya",
+      latitude: 12.955,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
+      longitude: 100.889
+    },
+    {
+      aliases: ["south pattaya", "พัทยาใต้", "южная паттайя", "юг паттайи"],
+      kind: "area",
+      label: "South Pattaya",
+      latitude: 12.923,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
+      longitude: 100.882
+    },
+    {
+      aliases: ["east pattaya", "dark side", "พัทยาตะวันออก", "восточная паттайя", "восток паттайи"],
+      kind: "area",
+      label: "East Pattaya",
+      latitude: 12.929,
+      matchRadiusMeters: 4_000,
+      longitude: 100.93
+    },
+    {
+      aliases: ["huai yai", "ห้วยใหญ่", "хуай яй", "хуай-яй"],
+      kind: "area",
+      label: "Huai Yai",
+      latitude: 12.845,
+      matchRadiusMeters: 4_000,
+      longitude: 100.949
+    },
+    {
+      aliases: ["bang saray", "bangsaray", "บางเสร่", "банг сарай", "бангсарай"],
+      kind: "area",
+      label: "Bang Saray",
+      latitude: 12.764,
+      matchRadiusMeters: 4_000,
+      longitude: 100.897
+    },
+    {
+      aliases: ["phoenix", "phoenix golf", "ฟีนิกซ์", "феникс"],
+      kind: "area",
+      label: "Phoenix",
+      latitude: 12.837,
+      matchRadiusMeters: 4_000,
+      longitude: 100.964
+    },
+    {
+      aliases: ["mabprachan", "map prachan", "мабпрачан", "мапрачан", "มาบประชัน"],
+      kind: "area",
+      label: "Mabprachan",
+      latitude: 12.954,
+      matchRadiusMeters: 4_000,
+      longitude: 100.98
+    },
+    {
+      aliases: ["nong prue", "หนองปรือ", "нонг пру", "нонгпру"],
+      kind: "area",
+      label: "Nong Prue",
+      latitude: 12.92,
+      matchRadiusMeters: 4_000,
+      longitude: 100.949
+    },
+    {
+      aliases: ["sattahip", "สัตหีบ", "саттахип"],
+      kind: "area",
+      label: "Sattahip",
+      latitude: 12.666,
+      matchRadiusMeters: 5_000,
+      longitude: 100.901
     },
     {
       aliases: ["walking street", "pattaya walking street"],
@@ -746,16 +834,18 @@ function filterByWidgetLocationTarget(properties: PropertySnapshot[], locationTa
     return properties;
   }
 
-  const nearbyProperties = properties.filter((property) => isWidgetPropertyInLocationTarget(property, locationTarget));
+  const textMatchedProperties = properties.filter((property) => hasWidgetLocationTextMatch(property, locationTarget));
+  const nearbyProperties = textMatchedProperties.length
+    ? textMatchedProperties
+    : properties.filter((property) => distanceMeters(property.location, locationTarget) <= locationTarget.matchRadiusMeters!);
 
   return locationTarget.kind === "area" ? nearbyProperties : nearbyProperties.length ? nearbyProperties : properties;
 }
 
-function isWidgetPropertyInLocationTarget(property: PropertySnapshot, locationTarget: WidgetLocationTarget): boolean {
+function hasWidgetLocationTextMatch(property: PropertySnapshot, locationTarget: WidgetLocationTarget): boolean {
   const haystack = normalizeLocationText(`${property.title} ${property.address ?? ""}`);
-  const hasAreaTextMatch = locationTarget.aliases.some((alias) => haystack.includes(normalizeLocationText(alias)));
 
-  return hasAreaTextMatch || distanceMeters(property.location, locationTarget) <= locationTarget.matchRadiusMeters!;
+  return locationTarget.aliases.some((alias) => haystack.includes(normalizeLocationText(alias)));
 }
 
 function filterByWidgetListingIntent(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
@@ -806,6 +896,8 @@ function detectWidgetBedroomRange(message: string): { minBedrooms?: number; maxB
   const normalized = message.toLowerCase();
   const studioPattern = String.raw`(?:\b(?:studio)\b|студия|студию|สตูดิโอ|开间|開間|单间|單間)`;
   const oneBedroomPattern = String.raw`(?:\b(?:1|one)\s*(?:bedroom|bedrooms|br|bed|beds)\b|однушк|однокомнат|1\s*спальн)`;
+  const twoBedroomPattern = String.raw`(?:\b(?:2|two)\s*(?:bedroom|bedrooms|br|bed|beds)\b|двушк|двухкомнат|2\s*спальн)`;
+  const threeBedroomPattern = String.raw`(?:\b(?:3|three)\s*(?:bedroom|bedrooms|br|bed|beds)\b|трешк|трёшк|трехкомнат|трёхкомнат|3\s*спальн)`;
   const studioOrOneBedroom = new RegExp(
     `(?:${studioPattern}.{0,40}(?:or|/|или).{0,40}${oneBedroomPattern}|${oneBedroomPattern}.{0,40}(?:or|/|или).{0,40}${studioPattern})`,
     "i"
@@ -813,6 +905,14 @@ function detectWidgetBedroomRange(message: string): { minBedrooms?: number; maxB
 
   if (studioOrOneBedroom.test(normalized)) {
     return { minBedrooms: 0, maxBedrooms: 1 };
+  }
+
+  if (new RegExp(threeBedroomPattern, "i").test(normalized)) {
+    return { minBedrooms: 3, maxBedrooms: 3 };
+  }
+
+  if (new RegExp(twoBedroomPattern, "i").test(normalized)) {
+    return { minBedrooms: 2, maxBedrooms: 2 };
   }
 
   const explicit = normalized.match(/(\d+)\s*(?:bedroom|bedrooms|br|спальн|спальни|спален|ห้องนอน|卧室|臥室|房间|房間|房)/);
@@ -1454,8 +1554,15 @@ function buildListingCardDescription(
 function resolveStaticWidgetLocationTarget(message: string, market?: PropertySnapshot["market"]): WidgetLocationTarget | undefined {
   const normalized = normalizeLocationText(message);
   const targets = market ? WIDGET_LOCATION_TARGETS[market] ?? [] : Object.values(WIDGET_LOCATION_TARGETS).flat();
+  const matches = targets
+    .flatMap((target) =>
+      target.aliases
+        .map((alias) => ({ index: normalized.lastIndexOf(normalizeLocationText(alias)), target }))
+        .filter((match) => match.index >= 0)
+    )
+    .sort((left, right) => right.index - left.index);
 
-  return targets.find((target) => target.aliases.some((alias) => normalized.includes(normalizeLocationText(alias))));
+  return matches[0]?.target;
 }
 
 function distanceMeters(from: PropertySnapshot["location"], to: Pick<WidgetLocationTarget, "latitude" | "longitude">): number {

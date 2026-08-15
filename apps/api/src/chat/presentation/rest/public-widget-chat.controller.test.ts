@@ -753,12 +753,9 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toContain("1BR Condo at Grand Avenue Residence - Central Pattaya: 30k THB/mo");
     expect(response.answer).toContain("in or near Central Pattaya, closest option about 1049m from the beach");
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
-      "1BR Condo at Grand Avenue Residence - Central Pattaya",
-      "1BR Condo at City Garden Pratumnak - Pratumnak"
+      "1BR Condo at Grand Avenue Residence - Central Pattaya"
     ]);
-    expect(response.answer.indexOf("1BR Condo at Grand Avenue Residence - Central Pattaya:")).toBeLessThan(
-      response.answer.indexOf("1BR Condo at City Garden Pratumnak - Pratumnak:")
-    );
+    expect(response.answer).not.toContain("1BR Condo at City Garden Pratumnak - Pratumnak:");
   });
 
   it("filters public cards by studio or 1 bedroom refinements instead of showing next broad matches", async () => {
@@ -944,6 +941,107 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("studio спальн.");
     expect(response.answer).not.toContain("Naklua");
     expect(response.answer).not.toContain("Huai Yai");
+  });
+
+  it("uses the latest mentioned Pattaya area when a Russian visitor changes location", async () => {
+    const controller = publicWidgetControllerForProperties(
+      ["pratumnak-studio", "jomtien-studio", "jomtien-2br"],
+      new Map([
+        [
+          "pratumnak-studio",
+          propertyFactory({
+            bedrooms: 0,
+            id: "pratumnak-studio",
+            listingType: "rent",
+            location: { latitude: 12.914, longitude: 100.861 },
+            rentalPriceMonthly: { amount: 19_000, currency: "THB" },
+            title: "Studio Condo at Pratumnak"
+          })
+        ],
+        [
+          "jomtien-studio",
+          propertyFactory({
+            amenities: ["pool", "washing machine"],
+            bedrooms: 0,
+            id: "jomtien-studio",
+            listingType: "rent",
+            location: { latitude: 12.897, longitude: 100.875 },
+            rentalPriceMonthly: { amount: 18_000, currency: "THB" },
+            title: "Studio Condo at Jomtien Beach - Jomtien"
+          })
+        ],
+        [
+          "jomtien-2br",
+          propertyFactory({
+            bedrooms: 2,
+            id: "jomtien-2br",
+            listingType: "rent",
+            location: { latitude: 12.896, longitude: 100.874 },
+            rentalPriceMonthly: { amount: 28_000, currency: "THB" },
+            title: "2BR Condo at Jomtien Complex - Jomtien"
+          })
+        ]
+      ])
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          { role: "user", text: "я ищу недорогую студию или однушку в паттайе на пратамнаке, что посоветуешь?" },
+          { role: "assistant", text: "Сейчас нет публичных карточек кондо рядом с Pratumnak под этот запрос." },
+          { role: "user", text: "меня интересует аренда, бюджет до 20 тысяч, планирую въехать в конце ноября, контракт на полгода" },
+          { role: "assistant", text: "Сейчас нет публичных карточек кондо рядом с Pratumnak под этот запрос." }
+        ],
+        locale: "ru",
+        market: "pattaya",
+        message: "может, на джомтьене что-то есть?"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Studio Condo at Jomtien Beach - Jomtien"]);
+    expect(response.answer).toContain("район: Jomtien");
+    expect(response.answer).toContain("в районе Jomtien");
+    expect(response.answer).not.toContain("Pratumnak");
+  });
+
+  it("recognizes Russian two-bedroom and three-bedroom layout requests in widget cards", async () => {
+    const controller = publicWidgetControllerForProperties(
+      ["studio", "two-bedroom", "three-bedroom"],
+      new Map([
+        ["studio", propertyFactory({ bedrooms: 0, id: "studio", title: "Studio Condo at Jomtien" })],
+        ["two-bedroom", propertyFactory({ bedrooms: 2, id: "two-bedroom", title: "2BR Condo at Jomtien" })],
+        ["three-bedroom", propertyFactory({ bedrooms: 3, id: "three-bedroom", title: "3BR Condo at Jomtien" })]
+      ])
+    );
+
+    const twoBedroomResponse = await controller.ask(
+      "demo-agency",
+      {
+        locale: "ru",
+        market: "pattaya",
+        message: "нужна двушка на джомтьене"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+    const threeBedroomResponse = await controller.ask(
+      "demo-agency",
+      {
+        locale: "ru",
+        market: "pattaya",
+        message: "а трешка на джомтьене есть?"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(twoBedroomResponse.recommendedListings.map((listing) => listing.title)).toEqual(["2BR Condo at Jomtien"]);
+    expect(twoBedroomResponse.answer).toContain("2 спальни");
+    expect(threeBedroomResponse.recommendedListings.map((listing) => listing.title)).toEqual(["3BR Condo at Jomtien"]);
+    expect(threeBedroomResponse.answer).toContain("3 спальни");
   });
 
   it("shows unseen listing cards when the visitor asks for more options", async () => {

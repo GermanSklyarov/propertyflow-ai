@@ -1167,6 +1167,48 @@ describe("AiChatService", () => {
     });
   });
 
+  it("uses the latest Russian area refinement while keeping prior rent and budget constraints", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya", maxPrice: 20_000 },
+        interpretedIntent: "Jomtien rental under 20k",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "Studio Condo at Jomtien" })],
+        rankingExplanation: "Using Jomtien area refinement plus prior rental budget.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const previousRefinement = "меня интересует аренда, бюджет до 20 тысяч, планирую въехать в конце ноября, контракт на полгода";
+    const areaRefinement = "может, на джомтьене что-то есть?";
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "я ищу недорогую студию или однушку в паттайе на пратамнаке, что посоветуешь?" },
+        { role: "assistant", text: "Сейчас нет публичных карточек кондо рядом с Pratumnak под этот запрос." },
+        { role: "user", text: previousRefinement },
+        { role: "assistant", text: "Сейчас нет публичных карточек кондо рядом с Pratumnak под этот запрос." }
+      ],
+      locale: "ru",
+      market: "pattaya",
+      message: areaRefinement
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "ru",
+      market: "pattaya",
+      purpose: undefined,
+      query: `${previousRefinement}. Updated criteria: ${areaRefinement}`
+    });
+  });
+
   it("merges Thai layout refinements with the previous rental search context", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const naturalLanguageSearch = {
