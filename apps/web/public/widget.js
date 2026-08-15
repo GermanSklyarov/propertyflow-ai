@@ -460,7 +460,9 @@
         return response.json();
       })
       .then(function (response) {
-        var recommendations = shouldShowRecommendations(trimmed, response.recommendedListings) ? response.recommendedListings : [];
+        var recommendations = shouldShowRecommendations(trimmed, response.recommendedListings, response.suggestedActions)
+          ? response.recommendedListings
+          : [];
         state.messages.push(
           assistantMessage(response.answer || getEmptyAnswerMessage(state.locale), recommendations)
         );
@@ -676,11 +678,7 @@
       .trim();
   }
 
-  function shouldShowRecommendations(message, recommendations) {
-    if (normalizeRecommendedListings(recommendations).length) {
-      return true;
-    }
-
+  function shouldShowRecommendations(message, recommendations, suggestedActions) {
     var normalized = String(message || "")
       .toLowerCase()
       .replaceAll("ё", "е")
@@ -692,6 +690,14 @@
 
     if (matchesIntent(normalized, handoffIntentPatterns)) {
       return false;
+    }
+
+    if (!normalizeRecommendedListings(recommendations).length) {
+      return false;
+    }
+
+    if (Array.isArray(suggestedActions) && suggestedActions.indexOf("save-search") >= 0) {
+      return true;
     }
 
     return matchesIntent(normalized, searchIntentPatterns);
