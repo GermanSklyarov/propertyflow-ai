@@ -2263,7 +2263,7 @@ describe("PublicWidgetChatController", () => {
       contactEmail: "buyer@example.com",
       contactName: "Buyer",
       contactPhone: undefined,
-      message: "Widget handoff request.\n\nVisitor note: I want a viewing next week.\n\nLead qualification:\nTiming: next week",
+      message: "Widget handoff request.\n\nVisitor note: I want a viewing next week.\n\nLead qualification:\nViewing time: next week",
       preferredLocale: "ru",
       propertyId: undefined,
       source: "ai-concierge"
@@ -2366,7 +2366,7 @@ describe("PublicWidgetChatController", () => {
         "",
         "Lead qualification:",
         "Budget: under 3M",
-        "Timing: next month",
+        "Viewing time: next month",
         "Contact channel: WhatsApp",
         "",
         "Recommended listings:",
@@ -2426,6 +2426,9 @@ describe("PublicWidgetChatController", () => {
     }));
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
       message: expect.stringContaining("Purchase timing: next year")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.not.stringContaining("Timing: next year")
     }));
   });
 
@@ -2518,7 +2521,7 @@ describe("PublicWidgetChatController", () => {
     );
 
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
-      message: expect.stringContaining("Timing: friday at 3 pm"),
+      message: expect.stringContaining("Viewing time: friday at 3 pm"),
       propertyId: "property-2"
     }));
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
@@ -2565,7 +2568,51 @@ describe("PublicWidgetChatController", () => {
     );
 
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
-      message: expect.stringContaining("Timing: 15 august at 3p.m")
+      message: expect.stringContaining("Viewing time: 15 august at 3p.m")
+    }));
+  });
+
+  it("separates viewing time from preferred contact time in widget leads", async () => {
+    const tenant = tenantFactory({ subscriptionPlan: "starter" });
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ propertyId: "property-2", tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      {
+        assertPublicWidgetOriginAllowed: vi.fn(),
+        getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+        recordPublicWidgetAsk: vi.fn()
+      } as unknown as TenantService,
+      { ask: vi.fn() } as unknown as AiChatService,
+      leads,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    await controller.createLead(
+      "demo-agency",
+      {
+        contactName: "Website visitor",
+        contactPhone: "+660827955673",
+        conversation: [
+          { role: "user", text: "I want to view it next saturday at 2 pm." },
+          { role: "user", text: "Please contact me tomorrow morning on LINE." }
+        ],
+        locale: "en",
+        message: "line id german_sklyarov",
+        recommendedListings: [{ propertyId: "property-2", title: "Terminal 21 Walkable Studio" }]
+      },
+      "https://agency.example.com"
+    );
+
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Viewing time: saturday at 2 pm")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Preferred contact time: tomorrow morning")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.not.stringContaining("\nTiming:")
     }));
   });
 
@@ -2612,7 +2659,7 @@ describe("PublicWidgetChatController", () => {
       message: expect.stringContaining("Budget: ไม่เกิน 40000 บาทต่อเดือน")
     }));
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
-      message: expect.stringContaining("Timing: เดือนหน้า")
+      message: expect.stringContaining("Viewing time: เดือนหน้า")
     }));
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
       message: expect.stringContaining("Contact channel: LINE")
@@ -2665,7 +2712,7 @@ describe("PublicWidgetChatController", () => {
       message: expect.stringContaining("Purpose: Investment")
     }));
     expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
-      message: expect.stringContaining("Timing: 明天")
+      message: expect.stringContaining("Preferred contact time: 明天")
     }));
   });
 

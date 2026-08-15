@@ -1447,16 +1447,27 @@ function buildLeadQualificationSection(payload: PublicWidgetLeadDto): string | u
   ]
     .filter(Boolean)
     .join("\n");
+  const dealIntent = parseDealIntent(source);
+  const budget = parseBudget(source);
+  const purpose = parsePurpose(source);
+  const ownershipStructure = parseOwnershipStructure(source);
+  const purchaseTiming = parsePurchaseTiming(source);
+  const moveInDate = parseMoveInDate(source);
+  const contractLength = parseContractLength(source);
+  const viewingTime = parseViewingTime(source);
+  const preferredContactTime = parsePreferredContactTime(source);
+  const contactPreference = parseContactPreference(source);
   const details = [
-    parseDealIntent(source) ? `Intent: ${parseDealIntent(source)}` : undefined,
-    parseBudget(source) ? `Budget: ${parseBudget(source)}` : undefined,
-    parsePurpose(source) ? `Purpose: ${parsePurpose(source)}` : undefined,
-    parseOwnershipStructure(source) ? `Ownership/quota: ${parseOwnershipStructure(source)}` : undefined,
-    parsePurchaseTiming(source) ? `Purchase timing: ${parsePurchaseTiming(source)}` : undefined,
-    parseMoveInDate(source) ? `Move-in: ${parseMoveInDate(source)}` : undefined,
-    parseContractLength(source) ? `Contract length: ${parseContractLength(source)}` : undefined,
-    parseTiming(source) ? `Timing: ${parseTiming(source)}` : undefined,
-    parseContactPreference(source) ? `Contact channel: ${parseContactPreference(source)}` : undefined
+    dealIntent ? `Intent: ${dealIntent}` : undefined,
+    budget ? `Budget: ${budget}` : undefined,
+    purpose ? `Purpose: ${purpose}` : undefined,
+    ownershipStructure ? `Ownership/quota: ${ownershipStructure}` : undefined,
+    purchaseTiming ? `Purchase timing: ${purchaseTiming}` : undefined,
+    moveInDate ? `Move-in: ${moveInDate}` : undefined,
+    contractLength ? `Contract length: ${contractLength}` : undefined,
+    viewingTime ? `Viewing time: ${viewingTime}` : undefined,
+    preferredContactTime ? `Preferred contact time: ${preferredContactTime}` : undefined,
+    contactPreference ? `Contact channel: ${contactPreference}` : undefined
   ].filter(Boolean);
 
   return details.length ? ["Lead qualification:", ...details].join("\n") : undefined;
@@ -1581,15 +1592,45 @@ function parseContactPreference(text: string): string | undefined {
   return undefined;
 }
 
-function parseTiming(text: string): string | undefined {
+const timingPattern =
+  /next week|next month|this weekend|weekend|day after tomorrow|tomorrow(?:\s+(?:morning|afternoon|evening|night))?|today(?:\s+(?:morning|afternoon|evening|night))?|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра(?:\s+(?:утром|днем|днём|вечером))?|сегодня(?:\s+(?:утром|днем|днём|вечером))?|วัน(?:นี้|พรุ่งนี้)|พรุ่งนี้|สัปดาห์หน้า|เดือนหน้า|明天(?:上午|下午|晚上)?|今天(?:上午|下午|晚上)?|后天|後天|周末|週末|下周|下週|下个月|下個月/gi;
+
+const viewingTimingContextPattern =
+  /\b(?:viewing|view|see it|see the|tour|visit|showing|appointment)\b|просмотр|посмотр|показ|посетить|встреч|ดูห้อง|นัดชม|ดูคอนโด|看房|看一下|参观|參觀|预约看|預約看/i;
+
+const contactTimingContextPattern =
+  /\b(?:contact|call|message|text|whatsapp|line|telegram|email|reach me|follow up)\b|связ|позвон|звон|напиш|сообщ|ватсап|телеграм|почт|лайн|โทร|ติดต่อ|ไลน์|อีเมล|微信|联系|聯繫|打电话|打電話|发消息|發消息/i;
+
+function parseViewingTime(text: string): string | undefined {
+  return parseContextualTiming(text, viewingTimingContextPattern);
+}
+
+function parsePreferredContactTime(text: string): string | undefined {
+  return parseContextualTiming(text, contactTimingContextPattern);
+}
+
+function parseContextualTiming(text: string, contextPattern: RegExp): string | undefined {
+  timingPattern.lastIndex = 0;
   const matches = [
     ...text.matchAll(
-      /next week|next month|this weekend|weekend|day after tomorrow|tomorrow|today|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра|сегодня|วัน(?:นี้|พรุ่งนี้)|สัปดาห์หน้า|เดือนหน้า|明天|今天|后天|後天|周末|週末|下周|下週|下个月|下個月/gi
+      timingPattern
     )
-  ];
+  ].filter((match) => contextPattern.test(getSentenceAround(text, match.index ?? 0, match[0].length)));
   const match = matches.at(-1);
 
   return match?.[0] ? normalizeQualificationValue(match[0]) : undefined;
+}
+
+function getSentenceAround(text: string, index: number, length: number): string {
+  const before = text.slice(0, index);
+  const after = text.slice(index + length);
+  const start = Math.max(before.lastIndexOf("."), before.lastIndexOf("?"), before.lastIndexOf("!"), before.lastIndexOf("\n"), before.lastIndexOf("。"), before.lastIndexOf("？"), before.lastIndexOf("！")) + 1;
+  const endCandidates = [after.indexOf("."), after.indexOf("?"), after.indexOf("!"), after.indexOf("\n"), after.indexOf("。"), after.indexOf("？"), after.indexOf("！")]
+    .filter((candidate) => candidate >= 0)
+    .map((candidate) => index + length + candidate);
+  const end = endCandidates.length ? Math.min(...endCandidates) : text.length;
+
+  return text.slice(start, end);
 }
 
 function normalizeQualificationValue(value: string): string {

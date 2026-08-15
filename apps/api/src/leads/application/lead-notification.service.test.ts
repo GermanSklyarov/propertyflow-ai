@@ -87,7 +87,8 @@ describe("LeadNotificationService", () => {
           "Purpose: Relocation",
           "Ownership/quota: Foreign quota",
           "Purchase timing: next year",
-          "Timing: monday at 10 a.m.",
+          "Viewing time: monday at 10 a.m.",
+          "Preferred contact time: tomorrow morning",
           "Contact channel: Phone",
           "",
           "Recommended listings:",
@@ -120,7 +121,8 @@ describe("LeadNotificationService", () => {
     expect(requestBody.text).toContain("🎯 Purpose: Relocation");
     expect(requestBody.text).toContain("🪪 Ownership/quota: Foreign quota");
     expect(requestBody.text).toContain("⏳ Purchase timing: next year");
-    expect(requestBody.text).toContain("🗓️ Timing: monday at 10 a.m.");
+    expect(requestBody.text).toContain("🗓️ Viewing time: monday at 10 a.m.");
+    expect(requestBody.text).toContain("⏰ Preferred contact time: tomorrow morning");
     expect(requestBody.text).toContain("📝 Latest request: my phone number +660827955673");
     expect(requestBody.text).toContain("🏠 Selected listing: Price Recommendation Target Condo (property-3)");
     expect(requestBody.text).toContain("📋 Lead: https://agency.propertyflow.test/app/leads/lead-1");
