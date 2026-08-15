@@ -546,15 +546,17 @@ export interface SuperAdminLimitAlert {
   level: "ok" | "warning" | "critical";
 }
 
+export type SuperAdminHealthStatus = "ok" | "configured" | "not_configured" | "degraded" | "unknown";
+
 export interface SuperAdminSystemHealth {
   api: "ok";
-  postgresql: "ok" | "degraded";
-  redis: "unknown";
-  llmProvider: "unknown";
-  googleMaps: "unknown";
-  telegram: "unknown";
-  line: "unknown";
-  whatsapp: "unknown";
+  postgresql: SuperAdminHealthStatus;
+  redis: SuperAdminHealthStatus;
+  llmProvider: SuperAdminHealthStatus;
+  googleMaps: SuperAdminHealthStatus;
+  telegram: SuperAdminHealthStatus;
+  line: SuperAdminHealthStatus;
+  whatsapp: SuperAdminHealthStatus;
   failedJobs: number;
   webhookFailures: number;
   failedNotifications: number;

@@ -1,6 +1,7 @@
 import type {
   SuperAdminAgencyDrilldown,
   SuperAdminDashboardResponse,
+  SuperAdminHealthStatus,
   SuperAdminMetricCard,
   SuperAdminSystemHealth
 } from "@propertyflow/contracts";
@@ -311,7 +312,7 @@ function HealthGrid({ health }: { health: SuperAdminSystemHealth }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
       {items.map(([label, value]) => (
-        <MiniStat key={label} label={label} value={value} />
+        <MiniStat key={label} label={label} value={formatHealthValue(value)} />
       ))}
     </div>
   );
@@ -360,13 +361,35 @@ function EmptyState({ copy, title }: { copy: string; title: string }) {
 }
 
 function StatusPill({ label, value }: { label: string; value: string }) {
-  const ok = value === "ok";
+  const tone = healthTone(value);
 
   return (
-    <span className={`rounded-md px-3 py-1.5 text-xs font-semibold ${ok ? "bg-[#e9f0df] text-[#315742]" : "bg-[#eee8dc] text-[#675f55]"}`}>
-      {label}: {value}
+    <span className={`rounded-md px-3 py-1.5 text-xs font-semibold ${tone}`}>
+      {label}: {formatHealthValue(value)}
     </span>
   );
+}
+
+function formatHealthValue(value: string): string {
+  return value.replaceAll("_", " ");
+}
+
+function healthTone(value: string): string {
+  const status = value as SuperAdminHealthStatus;
+
+  if (status === "ok" || status === "configured") {
+    return "bg-[#e9f0df] text-[#315742]";
+  }
+
+  if (status === "degraded") {
+    return "bg-[#ffe1bd] text-[#6a3d12]";
+  }
+
+  if (status === "not_configured") {
+    return "bg-[#eee8dc] text-[#675f55]";
+  }
+
+  return "bg-[#eee8dc] text-[#675f55]";
 }
 
 function formatNumber(value: number): string {

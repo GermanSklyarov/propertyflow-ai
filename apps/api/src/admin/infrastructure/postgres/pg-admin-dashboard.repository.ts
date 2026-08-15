@@ -1,3 +1,4 @@
+import { Socket } from "node:net";
 import { Inject, Injectable } from "@nestjs/common";
 import type {
   SuperAdminAgencyCost,
@@ -8,6 +9,7 @@ import type {
   SuperAdminMapsUsage,
   SuperAdminMessagingUsage,
   SuperAdminMetricCard,
+  SuperAdminHealthStatus,
   SuperAdminSystemHealth,
   SuperAdminUsageByOperation,
   TenantSubscriptionPlan,
@@ -63,6 +65,12 @@ interface MessagingRow {
   whatsapp_sent: string;
   whatsapp_failed: string;
   delivery_errors: string;
+}
+
+interface IntegrationConfigRow {
+  telegram_configured: string;
+  line_configured: string;
+  whatsapp_configured: string;
 }
 
 const starterLimits = {
@@ -328,12 +336,16 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
   ): Promise<SuperAdminSystemHealth> {
     const [
       postgresOk,
+      redisStatus,
+      integrationConfig,
       failedJobs,
       webhookFailures,
       failedNotifications,
       errors,
     ] = await Promise.all([
       this.pingPostgres(),
+      this.getRedisStatus(),
+      this.getIntegrationConfig(),
       this.count(
         `
           select count(*)
@@ -377,12 +389,12 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
     return {
       api: "ok",
       postgresql: postgresOk ? "ok" : "degraded",
-      redis: "unknown",
-      llmProvider: "unknown",
-      googleMaps: "unknown",
-      telegram: "unknown",
-      line: "unknown",
-      whatsapp: "unknown",
+      redis: redisStatus,
+      llmProvider: getLlmProviderStatus(),
+      googleMaps: process.env.GOOGLE_MAPS_API_KEY ? "configured" : "not_configured",
+      telegram: integrationConfig.telegram ? "configured" : "not_configured",
+      line: integrationConfig.line ? "configured" : "not_configured",
+      whatsapp: integrationConfig.whatsapp ? "configured" : "not_configured",
       failedJobs,
       webhookFailures,
       failedNotifications,
@@ -613,6 +625,91 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
       return false;
     }
   }
+
+  private async getRedisStatus(): Promise<SuperAdminHealthStatus> {
+    const redisUrl = process.env.REDIS_URL;
+
+    if (!redisUrl) {
+      return "not_configured";
+    }
+
+    try {
+      const parsedUrl = new URL(redisUrl);
+      const host = parsedUrl.hostname || "127.0.0.1";
+      const port = parsedUrl.port ? Number(parsedUrl.port) : 6379;
+
+      return await canOpenTcpConnection(host, port) ? "ok" : "degraded";
+    } catch {
+      return "degraded";
+    }
+  }
+
+  private async getIntegrationConfig(): Promise<{ line: boolean; telegram: boolean; whatsapp: boolean }> {
+    const result = await this.pool.query<IntegrationConfigRow>(
+      `
+        select
+          count(*) filter (
+            where widget_lead_telegram_bot_token is not null
+              and cardinality(widget_lead_telegram_chat_ids) > 0
+          ) as telegram_configured,
+          count(*) filter (
+            where widget_lead_line_channel_access_token is not null
+              and cardinality(widget_lead_line_recipient_ids) > 0
+          ) as line_configured,
+          count(*) filter (
+            where widget_lead_whatsapp_access_token is not null
+              and widget_lead_whatsapp_phone_number_id is not null
+              and cardinality(widget_lead_whatsapp_recipients) > 0
+          ) as whatsapp_configured
+        from tenants
+        where status = 'active'
+      `,
+    );
+    const row = result.rows[0];
+
+    return {
+      telegram: toNumber(row?.telegram_configured) > 0,
+      line: toNumber(row?.line_configured) > 0,
+      whatsapp: toNumber(row?.whatsapp_configured) > 0,
+    };
+  }
+}
+
+function getLlmProviderStatus(): SuperAdminHealthStatus {
+  if (
+    process.env.OPENAI_API_KEY ||
+    process.env.ANTHROPIC_API_KEY ||
+    process.env.GEMINI_API_KEY ||
+    process.env.OPENROUTER_API_KEY ||
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true"
+  ) {
+    return "configured";
+  }
+
+  return "not_configured";
+}
+
+function canOpenTcpConnection(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const socket = new Socket();
+    let settled = false;
+
+    const finish = (ok: boolean) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      socket.destroy();
+      resolve(ok);
+    };
+
+    socket.setTimeout(500);
+    socket.once("connect", () => finish(true));
+    socket.once("timeout", () => finish(false));
+    socket.once("error", () => finish(false));
+    socket.connect(port, host);
+  });
 }
 
 const aiAuditActions = [
