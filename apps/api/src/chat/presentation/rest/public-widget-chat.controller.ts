@@ -368,10 +368,7 @@ export class PublicWidgetChatController {
       conciergeMode: tenant.subscriptionPlan,
       leadId: lead.id,
       locale,
-      message:
-        tenant.subscriptionPlan === "starter"
-          ? "Thanks. The agency has your qualified request and can follow up."
-          : "Thanks. The agency has your request and can follow up from CRM.",
+      message: buildWidgetLeadSuccessMessage(locale, tenant.subscriptionPlan),
       status: lead.status,
       tenantSlug: tenant.slug
     };
@@ -490,6 +487,24 @@ function resolveWidgetLocale(enabledLanguages: TenantWidgetLanguage[], requested
   }
 
   return enabledLanguages[0] ?? "en";
+}
+
+function buildWidgetLeadSuccessMessage(locale: TenantWidgetLanguage, subscriptionPlan: TenantSnapshot["subscriptionPlan"]): string {
+  const starterLabels: Record<TenantWidgetLanguage, string> = {
+    en: "Thanks. The agency has your qualified request and can follow up.",
+    ru: "Спасибо. Агентство получило ваш запрос и сможет связаться с вами.",
+    th: "ขอบคุณค่ะ เอเจนซี่ได้รับคำขอของคุณแล้วและจะติดต่อกลับ",
+    zh: "谢谢。机构已收到您的需求，并会跟进。"
+  };
+  const crmLabels: Record<TenantWidgetLanguage, string> = {
+    en: "Thanks. The agency has your request and can follow up from CRM.",
+    ru: "Спасибо. Агентство получило ваш запрос и сможет обработать его в CRM.",
+    th: "ขอบคุณค่ะ เอเจนซี่ได้รับคำขอของคุณแล้วและจะติดตามต่อใน CRM",
+    zh: "谢谢。机构已收到您的请求，并可在 CRM 中跟进。"
+  };
+  const labels = subscriptionPlan === "starter" ? starterLabels : crmLabels;
+
+  return labels[locale] ?? labels.en;
 }
 
 function normalizePublicWidgetAnswer(
@@ -619,7 +634,10 @@ function buildListingCardIntro(
     en: `I found ${countText} matching listing${countText === "1" ? "" : "s"}. ${
       shownCount === 1 ? "Here is the top match I can show now." : `Here are the top ${shownCount} I can show now.`
     }`,
-    ru: `Я нашла ${countText} подходящих вариантов. Ниже топ-${shownCount}, которые можно открыть сейчас.`,
+    ru:
+      countText === "1"
+        ? "Я нашла 1 подходящий вариант. Ниже лучший вариант, который можно открыть сейчас."
+        : `Я нашла ${countText} подходящих вариантов. Ниже топ-${shownCount}, которые можно открыть сейчас.`,
     th: `พบรายการที่ตรงกับคำขอ ${countText} รายการ ด้านล่างคือ ${shownCount} รายการเด่นที่เปิดดูได้ตอนนี้`,
     zh: `我找到了 ${countText} 个匹配房源。下面是现在可以打开查看的前 ${shownCount} 个。`
   };
@@ -653,7 +671,10 @@ function buildListingFitSummary(
 
   const overviewLabels: Record<TenantWidgetLanguage, string> = {
     en: `These ${kind} options fit the ${market} search${details.length ? ` because they include ${details.join(", ")}` : ""}. Open the cards to compare exact photos, availability, and viewing details.`,
-    ru: `Эти варианты ${kind} подходят под поиск в ${market}${details.length ? `: ${details.join(", ")}` : ""}. Откройте карточки, чтобы сравнить фото, наличие и детали просмотра.`,
+    ru:
+      properties.length === 1
+        ? `Этот вариант ${kind} подходит под поиск в ${market}${details.length ? `: ${details.join(", ")}` : ""}. Откройте карточку, чтобы посмотреть фото, наличие и детали просмотра.`
+        : `Эти варианты ${kind} подходят под поиск в ${market}${details.length ? `: ${details.join(", ")}` : ""}. Откройте карточки, чтобы сравнить фото, наличие и детали просмотра.`,
     th: `ตัวเลือก${kind}เหล่านี้เหมาะกับการค้นหาใน ${market}${details.length ? ` เพราะมี ${details.join(", ")}` : ""} เปิดการ์ดเพื่อดูรูป ความพร้อม และรายละเอียดนัดชม`,
     zh: `这些${kind}选项符合 ${market} 搜索${details.length ? `，因为包含${details.join("、")}` : ""}。打开卡片可查看照片、可售状态和看房细节。`
   };
@@ -1756,8 +1777,8 @@ function parseDealIntent(text: string): string | undefined {
 
 function parseBudget(text: string): string | undefined {
   const match = [
-    /(?:under|below|max|up to|budget|до|менее|не больше|ไม่เกิน|ต่ำกว่า|งบ|预算|預算|预算是|預算是|不超过|不超過|低于|低於)\s*[0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|ล้าน|百万|百萬|万|萬|k|thousand|тыс)?\s*(?:thb|baht|бат|บาท|泰铢|泰銖)?(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i,
-    /[0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|ล้าน|百万|百萬|万|萬|k|thousand|тыс)\s*(?:thb|baht|бат|บาท|泰铢|泰銖)?(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i,
+    /(?:under|below|max|up to|budget|до|менее|не больше|ไม่เกิน|ต่ำกว่า|งบ|预算|預算|预算是|預算是|不超过|不超過|低于|低於)\s*[0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|ล้าน|百万|百萬|万|萬|k|thousand|тысяч|тыс)?\s*(?:thb|baht|бат|บาท|泰铢|泰銖)?(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i,
+    /[0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|ล้าน|百万|百萬|万|萬|k|thousand|тысяч|тыс)\s*(?:thb|baht|бат|บาท|泰铢|泰銖)?(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i,
     /[0-9][0-9\s,.]*\s*(?:thb|baht|бат|บาท|泰铢|泰銖)(?:\s*(?:per month|monthly|month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租))?/i
   ].map((pattern) => text.match(pattern)).find(Boolean);
 
@@ -1804,7 +1825,7 @@ function parseMoveInDate(text: string): string | undefined {
   }
 
   const match = normalized.match(
-    /(?:move[-\s]?in|available from|start from|from|заезд|въезд|въезжаю|въехать|заехать|с\s+|ย้ายเข้า|入住)\s+(today|tomorrow|next week|next month|this weekend|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|[0-9]{1,2}[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?|сегодня|завтра|на следующей неделе|в следующем месяце|через\s+(?:\d+|один|одну|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать)\s+дн\w*|เดือนหน้า|พรุ่งนี้|明天|下周|下週|下个月|下個月)/i
+    /(?:move[-\s]?in|available from|start from|from|заезд|въезд|въезжаю|въехать|заехать|с\s+|ย้ายเข้า|入住)\s+(today|tomorrow|next week|next month|this weekend|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|[0-9]{1,2}[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?|сегодня|завтра|на следующей неделе|в следующем месяце|в конце\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|конец\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|через\s+(?:\d+|один|одну|два|две|три|четыре|пять|шесть|семь|восемь|девять|десять|одиннадцать|двенадцать)\s+дн\w*|เดือนหน้า|พรุ่งนี้|明天|下周|下週|下个月|下個月)/i
   );
 
   return match?.[1] ? normalizeQualificationValue(match[1]) : undefined;
@@ -1812,10 +1833,10 @@ function parseMoveInDate(text: string): string | undefined {
 
 function parseContractLength(text: string): string | undefined {
   const match = text.match(
-    /(?:for|contract|lease|term|на|контракт|срок|สัญญา|租期)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年))|([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年)\s*(?:contract|lease|term|контракт|договор|สัญญา|租期)?)/i
+    /(?:for|contract|lease|term|на|контракт|срок|สัญญา|租期)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年)|полгода)|([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年)\s*(?:contract|lease|term|контракт|договор|สัญญา|租期)?)|(полгода)/i
   );
 
-  return match?.[1] || match?.[2] ? normalizeQualificationValue(match[1] ?? match[2]!) : undefined;
+  return match?.[1] || match?.[2] || match?.[3] ? normalizeQualificationValue(match[1] ?? match[2] ?? match[3]!) : undefined;
 }
 
 function parsePurpose(text: string): string | undefined {
@@ -1840,7 +1861,7 @@ function parseContactPreference(text: string): string | undefined {
     return "WhatsApp";
   }
 
-  if (/(telegram|телеграм)/i.test(normalized)) {
+  if (/(telegram|телеграм|тг)/i.test(normalized)) {
     return "Telegram";
   }
 
@@ -1860,7 +1881,7 @@ function parseContactPreference(text: string): string | undefined {
 }
 
 const timingPattern =
-  /next week|next month|this weekend|weekend|day after tomorrow|tomorrow(?:\s+(?:morning|afternoon|evening|night))?|today(?:\s+(?:morning|afternoon|evening|night))?|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра(?:\s+(?:утром|днем|днём|вечером))?|сегодня(?:\s+(?:утром|днем|днём|вечером))?|วัน(?:นี้|พรุ่งนี้)|พรุ่งนี้|สัปดาห์หน้า|เดือนหน้า|明天(?:上午|下午|晚上)?|今天(?:上午|下午|晚上)?|后天|後天|周末|週末|下周|下週|下个月|下個月/gi;
+  /next week|next month|this weekend|weekend|day after tomorrow|tomorrow(?:\s+(?:morning|afternoon|evening|night))?|today(?:\s+(?:morning|afternoon|evening|night))?|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра(?:\s+(?:утром|днем|днём|вечером))?|сегодня(?:\s+(?:утром|днем|днём|вечером))?|(?:понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье)(?:\s+в\s+(?:[0-9]{1,2}(?::[0-9]{2})?|час(?:\s+дня)?|полдень))?|วัน(?:นี้|พรุ่งนี้)|พรุ่งนี้|สัปดาห์หน้า|เดือนหน้า|明天(?:上午|下午|晚上)?|今天(?:上午|下午|晚上)?|后天|後天|周末|週末|下周|下週|下个月|下個月/gi;
 
 const viewingTimingContextPattern =
   /\b(?:viewing|view|see it|see the|tour|visit|showing|appointment)\b|просмотр|посмотр|показ|посетить|встреч|ดูห้อง|นัดชม|ดูคอนโด|看房|看一下|参观|參觀|预约看|預約看/i;

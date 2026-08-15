@@ -132,6 +132,57 @@ describe("LeadNotificationService", () => {
     expect(requestBody.text).not.toContain("deliberately long response");
   });
 
+  it("sends Russian rental qualification and selected listing details to Telegram", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LeadNotificationService(
+      tenantService(tenant({ leadTelegramBotToken: "telegram-test-token", leadTelegramChatIds: ["-100123"] }))
+    );
+
+    await service.notifyLeadCreated(
+      "tenant-demo",
+      lead({
+        contactName: "Website visitor",
+        contactPhone: "Telegram @GermanSklyarov",
+        message: [
+          "Widget handoff request.",
+          "",
+          "Visitor note: я бы хотел посмотреть в понедельник в час дня, мой ТГ @GermanSklyarov",
+          "",
+          "Lead qualification:",
+          "Intent: Rent",
+          "Budget: до 20 тысяч",
+          "Move-in: в конце ноября",
+          "Contract length: полгода",
+          "Viewing time: понедельник в час дня",
+          "Contact channel: Telegram",
+          "",
+          "Recommended listings:",
+          "1. 1BR Condo at The Ville Jomtien - East Pattaya (jomtien-1br)",
+          "",
+          "Recent widget conversation:",
+          "user: меня интересует аренда, бюджет до 20 тысяч, планирую въехать в конце ноября, контракт на полгода",
+          "user: может, на джомтьене есть?",
+          "user: я бы хотел посмотреть в понедельник в час дня, мой ТГ @GermanSklyarov"
+        ].join("\n"),
+        preferredLocale: "ru",
+        propertyId: "jomtien-1br"
+      })
+    );
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as { text: string };
+
+    expect(requestBody.text).toContain("📞 Phone: Telegram @GermanSklyarov");
+    expect(requestBody.text).toContain("💬 Contact channel: Telegram");
+    expect(requestBody.text).toContain("🧭 Intent: Rent");
+    expect(requestBody.text).toContain("💰 Budget: до 20 тысяч");
+    expect(requestBody.text).toContain("📦 Move-in: в конце ноября");
+    expect(requestBody.text).toContain("📄 Contract length: полгода");
+    expect(requestBody.text).toContain("🗓️ Viewing time: понедельник в час дня");
+    expect(requestBody.text).toContain("🏠 Selected listing: 1BR Condo at The Ville Jomtien - East Pattaya (jomtien-1br)");
+    expect(requestBody.text).not.toContain("Siam Oriental");
+  });
+
   it("sends LINE push messages with the tenant channel token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);

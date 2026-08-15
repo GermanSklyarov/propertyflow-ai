@@ -134,7 +134,7 @@ function buildEnglishViewingHandoffAnswer(property: PropertySnapshot, preferredS
     ? "I can pass this preferred slot to the agency team."
     : "Please share a convenient day and time for the viewing.";
   const qualificationPrompt =
-    property.listingType === "rent"
+    isRentalHandoffProperty(property)
       ? " If you already know your target move-in date and contract length, include those too so the agent can check availability and rate."
       : " If you are buying, please also mention whether ownership would be foreign quota, Thai name, or company, and your approximate purchase timing.";
 
@@ -147,7 +147,7 @@ function buildRussianViewingHandoffAnswer(property: PropertySnapshot, preferredS
     ? "Я передам это время агентству, чтобы они подтвердили точное окно."
     : "Напишите, пожалуйста, удобный день и время для просмотра.";
   const qualificationPrompt =
-    property.listingType === "rent"
+    isRentalHandoffProperty(property)
       ? "Дата въезда и срок контракта уже помогают проверить доступность и ставку."
       : "Если планируете покупку, также полезно указать формат оформления: foreign quota, Thai name или company.";
 
@@ -160,7 +160,7 @@ function buildThaiViewingHandoffAnswer(property: PropertySnapshot, preferredSlot
     ? "ฉันจะส่งช่วงเวลานี้ให้ทีมเอเจนซียืนยันเวลาที่แน่นอน"
     : "กรุณาระบุวันและเวลาที่สะดวกสำหรับนัดชม";
   const qualificationPrompt =
-    property.listingType === "rent"
+    isRentalHandoffProperty(property)
       ? "วันที่ต้องการเข้าอยู่และระยะสัญญาจะช่วยให้เอเจนต์ตรวจสอบห้องว่างและราคาได้"
       : "ถ้าต้องการซื้อ กรุณาระบุรูปแบบการถือครอง เช่น foreign quota, Thai name หรือ company และช่วงเวลาที่ต้องการซื้อ";
 
@@ -171,11 +171,15 @@ function buildChineseViewingHandoffAnswer(property: PropertySnapshot, preferredS
   const slotText = preferredSlot ? `，时间为 ${preferredSlot}` : "";
   const slotFollowUp = preferredSlot ? "我可以把这个意向时间转给经纪团队确认。" : "请告诉我你方便看房的日期和时间。";
   const qualificationPrompt =
-    property.listingType === "rent"
+    isRentalHandoffProperty(property)
       ? "入住日期和租期也有助于经纪人确认可租状态和价格。"
       : "如果是购买，也请说明产权形式，比如 foreign quota、Thai name 或 company，以及大致购买时间。";
 
   return `这个选择不错。我可以帮你预约看 ${property.title}${slotText}。我这里不能直接确认经纪人的日程，${slotFollowUp} 请留下 WhatsApp、Telegram、电话或 email，方便经纪人确认看房。${qualificationPrompt}${rental}`;
+}
+
+function isRentalHandoffProperty(property: PropertySnapshot): boolean {
+  return property.listingType === "rent" || Boolean(property.rentalPriceMonthly);
 }
 
 function formatRentalAsk(property: PropertySnapshot, locale: TenantWidgetLanguage): string {

@@ -425,8 +425,8 @@ function parseDealIntent(text: string): string | undefined {
 
 function parseBudget(text: string): string | undefined {
   const match =
-    text.match(/\b(?:under|below|max|up to|до|менее|ไม่เกิน|ต่ำกว่า|预算|预算是|ไม่เกิน)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))?/i) ??
-    text.match(/\b([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тыс)?)(?:\s*(?:thb|baht|бат))\b/i);
+    text.match(/(?:under|below|max|up to|до|менее|не больше|ไม่เกิน|ต่ำกว่า|预算|预算是|不超过|不超過)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тысяч|тыс)?)(?:\s*(?:thb|baht|бат))?/i) ??
+    text.match(/([0-9]+(?:[.,][0-9]+)?\s*(?:m|million|млн|k|thousand|тысяч|тыс)?)(?:\s*(?:thb|baht|бат))\b/i);
 
   if (!match?.[0]) {
     return undefined;
@@ -485,12 +485,12 @@ function parsePurchaseTiming(text: string): string | undefined {
 function parseMoveInDate(text: string): string | undefined {
   const normalized = text.toLowerCase();
 
-  if (!/(rent|rental|lease|move in|move-in|аренд|снять|заехать|въезд|เช่า|ย้ายเข้า|入住|租)/i.test(normalized)) {
+  if (!/(rent|rental|lease|move in|move-in|аренд|снять|заехать|въезд|въехать|เช่า|ย้ายเข้า|入住|租)/i.test(normalized)) {
     return undefined;
   }
 
   const match = normalized.match(
-    /(?:move[-\s]?in|available from|start from|from|заезд|въезд|заехать|с\s+|ย้ายเข้า|入住)\s+(today|tomorrow|next week|next month|this weekend|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|[0-9]{1,2}[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?|сегодня|завтра|на следующей неделе|в следующем месяце|เดือนหน้า|พรุ่งนี้|明天|下周|下週|下个月|下個月)/i
+    /(?:move[-\s]?in|available from|start from|from|заезд|въезд|въехать|заехать|с\s+|ย้ายเข้า|入住)\s+(today|tomorrow|next week|next month|this weekend|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)|[0-9]{1,2}[./-][0-9]{1,2}(?:[./-][0-9]{2,4})?|сегодня|завтра|на следующей неделе|в следующем месяце|в конце\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|конец\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)|เดือนหน้า|พรุ่งนี้|明天|下周|下週|下个月|下個月)/i
   );
 
   return match?.[1] ? normalizeQualificationValue(match[1]) : undefined;
@@ -498,10 +498,10 @@ function parseMoveInDate(text: string): string | undefined {
 
 function parseContractLength(text: string): string | undefined {
   const match = text.match(
-    /(?:for|contract|lease|term|на|контракт|срок|สัญญา|租期)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年))|([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年)\s*(?:contract|lease|term|контракт|договор|สัญญา|租期)?)/i
+    /(?:for|contract|lease|term|на|контракт|срок|สัญญา|租期)\s*([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年)|полгода)|([0-9]+(?:[.,][0-9]+)?\s*(?:months|month|years|year|mo|мес|месяцев|месяца|месяц|года|год|лет|เดือน|ปี|个月|個月|年)\s*(?:contract|lease|term|контракт|договор|สัญญา|租期)?)|(полгода)/i
   );
 
-  return match?.[1] || match?.[2] ? normalizeQualificationValue(match[1] ?? match[2]!) : undefined;
+  return match?.[1] || match?.[2] || match?.[3] ? normalizeQualificationValue(match[1] ?? match[2] ?? match[3]!) : undefined;
 }
 
 function parseContactPreference(text: string): string | undefined {
@@ -511,7 +511,7 @@ function parseContactPreference(text: string): string | undefined {
     return "WhatsApp";
   }
 
-  if (/(telegram|телеграм)/i.test(normalized)) {
+  if (/(telegram|телеграм|тг)/i.test(normalized)) {
     return "Telegram";
   }
 
@@ -531,7 +531,7 @@ function parseContactPreference(text: string): string | undefined {
 }
 
 const timingPattern =
-  /next week|next month|this weekend|weekend|day after tomorrow|tomorrow(?:\s+(?:morning|afternoon|evening|night))?|today(?:\s+(?:morning|afternoon|evening|night))?|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра(?:\s+(?:утром|днем|днём|вечером))?|сегодня(?:\s+(?:утром|днем|днём|вечером))?|วัน(?:นี้|พรุ่งนี้)|พรุ่งนี้|สัปดาห์หน้า|เดือนหน้า|明天(?:上午|下午|晚上)?|今天(?:上午|下午|晚上)?|后天|後天|周末|週末|下周|下週|下个月|下個月/gi;
+  /next week|next month|this weekend|weekend|day after tomorrow|tomorrow(?:\s+(?:morning|afternoon|evening|night))?|today(?:\s+(?:morning|afternoon|evening|night))?|in\s+[0-9]+\s+days?|within\s+[0-9]+\s+(?:days|weeks|months)|(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|[0-9]{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+[0-9]{1,2}(?::[0-9]{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?|следующ(?:ей|ий|ем)\s+\S+|через\s+[0-9]+\s+дн\w*|на\s+выходных|в\s+выходные|послезавтра|завтра(?:\s+(?:утром|днем|днём|вечером))?|сегодня(?:\s+(?:утром|днем|днём|вечером))?|(?:понедельник|вторник|сред[ау]|четверг|пятниц[ау]|суббот[ау]|воскресенье)(?:\s+в\s+(?:[0-9]{1,2}(?::[0-9]{2})?|час(?:\s+дня)?|полдень))?|วัน(?:นี้|พรุ่งนี้)|พรุ่งนี้|สัปดาห์หน้า|เดือนหน้า|明天(?:上午|下午|晚上)?|今天(?:上午|下午|晚上)?|后天|後天|周末|週末|下周|下週|下个月|下個月/gi;
 
 const viewingTimingContextPattern =
   /\b(?:viewing|view|see it|see the|tour|visit|showing|appointment)\b|просмотр|посмотр|показ|посетить|встреч|ดูห้อง|นัดชม|ดูคอนโด|看房|看一下|参观|參觀|预约看|預約看/i;

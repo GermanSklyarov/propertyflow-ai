@@ -2681,6 +2681,87 @@ describe("PublicWidgetChatController", () => {
     }));
   });
 
+  it("captures Russian rental qualification and the latest selected listing in widget leads", async () => {
+    const tenant = tenantFactory({
+      subscriptionPlan: "starter",
+      widget: {
+        ...tenantFactory().widget,
+        languages: ["ru", "en"]
+      }
+    });
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ propertyId: "jomtien-1br", tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      {
+        assertPublicWidgetOriginAllowed: vi.fn(),
+        getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+        recordPublicWidgetAsk: vi.fn()
+      } as unknown as TenantService,
+      { ask: vi.fn() } as unknown as AiChatService,
+      leads,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    const response = await controller.createLead(
+      "demo-agency",
+      {
+        contactName: "Website visitor",
+        contactPhone: "Telegram @GermanSklyarov",
+        conversation: [
+          { role: "user", text: "я ищу недорогую студию или однушку в паттайе на пратамнаке, что посоветуешь?" },
+          {
+            recommendedListings: [{ propertyId: "pratumnak-1br", title: "1BR Condo at Siam Oriental Tropical Garden - Pratumnak" }],
+            role: "assistant",
+            text: "Я нашла варианты на Пратамнаке."
+          },
+          { role: "user", text: "меня интересует аренда, бюджет до 20 тысяч, планирую въехать в конце ноября, контракт на полгода" },
+          { role: "assistant", text: "Сейчас нет публичных карточек кондо рядом с Pratumnak под этот запрос." },
+          { role: "user", text: "может, на джомтьене есть?" },
+          {
+            recommendedListings: [{ propertyId: "jomtien-1br", title: "1BR Condo at The Ville Jomtien - East Pattaya" }],
+            role: "assistant",
+            text: "Я нашла 1 подходящий вариант."
+          },
+          { role: "user", text: "пойдет, как записаться на просмотр?" }
+        ],
+        locale: "ru",
+        message: "я бы хотел посмотреть в понедельник в час дня, мой ТГ @GermanSklyarov",
+        recommendedListings: [{ propertyId: "jomtien-1br", title: "1BR Condo at The Ville Jomtien - East Pattaya" }]
+      },
+      "https://agency.example.com"
+    );
+
+    expect(response.message).toBe("Спасибо. Агентство получило ваш запрос и сможет связаться с вами.");
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      contactPhone: "Telegram @GermanSklyarov",
+      preferredLocale: "ru",
+      propertyId: "jomtien-1br"
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Intent: Rent")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Budget: до 20 тысяч")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Move-in: в конце ноября")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Contract length: полгода")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Viewing time: понедельник в час дня")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Contact channel: Telegram")
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("1. 1BR Condo at The Ville Jomtien - East Pattaya (jomtien-1br)")
+    }));
+  });
+
   it("keeps the selected listing and viewing slot in auto-captured widget leads", async () => {
     const tenant = tenantFactory({
       subscriptionPlan: "starter"

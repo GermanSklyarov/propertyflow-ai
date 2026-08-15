@@ -503,7 +503,7 @@
   }
 
   function shouldSubmitQualifiedLeadFromChat(triggerMessage) {
-    var recommendations = getRecentRecommendedListings();
+    var recommendations = getLatestRecommendedListings();
     var conversationText = state.messages
       .map(function (message) {
         return message.text || "";
@@ -522,7 +522,7 @@
 
   function submitQualifiedLeadFromChat(triggerMessage) {
     var contact = extractContactDetailsFromText(triggerMessage + " " + getUserConversationText());
-    var recommendations = getRecentRecommendedListings();
+    var recommendations = getLatestRecommendedListings();
     var leadProperty = resolveLeadListingFromConversation(triggerMessage, recommendations);
 
     if (!leadProperty || !leadProperty.propertyId || (!contact.email && !contact.phone)) {
@@ -597,10 +597,12 @@
   function extractContactDetailsFromText(text) {
     var emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
     var phoneMatch = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
-    var telegramMatch = text.match(/(?:telegram|телеграм)\s+(@[A-Z0-9_]{5,32})/i) || text.match(/(^|\s)(@[A-Z0-9_]{5,32})\b/i);
+    var telegramMatch =
+      text.match(/(?:telegram|телеграм|тг)\s+(@[A-Z0-9_]{5,32})/i) || text.match(/(^|\s)(@[A-Z0-9_]{5,32})\b/i);
     var lineMatch = text.match(/(?:line(?:\s+id)?|ไลน์)\s+(@?[A-Z0-9_.-]{3,40})/i);
-    var messengerContact = telegramMatch
-      ? "Telegram " + (telegramMatch[1] || telegramMatch[2]).trim()
+    var telegramHandle = telegramMatch ? (telegramMatch[1] && telegramMatch[1].trim().charAt(0) === "@" ? telegramMatch[1] : telegramMatch[2]) : "";
+    var messengerContact = telegramHandle
+      ? "Telegram " + telegramHandle.trim()
       : lineMatch
         ? "LINE " + lineMatch[1].trim()
         : "";
@@ -786,6 +788,25 @@
           title: listing.title
         };
       });
+  }
+
+  function getLatestRecommendedListings() {
+    var latest = state.messages
+      .slice()
+      .reverse()
+      .map(function (message) {
+        return normalizeRecommendedListings(message.recommendations);
+      })
+      .find(function (recommendations) {
+        return recommendations.length;
+      });
+
+    return (latest || []).map(function (listing) {
+      return {
+        propertyId: listing.propertyId,
+        title: listing.title
+      };
+    });
   }
 
   function assistantMessage(text, recommendations) {
