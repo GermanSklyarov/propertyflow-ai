@@ -1,4 +1,9 @@
-import type { TenantSnapshot, TenantSubscriptionPlan, UpdateTenantSettingsRequest } from "@propertyflow/contracts";
+import type {
+  RecordUsageEventRequest,
+  TenantSnapshot,
+  TenantSubscriptionPlan,
+  UpdateTenantSettingsRequest
+} from "@propertyflow/contracts";
 
 export const TENANT_REPOSITORY = Symbol("TENANT_REPOSITORY");
 
@@ -7,6 +12,7 @@ export interface TenantRepository {
   findBySlug(slug: string): Promise<TenantSnapshot | null>;
   getUsage(tenantId: string, periodStart: Date, periodEnd: Date): Promise<TenantUsageRawMetrics>;
   provision(input: ProvisionTenantRepositoryInput): Promise<TenantSnapshot>;
+  recordGenericUsage(input: RecordUsageEventRequest): Promise<void>;
   recordUsage(tenantId: string, eventType: TenantUsageEventType, metadata?: Record<string, unknown>): Promise<void>;
   updateSettings(tenantId: string, request: UpdateTenantSettingsRequest): Promise<TenantSnapshot | null>;
 }

@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { CqrsModule } from "@nestjs/cqrs";
+import { AdminModule } from "./admin/admin.module.js";
 import { AnalyticsModule } from "./analytics/analytics.module.js";
 import { AuditModule } from "./audit/audit.module.js";
 import { ChatModule } from "./chat/chat.module.js";
@@ -18,6 +19,7 @@ import { UsersModule } from "./users/users.module.js";
 @Module({
   imports: [
     CqrsModule.forRoot(),
+    AdminModule,
     AnalyticsModule,
     AuditModule,
     ChatModule,

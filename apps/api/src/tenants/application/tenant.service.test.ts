@@ -1270,6 +1270,7 @@ function repository(overrides: Partial<TenantRepository> = {}): TenantRepository
       publicApiRequestsMonthly: 0
     }),
     provision: async () => tenant(),
+    recordGenericUsage: async () => undefined,
     recordUsage: async () => undefined,
     updateSettings: async () => null,
     ...overrides

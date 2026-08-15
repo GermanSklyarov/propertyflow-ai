@@ -21,6 +21,7 @@ import type {
   PublicWidgetConfigResponse,
   PublicWidgetReadiness,
   PublicWidgetReadinessCheck,
+  RecordUsageEventRequest,
   RefreshAgencySessionRequest,
   RefreshAgencySessionResponse,
   RequestAgencyMagicLinkRequest,
@@ -410,6 +411,10 @@ export class TenantService {
 
   recordPublicWidgetAsk(tenant: TenantSnapshot, metadata: Record<string, unknown> = {}): Promise<void> {
     return this.tenants.recordUsage(tenant.id, "public-widget.ask", metadata);
+  }
+
+  recordUsageEvent(input: RecordUsageEventRequest): Promise<void> {
+    return this.tenants.recordGenericUsage(input);
   }
 
   async verifyWidgetInstall(tenant: TenantSnapshot, url: string): Promise<TenantWidgetInstallCheckResponse> {

@@ -463,6 +463,146 @@ export interface TenantUsageResponse {
   generatedAt: string;
 }
 
+export type UsageServiceKey = "openai" | "google_maps" | "telegram" | "line" | "whatsapp" | "email" | "webhook" | "system";
+
+export interface RecordUsageEventRequest {
+  tenantId: string;
+  service: UsageServiceKey | string;
+  operation: string;
+  quantity?: number;
+  unit?: string;
+  estimatedCostUsd?: number;
+  metadata?: Record<string, unknown>;
+  occurredAt?: string;
+}
+
+export interface SuperAdminMetricCard {
+  key: string;
+  label: string;
+  today: number;
+  month: number;
+  unit?: string;
+}
+
+export interface SuperAdminAgencyCost {
+  tenantId: string;
+  agencyName: string;
+  subscriptionPlan: TenantSubscriptionPlan;
+  estimatedCostUsd: number;
+  costPerQualifiedLeadUsd?: number;
+}
+
+export interface SuperAdminAiUsageRow {
+  tenantId: string;
+  agencyName: string;
+  conversations: number;
+  llmRequests: number;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+}
+
+export interface SuperAdminUsageByOperation {
+  service: string;
+  operation: string;
+  quantity: number;
+  estimatedCostUsd: number;
+  costSharePercent: number;
+}
+
+export interface SuperAdminMapsUsage {
+  geocodingRequests: number;
+  placesRequests: number;
+  cacheHits: number;
+  cacheMisses: number;
+  cacheHitRate: number;
+  estimatedCostUsd: number;
+  freeTierUsage: {
+    geocoding: {
+      used: number;
+      limit: number;
+    };
+  };
+}
+
+export interface SuperAdminMessagingUsage {
+  notifications: number;
+  telegramSent: number;
+  telegramFailed: number;
+  lineSent: number;
+  lineFailed: number;
+  whatsappSent: number;
+  whatsappFailed: number;
+  deliveryErrors: number;
+}
+
+export interface SuperAdminLimitAlert {
+  tenantId: string;
+  agencyName: string;
+  metric: "aiRequests" | "conversations" | "mapsRequests";
+  used: number;
+  limit: number;
+  utilizationRate: number;
+  level: "ok" | "warning" | "critical";
+}
+
+export interface SuperAdminSystemHealth {
+  api: "ok";
+  postgresql: "ok" | "degraded";
+  redis: "unknown";
+  llmProvider: "unknown";
+  googleMaps: "unknown";
+  telegram: "unknown";
+  line: "unknown";
+  whatsapp: "unknown";
+  failedJobs: number;
+  webhookFailures: number;
+  failedNotifications: number;
+  averageAiResponseTimeMs?: number;
+  errorRate: number;
+}
+
+export interface SuperAdminAgencyDrilldown {
+  tenantId: string;
+  agencyName: string;
+  subscriptionPlan: TenantSubscriptionPlan;
+  usageThisMonth: {
+    conversations: number;
+    aiRequests: number;
+    tokens: number;
+    leads: number;
+    qualifiedLeads: number;
+    telegramNotifications: number;
+    lineNotifications: number;
+    whatsappNotifications: number;
+    mapsRequests: number;
+    estimatedCostUsd: number;
+  };
+  roi: {
+    visitors?: number;
+    conversations: number;
+    leads: number;
+    qualifiedLeads: number;
+    viewingsOrBookings: number;
+    costPerQualifiedLeadUsd?: number;
+  };
+}
+
+export interface SuperAdminDashboardResponse {
+  periodStart: string;
+  periodEnd: string;
+  cards: SuperAdminMetricCard[];
+  agencyCosts: SuperAdminAgencyCost[];
+  aiUsage: SuperAdminAiUsageRow[];
+  usageByOperation: SuperAdminUsageByOperation[];
+  maps: SuperAdminMapsUsage;
+  messaging: SuperAdminMessagingUsage;
+  limits: SuperAdminLimitAlert[];
+  agencies: SuperAdminAgencyDrilldown[];
+  systemHealth: SuperAdminSystemHealth;
+  generatedAt: string;
+}
+
 export type UserRole = "agent" | "broker" | "manager" | "admin";
 
 export interface RequestUser {

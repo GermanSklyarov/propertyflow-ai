@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import type {
+  RecordUsageEventRequest,
   TenantLeadQualificationField,
   TenantPlanLimits,
   TenantSnapshot,
@@ -191,6 +192,27 @@ export class PgTenantRepository implements TenantRepository {
   }
 
   async recordUsage(tenantId: string, eventType: TenantUsageEventType, metadata: Record<string, unknown> = {}): Promise<void> {
+    await this.recordGenericUsage({
+      tenantId,
+      service: eventType.split(".")[0] ?? "system",
+      operation: eventType,
+      quantity: 1,
+      unit: "event",
+      metadata
+    });
+  }
+
+  async recordGenericUsage(input: RecordUsageEventRequest): Promise<void> {
+    const quantity = normalizeUsageQuantity(input.quantity);
+    const operation = input.operation.trim();
+    const service = input.service.trim();
+    const unit = input.unit?.trim() || "event";
+    const occurredAt = input.occurredAt ? new Date(input.occurredAt) : new Date();
+
+    if (!service || !operation || Number.isNaN(occurredAt.getTime())) {
+      return;
+    }
+
     await this.pool.query(
       `
         insert into tenant_usage_events (
@@ -198,18 +220,37 @@ export class PgTenantRepository implements TenantRepository {
           tenant_id,
           event_type,
           quantity,
+          service,
+          operation,
+          unit,
+          estimated_cost_usd,
           metadata,
           created_at
         ) values (
           $1,
           $2,
           $3,
-          1,
           $4,
-          $5
+          $5,
+          $6,
+          $7,
+          $8,
+          $9,
+          $10
         )
       `,
-      [randomUUID(), tenantId, eventType, JSON.stringify(metadata), new Date().toISOString()]
+      [
+        randomUUID(),
+        input.tenantId,
+        operation,
+        quantity,
+        service,
+        operation,
+        unit,
+        normalizeUsageCost(input.estimatedCostUsd),
+        JSON.stringify(input.metadata ?? {}),
+        occurredAt.toISOString()
+      ]
     );
   }
 
@@ -631,4 +672,12 @@ function resolveTenantLimits(
 
 function normalizeLimit(value: number | null | undefined, fallback: number): number {
   return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+function normalizeUsageQuantity(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.round(value) : 1;
+}
+
+function normalizeUsageCost(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }
