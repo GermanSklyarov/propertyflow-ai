@@ -44,6 +44,44 @@ describe("ai-chat-property-response", () => {
     expect(draft.deterministicDraft).toContain("Please share your WhatsApp, Telegram, phone, or email");
   });
 
+  it("localizes viewing handoff drafts for Thai and Chinese", () => {
+    const thaiDraft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("ขอนัดดูห้อง"),
+      knowledge: [],
+      locale: "th",
+      property: propertyFactory({
+        listingType: "rent",
+        rentalPriceMonthly: { amount: 19_000, currency: "THB" }
+      }),
+      requestMessage: "ขอนัดดูห้อง"
+    });
+    const chineseDraft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("怎么预约看房？"),
+      knowledge: [],
+      locale: "zh",
+      property: propertyFactory({
+        listingType: "rent",
+        rentalPriceMonthly: { amount: 19_000, currency: "THB" }
+      }),
+      requestMessage: "怎么预约看房？"
+    });
+
+    expect(thaiDraft.deterministicDraft).toContain("ฉันช่วยนัดชม Wongamat Sea View Residence");
+    expect(thaiDraft.deterministicDraft).toContain("ค่าเช่า 19000 THB/เดือน");
+    expect(thaiDraft.deterministicDraft).not.toContain("Great choice");
+    expect(chineseDraft.deterministicDraft).toContain("我可以帮你预约看 Wongamat Sea View Residence");
+    expect(chineseDraft.deterministicDraft).toContain("租金为 19000 THB/月");
+    expect(chineseDraft.deterministicDraft).not.toContain("Great choice");
+  });
+
   it("answers family and pet suitability questions instead of repeating the listing description", () => {
     const familyDraft = buildAiChatPropertyResponseDraft({
       dueDiligence: {

@@ -37,10 +37,11 @@ interface PublicWidgetRecommendationBundle {
 }
 
 type WidgetPriceMode = "rent" | "sale";
-const WIDGET_LOCATION_MATCH_RADIUS_METERS = 5_000;
+const WIDGET_AREA_MATCH_RADIUS_METERS = 2_500;
 
 interface WidgetLocationTarget {
   aliases: string[];
+  kind?: "area" | "poi";
   label: string;
   latitude: number;
   longitude: number;
@@ -51,8 +52,10 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
   pattaya: [
     {
       aliases: ["central pattaya", "central festival", "central pattaya mall", "центр паттайи", "центральная паттайя"],
+      kind: "area",
       label: "Central Pattaya",
       latitude: 12.9348,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
       longitude: 100.8832
     },
     {
@@ -66,37 +69,59 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
         "пратамнаке",
         "пратамнака"
       ],
+      kind: "area",
       label: "Pratumnak",
       latitude: 12.9156,
-      matchRadiusMeters: WIDGET_LOCATION_MATCH_RADIUS_METERS,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
       longitude: 100.8624
     },
     {
+      aliases: ["jomtien", "jomtien beach", "джомтьен", "джомтьене", "джомтьена"],
+      kind: "area",
+      label: "Jomtien",
+      latitude: 12.8958,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
+      longitude: 100.8745
+    },
+    {
+      aliases: ["wongamat", "wongamat beach", "вонгамат", "вонгамате", "вонгамата"],
+      kind: "area",
+      label: "Wongamat",
+      latitude: 12.9696,
+      matchRadiusMeters: WIDGET_AREA_MATCH_RADIUS_METERS,
+      longitude: 100.8855
+    },
+    {
       aliases: ["walking street", "pattaya walking street"],
+      kind: "poi",
       label: "Walking Street",
       latitude: 12.9279,
       longitude: 100.8738
     },
     {
       aliases: ["boyz town", "boyztown", "boys town"],
+      kind: "poi",
       label: "Boyz Town",
       latitude: 12.9298,
       longitude: 100.8789
     },
     {
       aliases: ["asia pattaya hotel", "asia pattaya beach hotel", "asia hotel pattaya", "отель asia pattaya", "азия паттайя отель"],
+      kind: "poi",
       label: "Asia Pattaya Hotel",
       latitude: 12.914206,
       longitude: 100.858419
     },
     {
       aliases: ["terminal 21", "terminal 21 pattaya"],
+      kind: "poi",
       label: "Terminal 21 Pattaya",
       latitude: 12.9497,
       longitude: 100.889
     },
     {
       aliases: ["ramayana water park", "water park ramayana", "ramayana", "аквапарк рамаяна", "рамаяна"],
+      kind: "poi",
       label: "Ramayana Water Park",
       latitude: 12.75045,
       longitude: 100.96204
@@ -333,6 +358,7 @@ export class PublicWidgetChatController {
 
     return {
       aliases: target.poi.aliases,
+      kind: "poi",
       label: target.poi.label,
       latitude: target.poi.location.latitude,
       longitude: target.poi.location.longitude
@@ -720,11 +746,16 @@ function filterByWidgetLocationTarget(properties: PropertySnapshot[], locationTa
     return properties;
   }
 
-  const nearbyProperties = properties.filter(
-    (property) => distanceMeters(property.location, locationTarget) <= locationTarget.matchRadiusMeters!
-  );
+  const nearbyProperties = properties.filter((property) => isWidgetPropertyInLocationTarget(property, locationTarget));
 
-  return nearbyProperties.length ? nearbyProperties : properties;
+  return locationTarget.kind === "area" ? nearbyProperties : nearbyProperties.length ? nearbyProperties : properties;
+}
+
+function isWidgetPropertyInLocationTarget(property: PropertySnapshot, locationTarget: WidgetLocationTarget): boolean {
+  const haystack = normalizeLocationText(`${property.title} ${property.address ?? ""}`);
+  const hasAreaTextMatch = locationTarget.aliases.some((alias) => haystack.includes(normalizeLocationText(alias)));
+
+  return hasAreaTextMatch || distanceMeters(property.location, locationTarget) <= locationTarget.matchRadiusMeters!;
 }
 
 function filterByWidgetListingIntent(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
@@ -1313,6 +1344,17 @@ function summarizeLocationTargetDistance(
   target: WidgetLocationTarget,
   locale: TenantWidgetLanguage
 ): string {
+  if (target.kind === "area") {
+    const labels: Record<TenantWidgetLanguage, string> = {
+      en: `area: ${target.label}`,
+      ru: `район: ${target.label}`,
+      th: `ทำเล: ${target.label}`,
+      zh: `区域：${target.label}`
+    };
+
+    return labels[locale] ?? labels.en;
+  }
+
   const distances = properties.map((property) => distanceMeters(property.location, target));
 
   if (!distances.length) {
@@ -1337,6 +1379,17 @@ function summarizeSingleLocationTargetDistance(
 ): string {
   if (!target) {
     return "";
+  }
+
+  if (target.kind === "area") {
+    const labels: Record<TenantWidgetLanguage, string> = {
+      en: `in or near ${target.label}`,
+      ru: `в районе ${target.label}`,
+      th: `ในย่าน ${target.label}`,
+      zh: `位于 ${target.label} 区域`
+    };
+
+    return labels[locale] ?? labels.en;
   }
 
   const distance = formatDistance(distanceMeters(property.location, target));

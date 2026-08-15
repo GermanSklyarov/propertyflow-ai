@@ -482,6 +482,57 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("Terminal 21 Walkable Studio is a 1-bedroom condo");
   });
 
+  it("answers Russian viewing requests in Russian without inventing a preferred slot", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-2",
+        propertyFactory({
+          id: "property-2",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 19_000, currency: "THB" },
+          title: "Terminal 21 Walkable Studio"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [{ propertyId: "property-2", title: "Terminal 21 Walkable Studio" }],
+          role: "assistant",
+          text: "Я нашла 1 подходящий вариант."
+        }
+      ],
+      locale: "ru",
+      message: "как записаться на просмотр?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["property-2"]);
+    expect(response.answer).toContain("Я помогу записаться на просмотр Terminal 21 Walkable Studio");
+    expect(response.answer).toContain("Напишите, пожалуйста, удобный день и время для просмотра");
+    expect(response.answer).toContain("Оставьте WhatsApp, Telegram, телефон или email");
+    expect(response.answer).toContain("Арендная ставка: 19000 THB/мес.");
+    expect(response.answer).not.toContain("preferred slot");
+    expect(response.answer).not.toContain("Great choice");
+  });
+
   it("compares the previous recommendation shortlist instead of searching again", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([

@@ -101,6 +101,7 @@ export class AiChatService {
       dueDiligence,
       intent,
       knowledge,
+      locale: request.locale,
       neighborhood,
       property,
       requestMessage: request.message

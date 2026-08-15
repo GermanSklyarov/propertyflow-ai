@@ -2,7 +2,8 @@ import type {
   AiAdvisorSummary,
   AiChatCitation,
   KnowledgeDocumentChunkSnapshot,
-  NeighborhoodIntelligence
+  NeighborhoodIntelligence,
+  TenantWidgetLanguage
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
 import {
@@ -22,6 +23,7 @@ export function buildAiChatPropertyResponseDraft(options: {
   dueDiligence: AiChatDueDiligencePayload;
   intent: AiChatIntent;
   knowledge: KnowledgeDocumentChunkSnapshot[];
+  locale?: TenantWidgetLanguage;
   neighborhood?: NeighborhoodIntelligence;
   property: PropertySnapshot;
   requestMessage?: string;
@@ -30,7 +32,7 @@ export function buildAiChatPropertyResponseDraft(options: {
   const suitabilityAnswer = buildSuitabilityAnswer(options.property, options.requestMessage);
   const answerParts = [
     options.intent.wantsViewing
-      ? buildViewingHandoffAnswer(options.property, options.requestMessage)
+      ? buildViewingHandoffAnswer(options.property, options.requestMessage, options.locale)
       : suitabilityAnswer ?? describeProperty(options.property)
   ];
 
@@ -113,18 +115,82 @@ function summarizeLocation(property: PropertySnapshot): string {
     : `${property.beachDistanceMeters}m from the beach`;
 }
 
-function buildViewingHandoffAnswer(property: PropertySnapshot, requestMessage?: string): string {
+function buildViewingHandoffAnswer(property: PropertySnapshot, requestMessage?: string, locale: TenantWidgetLanguage = "en"): string {
   const preferredSlot = requestMessage ? extractViewingSlot(requestMessage) : undefined;
+  const rental = property.rentalPriceMonthly ? formatRentalAsk(property, locale) : "";
+  const messages: Record<TenantWidgetLanguage, string> = {
+    en: buildEnglishViewingHandoffAnswer(property, preferredSlot, rental),
+    ru: buildRussianViewingHandoffAnswer(property, preferredSlot, rental),
+    th: buildThaiViewingHandoffAnswer(property, preferredSlot, rental),
+    zh: buildChineseViewingHandoffAnswer(property, preferredSlot, rental)
+  };
+
+  return messages[locale] ?? messages.en;
+}
+
+function buildEnglishViewingHandoffAnswer(property: PropertySnapshot, preferredSlot: string | undefined, rental: string): string {
   const slotText = preferredSlot ? ` for ${preferredSlot}` : "";
-  const rental = property.rentalPriceMonthly
-    ? ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`
-    : "";
+  const slotFollowUp = preferredSlot
+    ? "I can pass this preferred slot to the agency team."
+    : "Please share a convenient day and time for the viewing.";
   const qualificationPrompt =
     property.listingType === "rent"
       ? " If you already know your target move-in date and contract length, include those too so the agent can check availability and rate."
       : " If you are buying, please also mention whether ownership would be foreign quota, Thai name, or company, and your approximate purchase timing.";
 
-  return `Great choice. I can help arrange a viewing of ${property.title}${slotText}. I cannot directly confirm the agent's calendar from here, but I can pass this preferred slot to the agency team. Please share your WhatsApp, Telegram, phone, or email so they can confirm the exact time.${qualificationPrompt}${rental}`;
+  return `Great choice. I can help arrange a viewing of ${property.title}${slotText}. I cannot directly confirm the agent's calendar from here. ${slotFollowUp} Please share your WhatsApp, Telegram, phone, or email so they can confirm the exact time.${qualificationPrompt}${rental}`;
+}
+
+function buildRussianViewingHandoffAnswer(property: PropertySnapshot, preferredSlot: string | undefined, rental: string): string {
+  const slotText = preferredSlot ? ` на ${preferredSlot}` : "";
+  const slotFollowUp = preferredSlot
+    ? "Я передам это время агентству, чтобы они подтвердили точное окно."
+    : "Напишите, пожалуйста, удобный день и время для просмотра.";
+  const qualificationPrompt =
+    property.listingType === "rent"
+      ? "Дата въезда и срок контракта уже помогают проверить доступность и ставку."
+      : "Если планируете покупку, также полезно указать формат оформления: foreign quota, Thai name или company.";
+
+  return `Хороший выбор. Я помогу записаться на просмотр ${property.title}${slotText}. Я не вижу календарь агента напрямую, поэтому ${slotFollowUp} Оставьте WhatsApp, Telegram, телефон или email, чтобы агент мог подтвердить просмотр. ${qualificationPrompt}${rental}`;
+}
+
+function buildThaiViewingHandoffAnswer(property: PropertySnapshot, preferredSlot: string | undefined, rental: string): string {
+  const slotText = preferredSlot ? ` ในช่วง ${preferredSlot}` : "";
+  const slotFollowUp = preferredSlot
+    ? "ฉันจะส่งช่วงเวลานี้ให้ทีมเอเจนซียืนยันเวลาที่แน่นอน"
+    : "กรุณาระบุวันและเวลาที่สะดวกสำหรับนัดชม";
+  const qualificationPrompt =
+    property.listingType === "rent"
+      ? "วันที่ต้องการเข้าอยู่และระยะสัญญาจะช่วยให้เอเจนต์ตรวจสอบห้องว่างและราคาได้"
+      : "ถ้าต้องการซื้อ กรุณาระบุรูปแบบการถือครอง เช่น foreign quota, Thai name หรือ company และช่วงเวลาที่ต้องการซื้อ";
+
+  return `ตัวเลือกนี้ดีมาก ฉันช่วยนัดชม ${property.title}${slotText} ได้ ฉันไม่สามารถยืนยันปฏิทินของเอเจนต์ได้โดยตรง ดังนั้น${slotFollowUp} กรุณาฝาก WhatsApp, Telegram, เบอร์โทร หรือ email เพื่อให้เอเจนต์ยืนยันนัดชม ${qualificationPrompt}${rental}`;
+}
+
+function buildChineseViewingHandoffAnswer(property: PropertySnapshot, preferredSlot: string | undefined, rental: string): string {
+  const slotText = preferredSlot ? `，时间为 ${preferredSlot}` : "";
+  const slotFollowUp = preferredSlot ? "我可以把这个意向时间转给经纪团队确认。" : "请告诉我你方便看房的日期和时间。";
+  const qualificationPrompt =
+    property.listingType === "rent"
+      ? "入住日期和租期也有助于经纪人确认可租状态和价格。"
+      : "如果是购买，也请说明产权形式，比如 foreign quota、Thai name 或 company，以及大致购买时间。";
+
+  return `这个选择不错。我可以帮你预约看 ${property.title}${slotText}。我这里不能直接确认经纪人的日程，${slotFollowUp} 请留下 WhatsApp、Telegram、电话或 email，方便经纪人确认看房。${qualificationPrompt}${rental}`;
+}
+
+function formatRentalAsk(property: PropertySnapshot, locale: TenantWidgetLanguage): string {
+  if (!property.rentalPriceMonthly) {
+    return "";
+  }
+
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`,
+    ru: ` Арендная ставка: ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/мес.`,
+    th: ` ค่าเช่า ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/เดือน`,
+    zh: ` 租金为 ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/月。`
+  };
+
+  return labels[locale] ?? labels.en;
 }
 
 function extractViewingSlot(message: string): string | undefined {

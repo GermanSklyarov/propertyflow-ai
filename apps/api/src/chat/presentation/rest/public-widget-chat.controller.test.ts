@@ -747,15 +747,14 @@ describe("PublicWidgetChatController", () => {
       "https://agency.example.com"
     );
 
-    expect(response.answer).toContain("from Central Pattaya");
+    expect(response.answer).toContain("area: Central Pattaya");
     expect(response.answer).toContain("These condo options fit the Pattaya search because they include");
     expect(response.answer).toContain("closest option about");
     expect(response.answer).toContain("1BR Condo at Grand Avenue Residence - Central Pattaya: 30k THB/mo");
-    expect(response.answer).toContain("from Central Pattaya, closest option about 1049m from the beach");
+    expect(response.answer).toContain("in or near Central Pattaya, closest option about 1049m from the beach");
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
       "1BR Condo at Grand Avenue Residence - Central Pattaya",
-      "1BR Condo at City Garden Pratumnak - Pratumnak",
-      "1BR Condo at The Cliff - Pratumnak"
+      "1BR Condo at City Garden Pratumnak - Pratumnak"
     ]);
     expect(response.answer.indexOf("1BR Condo at Grand Avenue Residence - Central Pattaya:")).toBeLessThan(
       response.answer.indexOf("1BR Condo at City Garden Pratumnak - Pratumnak:")
@@ -935,9 +934,12 @@ describe("PublicWidgetChatController", () => {
       "Terminal 21 Walkable Studio - Pratumnak"
     ]);
     expect(response.answer).toContain("Pratumnak");
+    expect(response.answer).toContain("район: Pratumnak");
+    expect(response.answer).toContain("в районе Pratumnak");
     expect(response.answer).toContain("студия и 1 спальня");
     expect(response.answer).toContain("удобства:");
     expect(response.answer).toContain("стиральная машина");
+    expect(response.answer).not.toContain("от Pratumnak");
     expect(response.answer).not.toContain("amenities like");
     expect(response.answer).not.toContain("studio спальн.");
     expect(response.answer).not.toContain("Naklua");
