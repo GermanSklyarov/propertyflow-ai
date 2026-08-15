@@ -59,31 +59,30 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
   const [activeSection, setActiveSection] = useState(navItems[0]?.id ?? "overview");
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visibleEntry = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0];
+    const updateActiveSection = () => {
+      let currentSection = navItems[0];
 
-        if (visibleEntry?.target.id) {
-          setActiveSection(visibleEntry.target.id);
+      for (const item of navItems) {
+        const element = document.getElementById(item.id);
+
+        if (element && element.getBoundingClientRect().top <= 140) {
+          currentSection = item;
         }
-      },
-      {
-        rootMargin: "-20% 0px -65% 0px",
-        threshold: [0, 0.25, 0.5]
       }
-    );
 
-    navItems.forEach((item) => {
-      const element = document.getElementById(item.id);
-
-      if (element) {
-        observer.observe(element);
+      if (currentSection) {
+        setActiveSection(currentSection.id);
       }
-    });
+    };
 
-    return () => observer.disconnect();
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
+
+    return () => {
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
   }, [navItems]);
 
   return (
@@ -143,6 +142,29 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
             {dashboard.cards.map((card) => (
               <MetricCard card={card} key={card.key} />
             ))}
+          </section>
+
+          <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[0.9fr_1.1fr]" id="agencies">
+            <AgencyDrilldown agency={primaryAgency} />
+            <Panel title="Spend by function">
+              <div className="space-y-3">
+                {dashboard.usageByOperation.length ? (
+                  dashboard.usageByOperation.map((item) => (
+                    <div key={`${item.service}-${item.operation}`}>
+                      <div className="mb-1 flex items-center justify-between gap-3 text-sm">
+                        <span className="font-medium text-[#17211f]">
+                          {item.service} · {item.operation}
+                        </span>
+                        <span className="text-[#675f55]">{formatAdminMoney(item.estimatedCostUsd)}</span>
+                      </div>
+                      <Progress value={item.costSharePercent} />
+                    </div>
+                  ))
+                ) : (
+                  <EmptyState title="No usage events yet" copy="Costs will appear after AI, Maps, and messaging calls start writing usage events." />
+                )}
+              </div>
+            </Panel>
           </section>
 
           <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]" id="usage-and-costs">
@@ -238,27 +260,6 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
                     formatConfigured(integration.whatsappConfigured)
                   ])}
                 />
-              </div>
-            </Panel>
-          </section>
-
-          <section className="mt-6 grid grid-cols-1 gap-6 xl:grid-cols-[0.9fr_1.1fr]" id="agencies">
-            <AgencyDrilldown agency={primaryAgency} />
-            <Panel title="Spend by function">
-              <div className="space-y-3">
-                {dashboard.usageByOperation.length ? (
-                  dashboard.usageByOperation.map((item) => (
-                    <div key={`${item.service}-${item.operation}`}>
-                      <div className="mb-1 flex items-center justify-between gap-3 text-sm">
-                        <span className="font-medium text-[#17211f]">{item.service} · {item.operation}</span>
-                        <span className="text-[#675f55]">{formatAdminMoney(item.estimatedCostUsd)}</span>
-                      </div>
-                      <Progress value={item.costSharePercent} />
-                    </div>
-                  ))
-                ) : (
-                  <EmptyState title="No usage events yet" copy="Costs will appear after AI, Maps, and messaging calls start writing usage events." />
-                )}
               </div>
             </Panel>
           </section>

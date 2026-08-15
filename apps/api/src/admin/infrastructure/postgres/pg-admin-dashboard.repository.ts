@@ -38,11 +38,21 @@ interface OverviewRow {
   telegram_notifications: string;
   line_notifications: string;
   whatsapp_notifications: string;
+  estimated_ai_cost_usd: string;
+  estimated_cost_usd: string;
+}
+
+interface TenantIntegrationRow {
+  tenant_id: string;
+  agency_name: string;
   telegram_configured: boolean;
   line_configured: boolean;
   whatsapp_configured: boolean;
-  estimated_ai_cost_usd: string;
-  estimated_cost_usd: string;
+}
+
+interface TenantIdentityRow {
+  tenant_id: string;
+  agency_name: string;
 }
 
 interface OperationRow {
@@ -94,6 +104,7 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
       usageByOperation,
       maps,
       messaging,
+      tenantIntegrations,
       systemHealth,
     ] = await Promise.all([
       this.getAgencyRows(periodStart, periodEnd),
@@ -101,6 +112,7 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
       this.getUsageByOperation(periodStart, periodEnd),
       this.getMapsUsage(periodStart, periodEnd),
       this.getMessagingUsage(periodStart, periodEnd),
+      this.getTenantIntegrations(),
       this.getSystemHealth(periodStart, periodEnd),
     ]);
 
@@ -113,7 +125,7 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
       usageByOperation,
       maps,
       messaging,
-      tenantIntegrations: this.buildTenantIntegrations(monthRows),
+      tenantIntegrations,
       limits: this.buildLimitAlerts(monthRows),
       agencies: this.buildAgencyDrilldowns(monthRows),
       systemHealth,
@@ -202,13 +214,6 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
           coalesce(usage_month.telegram_notifications, 0) as telegram_notifications,
           coalesce(usage_month.line_notifications, 0) as line_notifications,
           coalesce(usage_month.whatsapp_notifications, 0) as whatsapp_notifications,
-          tenant.widget_lead_telegram_bot_token is not null
-            and cardinality(tenant.widget_lead_telegram_chat_ids) > 0 as telegram_configured,
-          tenant.widget_lead_line_channel_access_token is not null
-            and cardinality(tenant.widget_lead_line_recipient_ids) > 0 as line_configured,
-          tenant.widget_lead_whatsapp_access_token is not null
-            and tenant.widget_lead_whatsapp_phone_number_id is not null
-            and cardinality(tenant.widget_lead_whatsapp_recipients) > 0 as whatsapp_configured,
           coalesce(usage_month.estimated_ai_cost_usd, 0) as estimated_ai_cost_usd,
           coalesce(usage_month.estimated_cost_usd, 0) as estimated_cost_usd
         from tenant_list tenant
@@ -535,16 +540,6 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
     ]);
   }
 
-  private buildTenantIntegrations(rows: OverviewRow[]): SuperAdminTenantIntegrationStatus[] {
-    return rows.map((row) => ({
-      tenantId: row.tenant_id,
-      agencyName: row.agency_name,
-      telegramConfigured: row.telegram_configured,
-      lineConfigured: row.line_configured,
-      whatsappConfigured: row.whatsapp_configured,
-    }));
-  }
-
   private buildAgencyDrilldowns(
     rows: OverviewRow[],
   ): SuperAdminAgencyDrilldown[] {
@@ -656,6 +651,64 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
     }
   }
 
+  private async getTenantIntegrations(): Promise<SuperAdminTenantIntegrationStatus[]> {
+    const availableColumns = await this.getTenantColumns();
+    const telegramConfiguredSql =
+      hasColumns(availableColumns, ["widget_lead_telegram_bot_token", "widget_lead_telegram_chat_ids"])
+        ? "nullif(trim(widget_lead_telegram_bot_token), '') is not null and cardinality(widget_lead_telegram_chat_ids) > 0"
+        : "false";
+    const lineConfiguredSql =
+      hasColumns(availableColumns, ["widget_lead_line_channel_access_token", "widget_lead_line_recipient_ids"])
+        ? "nullif(trim(widget_lead_line_channel_access_token), '') is not null and cardinality(widget_lead_line_recipient_ids) > 0"
+        : "false";
+    const whatsappConfiguredSql =
+      hasColumns(availableColumns, [
+        "widget_lead_whatsapp_access_token",
+        "widget_lead_whatsapp_phone_number_id",
+        "widget_lead_whatsapp_recipients",
+      ])
+        ? `
+          nullif(trim(widget_lead_whatsapp_access_token), '') is not null
+            and nullif(trim(widget_lead_whatsapp_phone_number_id), '') is not null
+            and cardinality(widget_lead_whatsapp_recipients) > 0
+        `
+        : "false";
+
+    const result = await this.pool.query<TenantIntegrationRow>(
+      `
+        select
+          id as tenant_id,
+          name as agency_name,
+          ${telegramConfiguredSql} as telegram_configured,
+          ${lineConfiguredSql} as line_configured,
+          ${whatsappConfiguredSql} as whatsapp_configured
+        from tenants
+        where status = 'active'
+        order by name asc
+      `,
+    );
+
+    return result.rows.map((row) => ({
+      tenantId: row.tenant_id,
+      agencyName: row.agency_name,
+      telegramConfigured: row.telegram_configured,
+      lineConfigured: row.line_configured,
+      whatsappConfigured: row.whatsapp_configured,
+    }));
+  }
+
+  private async getTenantColumns(): Promise<Set<string>> {
+    const result = await this.pool.query<{ column_name: string }>(
+      `
+        select column_name
+        from information_schema.columns
+        where table_schema = current_schema()
+          and table_name = 'tenants'
+      `,
+    );
+
+    return new Set(result.rows.map((row) => row.column_name));
+  }
 }
 
 function getLlmProviderStatus(): SuperAdminHealthStatus {
@@ -670,6 +723,10 @@ function getLlmProviderStatus(): SuperAdminHealthStatus {
   }
 
   return "not_configured";
+}
+
+function hasColumns(availableColumns: Set<string>, requiredColumns: string[]): boolean {
+  return requiredColumns.every((column) => availableColumns.has(column));
 }
 
 function canOpenTcpConnection(host: string, port: number): Promise<boolean> {
