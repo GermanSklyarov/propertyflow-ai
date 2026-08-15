@@ -482,6 +482,66 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("Terminal 21 Walkable Studio is a 1-bedroom condo");
   });
 
+  it("keeps rental availability follow-ups on the selected listing instead of rerunning search", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          id: "property-1",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+          title: "1BR Condo at Siam Oriental Tropical Garden - Pratumnak"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          id: "property-2",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 25_000, currency: "THB" },
+          title: "1BR Condo at City Garden Pratumnak - Pratumnak"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "1BR Condo at Siam Oriental Tropical Garden - Pratumnak" },
+            { propertyId: "property-2", title: "1BR Condo at City Garden Pratumnak - Pratumnak" }
+          ],
+          role: "assistant",
+          text: "I found 3 matching listings."
+        }
+      ],
+      locale: "en",
+      message: "I like the first option and I want to rent on 1st september it's possible?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["property-1"]);
+    expect(response.answer).toContain("I can help arrange a viewing of 1BR Condo at Siam Oriental Tropical Garden - Pratumnak for 1st september");
+    expect(response.answer).toContain("Rental ask is 24000 THB/mo");
+    expect(response.answer).not.toContain("I found 3 matching listings");
+  });
+
   it("answers Russian viewing requests in Russian without inventing a preferred slot", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([

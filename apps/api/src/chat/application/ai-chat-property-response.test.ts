@@ -44,6 +44,25 @@ describe("ai-chat-property-response", () => {
     expect(draft.deterministicDraft).toContain("Please share your WhatsApp, Telegram, phone, or email");
   });
 
+  it("treats rental availability dates as handoff requests", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("I want to rent on 1st september it's possible?"),
+      knowledge: [],
+      property: propertyFactory({
+        listingType: "rent",
+        rentalPriceMonthly: { amount: 24_000, currency: "THB" }
+      }),
+      requestMessage: "I want to rent on 1st september it's possible?"
+    });
+
+    expect(draft.deterministicDraft).toContain("I can help arrange a viewing of Wongamat Sea View Residence for 1st september");
+    expect(draft.deterministicDraft).toContain("Rental ask is 24000 THB/mo");
+  });
+
   it("localizes viewing handoff drafts for Thai and Chinese", () => {
     const thaiDraft = buildAiChatPropertyResponseDraft({
       dueDiligence: {

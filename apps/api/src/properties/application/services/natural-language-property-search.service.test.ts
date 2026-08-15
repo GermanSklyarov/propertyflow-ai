@@ -370,6 +370,67 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.items).not.toContainEqual(expect.objectContaining({ bedrooms: 2 }));
   });
 
+  it("does not apply point-radius geofiltering when Jomtien is used as an area", async () => {
+    const ville = propertyFactory({
+      address: "East Pattaya",
+      areaSqm: 34,
+      bedrooms: 1,
+      id: "ville-jomtien",
+      kind: "condo",
+      listingType: "sale_or_rent",
+      location: { latitude: 12.929, longitude: 100.94 },
+      rentalPriceMonthly: { amount: 30_000, currency: "THB" },
+      title: "1BR Condo at The Ville Jomtien - East Pattaya"
+    });
+    const repository = {
+      findById: async () => ville,
+      search: async () => [ville]
+    };
+    const indexedSearch = {
+      search: async (_tenantId: string, filters: Record<string, unknown>) => ({
+        filters,
+        index: "propertyflow-properties-v1",
+        items: [{ propertyId: ville.id }],
+        total: 1
+      })
+    };
+    const locationIntelligence = {
+      resolveComparisonTarget: async () => ({
+        kind: "poi",
+        poi: {
+          aliases: ["jomtien", "jomtien beach"],
+          category: "beach",
+          id: "pattaya-jomtien-beach",
+          label: "Jomtien Beach",
+          location: { latitude: 12.8906, longitude: 100.8697 },
+          market: "pattaya"
+        }
+      })
+    };
+    const service = new NaturalLanguagePropertySearchService(
+      repository as never,
+      indexedSearch as never,
+      { rankCandidates: async () => [] } as never,
+      locationIntelligence as never
+    );
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      market: "pattaya",
+      query: "condo for rent 1 year lease at jomtien budget around 30k"
+    });
+
+    expect(result.filters).toMatchObject({
+      listingType: "rent",
+      market: "pattaya",
+      maxMonthlyRentThb: 30_000
+    });
+    expect(result.filters).not.toHaveProperty("near");
+    expect(result.filters).not.toHaveProperty("radiusMeters");
+    expect(result.items.map((item) => item.id)).toEqual(["ville-jomtien"]);
+    expect(result.rankingExplanation).not.toContain("Map geocoding resolved");
+  });
+
   it("supplements a thin indexed shortlist with structured sale matches", async () => {
     const indexedOnly = propertyFactory({
       id: "property-wongamat",

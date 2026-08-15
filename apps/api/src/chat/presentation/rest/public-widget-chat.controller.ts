@@ -856,11 +856,16 @@ function filterByWidgetLocationTarget(properties: PropertySnapshot[], locationTa
   }
 
   const textMatchedProperties = properties.filter((property) => hasWidgetLocationTextMatch(property, locationTarget));
+
+  if (locationTarget.kind === "area") {
+    return textMatchedProperties;
+  }
+
   const nearbyProperties = textMatchedProperties.length
     ? textMatchedProperties
     : properties.filter((property) => distanceMeters(property.location, locationTarget) <= locationTarget.matchRadiusMeters!);
 
-  return locationTarget.kind === "area" ? nearbyProperties : nearbyProperties.length ? nearbyProperties : properties;
+  return nearbyProperties.length ? nearbyProperties : properties;
 }
 
 function hasWidgetLocationTextMatch(property: PropertySnapshot, locationTarget: WidgetLocationTarget): boolean {
@@ -1503,6 +1508,10 @@ function summarizeSingleLocationTargetDistance(
   }
 
   if (target.kind === "area") {
+    if (!hasWidgetLocationTextMatch(property, target)) {
+      return "";
+    }
+
     const labels: Record<TenantWidgetLanguage, string> = {
       en: `in or near ${target.label}`,
       ru: `в районе ${target.label}`,

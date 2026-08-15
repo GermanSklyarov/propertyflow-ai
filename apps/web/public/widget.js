@@ -696,8 +696,8 @@
       return false;
     }
 
-    if (Array.isArray(suggestedActions) && suggestedActions.indexOf("save-search") >= 0) {
-      return true;
+    if (Array.isArray(suggestedActions) && suggestedActions.length) {
+      return suggestedActions.indexOf("save-search") >= 0;
     }
 
     return matchesIntent(normalized, searchIntentPatterns);

@@ -62,6 +62,29 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("keeps rent availability date follow-ups on the referenced listing", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Siam Oriental Tropical Garden" },
+              { propertyId: "property-2", title: "City Garden Pratumnak" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "I like the first option and I want to rent on 1st september it's possible?"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-1",
+      reason: "follow-up-reference"
+    });
+  });
+
   it("recognizes common viewing date phrases as booking follow-ups", () => {
     const baseConversation = [
       {

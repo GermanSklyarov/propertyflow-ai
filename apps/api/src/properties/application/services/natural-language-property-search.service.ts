@@ -264,6 +264,10 @@ export class NaturalLanguagePropertySearchService {
       return interpretation;
     }
 
+    if (target.kind === "poi" && isAreaOnlyLocationMention(this.normalize(request.query), target.poi.label)) {
+      return interpretation;
+    }
+
     const radiusMeters = detectRequestedRadiusMeters(this.normalize(request.query)) ?? defaultRadiusMetersForQuery(this.normalize(request.query));
     const anchor = target.kind === "poi" ? target.poi : target.pois[0];
 
@@ -505,6 +509,16 @@ function hasExactBedroomQualifier(query: string, layoutTerm: string): boolean {
     `(?:\\b(?:only|exactly|just)\\s+${escapedLayoutTerm}\\b|\\b${escapedLayoutTerm}\\s+(?:only|exactly|just)\\b|только\\s+${escapedLayoutTerm}|${escapedLayoutTerm}\\s+только|именно\\s+${escapedLayoutTerm}|ровно\\s+${escapedLayoutTerm})`,
     "i"
   ).test(query);
+}
+
+function isAreaOnlyLocationMention(query: string, targetLabel: string): boolean {
+  const areaPattern =
+    /\b(?:jomtien|na jomtien|na chom thian|wongamat|pratumnak|pratamnak|phra tamnak|naklua|central pattaya|east pattaya)\b|джомтьен|вонгамат|пратамнак|наклуа|центральная паттайя|จอมเทียน|นาจอมเทียน|วงศ์อมาตย์|นาเกลือ|พระตำหนัก/i;
+  const explicitProximityPattern =
+    /\b(?:near|close to|next to|walking distance|walkable|within|radius)\b|рядом|возле|около|пешком|в радиусе|ใกล้|เดิน|ภายใน|近|靠近|步行|范围|範圍/i;
+  const targetIsAreaLike = /jomtien|wongamat|pratumnak|pratamnak|phra tamnak|naklua|central pattaya|east pattaya/i.test(targetLabel);
+
+  return targetIsAreaLike && areaPattern.test(query) && !explicitProximityPattern.test(query);
 }
 
 function escapeRegExp(value: string): string {

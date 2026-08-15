@@ -202,6 +202,7 @@ function extractViewingSlot(message: string): string | undefined {
   const patterns = [
     /\b(?:today|tomorrow|day after tomorrow|next week|this weekend|weekend)(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?/i,
     /\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?/i,
+    /\b\d{1,2}(?:st|nd|rd|th)\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?/i,
     /\b\d{1,2}\s+(?:january|february|march|april|may|june|july|august|september|october|november|december)(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?/i,
     /\bin\s+\d+\s+days?(?:\s+at\s+\d{1,2}(?::\d{2})?\s*(?:a\.?m\.?|p\.?m\.?)?)?/i,
     /\b(?:сегодня|завтра|послезавтра|на выходных|в выходные|на следующей неделе)(?:\s+в\s+\d{1,2}(?::\d{2})?)?/i,

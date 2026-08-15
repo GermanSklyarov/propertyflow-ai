@@ -38,17 +38,7 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
   const intent = classifyAiChatIntent(request.message);
   const namedPropertyId = resolveNamedPropertyId(request);
   const selectedPropertyId = resolveSelectedPropertyIdFromConversation(request);
-
-  if (isSearchRefinement(request)) {
-    return {
-      intent: {
-        ...intent,
-        route: "search"
-      },
-      mode: "listing-search",
-      reason: "search-request"
-    };
-  }
+  const hasCurrentPropertyReference = hasCurrentMessagePropertyReference(request, intent, namedPropertyId);
 
   if (request.propertyId) {
     return {
@@ -68,6 +58,17 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
       mode: "property-detail",
       propertyId: namedPropertyId,
       reason: "follow-up-reference"
+    };
+  }
+
+  if (isSearchRefinement(request) && !hasCurrentPropertyReference) {
+    return {
+      intent: {
+        ...intent,
+        route: "search"
+      },
+      mode: "listing-search",
+      reason: "search-request"
     };
   }
 
@@ -144,6 +145,17 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     }
   }
 
+  if (isSearchRefinement(request)) {
+    return {
+      intent: {
+        ...intent,
+        route: "search"
+      },
+      mode: "listing-search",
+      reason: "search-request"
+    };
+  }
+
   if (intent.route === "property-follow-up") {
     const propertyId = resolveReferencedPropertyId(request, intent.referencedListingIndex ?? 0);
 
@@ -166,6 +178,20 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     mode: "listing-search",
     reason: "search-request"
   };
+}
+
+function hasCurrentMessagePropertyReference(
+  request: AiChatRequest,
+  intent: AiChatIntent,
+  namedPropertyId: string | undefined
+): boolean {
+  const message = normalizeReferenceText(request.message);
+
+  return Boolean(
+    namedPropertyId ||
+      intent.referencedListingIndex !== undefined ||
+      contextualPropertyReferencePattern.test(message)
+  );
 }
 
 function resolveSelectedPropertyIdFromConversation(request: AiChatRequest): string | undefined {

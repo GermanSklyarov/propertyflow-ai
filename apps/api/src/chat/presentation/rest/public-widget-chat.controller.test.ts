@@ -1053,6 +1053,99 @@ describe("PublicWidgetChatController", () => {
     expect(threeBedroomResponse.answer).toContain("3 спальни");
   });
 
+  it("does not drop Jomtien rental cards when an area target only has an approximate center", async () => {
+    const controller = publicWidgetControllerForProperties(
+      ["ville-jomtien"],
+      new Map([
+        [
+          "ville-jomtien",
+          propertyFactory({
+            address: "East Pattaya",
+            areaSqm: 34,
+            bedrooms: 1,
+            id: "ville-jomtien",
+            listingType: "sale_or_rent",
+            location: { latitude: 12.929, longitude: 100.94 },
+            rentalPriceMonthly: { amount: 30_000, currency: "THB" },
+            title: "1BR Condo at The Ville Jomtien - East Pattaya"
+          })
+        ]
+      ])
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        market: "pattaya",
+        message: "condo for rent 1 year lease at jomtien budget around 30k"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings).toEqual([
+      {
+        propertyId: "ville-jomtien",
+        title: "1BR Condo at The Ville Jomtien - East Pattaya",
+        url: "https://agency.example.com/listings/ville-jomtien"
+      }
+    ]);
+    expect(response.answer).toContain("1BR Condo at The Ville Jomtien - East Pattaya: 30k THB/mo");
+    expect(response.answer).not.toContain("do not have public condo cards");
+  });
+
+  it("does not relabel Pratumnak rentals as Jomtien area matches", async () => {
+    const controller = publicWidgetControllerForProperties(
+      ["siam-oriental", "the-cliff", "city-garden"],
+      new Map([
+        [
+          "siam-oriental",
+          propertyFactory({
+            id: "siam-oriental",
+            listingType: "rent",
+            rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+            title: "1BR Condo at Siam Oriental Tropical Garden - Pratumnak"
+          })
+        ],
+        [
+          "the-cliff",
+          propertyFactory({
+            id: "the-cliff",
+            listingType: "rent",
+            rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+            title: "1BR Condo at The Cliff - Pratumnak"
+          })
+        ],
+        [
+          "city-garden",
+          propertyFactory({
+            id: "city-garden",
+            listingType: "rent",
+            rentalPriceMonthly: { amount: 25_000, currency: "THB" },
+            title: "1BR Condo at City Garden Pratumnak - Pratumnak"
+          })
+        ]
+      ])
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "ru",
+        market: "pattaya",
+        message: "найди мне кондо на джомтьене в аренду, бюджет до 30 тысяч"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings).toEqual([]);
+    expect(response.answer).toContain("Сейчас нет публичных карточек кондо рядом с Jomtien");
+    expect(response.answer).not.toContain("Siam Oriental");
+    expect(response.answer).not.toContain("в районе Jomtien");
+  });
+
   it("shows unseen listing cards when the visitor asks for more options", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
