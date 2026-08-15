@@ -577,7 +577,7 @@ function isShortAffirmation(message: string): boolean {
 }
 
 function looksLikeSearchRequest(message: string): boolean {
-  return /find|show|recommend|suggest|condo|apartment|room|house|villa|rent|rental|buy|budget|under|studio|bedroom|spacious|move|найд|подбер|покаж|кондо|квартир|дом|аренд|купить|หา|แนะนำ|คอนโด|อพาร์ตเมนต์|ห้อง|บ้าน|วิลล่า|ซื้อ|เช่า|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|ย้าย|找|推荐|推薦|显示|顯示|公寓|房子|别墅|別墅|买|買|购买|購買|租|出租|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|搬|入住/i.test(
+  return /find|show|recommend|suggest|condo|apartment|room|house|villa|rent|rental|buy|budget|under|studio|bedroom|spacious|move|найд|подбер|покаж|посовет|ищу|поиск|кондо|квартир|однушк|однокомнат|студи|дом|аренд|купить|หา|แนะนำ|คอนโด|อพาร์ตเมนต์|ห้อง|บ้าน|วิลล่า|ซื้อ|เช่า|งบ|ไม่เกิน|สตูดิโอ|ห้องนอน|กว้าง|ย้าย|找|推荐|推薦|显示|顯示|公寓|房子|别墅|別墅|买|買|购买|購買|租|出租|预算|預算|不超过|不超過|以内|以內|开间|開間|单间|單間|卧室|臥室|房间|房間|宽敞|寬敞|搬|入住/i.test(
     message
   );
 }

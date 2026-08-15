@@ -856,6 +856,94 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("2BR Condo at Grand Avenue Residence");
   });
 
+  it("keeps Russian Pratumnak context when the visitor refines rent, budget, and move-in timing", async () => {
+    const controller = publicWidgetControllerForProperties(
+      ["huai-yai", "the-cliff", "naklua", "pratumnak-studio"],
+      new Map([
+        [
+          "huai-yai",
+          propertyFactory({
+            amenities: ["kids playground", "balcony", "washing machine"],
+            areaSqm: 31.9,
+            bedrooms: 0,
+            id: "huai-yai",
+            listingType: "rent",
+            location: { latitude: 12.8401, longitude: 100.9401 },
+            rentalPriceMonthly: { amount: 14_000, currency: "THB" },
+            title: "Studio Condo at Huai Yai Villas - Huai Yai"
+          })
+        ],
+        [
+          "the-cliff",
+          propertyFactory({
+            amenities: ["key card access", "European kitchen", "washing machine"],
+            areaSqm: 29.8,
+            bedrooms: 1,
+            id: "the-cliff",
+            listingType: "rent",
+            location: { latitude: 12.916, longitude: 100.86 },
+            rentalPriceMonthly: { amount: 18_000, currency: "THB" },
+            title: "1BR Condo at The Cliff - Pratumnak"
+          })
+        ],
+        [
+          "naklua",
+          propertyFactory({
+            amenities: ["covered parking", "garden", "communal pool"],
+            areaSqm: 36.8,
+            bedrooms: 0,
+            id: "naklua",
+            listingType: "rent",
+            location: { latitude: 12.9706, longitude: 100.9902 },
+            rentalPriceMonthly: { amount: 18_000, currency: "THB" },
+            title: "Studio Condo at Club Royal - Naklua"
+          })
+        ],
+        [
+          "pratumnak-studio",
+          propertyFactory({
+            amenities: ["fiber-internet", "pool", "coworking-lounge"],
+            areaSqm: 31,
+            bedrooms: 0,
+            id: "pratumnak-studio",
+            listingType: "rent",
+            location: { latitude: 12.914, longitude: 100.861 },
+            rentalPriceMonthly: { amount: 19_000, currency: "THB" },
+            title: "Terminal 21 Walkable Studio - Pratumnak"
+          })
+        ]
+      ])
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          { role: "user", text: "я ищу недорогую студию или однушку в паттайе на пратамнаке, что посоветуешь?" },
+          { role: "assistant", text: "Я нашла варианты на Пратамнаке." }
+        ],
+        locale: "ru",
+        market: "pattaya",
+        message: "меня интересует аренда, бюджет до 20 тысяч, планирую въехать в конце ноября, контракт на полгода"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "1BR Condo at The Cliff - Pratumnak",
+      "Terminal 21 Walkable Studio - Pratumnak"
+    ]);
+    expect(response.answer).toContain("Pratumnak");
+    expect(response.answer).toContain("студия и 1 спальня");
+    expect(response.answer).toContain("удобства:");
+    expect(response.answer).toContain("стиральная машина");
+    expect(response.answer).not.toContain("amenities like");
+    expect(response.answer).not.toContain("studio спальн.");
+    expect(response.answer).not.toContain("Naklua");
+    expect(response.answer).not.toContain("Huai Yai");
+  });
+
   it("shows unseen listing cards when the visitor asks for more options", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

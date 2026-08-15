@@ -37,12 +37,14 @@ interface PublicWidgetRecommendationBundle {
 }
 
 type WidgetPriceMode = "rent" | "sale";
+const WIDGET_LOCATION_MATCH_RADIUS_METERS = 5_000;
 
 interface WidgetLocationTarget {
   aliases: string[];
   label: string;
   latitude: number;
   longitude: number;
+  matchRadiusMeters?: number;
 }
 
 const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], WidgetLocationTarget[]>> = {
@@ -52,6 +54,22 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
       label: "Central Pattaya",
       latitude: 12.9348,
       longitude: 100.8832
+    },
+    {
+      aliases: [
+        "pratumnak",
+        "pratamnak",
+        "phra tamnak",
+        "phra tamnak hill",
+        "pratumnak hill",
+        "пратамнак",
+        "пратамнаке",
+        "пратамнака"
+      ],
+      label: "Pratumnak",
+      latitude: 12.9156,
+      matchRadiusMeters: WIDGET_LOCATION_MATCH_RADIUS_METERS,
+      longitude: 100.8624
     },
     {
       aliases: ["walking street", "pattaya walking street"],
@@ -282,7 +300,8 @@ export class PublicWidgetChatController {
     const layoutMatchedProperties = filterByWidgetLayoutRequirements(kindMatchedProperties, searchContext);
     const strictPublicProperties = filterByRequiredWidgetAmenities(layoutMatchedProperties, searchContext);
     const locationTarget = await this.resolveWidgetLocationTarget(searchContext, publicProperties[0]?.market ?? payload?.market);
-    const rankedPublicProperties = rankWidgetPropertiesForRequest(strictPublicProperties, searchContext, locationTarget);
+    const locationMatchedProperties = filterByWidgetLocationTarget(strictPublicProperties, locationTarget);
+    const rankedPublicProperties = rankWidgetPropertiesForRequest(locationMatchedProperties, searchContext, locationTarget);
     const matchedProperties = rankedPublicProperties.slice(0, 3);
 
     return {
@@ -294,7 +313,7 @@ export class PublicWidgetChatController {
         url: buildListingUrl(baseOrigin, listingUrlTemplate, property.id)
       })),
       locationTarget,
-      totalMatches: strictPublicProperties.length
+      totalMatches: locationMatchedProperties.length
     };
   }
 
@@ -513,7 +532,7 @@ function buildListingFitSummary(
   const beachSummary = summarizeBeachDistance(properties, locale);
   const locationTarget = explicitLocationTarget ?? resolveStaticWidgetLocationTarget(requestMessage, properties[0]?.market);
   const locationSummary = locationTarget ? summarizeLocationTargetDistance(properties, locationTarget, locale) : "";
-  const amenities = summarizeAmenities(properties, requestMessage);
+  const amenities = summarizeAmenities(properties, locale, requestMessage);
   const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
   const details = [priceRange, bedroomSummary, areaSummary, locationSummary, beachSummary, amenities].filter(Boolean);
   const clarificationPrompt = buildRecommendationClarificationPrompt(requestMessage, locale);
@@ -694,6 +713,18 @@ function filterByRequiredWidgetAmenities(properties: PropertySnapshot[], request
     : [];
 
   return familySized.length ? familySized : filtered.length ? filtered : properties;
+}
+
+function filterByWidgetLocationTarget(properties: PropertySnapshot[], locationTarget?: WidgetLocationTarget): PropertySnapshot[] {
+  if (!locationTarget?.matchRadiusMeters) {
+    return properties;
+  }
+
+  const nearbyProperties = properties.filter(
+    (property) => distanceMeters(property.location, locationTarget) <= locationTarget.matchRadiusMeters!
+  );
+
+  return nearbyProperties.length ? nearbyProperties : properties;
 }
 
 function filterByWidgetListingIntent(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
@@ -1159,6 +1190,54 @@ function formatMoneyAmount(value: number): string {
   return value.toLocaleString("en-US");
 }
 
+function formatRussianBedrooms(value: number): string {
+  const normalized = Math.abs(value);
+  const lastDigit = normalized % 10;
+  const lastTwoDigits = normalized % 100;
+
+  if (lastDigit === 1 && lastTwoDigits !== 11) {
+    return `${value} спальня`;
+  }
+
+  if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
+    return `${value} спальни`;
+  }
+
+  return `${value} спален`;
+}
+
+function formatAmenityLabel(amenity: string, locale: TenantWidgetLanguage): string {
+  if (locale !== "ru") {
+    return amenity;
+  }
+
+  const labels: Record<string, string> = {
+    "24h security": "охрана 24/7",
+    balcony: "балкон",
+    "communal pool": "общий бассейн",
+    "covered parking": "крытая парковка",
+    coworking: "коворкинг",
+    "coworking space": "коворкинг",
+    "coworking-lounge": "коворкинг-зона",
+    "European kitchen": "европейская кухня",
+    "fast-internet": "быстрый интернет",
+    "fiber-internet": "оптоволоконный интернет",
+    garden: "сад",
+    gym: "спортзал",
+    "high-speed internet": "быстрый интернет",
+    "key card access": "доступ по карте",
+    "kids playground": "детская площадка",
+    "pet-friendly": "можно с питомцами",
+    pool: "бассейн",
+    "sea-view": "вид на море",
+    "shuttle service": "шаттл",
+    "washing machine": "стиральная машина",
+    workspace: "рабочее место"
+  };
+
+  return labels[amenity] ?? amenity.replaceAll("-", " ");
+}
+
 function summarizeBedrooms(properties: PropertySnapshot[], locale: TenantWidgetLanguage): string {
   const bedrooms = Array.from(new Set(properties.map((property) => property.bedrooms ?? 0))).sort((left, right) => left - right);
 
@@ -1166,17 +1245,22 @@ function summarizeBedrooms(properties: PropertySnapshot[], locale: TenantWidgetL
     return "";
   }
 
+  const minBedrooms = bedrooms[0] ?? 0;
+  const maxBedrooms = bedrooms[bedrooms.length - 1] ?? minBedrooms;
   const value =
-    bedrooms.length === 1
-      ? bedrooms[0] === 0
-        ? "studio"
-        : String(bedrooms[0])
-      : bedrooms[0] === 0
-        ? `studio-${bedrooms[bedrooms.length - 1]}`
-        : `${bedrooms[0]}-${bedrooms[bedrooms.length - 1]}`;
+    bedrooms.length === 1 ? (minBedrooms === 0 ? "studio" : String(minBedrooms)) : minBedrooms === 0 ? `studio-${maxBedrooms}` : `${minBedrooms}-${maxBedrooms}`;
   const labels: Record<TenantWidgetLanguage, string> = {
     en: value === "studio" ? "studio layouts" : `${value} bedroom${value === "1" ? "" : "s"}`,
-    ru: `${value} спальн.`,
+    ru:
+      bedrooms.length === 1
+        ? minBedrooms === 0
+          ? "студия"
+          : formatRussianBedrooms(minBedrooms)
+        : minBedrooms === 0
+          ? maxBedrooms === 1
+            ? "студия и 1 спальня"
+            : `студии-${formatRussianBedrooms(maxBedrooms)}`
+          : `${minBedrooms}-${formatRussianBedrooms(maxBedrooms)}`,
     th: `${value} ห้องนอน`,
     zh: `${value} 间卧室`
   };
@@ -1246,11 +1330,27 @@ function summarizeLocationTargetDistance(
   return labels[locale] ?? labels.en;
 }
 
-function summarizeSingleLocationTargetDistance(property: PropertySnapshot, target?: WidgetLocationTarget): string {
-  return target ? `about ${formatDistance(distanceMeters(property.location, target))} from ${target.label}` : "";
+function summarizeSingleLocationTargetDistance(
+  property: PropertySnapshot,
+  locale: TenantWidgetLanguage,
+  target?: WidgetLocationTarget
+): string {
+  if (!target) {
+    return "";
+  }
+
+  const distance = formatDistance(distanceMeters(property.location, target));
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `about ${distance} from ${target.label}`,
+    ru: `примерно ${distance} от ${target.label}`,
+    th: `ประมาณ ${distance} จาก ${target.label}`,
+    zh: `距离 ${target.label} 约 ${distance}`
+  };
+
+  return labels[locale] ?? labels.en;
 }
 
-function summarizeAmenities(properties: PropertySnapshot[], requestMessage = ""): string {
+function summarizeAmenities(properties: PropertySnapshot[], locale: TenantWidgetLanguage, requestMessage = ""): string {
   const allAmenities = Array.from(new Set(properties.flatMap((property) => property.amenities ?? []).filter(Boolean)));
   const requestedAmenities = detectRequestedWidgetAmenities(requestMessage).filter((amenity) =>
     properties.some((property) => hasAnyAmenity(property, amenity === "pet-friendly" ? ["pet-friendly", "pets-allowed"] : [amenity]))
@@ -1259,8 +1359,15 @@ function summarizeAmenities(properties: PropertySnapshot[], requestMessage = "")
     ...requestedAmenities,
     ...allAmenities.filter((amenity) => !requestedAmenities.includes(amenity))
   ].slice(0, 3);
+  const localizedAmenities = amenities.map((amenity) => formatAmenityLabel(amenity, locale));
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `amenities like ${localizedAmenities.join(", ")}`,
+    ru: `удобства: ${localizedAmenities.join(", ")}`,
+    th: `สิ่งอำนวยความสะดวก เช่น ${localizedAmenities.join(", ")}`,
+    zh: `配套包括${localizedAmenities.join("、")}`
+  };
 
-  return amenities.length ? `amenities like ${amenities.join(", ")}` : "";
+  return amenities.length ? labels[locale] ?? labels.en : "";
 }
 
 function isPublicWidgetRecommendableProperty(property: PropertySnapshot): boolean {
@@ -1282,9 +1389,9 @@ function buildListingCardDescription(
     formatPriceRange([property], priceMode),
     summarizeBedrooms([property], locale),
     summarizeArea([property], locale),
-    summarizeSingleLocationTargetDistance(property, locationTarget),
+    summarizeSingleLocationTargetDistance(property, locale, locationTarget),
     summarizeBeachDistance([property], locale),
-    summarizeAmenities([property])
+    summarizeAmenities([property], locale)
   ].filter(Boolean);
   const detail = facts.length ? facts.join(", ") : formatMarketLabel(property.market);
 

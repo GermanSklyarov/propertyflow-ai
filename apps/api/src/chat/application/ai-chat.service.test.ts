@@ -1072,6 +1072,50 @@ describe("AiChatService", () => {
     });
   });
 
+  it("keeps Russian Pratumnak location context when the visitor refines rental criteria", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { listingType: "rent", market: "pattaya", maxPrice: 20_000 },
+        interpretedIntent: "Pratumnak rental under 20k",
+        items: [propertyFactory({ id: "property-2", listingType: "rent", title: "Studio Condo at Pratumnak" })],
+        rankingExplanation: "Using Pratumnak rental context plus updated budget.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const baseSearch = "я ищу недорогую студию или однушку в паттайе на пратамнаке, что посоветуешь?";
+    const refinement = "меня интересует аренда, бюджет до 20 тысяч, планирую въехать в конце ноября, контракт на полгода";
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: baseSearch },
+        {
+          recommendedListings: [{ propertyId: "property-1", title: "1BR Condo at The Cliff - Pratumnak" }],
+          role: "assistant",
+          text: "Я нашла варианты на Пратамнаке."
+        }
+      ],
+      locale: "ru",
+      market: "pattaya",
+      message: refinement
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "ru",
+      market: "pattaya",
+      purpose: undefined,
+      query: `${baseSearch}. Updated criteria: ${refinement}`
+    });
+  });
+
   it("merges Thai layout refinements with the previous rental search context", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const naturalLanguageSearch = {
