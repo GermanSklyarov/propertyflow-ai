@@ -76,7 +76,7 @@ for (const processConfig of processes) {
 }
 
 console.log("PropertyFlow dev stack started: api, worker, web, agency, admin.");
-console.log("Web: http://localhost:3000 | Agency: http://localhost:3002 | API: http://localhost:3001/docs | Admin: type-check watch");
+console.log("Web: http://localhost:3000 | Agency: http://localhost:3002 | Admin: http://localhost:3003 | API: http://localhost:3001/docs");
 console.log("Press Ctrl+C to stop all dev processes.");
 
 process.once("SIGINT", () => shutdown(0));
