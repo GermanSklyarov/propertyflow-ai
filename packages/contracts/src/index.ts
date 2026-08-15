@@ -536,6 +536,14 @@ export interface SuperAdminMessagingUsage {
   deliveryErrors: number;
 }
 
+export interface SuperAdminTenantIntegrationStatus {
+  tenantId: string;
+  agencyName: string;
+  telegramConfigured: boolean;
+  lineConfigured: boolean;
+  whatsappConfigured: boolean;
+}
+
 export interface SuperAdminLimitAlert {
   tenantId: string;
   agencyName: string;
@@ -554,9 +562,7 @@ export interface SuperAdminSystemHealth {
   redis: SuperAdminHealthStatus;
   llmProvider: SuperAdminHealthStatus;
   googleMaps: SuperAdminHealthStatus;
-  telegram: SuperAdminHealthStatus;
-  line: SuperAdminHealthStatus;
-  whatsapp: SuperAdminHealthStatus;
+  messagingDelivery: SuperAdminHealthStatus;
   failedJobs: number;
   webhookFailures: number;
   failedNotifications: number;
@@ -599,6 +605,7 @@ export interface SuperAdminDashboardResponse {
   usageByOperation: SuperAdminUsageByOperation[];
   maps: SuperAdminMapsUsage;
   messaging: SuperAdminMessagingUsage;
+  tenantIntegrations: SuperAdminTenantIntegrationStatus[];
   limits: SuperAdminLimitAlert[];
   agencies: SuperAdminAgencyDrilldown[];
   systemHealth: SuperAdminSystemHealth;

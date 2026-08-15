@@ -51,6 +51,11 @@ export const demoDashboard: SuperAdminDashboardResponse = {
     whatsappFailed: 0,
     deliveryErrors: 0
   },
+  tenantIntegrations: [
+    { tenantId: "apartwell", agencyName: "Apartwell", telegramConfigured: false, lineConfigured: true, whatsappConfigured: false },
+    { tenantId: "demo-agency", agencyName: "Demo Agency", telegramConfigured: true, lineConfigured: false, whatsappConfigured: false },
+    { tenantId: "another-agency", agencyName: "Another Agency", telegramConfigured: true, lineConfigured: true, whatsappConfigured: true }
+  ],
   limits: [
     { tenantId: "apartwell", agencyName: "Apartwell", metric: "aiRequests", used: 1281, limit: 10000, utilizationRate: 12.81, level: "ok" },
     { tenantId: "apartwell", agencyName: "Apartwell", metric: "conversations", used: 428, limit: 2000, utilizationRate: 21.4, level: "ok" },
@@ -88,9 +93,7 @@ export const demoDashboard: SuperAdminDashboardResponse = {
     redis: "ok",
     llmProvider: "configured",
     googleMaps: "configured",
-    telegram: "not_configured",
-    line: "configured",
-    whatsapp: "not_configured",
+    messagingDelivery: "ok",
     failedJobs: 0,
     webhookFailures: 0,
     failedNotifications: 0,

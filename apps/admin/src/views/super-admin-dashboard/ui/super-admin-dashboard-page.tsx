@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import type {
   SuperAdminAgencyDrilldown,
   SuperAdminDashboardResponse,
@@ -44,6 +47,44 @@ const metricIcons: Record<string, React.ComponentType<{ className?: string }>> =
 export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperAdminDashboardPageProps) {
   const alerts = selectActionableLimitAlerts(dashboard);
   const primaryAgency = dashboard.agencies[0];
+  const tenantIntegrations = dashboard.tenantIntegrations ?? fallbackTenantIntegrations(dashboard);
+  const navItems = useMemo(
+    () =>
+      superAdminSections.map((section) => ({
+        id: section.toLowerCase().replaceAll(" ", "-").replace("&", "and"),
+        label: section
+      })),
+    []
+  );
+  const [activeSection, setActiveSection] = useState(navItems[0]?.id ?? "overview");
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((left, right) => left.boundingClientRect.top - right.boundingClientRect.top)[0];
+
+        if (visibleEntry?.target.id) {
+          setActiveSection(visibleEntry.target.id);
+        }
+      },
+      {
+        rootMargin: "-20% 0px -65% 0px",
+        threshold: [0, 0.25, 0.5]
+      }
+    );
+
+    navItems.forEach((item) => {
+      const element = document.getElementById(item.id);
+
+      if (element) {
+        observer.observe(element);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [navItems]);
 
   return (
     <main className="min-h-screen bg-[#f6f4ef] text-[#17211f]">
@@ -55,16 +96,17 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
               <h1 className="mt-2 text-2xl font-semibold text-[#17211f]">Super Admin</h1>
             </div>
             <nav className="space-y-1">
-              {superAdminSections.map((section, index) => (
+              {navItems.map((item) => (
                 <a
                   className={`flex items-center justify-between rounded-md px-3 py-2 text-sm ${
-                    index === 0 ? "bg-[#17211f] text-white" : "text-[#554d43] hover:bg-[#ece7dd]"
+                    item.id === activeSection ? "bg-[#17211f] text-white" : "text-[#554d43] hover:bg-[#ece7dd]"
                   }`}
-                  href={`#${section.toLowerCase().replaceAll(" ", "-").replace("&", "and")}`}
-                  key={section}
+                  href={`#${item.id}`}
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id)}
                 >
-                  <span>{section}</span>
-                  {index === 0 ? <span className="h-2 w-2 rounded-full bg-[#f2b36d]" /> : null}
+                  <span>{item.label}</span>
+                  {item.id === activeSection ? <span className="h-2 w-2 rounded-full bg-[#f2b36d]" /> : null}
                 </a>
               ))}
             </nav>
@@ -186,6 +228,17 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
                 <MiniStat label="LINE sent / failed" value={`${dashboard.messaging.lineSent} / ${dashboard.messaging.lineFailed}`} />
                 <MiniStat label="WhatsApp sent / failed" value={`${dashboard.messaging.whatsappSent} / ${dashboard.messaging.whatsappFailed}`} />
               </div>
+              <div className="mt-4">
+                <ResponsiveTable
+                  columns={["Agency", "Telegram", "LINE", "WhatsApp"]}
+                  rows={tenantIntegrations.map((integration) => [
+                    integration.agencyName,
+                    formatConfigured(integration.telegramConfigured),
+                    formatConfigured(integration.lineConfigured),
+                    formatConfigured(integration.whatsappConfigured)
+                  ])}
+                />
+              </div>
             </Panel>
           </section>
 
@@ -219,6 +272,16 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
       </div>
     </main>
   );
+}
+
+function fallbackTenantIntegrations(dashboard: SuperAdminDashboardResponse) {
+  return dashboard.agencies.map((agency) => ({
+    tenantId: agency.tenantId,
+    agencyName: agency.agencyName,
+    telegramConfigured: agency.usageThisMonth.telegramNotifications > 0,
+    lineConfigured: agency.usageThisMonth.lineNotifications > 0,
+    whatsappConfigured: agency.usageThisMonth.whatsappNotifications > 0
+  }));
 }
 
 function MetricCard({ card }: { card: SuperAdminMetricCard }) {
@@ -294,19 +357,18 @@ function FunnelStep({ label, value }: { label: string; value: string }) {
 }
 
 function HealthGrid({ health }: { health: SuperAdminSystemHealth }) {
+  const failedNotifications = toFiniteNumber(health.failedNotifications);
   const items = [
     ["API", health.api],
     ["PostgreSQL", health.postgresql],
     ["Redis", health.redis],
     ["LLM provider", health.llmProvider],
     ["Google Maps", health.googleMaps],
-    ["Telegram", health.telegram],
-    ["LINE", health.line],
-    ["WhatsApp", health.whatsapp],
+    ["Messaging delivery", health.messagingDelivery ?? (failedNotifications > 0 ? "degraded" : "ok")],
     ["Failed jobs", formatNumber(health.failedJobs)],
     ["Webhook failures", formatNumber(health.webhookFailures)],
-    ["Failed notifications", formatNumber(health.failedNotifications)],
-    ["Error rate", `${health.errorRate}%`]
+    ["Failed notifications", formatNumber(failedNotifications)],
+    ["Error rate", `${toFiniteNumber(health.errorRate)}%`]
   ];
 
   return (
@@ -360,7 +422,7 @@ function EmptyState({ copy, title }: { copy: string; title: string }) {
   );
 }
 
-function StatusPill({ label, value }: { label: string; value: string }) {
+function StatusPill({ label, value }: { label: string; value?: string }) {
   const tone = healthTone(value);
 
   return (
@@ -370,11 +432,19 @@ function StatusPill({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatHealthValue(value: string): string {
-  return value.replaceAll("_", " ");
+function formatHealthValue(value: unknown): string {
+  if (value === undefined || value === null || value === "") {
+    return "unknown";
+  }
+
+  return String(value).replaceAll("_", " ");
 }
 
-function healthTone(value: string): string {
+function formatConfigured(value: boolean): string {
+  return value ? "configured" : "not configured";
+}
+
+function healthTone(value: unknown): string {
   const status = value as SuperAdminHealthStatus;
 
   if (status === "ok" || status === "configured") {
@@ -392,8 +462,12 @@ function healthTone(value: string): string {
   return "bg-[#eee8dc] text-[#675f55]";
 }
 
-function formatNumber(value: number): string {
-  return new Intl.NumberFormat("en-US").format(value);
+function formatNumber(value: number | null | undefined): string {
+  return new Intl.NumberFormat("en-US").format(toFiniteNumber(value));
+}
+
+function toFiniteNumber(value: number | null | undefined): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
 }
 
 function compact(value: number): string {
