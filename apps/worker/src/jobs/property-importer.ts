@@ -128,7 +128,7 @@ export class PropertyImporter {
     const importMode = job.data.importMode ?? "hybrid";
     const shouldCreateCrmInventory = importMode !== "concierge_index_only" && !job.data.dryRun;
     const shouldCreateConciergeSearchRecords = importMode === "concierge_index_only" && !job.data.dryRun;
-    const shouldCreateAiKnowledge = importMode !== "crm_inventory" && !job.data.dryRun;
+    const shouldCreateAiKnowledge = importMode === "hybrid" && !job.data.dryRun;
     let imported = 0;
     let knowledgeDocumentsCreated = 0;
     let rowsMissingExternalId = 0;
