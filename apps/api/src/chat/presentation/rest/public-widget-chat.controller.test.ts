@@ -1002,8 +1002,17 @@ describe("PublicWidgetChatController", () => {
     );
 
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Studio Condo at Jomtien Beach - Jomtien"]);
+    expect(response.recommendedListings).toEqual([
+      {
+        propertyId: "jomtien-studio",
+        title: "Studio Condo at Jomtien Beach - Jomtien",
+        url: "https://agency.example.com/listings/jomtien-studio"
+      }
+    ]);
     expect(response.answer).toContain("район: Jomtien");
     expect(response.answer).toContain("в районе Jomtien");
+    expect(response.answer).not.toContain("[Studio Condo at Jomtien Beach - Jomtien]");
+    expect(response.answer).not.toContain("[Открыть объект]");
     expect(response.answer).not.toContain("Pratumnak");
   });
 
@@ -2272,8 +2281,16 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).toBe(
       "Pratumnak Investment One-Bed fits your budget and buying intent. I can ask the agency to confirm viewing availability and the current foreign-quota status."
     );
+    expect(response.answer).not.toContain("[Pratumnak Investment One-Bed]");
+    expect(response.answer).not.toContain("[Open listing]");
     expect(response.answer).not.toContain("I found 1 matching listing");
-    expect(response.recommendedListings).toHaveLength(1);
+    expect(response.recommendedListings).toEqual([
+      {
+        propertyId: "property-1",
+        title: "Pratumnak Investment One-Bed",
+        url: "https://agency.example.com/listings/property-1"
+      }
+    ]);
   });
 
   it("keeps recommended listing links on the widget origin when tenant route config is unsafe", async () => {

@@ -460,7 +460,7 @@
         return response.json();
       })
       .then(function (response) {
-        var recommendations = shouldShowRecommendations(trimmed) ? response.recommendedListings : [];
+        var recommendations = shouldShowRecommendations(trimmed, response.recommendedListings) ? response.recommendedListings : [];
         state.messages.push(
           assistantMessage(response.answer || getEmptyAnswerMessage(state.locale), recommendations)
         );
@@ -674,7 +674,11 @@
       .trim();
   }
 
-  function shouldShowRecommendations(message) {
+  function shouldShowRecommendations(message, recommendations) {
+    if (normalizeRecommendedListings(recommendations).length) {
+      return true;
+    }
+
     var normalized = String(message || "")
       .toLowerCase()
       .replaceAll("ё", "е")

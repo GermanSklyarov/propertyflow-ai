@@ -109,6 +109,7 @@ export class AiChatService {
 
     return this.buildResponse({
       ...draft,
+      forceDeterministic: intent.wantsViewing,
       request,
       ...options
     });
@@ -306,6 +307,7 @@ export class AiChatService {
       citations: AiChatCitation[];
       context: string;
       deterministicDraft: string;
+      forceDeterministic?: boolean;
       insights: AiChatInsight[];
       matchedPropertyIds: string[];
       request: AiChatRequest;

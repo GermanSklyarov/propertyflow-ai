@@ -9,6 +9,7 @@ export interface BuildAiChatResponseOptions {
   deterministicDraft: string;
   idFactory?: () => string;
   insights: AiChatInsight[];
+  forceDeterministic?: boolean;
   matchedPropertyIds: string[];
   now?: () => Date;
   persona?: AiConciergePersona;
@@ -21,6 +22,16 @@ export interface BuildAiChatResponseOptions {
 export async function buildAiChatResponse(options: BuildAiChatResponseOptions): Promise<AiChatResponse> {
   const createdAt = timestamp(options);
   const id = responseId(options);
+
+  if (options.forceDeterministic) {
+    return buildDeterministicAiChatResponse({
+      ...options,
+      createdAt,
+      id,
+      reason: "Deterministic response required for grounded handoff",
+      text: options.deterministicDraft
+    });
+  }
 
   if (options.textGenerator.isConfigured()) {
     try {

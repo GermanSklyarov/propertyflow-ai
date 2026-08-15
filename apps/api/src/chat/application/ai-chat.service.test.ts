@@ -533,6 +533,53 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("Great choice");
   });
 
+  it("does not let the LLM rewrite grounded viewing handoff answers", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "false";
+    const propertyById = new Map([
+      [
+        "property-2",
+        propertyFactory({
+          id: "property-2",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 19_000, currency: "THB" },
+          title: "1BR Condo at The Ville Jomtien - East Pattaya"
+        })
+      ]
+    ]);
+    const textGenerator = {
+      isConfigured: vi.fn().mockReturnValue(true),
+      generate: vi.fn().mockResolvedValue({
+        answer: "Мне не хватает информации об этом объекте.",
+        model: "test-model",
+        provider: "test"
+      })
+    };
+    const service = serviceFactory({
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [{ propertyId: "property-2", title: "1BR Condo at The Ville Jomtien - East Pattaya" }],
+          role: "assistant",
+          text: "Я нашла 1 подходящий вариант."
+        }
+      ],
+      locale: "ru",
+      message: "пойдет, как записаться на просмотр?"
+    });
+
+    expect(textGenerator.generate).not.toHaveBeenCalled();
+    expect(response.answer).toContain("Я помогу записаться на просмотр 1BR Condo at The Ville Jomtien - East Pattaya");
+    expect(response.answer).toContain("Оставьте WhatsApp, Telegram, телефон или email");
+    expect(response.answer).not.toContain("не хватает информации");
+  });
+
   it("compares the previous recommendation shortlist instead of searching again", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([
