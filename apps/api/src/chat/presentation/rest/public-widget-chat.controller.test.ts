@@ -210,6 +210,110 @@ describe("PublicWidgetChatController", () => {
     expect(response.recommendedListings).toHaveLength(1);
   });
 
+  it("keeps plain 1 bedroom condo requests exact in public cards", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          matchedPropertyIds: ["two-bedroom", "four-bedroom", "one-bedroom"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      ["two-bedroom", propertyFactory({ bedrooms: 2, id: "two-bedroom", title: "2BR Condo at Grand Avenue Residence" })],
+      ["four-bedroom", propertyFactory({ bedrooms: 4, id: "four-bedroom", title: "4BR Condo at The Base Central Pattaya" })],
+      ["one-bedroom", propertyFactory({ bedrooms: 1, id: "one-bedroom", title: "Wongamat Sea View Residence" })]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "condo to buy in pattaya 1 bedroom"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual(["Wongamat Sea View Residence"]);
+    expect(response.answer).toContain("1 bedroom");
+    expect(response.answer).not.toContain("2BR Condo");
+    expect(response.answer).not.toContain("4BR Condo");
+  });
+
+  it("does not summarize distance to a geocoded point for plain Pattaya market searches", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          matchedPropertyIds: ["one-bedroom"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockResolvedValue(propertyFactory({
+          bedrooms: 1,
+          id: "one-bedroom",
+          title: "Wongamat Sea View Residence"
+        }))
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "condo to buy in pattaya 1 bedroom"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("These condo options fit the Pattaya search");
+    expect(response.answer).not.toContain("Pattaya Soi 1");
+    expect(response.answer).not.toContain("from Pattaya");
+  });
+
   it("does not ask for rental budget again when the refinement already includes it", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

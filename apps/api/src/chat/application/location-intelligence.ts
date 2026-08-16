@@ -430,11 +430,19 @@ function extractLocationQuery(message: string): string | undefined {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (!cleaned || CATEGORY_ALIASES.beach.some((alias) => normalizeLocationText(cleaned) === normalizeLocationText(alias))) {
+  if (
+    !cleaned ||
+    startsWithNonLocationAction(cleaned) ||
+    CATEGORY_ALIASES.beach.some((alias) => normalizeLocationText(cleaned) === normalizeLocationText(alias))
+  ) {
     return undefined;
   }
 
   return cleaned;
+}
+
+function startsWithNonLocationAction(value: string): boolean {
+  return /^(?:buy|purchase|rent|lease|find|show|get|search|look|looking|invest|move|live|stay)\b/i.test(value);
 }
 
 function geocodeCacheKey(provider: "google" | "mapbox", query: string, market?: ThailandMarket): string {

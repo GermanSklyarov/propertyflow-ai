@@ -66,6 +66,17 @@ describe("LocationIntelligenceService", () => {
     expect(resolveLocationComparisonTarget("which one is closer to the beach?", "pattaya")).toBeUndefined();
   });
 
+  it("does not treat ordinary purchase intent as a geocoding target", async () => {
+    process.env.GOOGLE_MAPS_API_KEY = "google-test-key";
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LocationIntelligenceService();
+
+    expect(isLocationInfrastructureQuestion("condo to buy in pattaya 1 bedroom")).toBe(false);
+    await expect(service.resolveComparisonTarget("condo to buy in pattaya 1 bedroom", "pattaya")).resolves.toBeUndefined();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it("geocodes arbitrary landmarks with Google when configured", async () => {
     process.env.GOOGLE_MAPS_API_KEY = "google-test-key";
     const fetchMock = vi.fn().mockResolvedValue(

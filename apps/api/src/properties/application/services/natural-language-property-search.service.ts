@@ -388,11 +388,14 @@ export class NaturalLanguagePropertySearchService {
       return { minBedrooms: 0, maxBedrooms: 1 };
     }
 
-    const explicit = query.match(/(\d+)\s*(?:bedroom|bedrooms|br|спальн|спальни|спален|ห้องนอน|卧室|臥室|房间|房間|房)/);
+    const explicit = query.match(/(\d+)\s*\+?\s*(?:bedroom|bedrooms|br|спальн|спальни|спален|ห้องนอน|卧室|臥室|房间|房間|房)/);
     if (explicit?.[1]) {
       const bedrooms = Number(explicit[1]);
       const exactRequest = hasExactBedroomQualifier(query, explicit[0]);
-      return exactRequest ? { minBedrooms: bedrooms, maxBedrooms: bedrooms } : { minBedrooms: bedrooms };
+      const isLowerBound = explicit[0].includes("+") || hasBedroomLowerBoundQualifier(query, explicit[0]);
+      return exactRequest || !isLowerBound
+        ? { minBedrooms: bedrooms, maxBedrooms: bedrooms }
+        : { minBedrooms: bedrooms };
     }
 
     if (new RegExp(studioPattern, "i").test(query)) {
@@ -536,6 +539,15 @@ function hasExactBedroomQualifier(query: string, layoutTerm: string): boolean {
 
   return new RegExp(
     `(?:\\b(?:only|exactly|just)\\s+${escapedLayoutTerm}\\b|\\b${escapedLayoutTerm}\\s+(?:only|exactly|just)\\b|только\\s+${escapedLayoutTerm}|${escapedLayoutTerm}\\s+только|именно\\s+${escapedLayoutTerm}|ровно\\s+${escapedLayoutTerm})`,
+    "i"
+  ).test(query);
+}
+
+function hasBedroomLowerBoundQualifier(query: string, layoutTerm: string): boolean {
+  const escapedLayoutTerm = escapeRegExp(layoutTerm.trim());
+
+  return new RegExp(
+    `(?:\\b${escapedLayoutTerm}\\s*(?:\\+|plus|or more|and more|or above|and above)\\b|\\b(?:at least|minimum|min|from)\\s+${escapedLayoutTerm}\\b|от\\s+${escapedLayoutTerm}|${escapedLayoutTerm}\\s*(?:\\+|или больше|и больше))`,
     "i"
   ).test(query);
 }

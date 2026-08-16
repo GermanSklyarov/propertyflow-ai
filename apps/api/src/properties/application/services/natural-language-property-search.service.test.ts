@@ -34,6 +34,40 @@ describe("NaturalLanguagePropertySearchService", () => {
     });
   });
 
+  it("treats a plain 1 bedroom condo request as an exact bedroom count", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query: "condo to buy in pattaya 1 bedroom"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      kind: "condo",
+      listingType: "sale",
+      market: "pattaya",
+      minBedrooms: 1,
+      maxBedrooms: 1
+    });
+  });
+
+  it("keeps plus bedroom requests as a lower bound", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query: "condo to buy in pattaya 4+ bedroom"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      kind: "condo",
+      listingType: "sale",
+      market: "pattaya",
+      minBedrooms: 4
+    });
+    expect(interpretation.filters).not.toHaveProperty("maxBedrooms");
+  });
+
   it("does not treat Russian words like увидеть as a family-with-children request", () => {
     const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 
