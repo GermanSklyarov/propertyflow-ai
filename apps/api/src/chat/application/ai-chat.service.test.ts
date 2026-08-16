@@ -542,6 +542,153 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("I found 3 matching listings");
   });
 
+  it("answers general foreign house ownership questions without running a listing search", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      knowledgeItems: [knowledgeChunkFactory()],
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "4BR House at The Base Central Pattaya - Central Pattaya" }
+          ],
+          role: "assistant",
+          text: "I found house options."
+        }
+      ],
+      locale: "en",
+      message: "can a foreigner buy a house in pattaya?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual([]);
+    expect(response.answer).toContain("foreign buyer generally cannot own land directly");
+    expect(response.answer).toContain("legal review");
+    expect(response.answer).not.toContain("I found");
+  });
+
+  it("compares recent listings for foreign ownership instead of rerunning search", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "townhouse",
+        propertyFactory({
+          id: "townhouse",
+          kind: "townhouse",
+          title: "4BR Townhouse at Centric Sea Pattaya - Central Pattaya"
+        })
+      ],
+      [
+        "condo",
+        propertyFactory({
+          id: "condo",
+          kind: "condo",
+          title: "2BR Condo at Grand Avenue Residence - Central Pattaya"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "townhouse", title: "4BR Townhouse at Centric Sea Pattaya - Central Pattaya" },
+            { propertyId: "condo", title: "2BR Condo at Grand Avenue Residence - Central Pattaya" }
+          ],
+          role: "assistant",
+          text: "I found two options."
+        }
+      ],
+      locale: "en",
+      message: "Which of them can a foreigner buy?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["townhouse", "condo"]);
+    expect(response.answer).toContain("2BR Condo at Grand Avenue Residence - Central Pattaya looks simplest");
+    expect(response.answer).toContain("foreign quota is available");
+    expect(response.answer).toContain("townhouse, not a straightforward foreign land ownership purchase");
+  });
+
+  it("answers selected listing foreign ownership questions without viewing handoff", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "house",
+        propertyFactory({
+          id: "house",
+          kind: "villa",
+          title: "4BR House at The Peak Towers - Pratumnak"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [{ propertyId: "house", title: "4BR House at The Peak Towers - Pratumnak" }],
+          role: "assistant",
+          text: "I found one option."
+        },
+        { role: "user", text: "i like the first option, can i buy it?" },
+        {
+          recommendedListings: [{ propertyId: "house", title: "4BR House at The Peak Towers - Pratumnak" }],
+          role: "assistant",
+          text: "This is the selected property."
+        }
+      ],
+      locale: "en",
+      message: "Is it available for purchase by a foreigner?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.matchedPropertyIds).toEqual(["house"]);
+    expect(response.answer).toContain("not a condominium unit");
+    expect(response.answer).toContain("Foreign buyers generally cannot own Thai land directly");
+    expect(response.answer).not.toContain("arrange a viewing");
+  });
+
   it("answers Russian viewing requests in Russian without inventing a preferred slot", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const propertyById = new Map([

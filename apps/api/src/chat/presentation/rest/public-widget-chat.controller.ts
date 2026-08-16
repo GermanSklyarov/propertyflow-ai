@@ -889,6 +889,12 @@ function filterByWidgetListingIntent(properties: PropertySnapshot[], requestMess
 }
 
 function filterByWidgetKindRequirements(properties: PropertySnapshot[], requestMessage: string): PropertySnapshot[] {
+  if (isHouseLikeRequest(requestMessage)) {
+    const filtered = properties.filter((property) => ["villa", "townhouse"].includes(property.kind));
+
+    return filtered.length ? filtered : [];
+  }
+
   if (!isApartmentLikeRequest(requestMessage)) {
     return properties;
   }
@@ -1209,6 +1215,10 @@ function isSchoolRequest(message: string) {
 
 function isApartmentLikeRequest(message: string) {
   return /\b(?:condo|apartment|flat|unit)\b|кондо|квартир|апартамент|ห้องชุด|คอนโด|公寓|单元|單元/i.test(message);
+}
+
+function isHouseLikeRequest(message: string) {
+  return /\b(?:house|houses|home|homes|villa|villas|townhouse|townhome|town house|town home)\b|(?:^|[^а-яё])дома?(?:$|[^а-яё])|вилл|таунхаус|บ้าน|วิลล่า|房子|住宅|别墅|別墅|联排|聯排/i.test(message);
 }
 
 function isBudgetPriceRequest(message: string) {

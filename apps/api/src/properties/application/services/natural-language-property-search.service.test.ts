@@ -19,6 +19,21 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(interpretation.rankingExplanation).toContain("requiredAmenities=sea-view");
   });
 
+  it("extracts house purchase requests as non-condo property kinds", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query: "i want to buy a house in pattaya"
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      kinds: ["villa", "townhouse"],
+      listingType: "sale",
+      market: "pattaya"
+    });
+  });
+
   it("does not treat Russian words like увидеть as a family-with-children request", () => {
     const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 

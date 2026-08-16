@@ -1000,6 +1000,8 @@ export type PropertySearchSort =
 
 export interface PropertySearchRequest {
   market?: ThailandMarket;
+  kind?: PropertyKind;
+  kinds?: PropertyKind[];
   listingType?: PropertyListingType;
   minPriceThb?: number;
   maxPriceThb?: number;

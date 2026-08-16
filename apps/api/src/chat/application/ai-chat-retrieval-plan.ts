@@ -15,6 +15,8 @@ const livingComparisonPattern = /living|live|family|school|kid|retire|для с�
 const petsComparisonPattern = /\bpets?\b|\bdogs?\b|\bcats?\b|собак|кош|питом|สัตว์เลี้ยง|หมา|แมว|宠物|寵物|狗|猫|貓/i;
 const valueComparisonPattern =
   /\b(?:value for money|best value|good value|best deal|good deal|worth it|balanced|optimal|price quality|price to quality)\b|цена.*качество|лучшее предложение|выгод|оптимальн|คุ้มค่า|性价比|性價比/i;
+const ownershipQuestionPattern =
+  /\b(?:foreigner|foreign buyer|foreigners|foreign quota|foreign freehold|foreign name|ownership|own|quota|freehold)\b|иностран|фаранг|квот|собствен|ต่างชาติ|ชาวต่างชาติ|โควต้า|ถือครอง|外国|外國|外籍|产权|產權|配额|配額/i;
 const moreListingsPattern =
   /\b(?:more|another|other|else|all|everything|show\s+all|see\s+all)\b|\bnext\s+(?:options?|listings?|ones?)\b|еще|ещё|друг|остальн|все вариант|покажи все|เพิ่มเติม|ทั้งหมด|其他|更多|全部|所有/i;
 const newSearchRefinementPattern =
@@ -27,9 +29,9 @@ const propertyDetailQuestionPattern =
   /pet|dog|cat|fee|maintenance|quota|foreign|ownership|floor|sqm|size|balcony|furniture|internet|parking|quiet|noise|view|yield|roi|rent|rental|beach|walk|school|family|питом|собак|кош|комис|квот|этаж|площад|балкон|мебел|интернет|парков|тих|шум|вид|доход|аренд|пляж|семь[яеиюй]|семей|школ|宠物|狗|猫|貓|费用|費用|楼层|樓層|面积|面積|阳台|陽台|家具|网络|網絡|停车|停車|安静|噪音|景观|景觀|租金|海滩|海灘|家庭|学校|學校|สัตว์เลี้ยง|หมา|แมว|ค่าส่วนกลาง|ชั้น|พื้นที่|ระเบียง|เฟอร์นิเจอร์|อินเทอร์เน็ต|ที่จอดรถ|เงียบ|วิว|ค่าเช่า|ชายหาด|ครอบครัว|โรงเรียน/i;
 
 export interface AiChatRetrievalPlan {
-  comparison?: "beach-distance" | "investment" | "living" | "pets" | "poi-distance" | "relocation" | "value";
+  comparison?: "beach-distance" | "investment" | "living" | "ownership" | "pets" | "poi-distance" | "relocation" | "value";
   intent: AiChatIntent;
-  mode: "clarify-reference" | "listing-comparison" | "listing-search" | "property-detail";
+  mode: "clarify-reference" | "general-advice" | "listing-comparison" | "listing-search" | "property-detail";
   propertyId?: string;
   reason: "comparison-follow-up" | "explicit-property" | "follow-up-reference" | "missing-follow-up-reference" | "search-request";
 }
@@ -49,6 +51,18 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     };
   }
 
+  if (isGeneralOwnershipQuestion(request) && !hasCurrentPropertyReference && !referencesRecentSet(request.message)) {
+    return {
+      intent: {
+        ...intent,
+        includeAdvice: true,
+        route: "search"
+      },
+      mode: "general-advice",
+      reason: "search-request"
+    };
+  }
+
   if (namedPropertyId) {
     return {
       intent: {
@@ -61,17 +75,6 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
     };
   }
 
-  if (isSearchRefinement(request) && !hasCurrentPropertyReference) {
-    return {
-      intent: {
-        ...intent,
-        route: "search"
-      },
-      mode: "listing-search",
-      reason: "search-request"
-    };
-  }
-
   const comparison = resolveRecentListingComparison(request);
 
   if (comparison && getRecentRecommendations(request).length > 1) {
@@ -79,7 +82,7 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
       comparison,
       intent: {
         ...intent,
-        includeAdvice: intent.includeAdvice || comparison === "investment",
+        includeAdvice: intent.includeAdvice || comparison === "investment" || comparison === "ownership",
         includeNeighborhood:
           intent.includeNeighborhood ||
           comparison === "beach-distance" ||
@@ -89,6 +92,17 @@ export function planAiChatRetrieval(request: AiChatRequest): AiChatRetrievalPlan
       },
       mode: "listing-comparison",
       reason: "comparison-follow-up"
+    };
+  }
+
+  if (isSearchRefinement(request) && !hasCurrentPropertyReference) {
+    return {
+      intent: {
+        ...intent,
+        route: "search"
+      },
+      mode: "listing-search",
+      reason: "search-request"
     };
   }
 
@@ -329,6 +343,10 @@ function resolveRecentListingComparison(request: AiChatRequest): AiChatRetrieval
     return undefined;
   }
 
+  if (ownershipQuestionPattern.test(message)) {
+    return "ownership";
+  }
+
   if (isLocationInfrastructureQuestion(message)) {
     return "poi-distance";
   }
@@ -358,6 +376,18 @@ function resolveRecentListingComparison(request: AiChatRequest): AiChatRetrieval
   }
 
   return undefined;
+}
+
+function isGeneralOwnershipQuestion(request: AiChatRequest): boolean {
+  const message = normalizeReferenceText(request.message);
+
+  return ownershipQuestionPattern.test(message);
+}
+
+function referencesRecentSet(message: string): boolean {
+  const normalized = normalizeReferenceText(message);
+
+  return recentSetReferencePattern.test(normalized) || shortlistComparisonPattern.test(normalized);
 }
 
 function normalizeReferenceText(value: string): string {

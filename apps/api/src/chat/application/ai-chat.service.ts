@@ -21,7 +21,7 @@ import {
   type AiChatDueDiligencePayload
 } from "./ai-chat-due-diligence.js";
 import { classifyAiChatIntent } from "./ai-chat-intent.js";
-import { buildAiChatContext, buildListingEvidence, propertyCitation } from "./ai-chat-context.js";
+import { buildAiChatContext, buildListingEvidence, knowledgeCitation, knowledgeLine, propertyCitation } from "./ai-chat-context.js";
 import { buildAiChatPropertyResponseDraft } from "./ai-chat-property-response.js";
 import { getRecentRecommendations, planAiChatRetrieval } from "./ai-chat-retrieval-plan.js";
 import {
@@ -71,6 +71,10 @@ export class AiChatService {
 
     if (plan.mode === "listing-comparison") {
       return this.answerWithRecentListingComparison(tenantId, request, options);
+    }
+
+    if (plan.mode === "general-advice") {
+      return this.answerWithGeneralAdvice(tenantId, request, options);
     }
 
     return this.answerWithSearch(tenantId, request, options);
@@ -178,6 +182,28 @@ export class AiChatService {
       matchedPropertyIds: properties.map((property) => property.id),
       request,
       suggestedActions: ["compare-results", "open-map", "create-lead"],
+      ...options
+    });
+  }
+
+  private async answerWithGeneralAdvice(
+    tenantId: string,
+    request: AiChatRequest,
+    options: AiChatAskOptions
+  ): Promise<AiChatResponse> {
+    const knowledge = await this.retrieveKnowledge(tenantId, request);
+    const citations = knowledge.map((chunk) => knowledgeCitation(chunk));
+    const answer = buildGeneralOwnershipAdvice(request.message);
+
+    return this.buildResponse({
+      citations,
+      context: buildAiChatContext([answer, ...knowledge.map((chunk) => knowledgeLine(chunk))], citations),
+      deterministicDraft: answer,
+      forceDeterministic: true,
+      insights: [],
+      matchedPropertyIds: [],
+      request,
+      suggestedActions: ["ask-agent-for-current-availability", "create-lead"],
       ...options
     });
   }
@@ -373,6 +399,16 @@ async function buildRecentListingComparisonAnswer(
       : `I can compare only the options we just discussed, but none of those listings has beach distance specified. ${comparisonLines.join(" ")}`;
   }
 
+  if (comparison === "ownership") {
+    const facts = properties.map((property) => `${property.title}: ${ownershipComparisonFact(property)}`).join(" ");
+    const condoOptions = properties.filter((property) => property.kind === "condo");
+    const strongest = condoOptions[0];
+
+    return strongest
+      ? `For foreign ownership, ${strongest.title} looks simplest to investigate because it is a condo, but only if foreign quota is available in that building. Houses, villas, townhouses, and land need legal review because foreign buyers generally cannot own Thai land directly. ${facts}`
+      : `For a foreign buyer, none of these looks like a straightforward condominium foreign-freehold option from the listing facts. Houses, villas, townhouses, and land need legal review because foreign buyers generally cannot own Thai land directly. ${facts}`;
+  }
+
   const scored = properties
     .map((property) => ({ property, score: scorePropertyForComparison(property, comparison) }))
     .sort((left, right) => right.score - left.score);
@@ -439,6 +475,7 @@ function comparisonLabel(comparison: NonNullable<ReturnType<typeof planAiChatRet
     "beach-distance": "beach access",
     investment: "investment",
     living: "living",
+    ownership: "foreign ownership feasibility",
     pets: "living with pets",
     "poi-distance": "city infrastructure access",
     relocation: "relocation",
@@ -488,7 +525,33 @@ function comparisonFacts(
     return `${monthlyRent}, ${property.areaSqm} sqm, ${beach}, ${amenities}`;
   }
 
+  if (comparison === "ownership") {
+    return ownershipComparisonFact(property);
+  }
+
   return `${property.areaSqm} sqm, ${property.bedrooms} bedroom${property.bedrooms === 1 ? "" : "s"}, ${beach}, ${amenities}`;
+}
+
+function ownershipComparisonFact(property: PropertySnapshot): string {
+  if (property.kind === "condo") {
+    return `condo, possible foreign-freehold route only if building foreign quota is available; verify quota, title, transfer costs, sinking fund, and maintenance fee`;
+  }
+
+  if (property.kind === "villa" || property.kind === "townhouse" || property.kind === "land") {
+    return `${property.kind}, not a straightforward foreign land ownership purchase; needs legal review for leasehold/company/building-vs-land structure and transfer taxes`;
+  }
+
+  return `${property.kind}, ownership structure needs agent/legal verification`;
+}
+
+function buildGeneralOwnershipAdvice(message: string): string {
+  const asksHouse = /\b(?:house|houses|home|homes|villa|villas|townhouse|townhome|land)\b/i.test(message);
+
+  if (asksHouse) {
+    return "In Thailand, a foreign buyer generally cannot own land directly, so buying a house, villa, or townhouse in Pattaya is not the same as buying a condominium freehold. The usual next step is legal review of the structure: leasehold, Thai company, building ownership separated from land, or another permitted route depending on the title. I would not promise that a specific house is foreign-buyable until the agent or lawyer confirms title, land ownership route, lease/company terms if any, transfer taxes, and closing timeline.";
+  }
+
+  return "Foreign buyers in Thailand most commonly buy condominium freehold when foreign quota is available in the building. For non-condo property or land-linked property, the ownership route needs legal review before making any promise. Ask the agent to confirm title, foreign quota or ownership structure, transfer-fee split, sinking fund, maintenance fee, and closing timeline.";
 }
 
 function resolveEffectiveSearchMessage(request: AiChatRequest): string {

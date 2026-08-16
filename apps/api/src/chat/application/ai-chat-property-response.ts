@@ -30,10 +30,11 @@ export function buildAiChatPropertyResponseDraft(options: {
 }): AiChatResponseDraft {
   const citations: AiChatCitation[] = [propertyCitation(options.property)];
   const suitabilityAnswer = buildSuitabilityAnswer(options.property, options.requestMessage);
+  const ownershipAnswer = buildOwnershipAnswer(options.property, options.requestMessage);
   const answerParts = [
     options.intent.wantsViewing
       ? buildViewingHandoffAnswer(options.property, options.requestMessage, options.locale)
-      : suitabilityAnswer ?? describeProperty(options.property)
+      : ownershipAnswer ?? suitabilityAnswer ?? describeProperty(options.property)
   ];
 
   if (options.intent.includeNeighborhood && options.neighborhood) {
@@ -107,6 +108,27 @@ function buildSuitabilityAnswer(property: PropertySnapshot, requestMessage?: str
   }
 
   return undefined;
+}
+
+function buildOwnershipAnswer(property: PropertySnapshot, requestMessage?: string): string | undefined {
+  const normalized = requestMessage?.toLowerCase() ?? "";
+
+  if (!/\b(?:foreigner|foreign buyer|foreigners|foreign quota|foreign freehold|foreign name|ownership|own|buy)\b|иностран|фаранг|квот|собствен|ต่างชาติ|ชาวต่างชาติ|โควต้า|ถือครอง|外国|外國|外籍|产权|產權|配额|配額/i.test(normalized)) {
+    return undefined;
+  }
+
+  const price = `${property.price.amount} ${property.price.currency}`;
+  const kind = property.kind;
+
+  if (kind === "condo") {
+    return `${property.title} is a condo, so a foreign buyer may be able to buy it as condominium freehold only if foreign quota is available for that building. I cannot confirm the live quota from here, so ask the agent to verify foreign-quota status, title, transfer-fee split, sinking fund, maintenance fee, and closing timeline before relying on it. Listed price is ${price}.`;
+  }
+
+  if (kind === "villa" || kind === "townhouse" || kind === "land") {
+    return `${property.title} is a ${kind}, not a condominium unit. Foreign buyers generally cannot own Thai land directly, so this needs legal review before any promise: common structures may involve leasehold, a Thai company, or separating building and land rights depending on the case. Ask the agent/lawyer to confirm the title structure, land ownership route, lease terms if any, transfer taxes, and whether the advertised sale is suitable for a foreign buyer. Listed price is ${price}.`;
+  }
+
+  return `${property.title} needs ownership-structure verification before advising a foreign buyer. Ask the agent to confirm title, permitted foreign ownership route, transfer costs, and closing timeline. Listed price is ${price}.`;
 }
 
 function summarizeLocation(property: PropertySnapshot): string {

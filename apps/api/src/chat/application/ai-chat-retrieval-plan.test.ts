@@ -16,6 +16,53 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("keeps ordinary purchase searches on listing search instead of ownership advice", () => {
+    expect(
+      planAiChatRetrieval({
+        locale: "en",
+        message: "i want to buy a house in pattaya"
+      })
+    ).toMatchObject({
+      mode: "listing-search",
+      reason: "search-request"
+    });
+  });
+
+  it("routes general foreign ownership questions to advice instead of listing search", () => {
+    expect(
+      planAiChatRetrieval({
+        locale: "en",
+        message: "can a foreigner buy a house in pattaya?"
+      })
+    ).toMatchObject({
+      mode: "general-advice",
+      reason: "search-request"
+    });
+  });
+
+  it("compares recent listings when asking which option works for foreign ownership", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "townhouse", title: "4BR Townhouse at Centric Sea Pattaya" },
+              { propertyId: "condo", title: "2BR Condo at Grand Avenue Residence" }
+            ],
+            role: "assistant",
+            text: "I found two options."
+          }
+        ],
+        locale: "en",
+        message: "Which of them can a foreigner buy?"
+      })
+    ).toMatchObject({
+      comparison: "ownership",
+      mode: "listing-comparison",
+      reason: "comparison-follow-up"
+    });
+  });
+
   it("resolves viewing follow-ups from prior recommended listings", () => {
     expect(
       planAiChatRetrieval({

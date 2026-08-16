@@ -596,6 +596,84 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("Pratumnak Investment One-Bed");
   });
 
+  it("keeps condo cards out of house purchase widget searches", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 3 matching listings.",
+          matchedPropertyIds: ["townhouse", "villa", "condo"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "townhouse",
+        propertyFactory({
+          id: "townhouse",
+          kind: "townhouse",
+          title: "4BR Townhouse at Centric Sea Pattaya - Central Pattaya"
+        })
+      ],
+      [
+        "villa",
+        propertyFactory({
+          id: "villa",
+          kind: "villa",
+          title: "3BR Villa at Pratumnak"
+        })
+      ],
+      [
+        "condo",
+        propertyFactory({
+          id: "condo",
+          kind: "condo",
+          title: "2BR Condo at Grand Avenue Residence - Central Pattaya"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        market: "pattaya",
+        message: "i want to buy a house in pattaya"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "4BR Townhouse at Centric Sea Pattaya - Central Pattaya",
+      "3BR Villa at Pratumnak"
+    ]);
+    expect(response.answer).not.toContain("2BR Condo at Grand Avenue");
+  });
+
   it("uses curated Asia Pattaya Hotel distances instead of falling back to generic Pattaya search", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

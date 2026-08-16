@@ -5,7 +5,7 @@ import type {
   NaturalLanguageSearchRequest,
   PropertySearchRequest
 } from "@propertyflow/contracts";
-import type { GeoPoint, PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
+import type { GeoPoint, PropertyKind, PropertyPurpose, PropertySnapshot, ThailandMarket } from "@propertyflow/domain";
 import { LocationIntelligenceService } from "../../../chat/application/location-intelligence.js";
 import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../domain/property.repository.js";
 import { IndexedPropertySearchService } from "./indexed-property-search.service.js";
@@ -207,6 +207,15 @@ export class NaturalLanguagePropertySearchService {
     }
 
     const purpose = request.purpose ?? this.detectPurpose(normalized);
+    const kinds = this.detectPropertyKinds(normalized);
+    if (kinds.length === 1) {
+      filters.kind = kinds[0];
+      explanations.push(`kind=${kinds[0]}`);
+    } else if (kinds.length > 1) {
+      filters.kinds = kinds;
+      explanations.push(`kinds=${kinds.join(",")}`);
+    }
+
     const bedroomRange = this.detectBedroomRange(normalized);
     const minBedrooms = bedroomRange.minBedrooms ?? (purpose === "family" ? 2 : undefined);
     if (minBedrooms !== undefined) {
@@ -455,6 +464,26 @@ export class NaturalLanguagePropertySearchService {
     return undefined;
   }
 
+  private detectPropertyKinds(query: string): PropertyKind[] {
+    if (/\b(?:villa|villas)\b|вилл|วิลล่า|别墅|別墅/i.test(query)) {
+      return ["villa"];
+    }
+
+    if (/\b(?:townhouse|townhome|town house|town home)\b|таунхаус|ทาวน์เฮาส์|联排|聯排/i.test(query)) {
+      return ["townhouse"];
+    }
+
+    if (/\b(?:house|houses|home|homes)\b|(?:^|[^а-яё])дома?(?:$|[^а-яё])|บ้าน|房子|住宅/i.test(query)) {
+      return ["villa", "townhouse"];
+    }
+
+    if (/\b(?:condo|condominium|apartment|apartments|flat|unit)\b|кондо|квартир|апартамент|ห้องชุด|คอนโด|公寓|单元|單元/i.test(query)) {
+      return ["condo"];
+    }
+
+    return [];
+  }
+
   private detectLifestyleSignals(query: string): string[] {
     const normalized = this.normalize(query);
 
@@ -535,6 +564,14 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
   }
 
   if (filters.listingType === "sale" && !["sale", "sale_or_rent"].includes(property.listingType)) {
+    return false;
+  }
+
+  if (filters.kind && property.kind !== filters.kind) {
+    return false;
+  }
+
+  if (filters.kinds?.length && !filters.kinds.includes(property.kind)) {
     return false;
   }
 

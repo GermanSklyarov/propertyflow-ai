@@ -125,6 +125,14 @@ export class IndexedPropertySearchService {
       filters.push({ term: { market: request.market } });
     }
 
+    if (request.kind) {
+      filters.push({ term: { kind: request.kind } });
+    }
+
+    if (request.kinds?.length) {
+      filters.push({ terms: { kind: request.kinds } });
+    }
+
     if (request.listingType) {
       filters.push({ terms: { listingType: [request.listingType, "sale_or_rent"] } });
     }

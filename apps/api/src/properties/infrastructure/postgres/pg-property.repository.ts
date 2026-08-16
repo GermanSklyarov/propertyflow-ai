@@ -383,6 +383,14 @@ export class PgPropertyRepository implements PropertyRepository {
       clauses.push(`p.market = ${addValue(filters.market)}`);
     }
 
+    if (filters.kind) {
+      clauses.push(`p.kind = ${addValue(filters.kind)}`);
+    }
+
+    if (filters.kinds?.length) {
+      clauses.push(`p.kind = any(${addValue(filters.kinds)})`);
+    }
+
     if (filters.listingType) {
       clauses.push(`p.listing_type in (${addValue(filters.listingType)}, 'sale_or_rent')`);
     }
