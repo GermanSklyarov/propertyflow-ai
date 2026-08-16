@@ -48,8 +48,9 @@ describe("LeadNotificationService", () => {
   it("sends Telegram messages with the tenant bot token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);
+    const tenants = tenantService(tenant({ leadTelegramBotToken: "telegram-test-token", leadTelegramChatIds: ["-100123"] }));
     const service = new LeadNotificationService(
-      tenantService(tenant({ leadTelegramBotToken: "telegram-test-token", leadTelegramChatIds: ["-100123"] }))
+      tenants
     );
 
     await service.notifyLeadCreated("tenant-demo", lead());
@@ -60,6 +61,12 @@ describe("LeadNotificationService", () => {
         body: expect.stringContaining('"chat_id":"-100123"')
       })
     );
+    expect(tenants.recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      operation: "lead_notification_sent",
+      quantity: 1,
+      service: "telegram",
+      tenantId: "tenant-demo"
+    }));
   });
 
   it("sends compact concierge handoff details to Telegram", async () => {
@@ -186,8 +193,9 @@ describe("LeadNotificationService", () => {
   it("sends LINE push messages with the tenant channel token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);
+    const tenants = tenantService(tenant({ leadLineChannelAccessToken: "line-test-token", leadLineRecipientIds: ["U123"] }));
     const service = new LeadNotificationService(
-      tenantService(tenant({ leadLineChannelAccessToken: "line-test-token", leadLineRecipientIds: ["U123"] }))
+      tenants
     );
 
     await service.notifyLeadCreated("tenant-demo", lead());
@@ -201,6 +209,28 @@ describe("LeadNotificationService", () => {
         body: expect.stringContaining('"to":"U123"')
       })
     );
+    expect(tenants.recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      operation: "lead_notification_sent",
+      quantity: 1,
+      service: "line",
+      tenantId: "tenant-demo"
+    }));
+  });
+
+  it("records failed messenger deliveries as usage events", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: false, status: 500 });
+    vi.stubGlobal("fetch", fetchMock);
+    const tenants = tenantService(tenant({ leadTelegramBotToken: "telegram-test-token", leadTelegramChatIds: ["-100123"] }));
+    const service = new LeadNotificationService(tenants);
+
+    await service.notifyLeadCreated("tenant-demo", lead());
+
+    expect(tenants.recordUsageEvent).toHaveBeenCalledWith(expect.objectContaining({
+      operation: "lead_notification_failed",
+      quantity: 1,
+      service: "telegram",
+      tenantId: "tenant-demo"
+    }));
   });
 
   it("sends WhatsApp text messages with the tenant Cloud API credentials", async () => {
@@ -242,7 +272,8 @@ describe("LeadNotificationService", () => {
 
 function tenantService(snapshot: TenantSnapshot): TenantService {
   return {
-    findActiveTenant: vi.fn().mockResolvedValue(snapshot)
+    findActiveTenant: vi.fn().mockResolvedValue(snapshot),
+    recordUsageEvent: vi.fn().mockResolvedValue(undefined)
   } as unknown as TenantService;
 }
 

@@ -150,6 +150,19 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
           where created_at >= $1 and created_at < $2
           group by tenant_id
         ),
+        widget_usage as (
+          select
+            tenant_id,
+            count(*) as widget_asks,
+            coalesce(
+              nullif(count(distinct nullif(metadata ->> 'sessionId', '')), 0),
+              count(*)
+            ) as widget_conversations
+          from tenant_usage_events
+          where created_at >= $1 and created_at < $2
+            and operation = 'public-widget.ask'
+          group by tenant_id
+        ),
         ai_messages as (
           select tenant_id, count(*) as ai_messages
           from concierge_messages
@@ -203,9 +216,9 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
           tenant.id as tenant_id,
           tenant.name as agency_name,
           tenant.subscription_plan,
-          coalesce(conversations.conversations, 0) as conversations,
-          greatest(coalesce(ai_audit.ai_requests, 0), coalesce(usage_month.usage_ai_requests, 0)) as ai_requests,
-          coalesce(ai_messages.ai_messages, 0) as ai_messages,
+          greatest(coalesce(conversations.conversations, 0), coalesce(widget_usage.widget_conversations, 0)) as conversations,
+          greatest(coalesce(ai_audit.ai_requests, 0), coalesce(usage_month.usage_ai_requests, 0), coalesce(widget_usage.widget_asks, 0)) as ai_requests,
+          greatest(coalesce(ai_messages.ai_messages, 0), coalesce(widget_usage.widget_asks, 0)) as ai_messages,
           coalesce(usage_month.input_tokens, 0) as input_tokens,
           coalesce(usage_month.output_tokens, 0) as output_tokens,
           coalesce(leads_month.leads, 0) as leads,
@@ -218,6 +231,7 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
           coalesce(usage_month.estimated_cost_usd, 0) as estimated_cost_usd
         from tenant_list tenant
         left join conversations on conversations.tenant_id = tenant.id
+        left join widget_usage on widget_usage.tenant_id = tenant.id
         left join ai_messages on ai_messages.tenant_id = tenant.id
         left join ai_audit on ai_audit.tenant_id = tenant.id
         left join leads_month on leads_month.tenant_id = tenant.id

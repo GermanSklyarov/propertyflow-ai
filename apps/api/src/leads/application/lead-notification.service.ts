@@ -86,9 +86,13 @@ export class LeadNotificationService {
       return;
     }
 
-    await this.postJson(tenant.widget.leadWebhookUrl, payload, {
+    const delivered = await this.postJson(tenant.widget.leadWebhookUrl, payload, {
       "content-type": "application/json",
       "user-agent": "PropertyFlowAI-LeadNotifications/1.0"
+    });
+    await this.recordNotificationUsage(tenant.id, "webhook", delivered, {
+      leadId: payload.lead.id,
+      url: tenant.widget.leadWebhookUrl
     });
   }
 
@@ -101,7 +105,7 @@ export class LeadNotificationService {
       return;
     }
 
-    await this.postJson(
+    const delivered = await this.postJson(
       "https://api.resend.com/emails",
       {
         from,
@@ -114,6 +118,10 @@ export class LeadNotificationService {
         "content-type": "application/json"
       }
     );
+    await this.recordNotificationUsage(tenant.id, "email", delivered, {
+      leadId: payload.lead.id,
+      recipients: recipients.length
+    }, recipients.length);
   }
 
   private async sendTelegramNotifications(tenant: TenantSnapshot, payload: LeadNotificationPayload): Promise<void> {
@@ -125,8 +133,8 @@ export class LeadNotificationService {
     }
 
     await Promise.all(
-      chatIds.map((chatId) =>
-        this.postJson(
+      chatIds.map(async (chatId) => {
+        const delivered = await this.postJson(
           `https://api.telegram.org/bot${token}/sendMessage`,
           {
             chat_id: chatId,
@@ -136,8 +144,12 @@ export class LeadNotificationService {
           {
             "content-type": "application/json"
           }
-        )
-      )
+        );
+        await this.recordNotificationUsage(tenant.id, "telegram", delivered, {
+          chatId,
+          leadId: payload.lead.id
+        });
+      })
     );
   }
 
@@ -150,8 +162,8 @@ export class LeadNotificationService {
     }
 
     await Promise.all(
-      recipientIds.map((recipientId) =>
-        this.postJson(
+      recipientIds.map(async (recipientId) => {
+        const delivered = await this.postJson(
           "https://api.line.me/v2/bot/message/push",
           {
             messages: [
@@ -166,8 +178,12 @@ export class LeadNotificationService {
             authorization: `Bearer ${token}`,
             "content-type": "application/json"
           }
-        )
-      )
+        );
+        await this.recordNotificationUsage(tenant.id, "line", delivered, {
+          leadId: payload.lead.id,
+          recipientId
+        });
+      })
     );
   }
 
@@ -182,8 +198,8 @@ export class LeadNotificationService {
     }
 
     await Promise.all(
-      recipients.map((recipient) =>
-        this.postJson(
+      recipients.map(async (recipient) => {
+        const delivered = await this.postJson(
           `https://graph.facebook.com/${graphVersion}/${phoneNumberId}/messages`,
           {
             messaging_product: "whatsapp",
@@ -199,12 +215,17 @@ export class LeadNotificationService {
             authorization: `Bearer ${token}`,
             "content-type": "application/json"
           }
-        )
-      )
+        );
+        await this.recordNotificationUsage(tenant.id, "whatsapp", delivered, {
+          leadId: payload.lead.id,
+          recipient,
+          phoneNumberId
+        });
+      })
     );
   }
 
-  private async postJson(url: string, body: unknown, headers: Record<string, string>): Promise<void> {
+  private async postJson(url: string, body: unknown, headers: Record<string, string>): Promise<boolean> {
     try {
       const response = await fetch(url, {
         method: "POST",
@@ -216,8 +237,33 @@ export class LeadNotificationService {
       if (!response.ok) {
         this.logger.warn(`Lead notification delivery failed with HTTP ${response.status} for ${url}`);
       }
+
+      return response.ok;
     } catch (error) {
       this.logger.warn(`Lead notification delivery failed for ${url}: ${toErrorMessage(error)}`);
+
+      return false;
+    }
+  }
+
+  private async recordNotificationUsage(
+    tenantId: string,
+    service: "email" | "line" | "telegram" | "webhook" | "whatsapp",
+    delivered: boolean,
+    metadata: Record<string, unknown>,
+    quantity = 1
+  ): Promise<void> {
+    try {
+      await this.tenants.recordUsageEvent({
+        tenantId,
+        service,
+        operation: delivered ? "lead_notification_sent" : "lead_notification_failed",
+        quantity,
+        unit: "message",
+        metadata
+      });
+    } catch (error) {
+      this.logger.warn(`Lead notification usage tracking failed for ${tenantId}: ${toErrorMessage(error)}`);
     }
   }
 }

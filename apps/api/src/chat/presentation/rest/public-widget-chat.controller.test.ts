@@ -86,7 +86,8 @@ describe("PublicWidgetChatController", () => {
     expect(tenants.recordPublicWidgetAsk).toHaveBeenCalledWith(tenant, {
       locale: "ru",
       origin: "https://agency.example.com",
-      referer: null
+      referer: null,
+      sessionId: "session-1"
     });
   });
 

@@ -293,7 +293,8 @@ export class PublicWidgetChatController {
     await this.tenants.recordPublicWidgetAsk(tenant, {
       locale,
       origin: origin ?? null,
-      referer: referer ?? null
+      referer: referer ?? null,
+      sessionId: payload.sessionId ?? null
     });
     const recommendations = await this.buildRecommendedListings(
       tenant,
