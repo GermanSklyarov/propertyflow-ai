@@ -1377,6 +1377,53 @@ describe("AiChatService", () => {
     });
   });
 
+  it("drops stale house kind when the visitor switches to big apartments", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn().mockResolvedValue({
+        filters: { kind: "condo", listingType: "sale", market: "pattaya", minBedrooms: 4 },
+        interpretedIntent: "Pattaya 4+ bedroom condo purchase",
+        items: [propertyFactory({ bedrooms: 4, id: "property-2", kind: "condo", title: "4BR Condo at Central Pattaya" })],
+        rankingExplanation: "Using apartment kind refinement over previous house request.",
+        total: 1
+      })
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      textGenerator: {
+        isConfigured: vi.fn().mockReturnValue(false),
+        generate: vi.fn()
+      }
+    });
+    const refinement = "in that case, maybe you have big apartments, like 4+ bedroom?";
+
+    await service.ask("tenant-1", {
+      conversation: [
+        { role: "user", text: "i want to buy a house in pattaya" },
+        {
+          recommendedListings: [
+            { propertyId: "townhouse-1", title: "4BR Townhouse at Centric Sea Pattaya - Central Pattaya" },
+            { propertyId: "townhouse-2", title: "2BR Townhouse at Unixx South Pattaya - Pratumnak" }
+          ],
+          role: "assistant",
+          text: "I found 2 matching listings."
+        },
+        { role: "user", text: "which one of them can a foreigner buy?" },
+        { role: "assistant", text: "Townhouses need legal review for foreign buyers." }
+      ],
+      locale: "en",
+      message: refinement
+    });
+
+    expect(naturalLanguageSearch.search).toHaveBeenCalledWith("tenant-1", {
+      locale: "en",
+      market: undefined,
+      purpose: undefined,
+      query: `i want to buy in pattaya. Updated criteria: ${refinement}`
+    });
+  });
+
   it("keeps Russian Pratumnak location context when the visitor refines rental criteria", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const naturalLanguageSearch = {

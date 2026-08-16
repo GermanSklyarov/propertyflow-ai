@@ -565,7 +565,7 @@ function resolveEffectiveSearchMessage(request: AiChatRequest): string {
 
   const previousUserTurns = [...(request.conversation ?? [])]
     .reverse()
-    .filter((turn) => turn.role === "user" && !isThinSearchContinuation(turn.text));
+    .filter((turn) => turn.role === "user" && !isThinSearchContinuation(turn.text) && !looksLikeOwnershipAdviceQuestion(turn.text));
 
   const latestRefinement = previousUserTurns.find((turn) => looksLikeSearchRefinement(turn.text))?.text;
 
@@ -579,10 +579,65 @@ function resolveEffectiveSearchMessage(request: AiChatRequest): string {
 function mergeSearchRefinement(request: AiChatRequest, refinement: string): string {
   const baseSearch = [...(request.conversation ?? [])]
     .reverse()
-    .filter((turn) => turn.role === "user" && turn.text !== refinement && !isThinSearchContinuation(turn.text))
+    .filter(
+      (turn) =>
+        turn.role === "user" &&
+        turn.text !== refinement &&
+        !isThinSearchContinuation(turn.text) &&
+        !looksLikeOwnershipAdviceQuestion(turn.text)
+    )
     .find((turn) => looksLikeSearchRequest(turn.text))?.text;
 
-  return baseSearch ? `${baseSearch}. Updated criteria: ${refinement}` : refinement;
+  if (!baseSearch) {
+    return refinement;
+  }
+
+  const compatibleBaseSearch = removeConflictingPropertyKindTerms(baseSearch, refinement);
+
+  return compatibleBaseSearch ? `${compatibleBaseSearch}. Updated criteria: ${refinement}` : refinement;
+}
+
+function removeConflictingPropertyKindTerms(baseSearch: string, refinement: string): string {
+  const baseKind = detectPropertyKindGroup(baseSearch);
+  const refinementKind = detectPropertyKindGroup(refinement);
+
+  if (!baseKind || !refinementKind || baseKind === refinementKind) {
+    return baseSearch;
+  }
+
+  return baseSearch
+    .replace(/\b(?:house|houses|home|homes|villa|villas|townhouse|townhomes?|town house|town home)\b/gi, " ")
+    .replace(/(?:^|[^а-яё])дома?(?=$|[^а-яё])/gi, " ")
+    .replace(/вилл\w*|таунхаус\w*/gi, " ")
+    .replace(/บ้าน|วิลล่า|房子|住宅|别墅|別墅|联排|聯排/g, " ")
+    .replace(/\b(?:condo|condominium|apartment|apartments|flat|unit)\b/gi, " ")
+    .replace(/кондо|квартир\w*|апартамент\w*/gi, " ")
+    .replace(/ห้องชุด|คอนโด|公寓|单元|單元/g, " ")
+    .replace(/\b(?:a|an)\s+(?=in\b|near\b|around\b|at\b|under\b|for\b|with\b|$)/gi, "")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.!?])/g, "$1")
+    .trim();
+}
+
+function detectPropertyKindGroup(message: string): "apartment" | "house" | undefined {
+  if (/\b(?:condo|condominium|apartment|apartments|flat|unit)\b|кондо|квартир|апартамент|ห้องชุด|คอนโด|公寓|单元|單元/i.test(message)) {
+    return "apartment";
+  }
+
+  if (/\b(?:house|houses|home|homes|villa|villas|townhouse|townhomes?|town house|town home)\b|(?:^|[^а-яё])дома?(?:$|[^а-яё])|вилл|таунхаус|บ้าน|วิลล่า|房子|住宅|别墅|別墅|联排|聯排/i.test(message)) {
+    return "house";
+  }
+
+  return undefined;
+}
+
+function looksLikeOwnershipAdviceQuestion(message: string): boolean {
+  const normalized = message.toLowerCase().replace(/\s+/g, " ").trim();
+
+  return (
+    /\b(?:foreigner|foreign buyer|foreigners|foreign quota|foreign freehold|foreign name|ownership|own|quota|freehold)\b/i.test(normalized) ||
+    /иностран|фаранг|квот|собствен|ต่างชาติ|ชาวต่างชาติ|โควต้า|ถือครอง|外国|外國|外籍|产权|產權|配额|配額/i.test(normalized)
+  );
 }
 
 function isSearchContinuationRequest(message: string): boolean {
