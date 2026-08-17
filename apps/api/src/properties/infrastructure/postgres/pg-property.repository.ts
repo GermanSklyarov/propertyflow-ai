@@ -15,6 +15,7 @@ import type {
 } from "@propertyflow/contracts";
 import type {
   Currency,
+  ListingLocationFeatures,
   Money,
   PropertyKind,
   PropertyListingType,
@@ -49,6 +50,18 @@ interface PropertyRow {
   area_sqm: string;
   floor: number | null;
   beach_distance_meters: number | null;
+  nearest_beach_distance_meters: number | null;
+  nearest_baht_bus_route_distance_meters: number | null;
+  nearest_public_transport_distance_meters: number | null;
+  nearest_taxi_stand_distance_meters: number | null;
+  nearest_supermarket_distance_meters: number | null;
+  nearest_mall_distance_meters: number | null;
+  nearest_hospital_distance_meters: number | null;
+  nearest_international_school_distance_meters: number | null;
+  nearest_nightlife_distance_meters: number | null;
+  nearest_airport_connection_distance_meters: number | null;
+  walkability_score: number | null;
+  location_features_updated_at: Date | null;
   monthly_rent_estimate_amount: string | null;
   monthly_rent_estimate_currency: Currency | null;
   maintenance_fee_monthly_amount: string | null;
@@ -432,7 +445,39 @@ export class PgPropertyRepository implements PropertyRepository {
     }
 
     if (filters.maxBeachDistanceMeters !== undefined) {
-      clauses.push(`p.beach_distance_meters <= ${addValue(filters.maxBeachDistanceMeters)}`);
+      clauses.push(`coalesce(lf.nearest_beach_distance_meters, p.beach_distance_meters) <= ${addValue(filters.maxBeachDistanceMeters)}`);
+    }
+
+    if (filters.maxBahtBusRouteDistanceMeters !== undefined) {
+      clauses.push(`lf.nearest_baht_bus_route_distance_meters <= ${addValue(filters.maxBahtBusRouteDistanceMeters)}`);
+    }
+
+    if (filters.maxPublicTransportDistanceMeters !== undefined) {
+      clauses.push(`lf.nearest_public_transport_distance_meters <= ${addValue(filters.maxPublicTransportDistanceMeters)}`);
+    }
+
+    if (filters.maxSupermarketDistanceMeters !== undefined) {
+      clauses.push(`lf.nearest_supermarket_distance_meters <= ${addValue(filters.maxSupermarketDistanceMeters)}`);
+    }
+
+    if (filters.maxMallDistanceMeters !== undefined) {
+      clauses.push(`lf.nearest_mall_distance_meters <= ${addValue(filters.maxMallDistanceMeters)}`);
+    }
+
+    if (filters.maxHospitalDistanceMeters !== undefined) {
+      clauses.push(`lf.nearest_hospital_distance_meters <= ${addValue(filters.maxHospitalDistanceMeters)}`);
+    }
+
+    if (filters.maxInternationalSchoolDistanceMeters !== undefined) {
+      clauses.push(`lf.nearest_international_school_distance_meters <= ${addValue(filters.maxInternationalSchoolDistanceMeters)}`);
+    }
+
+    if (filters.maxAirportConnectionDistanceMeters !== undefined) {
+      clauses.push(`lf.nearest_airport_connection_distance_meters <= ${addValue(filters.maxAirportConnectionDistanceMeters)}`);
+    }
+
+    if (filters.minWalkabilityScore !== undefined) {
+      clauses.push(`lf.walkability_score >= ${addValue(filters.minWalkabilityScore)}`);
     }
 
     if (filters.requiredAmenities?.length) {
@@ -782,6 +827,16 @@ export class PgPropertyRepository implements PropertyRepository {
               when p.beach_distance_meters is not null then greatest(0, 25 - p.beach_distance_meters::numeric / 100)
               else 0
             end
+          + coalesce(lf.walkability_score, 0)::numeric / 4
+          + case
+              when lf.nearest_supermarket_distance_meters <= 800 then 8
+              when lf.nearest_supermarket_distance_meters <= 1200 then 4
+              else 0
+            end
+          + case
+              when lf.nearest_baht_bus_route_distance_meters <= 500 or lf.nearest_public_transport_distance_meters <= 500 then 8
+              else 0
+            end
           + case when p.amenities && array['fiber-internet', 'coworking-lounge']::text[] then 12 else 0 end
           + case when p.amenities && array['sea-view', 'beachfront']::text[] then 10 else 0 end
           + least(
@@ -969,7 +1024,19 @@ export class PgPropertyRepository implements PropertyRepository {
         project.longitude as project_longitude,
         project.amenities as project_amenities,
         project.created_at as project_created_at,
-        project.updated_at as project_updated_at
+        project.updated_at as project_updated_at,
+        lf.nearest_beach_distance_meters,
+        lf.nearest_baht_bus_route_distance_meters,
+        lf.nearest_public_transport_distance_meters,
+        lf.nearest_taxi_stand_distance_meters,
+        lf.nearest_supermarket_distance_meters,
+        lf.nearest_mall_distance_meters,
+        lf.nearest_hospital_distance_meters,
+        lf.nearest_international_school_distance_meters,
+        lf.nearest_nightlife_distance_meters,
+        lf.nearest_airport_connection_distance_meters,
+        lf.walkability_score,
+        lf.updated_at as location_features_updated_at
       ${this.fromPropertiesSql()}
     `;
   }
@@ -988,6 +1055,8 @@ export class PgPropertyRepository implements PropertyRepository {
       ) cover_image on true
       left join property_projects project
         on project.tenant_id = p.tenant_id and project.id = p.project_id
+      left join listing_location_features lf
+        on lf.tenant_id = p.tenant_id and lf.listing_id = p.id
     `;
   }
 
@@ -996,6 +1065,8 @@ export class PgPropertyRepository implements PropertyRepository {
       from properties p
       left join property_projects project
         on project.tenant_id = p.tenant_id and project.id = p.project_id
+      left join listing_location_features lf
+        on lf.tenant_id = p.tenant_id and lf.listing_id = p.id
     `;
   }
 
@@ -1072,6 +1143,7 @@ export class PgPropertyRepository implements PropertyRepository {
       areaSqm: Number(row.area_sqm),
       floor: row.floor ?? undefined,
       beachDistanceMeters: row.beach_distance_meters ?? undefined,
+      locationFeatures: this.toLocationFeatures(row),
       monthlyRentEstimate: this.optionalMoney(row.monthly_rent_estimate_amount, row.monthly_rent_estimate_currency),
       maintenanceFeeMonthly: this.optionalMoney(row.maintenance_fee_monthly_amount, row.maintenance_fee_monthly_currency),
       amenities: row.amenities,
@@ -1115,6 +1187,27 @@ export class PgPropertyRepository implements PropertyRepository {
     return {
       amount: Number(amount),
       currency
+    };
+  }
+
+  private toLocationFeatures(row: PropertyRow): ListingLocationFeatures | undefined {
+    if (!row.location_features_updated_at) {
+      return undefined;
+    }
+
+    return {
+      nearestBeachDistanceMeters: row.nearest_beach_distance_meters ?? undefined,
+      nearestBahtBusRouteDistanceMeters: row.nearest_baht_bus_route_distance_meters ?? undefined,
+      nearestPublicTransportDistanceMeters: row.nearest_public_transport_distance_meters ?? undefined,
+      nearestTaxiStandDistanceMeters: row.nearest_taxi_stand_distance_meters ?? undefined,
+      nearestSupermarketDistanceMeters: row.nearest_supermarket_distance_meters ?? undefined,
+      nearestMallDistanceMeters: row.nearest_mall_distance_meters ?? undefined,
+      nearestHospitalDistanceMeters: row.nearest_hospital_distance_meters ?? undefined,
+      nearestInternationalSchoolDistanceMeters: row.nearest_international_school_distance_meters ?? undefined,
+      nearestNightlifeDistanceMeters: row.nearest_nightlife_distance_meters ?? undefined,
+      nearestAirportConnectionDistanceMeters: row.nearest_airport_connection_distance_meters ?? undefined,
+      walkabilityScore: row.walkability_score ?? undefined,
+      updatedAt: row.location_features_updated_at.toISOString()
     };
   }
 

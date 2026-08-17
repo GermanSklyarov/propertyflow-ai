@@ -967,6 +967,75 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(result.rankingExplanation).toContain("beach proximity");
   });
 
+  it("turns car-free living requests into saved location-intelligence filters", async () => {
+    const carDependent = propertyFactory({
+      id: "car-dependent",
+      locationFeatures: {
+        nearestPublicTransportDistanceMeters: 1400,
+        nearestSupermarketDistanceMeters: 1800,
+        updatedAt: "2026-08-17T00:00:00.000Z",
+        walkabilityScore: 45
+      },
+      title: "Car Dependent Condo"
+    });
+    const walkable = propertyFactory({
+      id: "walkable",
+      locationFeatures: {
+        nearestBahtBusRouteDistanceMeters: 260,
+        nearestPublicTransportDistanceMeters: 380,
+        nearestSupermarketDistanceMeters: 450,
+        updatedAt: "2026-08-17T00:00:00.000Z",
+        walkabilityScore: 82
+      },
+      title: "Walkable Baht Bus Condo"
+    });
+    const service = searchServiceForItems([carDependent, walkable]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "I don't drive. Find a condo without a car, supermarket nearby and easy public transport in Pattaya"
+    });
+
+    expect(result.filters.lifestyleSignals).toContain("car-free");
+    expect(result.filters.lifestyleSignals).toContain("supermarket-access");
+    expect(result.filters.minWalkabilityScore).toBe(70);
+    expect(result.filters.maxSupermarketDistanceMeters).toBe(900);
+    expect(result.filters.maxPublicTransportDistanceMeters).toBe(700);
+    expect(result.items.map((item) => item.id)).toEqual(["walkable"]);
+    expect(result.rankingExplanation).toContain("car-free daily living");
+  });
+
+  it("recognizes baht bus route proximity requests", async () => {
+    const far = propertyFactory({
+      id: "far-baht-bus",
+      locationFeatures: {
+        nearestBahtBusRouteDistanceMeters: 900,
+        updatedAt: "2026-08-17T00:00:00.000Z",
+        walkabilityScore: 75
+      },
+      title: "Far Baht Bus Condo"
+    });
+    const close = propertyFactory({
+      id: "close-baht-bus",
+      locationFeatures: {
+        nearestBahtBusRouteDistanceMeters: 180,
+        updatedAt: "2026-08-17T00:00:00.000Z",
+        walkabilityScore: 80
+      },
+      title: "Close Baht Bus Condo"
+    });
+    const service = searchServiceForItems([far, close]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "condo close to a baht bus route in Pattaya"
+    });
+
+    expect(result.filters.lifestyleSignals).toContain("baht-bus");
+    expect(result.filters.maxBahtBusRouteDistanceMeters).toBe(500);
+    expect(result.items.map((item) => item.id)).toEqual(["close-baht-bus"]);
+  });
+
   it("recognizes adults-only nightlife stays and applies nightlife geo/ranking preferences", async () => {
     const central = propertyFactory({
       address: "Central Pattaya",

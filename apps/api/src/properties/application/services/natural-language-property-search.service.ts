@@ -27,6 +27,7 @@ interface BudgetSignal {
 interface RankingPreferences {
   preferBeachProximity: boolean;
   preferBudgetPrice: boolean;
+  preferCarFreeFit: boolean;
   preferFamilyFit: boolean;
   preferLargerArea: boolean;
   preferLuxuryFit: boolean;
@@ -71,6 +72,9 @@ const LIFESTYLE_PATTERNS: Array<[string, RegExp]> = [
   ["retiree-comfort", /(?:retiree|retired|retirement|senior|elderly|пенсионер|пенси[ию]|пожил|เกษียณ|ผู้สูงอายุ|退休|养老|養老|老年)/],
   ["winter-stay", /(?:winter|wintering|snowbird|long stay|long-stay|зимовк|зимовать|зиму|зимн|ระยะยาว|过冬|過冬|避寒)/],
   ["shopping", /(?:terminal 21|shopping|mall|торгов|ห้าง|商场|商場|购物|購物)/],
+  ["car-free", /(?:without a car|no car|don'?t drive|do not drive|walkability|walkable|public transport|baht bus|songthaew|без машины|не вожу|нет машины|пешком|общественный транспорт|маршрутка|сонгтео|บาทบัส|รถสองแถว|ขนส่งสาธารณะ|ไม่ขับรถ|不用车|不用車|不开车|不開車|公共交通|双条车|雙條車)/],
+  ["baht-bus", /(?:baht bus|songthaew|батбас|бат бас|сонгтео|маршрутка|บาทบัส|รถสองแถว|双条车|雙條車)/],
+  ["supermarket-access", /(?:supermarket|grocery|convenience store|7-eleven|seven eleven|big c|lotus|makro|супермаркет|магазин|7-?eleven|продукт|ซูเปอร์มาร์เก็ต|ร้านสะดวกซื้อ|โลตัส|超市|便利店)/],
   ["school-access", /(?:school|kindergarten|children|kids|child|family|школ|реб[её]н|детьми|детск|дети|детей|семья|семьи|семье|семью|семей|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/],
   ["pet-friendly", /(?:\b(?:pet|pets|pet-friendly|pet friendly|dog|dogs|cat|cats)\b|животн|питомц|собак|кошк|สัตว์เลี้ยง|宠物|寵物|狗|猫|貓)/]
 ];
@@ -238,6 +242,10 @@ export class NaturalLanguagePropertySearchService {
       filters.maxBeachDistanceMeters = beachDistance;
       explanations.push(`maxBeachDistanceMeters=${beachDistance}`);
     }
+
+    const locationFeatureFilters = this.detectLocationFeatureFilters(normalized);
+    Object.assign(filters, locationFeatureFilters.filters);
+    explanations.push(...locationFeatureFilters.explanations);
 
     const requiredAmenities = Array.from(new Set([...this.detectAmenities(normalized), ...this.detectRequiredAmenities(normalized)]));
     if (requiredAmenities.length) {
@@ -443,6 +451,57 @@ export class NaturalLanguagePropertySearchService {
     return requiredAmenities;
   }
 
+  private detectLocationFeatureFilters(query: string): { explanations: string[]; filters: PropertySearchRequest } {
+    const filters: PropertySearchRequest = {};
+    const explanations: string[] = [];
+    const carFreeIntent = /(?:without a car|no car|don'?t drive|do not drive|walkability|walkable|public transport|без машины|не вожу|нет машины|пешком|общественный транспорт|ไม่ขับรถ|不用车|不用車|不开车|不開車|公共交通)/i.test(query);
+    const bahtBusIntent = /(?:baht bus|songthaew|батбас|бат бас|сонгтео|маршрутка|บาทบัส|รถสองแถว|双条车|雙條車)/i.test(query);
+    const supermarketIntent = /(?:supermarket|grocery|convenience store|7-eleven|seven eleven|big c|lotus|makro|супермаркет|магазин|продукт|ซูเปอร์มาร์เก็ต|ร้านสะดวกซื้อ|โลตัส|超市|便利店)/i.test(query);
+    const mallIntent = /(?:terminal 21|shopping mall|mall|торгов|тц|ห้าง|ศูนย์การค้า|商场|商場)/i.test(query);
+    const hospitalIntent = /(?:hospital|clinic|больниц|госпитал|клиник|โรงพยาบาล|医院|醫院)/i.test(query);
+    const schoolIntent = /(?:international school|международн.{0,20}школ|international kindergarten|โรงเรียนนานาชาติ|国际学校|國際學校)/i.test(query);
+    const airportIntent = /(?:airport|аэропорт|สนามบิน|机场|機場)/i.test(query);
+
+    if (carFreeIntent) {
+      filters.minWalkabilityScore = 70;
+      filters.maxSupermarketDistanceMeters = Math.min(filters.maxSupermarketDistanceMeters ?? 900, 900);
+      filters.maxPublicTransportDistanceMeters = Math.min(filters.maxPublicTransportDistanceMeters ?? 700, 700);
+      explanations.push("minWalkabilityScore=70", "maxSupermarketDistanceMeters=900", "maxPublicTransportDistanceMeters=700");
+    }
+
+    if (bahtBusIntent) {
+      filters.maxBahtBusRouteDistanceMeters = detectRequestedRadiusMeters(query) ?? 500;
+      explanations.push(`maxBahtBusRouteDistanceMeters=${filters.maxBahtBusRouteDistanceMeters}`);
+    }
+
+    if (supermarketIntent) {
+      filters.maxSupermarketDistanceMeters = Math.min(filters.maxSupermarketDistanceMeters ?? 1000, detectRequestedRadiusMeters(query) ?? 1000);
+      explanations.push(`maxSupermarketDistanceMeters=${filters.maxSupermarketDistanceMeters}`);
+    }
+
+    if (mallIntent) {
+      filters.maxMallDistanceMeters = detectRequestedRadiusMeters(query) ?? 3000;
+      explanations.push(`maxMallDistanceMeters=${filters.maxMallDistanceMeters}`);
+    }
+
+    if (hospitalIntent) {
+      filters.maxHospitalDistanceMeters = detectRequestedRadiusMeters(query) ?? 5000;
+      explanations.push(`maxHospitalDistanceMeters=${filters.maxHospitalDistanceMeters}`);
+    }
+
+    if (schoolIntent) {
+      filters.maxInternationalSchoolDistanceMeters = detectRequestedRadiusMeters(query) ?? 5000;
+      explanations.push(`maxInternationalSchoolDistanceMeters=${filters.maxInternationalSchoolDistanceMeters}`);
+    }
+
+    if (airportIntent) {
+      filters.maxAirportConnectionDistanceMeters = detectRequestedRadiusMeters(query) ?? 45_000;
+      explanations.push(`maxAirportConnectionDistanceMeters=${filters.maxAirportConnectionDistanceMeters}`);
+    }
+
+    return { explanations, filters };
+  }
+
   private detectPurpose(query: string): PropertyPurpose | undefined {
     if (/(инвест|доходн|invest|investment|roi|yield|rent out|сдач|ลงทุน|ผลตอบแทน|ปล่อยเช่า|投资|投資|收益|回报|回報|出租收益)/.test(query)) {
       return "investment";
@@ -497,6 +556,7 @@ export class NaturalLanguagePropertySearchService {
     return {
       preferBeachProximity: /(?:\b(?:close to (?:the )?beach|near (?:the )?beach|walk(?:ing)? distance|beachfront|by the beach)\b|рядом.*пляж|у пляжа|пешком.*пляж|ใกล้.*ชายหาด|ติดทะเล|海边|海邊|海滩附近|海灘附近)/i.test(query),
       preferBudgetPrice: /(?:\b(?:budget-friendly|budget option|cheap|cheaper|affordable|low price|lowest price|economy|inexpensive)\b|бюджетн|дешев|недорог|подешевле|ประหยัด|ถูก|ราคาไม่แพง|便宜|实惠|實惠)/i.test(query),
+      preferCarFreeFit: /(?:without a car|no car|don'?t drive|do not drive|walkability|walkable|public transport|baht bus|songthaew|без машины|не вожу|нет машины|пешком|общественный транспорт|маршрутка|сонгтео|ไม่ขับรถ|不用车|不用車|不开车|不開車|公共交通|双条车|雙條車)/i.test(query),
       preferFamilyFit: /(?:school|kindergarten|children|kids|child|family|школ|реб[её]н|детьми|детск|дети|детей|семья|семьи|семье|семью|семей|садик|ครอบครัว|เด็ก|โรงเรียน|家庭|孩子|学校|學校)/i.test(query),
       preferLargerArea: /(?:\b(?:spacious|roomy|large|larger|big|bigger|more space|not tiny|not small)\b|простор|побольше|больш|не маленьк|กว้าง|พื้นที่|宽敞|寬敞|大一点|大一點)/i.test(query),
       preferLuxuryFit: /(?:\b(?:luxury|premium|elite|high-end|upscale|exclusive|best quality)\b|элит|премиум|люкс|дорог|ระดับพรีเมียม|หรู|豪华|豪華|高端)/i.test(query),
@@ -613,7 +673,65 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
 
   if (
     filters.maxBeachDistanceMeters !== undefined &&
-    (property.beachDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxBeachDistanceMeters
+    (property.locationFeatures?.nearestBeachDistanceMeters ?? property.beachDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxBeachDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.maxBahtBusRouteDistanceMeters !== undefined &&
+    (property.locationFeatures?.nearestBahtBusRouteDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxBahtBusRouteDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.maxPublicTransportDistanceMeters !== undefined &&
+    (property.locationFeatures?.nearestPublicTransportDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxPublicTransportDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.maxSupermarketDistanceMeters !== undefined &&
+    (property.locationFeatures?.nearestSupermarketDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxSupermarketDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.maxMallDistanceMeters !== undefined &&
+    (property.locationFeatures?.nearestMallDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxMallDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.maxHospitalDistanceMeters !== undefined &&
+    (property.locationFeatures?.nearestHospitalDistanceMeters ?? Number.POSITIVE_INFINITY) > filters.maxHospitalDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.maxInternationalSchoolDistanceMeters !== undefined &&
+    (property.locationFeatures?.nearestInternationalSchoolDistanceMeters ?? Number.POSITIVE_INFINITY) >
+      filters.maxInternationalSchoolDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.maxAirportConnectionDistanceMeters !== undefined &&
+    (property.locationFeatures?.nearestAirportConnectionDistanceMeters ?? Number.POSITIVE_INFINITY) >
+      filters.maxAirportConnectionDistanceMeters
+  ) {
+    return false;
+  }
+
+  if (
+    filters.minWalkabilityScore !== undefined &&
+    (property.locationFeatures?.walkabilityScore ?? Number.NEGATIVE_INFINITY) < filters.minWalkabilityScore
   ) {
     return false;
   }
@@ -686,6 +804,13 @@ function compareByQueryPreferences(left: PropertySnapshot, right: PropertySnapsh
     const priceDelta = comparablePrice(left) - comparablePrice(right);
     if (priceDelta !== 0) {
       return priceDelta;
+    }
+  }
+
+  if (preferences.preferCarFreeFit) {
+    const carFreeDelta = carFreeFitScore(right) - carFreeFitScore(left);
+    if (carFreeDelta !== 0) {
+      return carFreeDelta;
     }
   }
 
@@ -777,6 +902,7 @@ function hybridScore(
 
 function preferenceScore(property: PropertySnapshot, preferences: RankingPreferences): number {
   const budgetScore = preferences.preferBudgetPrice ? 1 / Math.max(comparablePrice(property), 1) * 1_000_000 : 0;
+  const carFreeScore = preferences.preferCarFreeFit ? carFreeFitScore(property) / 10 : 0;
   const luxuryScore = preferences.preferLuxuryFit ? luxuryFitScore(property) / 10 : 0;
   const valueScore = preferences.preferValueForMoney ? valueForMoneyScore(property) / 10 : 0;
   const washerScore = preferences.preferWashingMachine && hasAmenity(property, "washing machine") ? 0.4 : 0;
@@ -793,7 +919,8 @@ function preferenceScore(property: PropertySnapshot, preferences: RankingPrefere
       : 0;
 
   return Math.min(
-    budgetScore +
+      budgetScore +
+      carFreeScore +
       luxuryScore +
       valueScore +
       washerScore +
@@ -816,6 +943,7 @@ function hasRankingPreferences(preferences: RankingPreferences): boolean {
 function describeRankingPreferences(preferences: RankingPreferences): string {
   const labels = [
     preferences.preferBudgetPrice ? "budget price" : undefined,
+    preferences.preferCarFreeFit ? "car-free daily living" : undefined,
     preferences.preferLuxuryFit ? "premium fit" : undefined,
     preferences.preferValueForMoney ? "value for money" : undefined,
     preferences.preferWashingMachine ? "washing machine" : undefined,
@@ -841,6 +969,29 @@ function valueForMoneyScore(property: PropertySnapshot): number {
   const amenityBonus = Math.min(property.amenities.length, 8) * 0.15;
 
   return Math.min(1_000_000 / Math.max(pricePerSqm, 1) + amenityBonus, 10);
+}
+
+function carFreeFitScore(property: PropertySnapshot): number {
+  const features = property.locationFeatures;
+  const walkability = Math.min((features?.walkabilityScore ?? 0) / 10, 10);
+  const supermarketScore = distanceScore(features?.nearestSupermarketDistanceMeters, 1200) * 3;
+  const transportDistance = Math.min(
+    features?.nearestBahtBusRouteDistanceMeters ?? Number.POSITIVE_INFINITY,
+    features?.nearestPublicTransportDistanceMeters ?? Number.POSITIVE_INFINITY
+  );
+  const transportScore = distanceScore(Number.isFinite(transportDistance) ? transportDistance : undefined, 900) * 3;
+  const mallScore = distanceScore(features?.nearestMallDistanceMeters, 3000) * 1.5;
+  const beachScore = distanceScore(features?.nearestBeachDistanceMeters ?? property.beachDistanceMeters, 1200);
+
+  return walkability * 0.35 + supermarketScore + transportScore + mallScore + beachScore;
+}
+
+function distanceScore(distanceMeters: number | undefined, comfortableDistanceMeters: number): number {
+  if (distanceMeters === undefined) {
+    return 0;
+  }
+
+  return Math.max(0, 1 - distanceMeters / comfortableDistanceMeters);
 }
 
 function luxuryFitScore(property: PropertySnapshot): number {

@@ -1012,6 +1012,14 @@ export interface PropertySearchRequest {
   minBathrooms?: number;
   minAreaSqm?: number;
   maxBeachDistanceMeters?: number;
+  maxBahtBusRouteDistanceMeters?: number;
+  maxPublicTransportDistanceMeters?: number;
+  maxSupermarketDistanceMeters?: number;
+  maxMallDistanceMeters?: number;
+  maxHospitalDistanceMeters?: number;
+  maxInternationalSchoolDistanceMeters?: number;
+  maxAirportConnectionDistanceMeters?: number;
+  minWalkabilityScore?: number;
   requiredAmenities?: string[];
   near?: GeoPoint;
   radiusMeters?: number;
@@ -1090,6 +1098,14 @@ export interface PropertySearchFilters {
   minBathrooms?: number;
   minAreaSqm?: number;
   maxBeachDistanceMeters?: number;
+  maxBahtBusRouteDistanceMeters?: number;
+  maxPublicTransportDistanceMeters?: number;
+  maxSupermarketDistanceMeters?: number;
+  maxMallDistanceMeters?: number;
+  maxHospitalDistanceMeters?: number;
+  maxInternationalSchoolDistanceMeters?: number;
+  maxAirportConnectionDistanceMeters?: number;
+  minWalkabilityScore?: number;
   near?: GeoPoint;
   radiusMeters?: number;
   requiredAmenities?: string[];
@@ -2875,6 +2891,7 @@ export type BackgroundJobName =
   | "concierge.model.train"
   | "pricing.model.train"
   | "properties.import"
+  | "properties.location.enrich"
   | "properties.ai_description.generate"
   | "properties.images.analyze"
   | "saved_search.alerts.digest"
@@ -2934,6 +2951,11 @@ export interface PropertySearchIndexJobPayload extends BackgroundJobBasePayload 
   reason: "created" | "updated" | "manual";
 }
 
+export interface PropertyLocationEnrichJobPayload extends BackgroundJobBasePayload {
+  propertyId: string;
+  reason: "created" | "imported" | "updated" | "manual";
+}
+
 export interface PricingModelTrainJobPayload extends BackgroundJobBasePayload {
   modelVersion: string;
   algorithm: "baseline-refresh" | "catboost" | "lightgbm";
@@ -2960,6 +2982,7 @@ export type BackgroundJobPayload =
   | PricingModelTrainJobPayload
   | SavedSearchAlertDigestJobPayload
   | PropertyImportJobPayload
+  | PropertyLocationEnrichJobPayload
   | PropertyAiDescriptionJobPayload
   | PropertyImageAnalysisJobPayload
   | PropertySearchIndexJobPayload;

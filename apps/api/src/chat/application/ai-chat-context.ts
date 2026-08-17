@@ -109,6 +109,33 @@ function propertyEvidenceLine(property: PropertySnapshot): string {
     `bathrooms=${property.bathrooms}`,
     property.floor !== undefined ? `floor=${property.floor}` : undefined,
     property.beachDistanceMeters !== undefined ? `beachDistance=${property.beachDistanceMeters}m` : undefined,
+    property.locationFeatures?.nearestBeachDistanceMeters !== undefined
+      ? `nearestBeach=${property.locationFeatures.nearestBeachDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.nearestBahtBusRouteDistanceMeters !== undefined
+      ? `nearestBahtBusRoute=${property.locationFeatures.nearestBahtBusRouteDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.nearestPublicTransportDistanceMeters !== undefined
+      ? `nearestPublicTransport=${property.locationFeatures.nearestPublicTransportDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.nearestSupermarketDistanceMeters !== undefined
+      ? `nearestSupermarket=${property.locationFeatures.nearestSupermarketDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.nearestMallDistanceMeters !== undefined
+      ? `nearestMall=${property.locationFeatures.nearestMallDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.nearestHospitalDistanceMeters !== undefined
+      ? `nearestHospital=${property.locationFeatures.nearestHospitalDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.nearestInternationalSchoolDistanceMeters !== undefined
+      ? `nearestInternationalSchool=${property.locationFeatures.nearestInternationalSchoolDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.nearestAirportConnectionDistanceMeters !== undefined
+      ? `nearestAirportConnection=${property.locationFeatures.nearestAirportConnectionDistanceMeters}m`
+      : undefined,
+    property.locationFeatures?.walkabilityScore !== undefined
+      ? `walkabilityScore=${property.locationFeatures.walkabilityScore}/100`
+      : undefined,
     property.address ? `address=${property.address}` : undefined,
     property.amenities.length ? `amenities=${property.amenities.join(", ")}` : "amenities=not specified",
     property.project ? projectEvidence(property) : undefined,

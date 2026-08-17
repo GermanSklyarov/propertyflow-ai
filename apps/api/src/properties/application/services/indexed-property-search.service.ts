@@ -31,6 +31,16 @@ interface PropertySearchDocument {
   bathrooms: number;
   areaSqm: number;
   beachDistanceMeters?: number;
+  locationFeatures?: {
+    nearestBahtBusRouteDistanceMeters?: number;
+    nearestPublicTransportDistanceMeters?: number;
+    nearestSupermarketDistanceMeters?: number;
+    nearestMallDistanceMeters?: number;
+    nearestHospitalDistanceMeters?: number;
+    nearestInternationalSchoolDistanceMeters?: number;
+    nearestAirportConnectionDistanceMeters?: number;
+    walkabilityScore?: number;
+  };
   amenities: string[];
 }
 
@@ -179,6 +189,40 @@ export class IndexedPropertySearchService {
 
     if (request.maxBeachDistanceMeters !== undefined) {
       filters.push({ range: { beachDistanceMeters: { lte: request.maxBeachDistanceMeters } } });
+    }
+
+    if (request.maxBahtBusRouteDistanceMeters !== undefined) {
+      filters.push({ range: { "locationFeatures.nearestBahtBusRouteDistanceMeters": { lte: request.maxBahtBusRouteDistanceMeters } } });
+    }
+
+    if (request.maxPublicTransportDistanceMeters !== undefined) {
+      filters.push({ range: { "locationFeatures.nearestPublicTransportDistanceMeters": { lte: request.maxPublicTransportDistanceMeters } } });
+    }
+
+    if (request.maxSupermarketDistanceMeters !== undefined) {
+      filters.push({ range: { "locationFeatures.nearestSupermarketDistanceMeters": { lte: request.maxSupermarketDistanceMeters } } });
+    }
+
+    if (request.maxMallDistanceMeters !== undefined) {
+      filters.push({ range: { "locationFeatures.nearestMallDistanceMeters": { lte: request.maxMallDistanceMeters } } });
+    }
+
+    if (request.maxHospitalDistanceMeters !== undefined) {
+      filters.push({ range: { "locationFeatures.nearestHospitalDistanceMeters": { lte: request.maxHospitalDistanceMeters } } });
+    }
+
+    if (request.maxInternationalSchoolDistanceMeters !== undefined) {
+      filters.push({
+        range: { "locationFeatures.nearestInternationalSchoolDistanceMeters": { lte: request.maxInternationalSchoolDistanceMeters } }
+      });
+    }
+
+    if (request.maxAirportConnectionDistanceMeters !== undefined) {
+      filters.push({ range: { "locationFeatures.nearestAirportConnectionDistanceMeters": { lte: request.maxAirportConnectionDistanceMeters } } });
+    }
+
+    if (request.minWalkabilityScore !== undefined) {
+      filters.push({ range: { "locationFeatures.walkabilityScore": { gte: request.minWalkabilityScore } } });
     }
 
     for (const amenity of request.requiredAmenities ?? []) {

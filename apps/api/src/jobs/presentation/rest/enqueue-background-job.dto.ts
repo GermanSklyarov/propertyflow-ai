@@ -10,6 +10,7 @@ import type {
   PropertyAiDescriptionJobPayload,
   PropertyImageAnalysisJobPayload,
   PropertyImportJobPayload,
+  PropertyLocationEnrichJobPayload,
   PropertySearchIndexJobPayload,
   SavedSearchAlertDigestJobPayload
 } from "@propertyflow/contracts";
@@ -22,6 +23,7 @@ const jobNames = [
   "concierge.model.train",
   "pricing.model.train",
   "properties.import",
+  "properties.location.enrich",
   "properties.ai_description.generate",
   "properties.images.analyze",
   "saved_search.alerts.digest",
@@ -41,6 +43,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
       { $ref: "#/components/schemas/KnowledgeDocumentIngestPayloadDto" },
       { $ref: "#/components/schemas/ConciergeModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyImportPayloadDto" },
+      { $ref: "#/components/schemas/PropertyLocationEnrichPayloadDto" },
       { $ref: "#/components/schemas/PricingModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyAiDescriptionPayloadDto" },
       { $ref: "#/components/schemas/PropertyImageAnalysisPayloadDto" },
@@ -54,6 +57,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
     | ConciergeModelTrainPayloadDto
     | PricingModelTrainPayloadDto
     | PropertyImportPayloadDto
+    | PropertyLocationEnrichPayloadDto
     | PropertyAiDescriptionPayloadDto
     | PropertyImageAnalysisPayloadDto
     | SavedSearchAlertDigestPayloadDto
@@ -242,6 +246,20 @@ export class PropertyImageAnalysisPayloadDto implements PropertyImageAnalysisJob
   @IsArray()
   @IsString({ each: true })
   imageIds?: string[];
+}
+
+export class PropertyLocationEnrichPayloadDto implements PropertyLocationEnrichJobPayload {
+  tenantId!: string;
+
+  requestedByUserId?: string;
+
+  @ApiProperty({ type: String })
+  @IsString()
+  propertyId!: string;
+
+  @ApiProperty({ enum: ["created", "imported", "updated", "manual"] })
+  @IsIn(["created", "imported", "updated", "manual"])
+  reason!: PropertyLocationEnrichJobPayload["reason"];
 }
 
 export class PropertySearchIndexPayloadDto implements PropertySearchIndexJobPayload {

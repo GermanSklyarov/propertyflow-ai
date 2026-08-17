@@ -107,6 +107,38 @@ function buildSuitabilityAnswer(property: PropertySnapshot, requestMessage?: str
     return `${property.title} can be considered for living with kids, but check the layout and building rules carefully. ${bedroomNote} ${summarizeLocation(property)}.${rent}`;
   }
 
+  if (/(without a car|no car|don'?t drive|do not drive|walkable|walkability|public transport|baht bus|без машины|не вожу|нет машины|пешком|общественный транспорт|บาทบัส|รถสองแถว|ไม่ขับรถ|不用车|不用車|不开车|不開車|公共交通)/i.test(normalized)) {
+    const features = property.locationFeatures;
+    if (!features) {
+      return `${property.title} may still be worth checking, but I do not have saved location-intelligence facts for car-free living yet. Ask the agent to confirm walking access to groceries and transport before relying on it.`;
+    }
+
+    const facts = [
+      features.nearestSupermarketDistanceMeters !== undefined
+        ? `a supermarket or convenience store about ${features.nearestSupermarketDistanceMeters}m away`
+        : undefined,
+      features.nearestBahtBusRouteDistanceMeters !== undefined
+        ? `a baht bus route about ${features.nearestBahtBusRouteDistanceMeters}m away`
+        : undefined,
+      features.nearestPublicTransportDistanceMeters !== undefined
+        ? `public transport about ${features.nearestPublicTransportDistanceMeters}m away`
+        : undefined,
+      features.nearestMallDistanceMeters !== undefined ? `shopping about ${features.nearestMallDistanceMeters}m away` : undefined,
+      features.walkabilityScore !== undefined ? `walkability score ${features.walkabilityScore}/100` : undefined
+    ].filter(Boolean);
+    const suitable =
+      (features.walkabilityScore ?? 0) >= 70 &&
+      (features.nearestSupermarketDistanceMeters ?? Number.POSITIVE_INFINITY) <= 900 &&
+      Math.min(
+        features.nearestBahtBusRouteDistanceMeters ?? Number.POSITIVE_INFINITY,
+        features.nearestPublicTransportDistanceMeters ?? Number.POSITIVE_INFINITY
+      ) <= 700;
+
+    return suitable
+      ? `Yes. ${property.title} could be a good option without a car: ${facts.join(", ")}.`
+      : `${property.title} is not a clear car-free match from the saved facts: ${facts.join(", ")}. I would compare it with listings that have groceries and transport closer.`;
+  }
+
   return undefined;
 }
 

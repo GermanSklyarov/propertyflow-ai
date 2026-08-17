@@ -14,6 +14,7 @@ const minimumRoleByJob: Record<BackgroundJobName, UserRole> = {
   "concierge.model.train": "manager",
   "pricing.model.train": "manager",
   "properties.import": "broker",
+  "properties.location.enrich": "broker",
   "properties.ai_description.generate": "broker",
   "properties.images.analyze": "broker",
   "saved_search.alerts.digest": "broker",
@@ -24,6 +25,7 @@ const locales = ["en", "ru", "th", "zh"] as const;
 const importSources = ["csv", "json", "partner-api", "partner-xml"] as const;
 const importModes = ["crm_inventory", "concierge_index_only", "hybrid"] as const;
 const searchIndexReasons = ["created", "updated", "manual"] as const;
+const locationEnrichReasons = ["created", "imported", "updated", "manual"] as const;
 const embeddingProviders = ["local-hash", "openai", "anthropic", "gemini"] as const;
 const pricingAlgorithms = ["baseline-refresh", "catboost", "lightgbm"] as const;
 const conciergeAlgorithms = ["baseline-refresh", "llm-reranker", "learning-to-rank"] as const;
@@ -92,6 +94,10 @@ export class BackgroundJobPolicyService {
       case "properties.ai_description.generate":
         this.requireString(payload, "propertyId");
         this.requireEnumArray(payload, "locales", locales);
+        return;
+      case "properties.location.enrich":
+        this.requireString(payload, "propertyId");
+        this.requireEnum(payload, "reason", locationEnrichReasons);
         return;
       case "properties.images.analyze":
         this.requireString(payload, "propertyId");

@@ -14,6 +14,7 @@ import {
   type PropertyAiDescriptionJobPayload,
   type PropertyImageAnalysisJobPayload,
   type PropertyImportJobPayload,
+  type PropertyLocationEnrichJobPayload,
   type PropertySearchIndexJobPayload,
   type SavedSearchAlertDigestJobPayload,
   PROPERTYFLOW_JOBS_QUEUE
@@ -21,6 +22,7 @@ import {
 import { loadAppConfig } from "@propertyflow/config";
 import { PropertyAiOutputWriter } from "./property-ai-output-writer.js";
 import { PropertyImporter } from "./property-importer.js";
+import { PropertyLocationEnricher } from "./property-location-enricher.js";
 import { PropertySearchIndexer } from "./property-search-indexer.js";
 
 type PropertyflowJob = Job<BackgroundJobPayload, unknown, BackgroundJobName>;
@@ -43,6 +45,7 @@ type PropertyAiDescriptionJob = Job<
   "properties.ai_description.generate"
 >;
 type PropertyImageAnalysisJob = Job<PropertyImageAnalysisJobPayload, unknown, "properties.images.analyze">;
+type PropertyLocationEnrichJob = Job<PropertyLocationEnrichJobPayload, unknown, "properties.location.enrich">;
 type PropertySearchIndexJob = Job<PropertySearchIndexJobPayload, unknown, "properties.search.index">;
 type SavedSearchAlertDigestJob = Job<SavedSearchAlertDigestJobPayload, unknown, "saved_search.alerts.digest">;
 type AutoEmbeddingRefreshResult = {
@@ -61,6 +64,7 @@ export class PropertyflowWorker {
   private readonly aiOutputWriter: PropertyAiOutputWriter;
   private readonly embeddings: KnowledgeEmbeddingGenerator;
   private readonly propertyImporter: PropertyImporter;
+  private readonly locationEnricher: PropertyLocationEnricher;
   private readonly searchIndexer: PropertySearchIndexer;
   private readonly connection: Redis;
   private readonly queue: Queue<BackgroundJobPayload, unknown, BackgroundJobName>;
@@ -77,6 +81,7 @@ export class PropertyflowWorker {
     this.embeddings = new KnowledgeEmbeddingGenerator();
     this.aiOutputWriter = new PropertyAiOutputWriter(this.pool);
     this.propertyImporter = new PropertyImporter(this.pool);
+    this.locationEnricher = new PropertyLocationEnricher(this.pool);
 
     this.searchIndexer = new PropertySearchIndexer(
       this.pool,
@@ -146,6 +151,8 @@ export class PropertyflowWorker {
         return this.trainPricingModel(job as PricingModelTrainJob);
       case "properties.import":
         return this.importProperties(job as PropertyImportJob);
+      case "properties.location.enrich":
+        return this.enrichPropertyLocation(job as PropertyLocationEnrichJob);
       case "properties.ai_description.generate":
         return this.generatePropertyDescription(job as PropertyAiDescriptionJob);
       case "properties.images.analyze":
@@ -180,8 +187,20 @@ export class PropertyflowWorker {
 
       const indexFailures: Array<{ propertyId: string; reason: string }> = [];
       let indexed = 0;
+      let locationEnriched = 0;
+      const locationEnrichmentFailures: Array<{ propertyId: string; reason: string }> = [];
 
       for (const propertyId of result.propertyIds) {
+        try {
+          await this.locationEnricher.enrichProperty(job.data.tenantId, propertyId);
+          locationEnriched += 1;
+        } catch (error) {
+          locationEnrichmentFailures.push({
+            propertyId,
+            reason: error instanceof Error ? error.message : "Failed to enrich imported property location"
+          });
+        }
+
         try {
           await this.searchIndexer.indexProperty(job.data.tenantId, propertyId);
           indexed += 1;
@@ -197,6 +216,8 @@ export class PropertyflowWorker {
         ...result,
         ...embeddingRefresh,
         indexed,
+        locationEnriched,
+        locationEnrichmentFailures: locationEnrichmentFailures.slice(0, 25),
         indexFailures: indexFailures.slice(0, 25)
       };
 
@@ -673,7 +694,22 @@ export class PropertyflowWorker {
     };
   }
 
+  private async enrichPropertyLocation(job: PropertyLocationEnrichJob): Promise<Record<string, unknown>> {
+    const result = await this.locationEnricher.enrichProperty(job.data.tenantId, job.data.propertyId);
+
+    return {
+      tenantId: job.data.tenantId,
+      propertyId: job.data.propertyId,
+      reason: job.data.reason,
+      enriched: true,
+      walkabilityScore: result.walkabilityScore
+    };
+  }
+
   private async indexProperty(job: PropertySearchIndexJob): Promise<Record<string, unknown>> {
+    const locationFeatures = await this.locationEnricher.enrichProperty(job.data.tenantId, job.data.propertyId).catch((error: unknown) => ({
+      error: error instanceof Error ? error.message : "Location enrichment failed before indexing"
+    }));
     const document = await this.searchIndexer.indexProperty(job.data.tenantId, job.data.propertyId);
 
     return {
@@ -682,6 +718,7 @@ export class PropertyflowWorker {
       reason: job.data.reason,
       index: "propertyflow-properties-v1",
       indexed: true,
+      locationFeatures,
       searchableTextLength: document.searchableText.length
     };
   }

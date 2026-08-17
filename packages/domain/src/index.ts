@@ -22,6 +22,21 @@ export interface GeoPoint {
   longitude: number;
 }
 
+export interface ListingLocationFeatures {
+  nearestBeachDistanceMeters?: number;
+  nearestBahtBusRouteDistanceMeters?: number;
+  nearestPublicTransportDistanceMeters?: number;
+  nearestTaxiStandDistanceMeters?: number;
+  nearestSupermarketDistanceMeters?: number;
+  nearestMallDistanceMeters?: number;
+  nearestHospitalDistanceMeters?: number;
+  nearestInternationalSchoolDistanceMeters?: number;
+  nearestNightlifeDistanceMeters?: number;
+  nearestAirportConnectionDistanceMeters?: number;
+  walkabilityScore?: number;
+  updatedAt: string;
+}
+
 export interface PropertyProjectSnapshot {
   id: string;
   tenantId: string;
@@ -55,6 +70,7 @@ export interface PropertySnapshot {
   areaSqm: number;
   floor?: number;
   beachDistanceMeters?: number;
+  locationFeatures?: ListingLocationFeatures;
   monthlyRentEstimate?: Money;
   maintenanceFeeMonthly?: Money;
   amenities: string[];

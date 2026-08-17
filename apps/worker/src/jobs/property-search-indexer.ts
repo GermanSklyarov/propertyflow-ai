@@ -4,6 +4,7 @@ import type { Pool } from "pg";
 import { PROPERTY_SEARCH_INDEX } from "@propertyflow/contracts";
 import type {
   Currency,
+  ListingLocationFeatures,
   PropertyKind,
   PropertyListingType,
   PropertySnapshot,
@@ -32,6 +33,18 @@ interface PropertyRow {
   area_sqm: string;
   floor: number | null;
   beach_distance_meters: number | null;
+  nearest_beach_distance_meters: number | null;
+  nearest_baht_bus_route_distance_meters: number | null;
+  nearest_public_transport_distance_meters: number | null;
+  nearest_taxi_stand_distance_meters: number | null;
+  nearest_supermarket_distance_meters: number | null;
+  nearest_mall_distance_meters: number | null;
+  nearest_hospital_distance_meters: number | null;
+  nearest_international_school_distance_meters: number | null;
+  nearest_nightlife_distance_meters: number | null;
+  nearest_airport_connection_distance_meters: number | null;
+  walkability_score: number | null;
+  location_features_updated_at: Date | null;
   monthly_rent_estimate_amount: string | null;
   monthly_rent_estimate_currency: Currency | null;
   maintenance_fee_monthly_amount: string | null;
@@ -64,6 +77,7 @@ export interface PropertySearchDocument {
   areaSqm: number;
   floor?: number;
   beachDistanceMeters?: number;
+  locationFeatures?: ListingLocationFeatures;
   monthlyRentEstimateAmount?: number;
   maintenanceFeeMonthlyAmount?: number;
   amenities: string[];
@@ -187,9 +201,24 @@ export class PropertySearchIndexer {
   private async findProperty(tenantId: string, propertyId: string): Promise<PropertySnapshot | null> {
     const result = await this.pool.query<PropertyRow>(
       `
-        select *
-        from properties
-        where tenant_id = $1 and id = $2
+        select
+          p.*,
+          lf.nearest_beach_distance_meters,
+          lf.nearest_baht_bus_route_distance_meters,
+          lf.nearest_public_transport_distance_meters,
+          lf.nearest_taxi_stand_distance_meters,
+          lf.nearest_supermarket_distance_meters,
+          lf.nearest_mall_distance_meters,
+          lf.nearest_hospital_distance_meters,
+          lf.nearest_international_school_distance_meters,
+          lf.nearest_nightlife_distance_meters,
+          lf.nearest_airport_connection_distance_meters,
+          lf.walkability_score,
+          lf.updated_at as location_features_updated_at
+        from properties p
+        left join listing_location_features lf
+          on lf.tenant_id = p.tenant_id and lf.listing_id = p.id
+        where p.tenant_id = $1 and p.id = $2
         limit 1
       `,
       [tenantId, propertyId]
@@ -231,6 +260,7 @@ export class PropertySearchIndexer {
       areaSqm: Number(row.area_sqm),
       floor: row.floor ?? undefined,
       beachDistanceMeters: row.beach_distance_meters ?? undefined,
+      locationFeatures: toLocationFeatures(row),
       monthlyRentEstimate:
         row.monthly_rent_estimate_amount && row.monthly_rent_estimate_currency
           ? {
@@ -290,6 +320,22 @@ export class PropertySearchIndexer {
             areaSqm: { type: "double" },
             floor: { type: "integer" },
             beachDistanceMeters: { type: "integer" },
+            locationFeatures: {
+              properties: {
+                nearestBeachDistanceMeters: { type: "integer" },
+                nearestBahtBusRouteDistanceMeters: { type: "integer" },
+                nearestPublicTransportDistanceMeters: { type: "integer" },
+                nearestTaxiStandDistanceMeters: { type: "integer" },
+                nearestSupermarketDistanceMeters: { type: "integer" },
+                nearestMallDistanceMeters: { type: "integer" },
+                nearestHospitalDistanceMeters: { type: "integer" },
+                nearestInternationalSchoolDistanceMeters: { type: "integer" },
+                nearestNightlifeDistanceMeters: { type: "integer" },
+                nearestAirportConnectionDistanceMeters: { type: "integer" },
+                walkabilityScore: { type: "integer" },
+                updatedAt: { type: "date" }
+              }
+            },
             monthlyRentEstimateAmount: { type: "double" },
             maintenanceFeeMonthlyAmount: { type: "double" },
             amenities: { type: "keyword" },
@@ -327,6 +373,7 @@ function toSearchDocument(property: PropertySnapshot): PropertySearchDocument {
     areaSqm: property.areaSqm,
     floor: property.floor,
     beachDistanceMeters: property.beachDistanceMeters,
+    locationFeatures: property.locationFeatures,
     monthlyRentEstimateAmount: property.monthlyRentEstimate?.amount,
     maintenanceFeeMonthlyAmount: property.maintenanceFeeMonthly?.amount,
     amenities: property.amenities,
@@ -337,6 +384,16 @@ function toSearchDocument(property: PropertySnapshot): PropertySearchDocument {
       property.market,
       property.kind,
       property.listingType,
+      property.locationFeatures?.nearestSupermarketDistanceMeters !== undefined
+        ? `${property.locationFeatures.nearestSupermarketDistanceMeters}m from supermarket`
+        : undefined,
+      property.locationFeatures?.nearestBahtBusRouteDistanceMeters !== undefined
+        ? `${property.locationFeatures.nearestBahtBusRouteDistanceMeters}m from baht bus route`
+        : undefined,
+      property.locationFeatures?.nearestPublicTransportDistanceMeters !== undefined
+        ? `${property.locationFeatures.nearestPublicTransportDistanceMeters}m from public transport`
+        : undefined,
+      property.locationFeatures?.walkabilityScore !== undefined ? `walkability score ${property.locationFeatures.walkabilityScore}` : undefined,
       ...property.amenities
     ]
       .filter(Boolean)
@@ -359,12 +416,43 @@ function buildPropertyEmbeddingText(document: PropertySearchDocument): string {
     `${document.bathrooms} bathrooms`,
     `${document.areaSqm} sqm`,
     document.beachDistanceMeters !== undefined ? `${document.beachDistanceMeters}m from beach` : undefined,
+    document.locationFeatures?.nearestSupermarketDistanceMeters !== undefined
+      ? `${document.locationFeatures.nearestSupermarketDistanceMeters}m from supermarket`
+      : undefined,
+    document.locationFeatures?.nearestBahtBusRouteDistanceMeters !== undefined
+      ? `${document.locationFeatures.nearestBahtBusRouteDistanceMeters}m from baht bus route`
+      : undefined,
+    document.locationFeatures?.nearestPublicTransportDistanceMeters !== undefined
+      ? `${document.locationFeatures.nearestPublicTransportDistanceMeters}m from public transport`
+      : undefined,
+    document.locationFeatures?.walkabilityScore !== undefined ? `walkability score ${document.locationFeatures.walkabilityScore}` : undefined,
     document.priceAmount ? `${document.priceAmount} ${document.priceCurrency}` : undefined,
     document.rentalPriceMonthlyAmount ? `${document.rentalPriceMonthlyAmount} monthly rent` : undefined,
     ...document.amenities
   ]
     .filter(Boolean)
     .join(" ");
+}
+
+function toLocationFeatures(row: PropertyRow): ListingLocationFeatures | undefined {
+  if (!row.location_features_updated_at) {
+    return undefined;
+  }
+
+  return {
+    nearestBeachDistanceMeters: row.nearest_beach_distance_meters ?? undefined,
+    nearestBahtBusRouteDistanceMeters: row.nearest_baht_bus_route_distance_meters ?? undefined,
+    nearestPublicTransportDistanceMeters: row.nearest_public_transport_distance_meters ?? undefined,
+    nearestTaxiStandDistanceMeters: row.nearest_taxi_stand_distance_meters ?? undefined,
+    nearestSupermarketDistanceMeters: row.nearest_supermarket_distance_meters ?? undefined,
+    nearestMallDistanceMeters: row.nearest_mall_distance_meters ?? undefined,
+    nearestHospitalDistanceMeters: row.nearest_hospital_distance_meters ?? undefined,
+    nearestInternationalSchoolDistanceMeters: row.nearest_international_school_distance_meters ?? undefined,
+    nearestNightlifeDistanceMeters: row.nearest_nightlife_distance_meters ?? undefined,
+    nearestAirportConnectionDistanceMeters: row.nearest_airport_connection_distance_meters ?? undefined,
+    walkabilityScore: row.walkability_score ?? undefined,
+    updatedAt: row.location_features_updated_at.toISOString()
+  };
 }
 
 function toVectorLiteral(vector: number[]): string {
