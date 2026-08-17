@@ -45,6 +45,32 @@ describe("BackgroundJobPolicyService", () => {
     ).not.toThrow();
   });
 
+  it("allows brokers to enrich existing listing locations in batches", () => {
+    expect(() =>
+      service.authorize(broker, {
+        name: "properties.location.enrich_existing",
+        payload: {
+          limit: 500,
+          market: "pattaya",
+          refreshExisting: false,
+          tenantId: "demo-agency"
+        }
+      } satisfies EnqueueBackgroundJobRequest)
+    ).not.toThrow();
+  });
+
+  it("rejects oversized existing listing location enrichment batches", () => {
+    expect(() =>
+      service.authorize(broker, {
+        name: "properties.location.enrich_existing",
+        payload: {
+          limit: 5000,
+          tenantId: "demo-agency"
+        }
+      } satisfies EnqueueBackgroundJobRequest)
+    ).toThrow(BadRequestException);
+  });
+
   it("allows partner API property imports with field mapping", () => {
     expect(() =>
       service.authorize(broker, {

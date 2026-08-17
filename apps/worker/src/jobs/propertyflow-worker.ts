@@ -14,6 +14,7 @@ import {
   type PropertyAiDescriptionJobPayload,
   type PropertyImageAnalysisJobPayload,
   type PropertyImportJobPayload,
+  type PropertyLocationEnrichExistingJobPayload,
   type PropertyLocationEnrichJobPayload,
   type PropertySearchIndexJobPayload,
   type SavedSearchAlertDigestJobPayload,
@@ -46,6 +47,11 @@ type PropertyAiDescriptionJob = Job<
 >;
 type PropertyImageAnalysisJob = Job<PropertyImageAnalysisJobPayload, unknown, "properties.images.analyze">;
 type PropertyLocationEnrichJob = Job<PropertyLocationEnrichJobPayload, unknown, "properties.location.enrich">;
+type PropertyLocationEnrichExistingJob = Job<
+  PropertyLocationEnrichExistingJobPayload,
+  unknown,
+  "properties.location.enrich_existing"
+>;
 type PropertySearchIndexJob = Job<PropertySearchIndexJobPayload, unknown, "properties.search.index">;
 type SavedSearchAlertDigestJob = Job<SavedSearchAlertDigestJobPayload, unknown, "saved_search.alerts.digest">;
 type AutoEmbeddingRefreshResult = {
@@ -153,6 +159,8 @@ export class PropertyflowWorker {
         return this.importProperties(job as PropertyImportJob);
       case "properties.location.enrich":
         return this.enrichPropertyLocation(job as PropertyLocationEnrichJob);
+      case "properties.location.enrich_existing":
+        return this.enrichExistingPropertyLocations(job as PropertyLocationEnrichExistingJob);
       case "properties.ai_description.generate":
         return this.generatePropertyDescription(job as PropertyAiDescriptionJob);
       case "properties.images.analyze":
@@ -703,6 +711,24 @@ export class PropertyflowWorker {
       reason: job.data.reason,
       enriched: true,
       walkabilityScore: result.walkabilityScore
+    };
+  }
+
+  private async enrichExistingPropertyLocations(job: PropertyLocationEnrichExistingJob): Promise<Record<string, unknown>> {
+    const result = await this.locationEnricher.enrichExistingListings({
+      limit: job.data.limit,
+      market: job.data.market,
+      refreshExisting: job.data.refreshExisting,
+      tenantId: job.data.tenantId
+    });
+
+    return {
+      tenantId: job.data.tenantId,
+      market: job.data.market,
+      refreshExisting: job.data.refreshExisting ?? false,
+      enriched: result.enriched,
+      failures: result.failures.slice(0, 25),
+      propertyIds: result.propertyIds.slice(0, 100)
     };
   }
 

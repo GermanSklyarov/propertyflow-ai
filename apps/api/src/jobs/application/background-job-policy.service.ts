@@ -15,6 +15,7 @@ const minimumRoleByJob: Record<BackgroundJobName, UserRole> = {
   "pricing.model.train": "manager",
   "properties.import": "broker",
   "properties.location.enrich": "broker",
+  "properties.location.enrich_existing": "broker",
   "properties.ai_description.generate": "broker",
   "properties.images.analyze": "broker",
   "saved_search.alerts.digest": "broker",
@@ -22,6 +23,7 @@ const minimumRoleByJob: Record<BackgroundJobName, UserRole> = {
 };
 
 const locales = ["en", "ru", "th", "zh"] as const;
+const markets = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"] as const;
 const importSources = ["csv", "json", "partner-api", "partner-xml"] as const;
 const importModes = ["crm_inventory", "concierge_index_only", "hybrid"] as const;
 const searchIndexReasons = ["created", "updated", "manual"] as const;
@@ -98,6 +100,11 @@ export class BackgroundJobPolicyService {
       case "properties.location.enrich":
         this.requireString(payload, "propertyId");
         this.requireEnum(payload, "reason", locationEnrichReasons);
+        return;
+      case "properties.location.enrich_existing":
+        this.optionalEnum(payload, "market", markets);
+        this.optionalInteger(payload, "limit", 1, 1000);
+        this.optionalBoolean(payload, "refreshExisting");
         return;
       case "properties.images.analyze":
         this.requireString(payload, "propertyId");

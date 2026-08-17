@@ -10,6 +10,7 @@ import type {
   PropertyAiDescriptionJobPayload,
   PropertyImageAnalysisJobPayload,
   PropertyImportJobPayload,
+  PropertyLocationEnrichExistingJobPayload,
   PropertyLocationEnrichJobPayload,
   PropertySearchIndexJobPayload,
   SavedSearchAlertDigestJobPayload
@@ -24,6 +25,7 @@ const jobNames = [
   "pricing.model.train",
   "properties.import",
   "properties.location.enrich",
+  "properties.location.enrich_existing",
   "properties.ai_description.generate",
   "properties.images.analyze",
   "saved_search.alerts.digest",
@@ -31,6 +33,7 @@ const jobNames = [
 ] as const satisfies readonly BackgroundJobName[];
 
 const locales = ["en", "ru", "th", "zh"] as const;
+const markets = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"] as const;
 
 export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
   @ApiProperty({ enum: jobNames })
@@ -44,6 +47,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
       { $ref: "#/components/schemas/ConciergeModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyImportPayloadDto" },
       { $ref: "#/components/schemas/PropertyLocationEnrichPayloadDto" },
+      { $ref: "#/components/schemas/PropertyLocationEnrichExistingPayloadDto" },
       { $ref: "#/components/schemas/PricingModelTrainPayloadDto" },
       { $ref: "#/components/schemas/PropertyAiDescriptionPayloadDto" },
       { $ref: "#/components/schemas/PropertyImageAnalysisPayloadDto" },
@@ -58,6 +62,7 @@ export class EnqueueBackgroundJobDto implements EnqueueBackgroundJobRequest {
     | PricingModelTrainPayloadDto
     | PropertyImportPayloadDto
     | PropertyLocationEnrichPayloadDto
+    | PropertyLocationEnrichExistingPayloadDto
     | PropertyAiDescriptionPayloadDto
     | PropertyImageAnalysisPayloadDto
     | SavedSearchAlertDigestPayloadDto
@@ -260,6 +265,30 @@ export class PropertyLocationEnrichPayloadDto implements PropertyLocationEnrichJ
   @ApiProperty({ enum: ["created", "imported", "updated", "manual"] })
   @IsIn(["created", "imported", "updated", "manual"])
   reason!: PropertyLocationEnrichJobPayload["reason"];
+}
+
+export class PropertyLocationEnrichExistingPayloadDto implements PropertyLocationEnrichExistingJobPayload {
+  tenantId!: string;
+
+  requestedByUserId?: string;
+
+  @ApiProperty({ enum: markets, required: false })
+  @IsOptional()
+  @IsIn(markets)
+  market?: PropertyLocationEnrichExistingJobPayload["market"];
+
+  @ApiProperty({ required: false, type: Number, minimum: 1, maximum: 1000 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(1000)
+  limit?: number;
+
+  @ApiProperty({ default: false, required: false, type: Boolean })
+  @IsOptional()
+  @IsBoolean()
+  refreshExisting?: boolean;
 }
 
 export class PropertySearchIndexPayloadDto implements PropertySearchIndexJobPayload {

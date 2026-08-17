@@ -2892,6 +2892,7 @@ export type BackgroundJobName =
   | "pricing.model.train"
   | "properties.import"
   | "properties.location.enrich"
+  | "properties.location.enrich_existing"
   | "properties.ai_description.generate"
   | "properties.images.analyze"
   | "saved_search.alerts.digest"
@@ -2956,6 +2957,12 @@ export interface PropertyLocationEnrichJobPayload extends BackgroundJobBasePaylo
   reason: "created" | "imported" | "updated" | "manual";
 }
 
+export interface PropertyLocationEnrichExistingJobPayload extends BackgroundJobBasePayload {
+  limit?: number;
+  market?: ThailandMarket;
+  refreshExisting?: boolean;
+}
+
 export interface PricingModelTrainJobPayload extends BackgroundJobBasePayload {
   modelVersion: string;
   algorithm: "baseline-refresh" | "catboost" | "lightgbm";
@@ -2983,6 +2990,7 @@ export type BackgroundJobPayload =
   | SavedSearchAlertDigestJobPayload
   | PropertyImportJobPayload
   | PropertyLocationEnrichJobPayload
+  | PropertyLocationEnrichExistingJobPayload
   | PropertyAiDescriptionJobPayload
   | PropertyImageAnalysisJobPayload
   | PropertySearchIndexJobPayload;

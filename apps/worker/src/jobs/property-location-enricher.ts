@@ -9,6 +9,10 @@ interface PropertyLocationRow {
   beach_distance_meters: number | null;
 }
 
+interface ExistingListingLocationRow {
+  id: string;
+}
+
 type FeatureCategory =
   | "airportConnection"
   | "bahtBusRoute"
@@ -58,6 +62,64 @@ const LOCATION_FEATURE_POIS: LocationFeaturePoi[] = [
 
 export class PropertyLocationEnricher {
   constructor(private readonly pool: Pool) {}
+
+  async enrichExistingListings(options: {
+    limit?: number;
+    market?: ThailandMarket;
+    refreshExisting?: boolean;
+    tenantId: string;
+  }): Promise<{ enriched: number; failures: Array<{ propertyId: string; reason: string }>; propertyIds: string[] }> {
+    const limit = Math.min(Math.max(options.limit ?? 250, 1), 1000);
+    const values: unknown[] = [options.tenantId];
+    const clauses = ["p.tenant_id = $1"];
+
+    const addValue = (value: unknown): string => {
+      values.push(value);
+      return `$${values.length}`;
+    };
+
+    if (options.market) {
+      clauses.push(`p.market = ${addValue(options.market)}`);
+    }
+
+    if (!options.refreshExisting) {
+      clauses.push("lf.listing_id is null");
+    }
+
+    values.push(limit);
+    const result = await this.pool.query<ExistingListingLocationRow>(
+      `
+        select p.id
+        from properties p
+        left join listing_location_features lf
+          on lf.tenant_id = p.tenant_id and lf.listing_id = p.id
+        where ${clauses.join(" and ")}
+        order by p.updated_at desc, p.created_at desc
+        limit $${values.length}
+      `,
+      values
+    );
+    const failures: Array<{ propertyId: string; reason: string }> = [];
+    const propertyIds: string[] = [];
+
+    for (const row of result.rows) {
+      try {
+        await this.enrichProperty(options.tenantId, row.id);
+        propertyIds.push(row.id);
+      } catch (error) {
+        failures.push({
+          propertyId: row.id,
+          reason: error instanceof Error ? error.message : "Failed to enrich existing listing location"
+        });
+      }
+    }
+
+    return {
+      enriched: propertyIds.length,
+      failures,
+      propertyIds
+    };
+  }
 
   async enrichProperty(tenantId: string, propertyId: string): Promise<{ propertyId: string; walkabilityScore: number }> {
     const result = await this.pool.query<PropertyLocationRow>(
