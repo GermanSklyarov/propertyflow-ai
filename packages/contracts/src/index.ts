@@ -3041,3 +3041,14 @@ export interface BackgroundJobMonitorResponse {
   total: number;
   states: BackgroundJobState[];
 }
+
+export interface LocationEnrichmentStatusResponse {
+  enrichedListings: number;
+  failedListings: number;
+  latestJobId?: string;
+  missingCoordinates: number;
+  pendingListings: number;
+  running: boolean;
+  totalListings: number;
+  updatedAt: string;
+}

@@ -51,6 +51,7 @@ import type {
   LeadQueueSummaryResponse,
   LeadSnapshot,
   LeadTimelineResponse,
+  LocationEnrichmentStatusResponse,
   ListLeadsRequest,
   ListingSourceListResponse,
   ListingSourcePreviewResponse,
@@ -289,6 +290,37 @@ export async function getBackgroundJob(
   }
 
   return (await response.json()) as BackgroundJobMonitorItem;
+}
+
+export async function getLocationEnrichmentStatus(options: AgencyApiOptions = {}): Promise<LocationEnrichmentStatusResponse> {
+  const response = await fetch(`${apiBaseUrl}/jobs/location-enrichment/status`, {
+    headers: await tenantHeaders(options),
+    ...(options.revalidateSeconds === false
+      ? { cache: "no-store" as const }
+      : { next: { revalidate: options.revalidateSeconds ?? 5 } })
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to load location enrichment status: ${response.status}`);
+  }
+
+  return (await response.json()) as LocationEnrichmentStatusResponse;
+}
+
+export async function enqueueLocationEnrichmentAction(
+  action: "enrich-missing" | "retry-failed",
+  options: AgencyApiOptions = {}
+): Promise<BackgroundJobSnapshot> {
+  const response = await fetch(`${apiBaseUrl}/jobs/location-enrichment/${action}`, {
+    method: "POST",
+    headers: await tenantHeaders(options)
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to enqueue location enrichment: ${response.status}`);
+  }
+
+  return (await response.json()) as BackgroundJobSnapshot;
 }
 
 export async function searchPropertyProjects(

@@ -35,7 +35,7 @@ export const agencyNavigationItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", plans: crmPlans },
   { href: "/setup", icon: Rocket, label: "Starter setup", plans: allPlans },
   { href: "/knowledge", icon: BookOpenText, label: "Knowledge", plans: allPlans },
-  { href: "/listings", icon: Building2, label: "Listings", plans: crmPlans },
+  { href: "/listings", icon: Building2, label: "Listings", plans: allPlans },
   { href: "/projects", icon: MapPinned, label: "Projects", plans: crmPlans },
   { href: "/widget-demo", icon: MessageCircle, label: "Widget demo", plans: allPlans },
   { href: "/settings", icon: Settings, label: "Settings", plans: allPlans },
@@ -51,7 +51,7 @@ const agencyTopbarQuickLinks = [
   { href: "/widget-demo", label: "Preview widget", plans: allPlans },
   { href: "/settings", label: "Widget setup", plans: allPlans },
   { href: "/leads", label: "Lead queue", plans: allPlans },
-  { href: "/listings", label: "Inventory", plans: crmPlans },
+  { href: "/listings", label: "Listings", plans: allPlans },
   { href: "/projects", label: "Projects", plans: crmPlans },
   { href: "/saved-searches", label: "Saved demand", plans: crmPlans },
   { href: "/ai-tools", label: "AI tools", plans: crmPlans }

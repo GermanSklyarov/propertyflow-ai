@@ -5,9 +5,12 @@ import type {
   BackgroundJobMonitorResponse,
   BackgroundJobSnapshot,
   CreatePropertyImportUploadResponse,
+  LocationEnrichmentStatusResponse,
   RequestUser
 } from "@propertyflow/contracts";
+import type { Pool } from "pg";
 import { AuditService } from "../../../audit/application/audit.service.js";
+import { PG_POOL } from "../../../database/database.constants.js";
 import { RealtimePublisherService } from "../../../realtime/application/realtime-publisher.service.js";
 import { CurrentUser } from "../../../shared/auth/request-user.decorator.js";
 import { Roles } from "../../../shared/auth/roles.decorator.js";
@@ -52,6 +55,7 @@ import { ListJobsDto, toListJobsQuery } from "./list-jobs.dto.js";
 export class JobsController {
   constructor(
     @Inject(JobQueueService) private readonly jobs: JobQueueService,
+    @Inject(PG_POOL) private readonly pool: Pool,
     @Inject(BackgroundJobPolicyService) private readonly jobPolicy: BackgroundJobPolicyService,
     @Inject(ObjectStorageService) private readonly storage: ObjectStorageService,
     @Inject(AuditService) private readonly audit: AuditService,
@@ -176,6 +180,80 @@ export class JobsController {
     return this.jobs.list(tenantId, filters.states, filters.limit);
   }
 
+  @Get("location-enrichment/status")
+  @Roles("broker", "manager", "admin")
+  async getLocationEnrichmentStatus(@TenantId() tenantId: string): Promise<LocationEnrichmentStatusResponse> {
+    const [counts, jobs] = await Promise.all([
+      this.pool.query<{
+        enriched_listings: string;
+        missing_coordinates: string;
+        total_listings: string;
+      }>(
+        `
+          select
+            count(*)::text as total_listings,
+            count(lf.listing_id)::text as enriched_listings,
+            count(*) filter (
+              where p.latitude is null
+                 or p.longitude is null
+                 or p.latitude < -90
+                 or p.latitude > 90
+                 or p.longitude < -180
+                 or p.longitude > 180
+            )::text as missing_coordinates
+          from properties p
+          left join listing_location_features lf
+            on lf.tenant_id = p.tenant_id and lf.listing_id = p.id
+          where p.tenant_id = $1
+        `,
+        [tenantId]
+      ),
+      this.jobs.list(tenantId, ["active", "waiting", "completed", "failed"], 50)
+    ]);
+    const row = counts.rows[0];
+    const enrichmentJobs = jobs.items.filter(
+      (job) => job.name === "properties.location.enrich_existing" || job.name === "properties.location.enrich"
+    );
+    const failedListings = enrichmentJobs.reduce((total, job) => total + countLocationFailures(job.result), 0);
+    const running = enrichmentJobs.some((job) => job.state === "active" || job.state === "waiting" || job.state === "delayed");
+    const totalListings = Number(row?.total_listings ?? 0);
+    const enrichedListings = Number(row?.enriched_listings ?? 0);
+    const missingCoordinates = Number(row?.missing_coordinates ?? 0);
+
+    return {
+      enrichedListings,
+      failedListings,
+      latestJobId: enrichmentJobs[0]?.id,
+      missingCoordinates,
+      pendingListings: Math.max(totalListings - enrichedListings - missingCoordinates, 0),
+      running,
+      totalListings,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  @Post("location-enrichment/enrich-missing")
+  @Roles("broker", "manager", "admin")
+  enqueueMissingLocationEnrichment(@TenantId() tenantId: string, @CurrentUser() user: RequestUser): Promise<BackgroundJobSnapshot> {
+    return this.jobs.enqueue("properties.location.enrich_existing", {
+      tenantId,
+      requestedByUserId: user.id,
+      limit: 1000,
+      refreshExisting: false
+    });
+  }
+
+  @Post("location-enrichment/retry-failed")
+  @Roles("broker", "manager", "admin")
+  enqueueFailedLocationEnrichmentRetry(@TenantId() tenantId: string, @CurrentUser() user: RequestUser): Promise<BackgroundJobSnapshot> {
+    return this.jobs.enqueue("properties.location.enrich_existing", {
+      tenantId,
+      requestedByUserId: user.id,
+      limit: 1000,
+      refreshExisting: false
+    });
+  }
+
   @Get(":jobId")
   @Roles("broker", "manager", "admin")
   async get(@TenantId() tenantId: string, @Param("jobId") jobId: string): Promise<BackgroundJobMonitorItem> {
@@ -187,4 +265,24 @@ export class JobsController {
 
     return job;
   }
+}
+
+function countLocationFailures(result: unknown): number {
+  if (!isRecord(result)) {
+    return 0;
+  }
+
+  if (Array.isArray(result.failures)) {
+    return result.failures.length;
+  }
+
+  if (Array.isArray(result.locationEnrichmentFailures)) {
+    return result.locationEnrichmentFailures.length;
+  }
+
+  return 0;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

@@ -55,7 +55,6 @@ import { KnowledgeDocumentCard } from "@entities/knowledge/ui/knowledge-document
 import { CreateKnowledgeDocumentForm } from "@features/knowledge-document-create/ui/create-knowledge-document-form";
 import { KnowledgeAiAnswerPanel } from "@features/knowledge-ai-answer/ui/knowledge-ai-answer-panel";
 import { KnowledgeRetrievalPreview } from "@features/knowledge-retrieval-preview/ui/knowledge-retrieval-preview";
-import { ListingBulkImportPanel } from "@features/listing-bulk-import/ui/listing-bulk-import-panel";
 import type {
   AiChatRequest,
   AiChatResponse,
@@ -78,11 +77,6 @@ export function KnowledgeBasePage({
   documents,
   embeddingHealth,
   jobs,
-  listingKnowledgeDocuments = [],
-  listingKnowledgeOpen = false,
-  listingKnowledgeShowMoreHref,
-  listingKnowledgeTotal = 0,
-  listingImportResult,
   listingSources,
   notice,
   retrieval,
@@ -96,11 +90,6 @@ export function KnowledgeBasePage({
   documents: KnowledgeDocumentSnapshot[];
   embeddingHealth: KnowledgeEmbeddingHealthSnapshot;
   jobs: BackgroundJobMonitorItem[];
-  listingKnowledgeDocuments?: KnowledgeDocumentSnapshot[];
-  listingKnowledgeOpen?: boolean;
-  listingKnowledgeShowMoreHref?: string;
-  listingKnowledgeTotal?: number;
-  listingImportResult?: { error?: "empty"; jobId?: string };
   listingSources: ListingSourceSnapshot[];
   notice?: { message: string; tone: "success" | "warning" };
   retrieval: KnowledgeChunkSearchResponse;
@@ -108,7 +97,7 @@ export function KnowledgeBasePage({
   sourceJobs?: BackgroundJobMonitorItem[];
   total: number;
 }) {
-  const allKnowledgeDocuments = [...documents, ...listingKnowledgeDocuments];
+  const allKnowledgeDocuments = documents;
   const kindCount = new Set(documents.map((document) => document.kind)).size;
   const localeCount = new Set(documents.map((document) => document.locale)).size;
   const taggedCount = documents.filter((document) => document.tags.length > 0).length;
@@ -118,13 +107,11 @@ export function KnowledgeBasePage({
     documents: allKnowledgeDocuments,
     jobs: sourceJobs ?? jobs,
     listingSources,
-    totalDocuments: total + listingKnowledgeTotal
+    totalDocuments: total
   });
   const operationalSourceGroups = filterOperationalKnowledgeSourceGroups(runtimeSourceGroups);
   const sourceModeSummary = summarizeKnowledgeSourceModes(operationalSourceGroups);
   const sourceReadiness = summarizeKnowledgeSourceReadiness(operationalSourceGroups);
-  const listingImportJobs = (sourceJobs ?? jobs).filter((job) => job.name === "properties.import");
-  const hasMoreListingKnowledge = listingKnowledgeDocuments.length < listingKnowledgeTotal;
   const sourceLaunchGate = buildKnowledgeSourceLaunchGate(sourceReadiness, {
     starterLaunchReady: starterReadiness.launchReady,
     starterNextAction: starterReadiness.nextAction,
@@ -251,12 +238,10 @@ export function KnowledgeBasePage({
 
           <ListingApiSourcesPanel sources={listingSources} />
 
-          <ListingBulkImportPanel
-            jobs={listingImportJobs}
-            result={listingImportResult}
-            returnTo="/knowledge"
-            variant="starter"
-          />
+          <a className={styles.primaryLink} href="/listings">
+            Manage AI listing inventory
+            <ArrowRight size={16} />
+          </a>
 
           <div className={styles.sourcesGrid}>
             {operationalSourceGroups.map((group) => (
@@ -314,37 +299,6 @@ export function KnowledgeBasePage({
 
           <KnowledgeJobsPanel jobs={jobs} />
         </section>
-
-        {listingKnowledgeDocuments.length ? (
-          <details
-            className={`${styles.panel} ${styles.listingKnowledgePanel}`}
-            id="concierge-listing-imports"
-            open={listingKnowledgeOpen}
-          >
-            <summary className={styles.listingKnowledgeSummary}>
-              <div>
-                <p className="section-kicker">Concierge listing imports</p>
-                <h2 className={styles.panelTitle}>Listings feeding AI Concierge</h2>
-              </div>
-              <span className={styles.statusBadge}>
-                {listingKnowledgeDocuments.length}/{listingKnowledgeTotal || listingKnowledgeDocuments.length} loaded
-              </span>
-            </summary>
-
-            <div className={styles.listingKnowledgeGrid}>
-              {listingKnowledgeDocuments.map((document) => (
-                <ListingKnowledgeCard document={document} key={document.id} />
-              ))}
-            </div>
-
-            {hasMoreListingKnowledge && listingKnowledgeShowMoreHref ? (
-              <a className={styles.listingKnowledgeMore} href={listingKnowledgeShowMoreHref}>
-                Show more listings
-                <ArrowRight size={15} />
-              </a>
-            ) : null}
-          </details>
-        ) : null}
 
         <section className={styles.layout}>
           <details className={`${styles.panel} ${styles.createSourcePanel}`} id="create-knowledge-document" open={createSourceOpen}>
@@ -411,89 +365,6 @@ function KpiCard({ icon, label, note, value }: { icon: ReactNode; label: string;
       <small>{note}</small>
     </article>
   );
-}
-
-function ListingKnowledgeCard({ document }: { document: KnowledgeDocumentSnapshot }) {
-  const summary = summarizeListingKnowledgeDocument(document);
-
-  return (
-    <article className={styles.listingKnowledgeCard}>
-      <div className={styles.listingKnowledgeTop}>
-        <span>{document.locale.toUpperCase()}</span>
-        <span>Listing</span>
-        {summary.status ? <span>{summary.status}</span> : null}
-      </div>
-      <h3>{document.title}</h3>
-      <dl className={styles.listingKnowledgeFacts}>
-        {summary.facts.map((fact) => (
-          <div key={fact.label}>
-            <dt>{fact.label}</dt>
-            <dd>{fact.value}</dd>
-          </div>
-        ))}
-      </dl>
-      {summary.description ? <p>{summary.description}</p> : null}
-      {summary.amenities.length ? (
-        <div className={styles.listingKnowledgeTags}>
-          {summary.amenities.map((amenity) => (
-            <span key={amenity}>{amenity}</span>
-          ))}
-        </div>
-      ) : null}
-    </article>
-  );
-}
-
-function summarizeListingKnowledgeDocument(document: KnowledgeDocumentSnapshot) {
-  const fields = parseKnowledgeBodyFields(document.body);
-  const facts = [
-    compactFact("Market", fields.get("Market")),
-    compactFact("Type", fields.get("Listing type")),
-    compactFact("Price", fields.get("Price")),
-    compactFact("Rent", fields.get("Monthly rent") ?? fields.get("Long-term monthly rent")),
-    compactFact("Area", fields.get("Area")),
-    compactFact("Bedrooms", fields.get("Bedrooms")),
-    compactFact("Beach", fields.get("Beach distance")),
-    compactFact("Quota", fields.get("Foreign quota"))
-  ].filter((fact): fact is { label: string; value: string } => Boolean(fact));
-  const amenities = splitList(fields.get("Amenities")).slice(0, 5);
-
-  return {
-    amenities,
-    description: fields.get("Description"),
-    facts: facts.slice(0, 8),
-    status: fields.get("Status")
-  };
-}
-
-function compactFact(label: string, value?: string) {
-  return value ? { label, value } : undefined;
-}
-
-function parseKnowledgeBodyFields(body: string) {
-  return body.split("\n").reduce((fields, line) => {
-    const separatorIndex = line.indexOf(":");
-
-    if (separatorIndex > 0) {
-      const key = line.slice(0, separatorIndex).trim();
-      const value = line.slice(separatorIndex + 1).trim();
-
-      if (key && value && key !== "Full source payload for agency-specific constraints") {
-        fields.set(key, value);
-      }
-    }
-
-    return fields;
-  }, new Map<string, string>());
-}
-
-function splitList(value?: string) {
-  return value
-    ? value
-        .split(",")
-        .map((item) => item.trim())
-        .filter(Boolean)
-    : [];
 }
 
 function Signal({ icon, label, copy }: { icon: ReactNode; label: string; copy: string }) {

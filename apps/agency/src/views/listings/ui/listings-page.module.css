@@ -44,3 +44,155 @@
   font-size: 0.78rem;
   font-weight: 900;
 }
+
+.starterKpiGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.starterKpiCard,
+.starterPanel,
+.starterListingCard {
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 16px 42px rgb(37 50 46 / 6%);
+}
+
+.starterKpiCard {
+  display: grid;
+  gap: 7px;
+  padding: 14px;
+}
+
+.starterKpiCard div {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  background: #edf8f4;
+  color: var(--teal-dark);
+}
+
+.starterKpiCard span,
+.starterKpiCard small {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.starterKpiCard span {
+  color: var(--teal-dark);
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.starterKpiCard strong {
+  color: var(--ink);
+  font-size: 1.65rem;
+  line-height: 1;
+}
+
+.starterPanel {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.starterPanelHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.starterPanelHeader h2 {
+  margin: 3px 0 0;
+  font-size: 1.15rem;
+}
+
+.starterPanelHeader span {
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 6px 8px;
+  color: var(--teal-dark);
+  font-size: 0.72rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+
+.starterListingGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.starterListingCard {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.starterListingTopline,
+.starterListingTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.starterListingTopline span,
+.starterListingTags span {
+  border: 1px solid rgb(15 118 110 / 14%);
+  background: #edf8f4;
+  padding: 5px 7px;
+  color: var(--teal-dark);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.starterListingCard h3 {
+  margin: 0;
+  font-size: 0.96rem;
+  line-height: 1.25;
+}
+
+.starterListingCard dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 0;
+}
+
+.starterListingCard dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.starterListingCard dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.starterEmpty {
+  display: grid;
+  gap: 5px;
+  border: 1px dashed var(--line);
+  background: #f7fbf8;
+  padding: 16px;
+}
+
+.starterEmpty strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+}
+
+.starterEmpty span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}

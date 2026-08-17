@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { AuditModule } from "../audit/audit.module.js";
+import { DatabaseModule } from "../database/database.module.js";
 import { RealtimeModule } from "../realtime/realtime.module.js";
 import { AuthModule } from "../shared/auth/auth.module.js";
 import { StorageModule } from "../storage/storage.module.js";
@@ -9,7 +10,7 @@ import { JobQueueService } from "./application/job-queue.service.js";
 import { JobsController } from "./presentation/rest/jobs.controller.js";
 
 @Module({
-  imports: [AuditModule, AuthModule, RealtimeModule, StorageModule, TenantsModule],
+  imports: [AuditModule, AuthModule, DatabaseModule, RealtimeModule, StorageModule, TenantsModule],
   controllers: [JobsController],
   providers: [BackgroundJobPolicyService, JobQueueService],
   exports: [JobQueueService]

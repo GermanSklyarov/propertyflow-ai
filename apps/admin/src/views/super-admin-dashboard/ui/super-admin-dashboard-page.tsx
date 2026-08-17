@@ -242,6 +242,25 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
               </div>
             </Panel>
 
+            <Panel title="Location enrichment ops">
+              <div className="grid grid-cols-2 gap-3">
+                <MiniStat label="Enrichment queue" value={dashboard.systemHealth.failedJobs > 0 ? "needs review" : "healthy"} />
+                <MiniStat label="Maps API cost" value={formatAdminMoney(dashboard.maps.estimatedCostUsd)} />
+                <MiniStat label="Cache hit rate" value={`${dashboard.maps.cacheHitRate}%`} />
+                <MiniStat label="Cache misses" value={formatNumber(dashboard.maps.cacheMisses)} />
+              </div>
+              <div className="mt-4">
+                <ResponsiveTable
+                  columns={["Tenant", "Maps requests", "Estimated tenant cost"]}
+                  rows={dashboard.agencies.map((agency) => [
+                    agency.agencyName,
+                    formatNumber(agency.usageThisMonth.mapsRequests),
+                    formatAdminMoney(agency.usageThisMonth.estimatedCostUsd)
+                  ])}
+                />
+              </div>
+            </Panel>
+
             <Panel title="Messaging">
               <div className="grid grid-cols-2 gap-3">
                 <MiniStat label="Notifications" value={formatNumber(dashboard.messaging.notifications)} />
