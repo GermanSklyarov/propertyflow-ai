@@ -219,9 +219,7 @@ function resolveSelectedPropertyIdFromConversation(request: AiChatRequest): stri
 
     if (turn.role === "assistant" && listings.length) {
       currentListings = listings;
-      if (listings.length === 1) {
-        selectedPropertyId = listings[0]?.propertyId;
-      }
+      selectedPropertyId = resolveNamedPropertyIdFromListings(turn.text, listings) ?? (listings.length === 1 ? listings[0]?.propertyId : selectedPropertyId);
     }
 
     if (turn.role === "user" && currentListings.length) {
@@ -239,15 +237,15 @@ function resolveSelectedPropertyIdFromConversation(request: AiChatRequest): stri
 function resolveReferencedListingIndexFromText(message: string): number | undefined {
   const normalized = normalizeReferenceText(message);
 
-  if (/\b(?:third|3(?:rd)?\s+(?:option|listing|one))\b|трет|สาม|第三|第3|三/i.test(normalized)) {
+  if (/\b(?:third|3(?:rd)?\s+(?:option|listing|one))\b|(?:^|\s)трет\w*|สาม|第三|第3|三/i.test(normalized)) {
     return 2;
   }
 
-  if (/\b(?:second|2(?:nd)?\s+(?:option|listing|one))\b|втор|สอง|第二|第2|二/i.test(normalized)) {
+  if (/\b(?:second|2(?:nd)?\s+(?:option|listing|one))\b|(?:^|\s)втор\w*|สอง|第二|第2|二/i.test(normalized)) {
     return 1;
   }
 
-  if (/\b(?:first|1(?:st)?\s+(?:option|listing|one))\b|перв|第一|第1|一/i.test(normalized)) {
+  if (/\b(?:first|1(?:st)?\s+(?:option|listing|one))\b|(?:^|\s)перв\w*|第一|第1|一/i.test(normalized)) {
     return 0;
   }
 

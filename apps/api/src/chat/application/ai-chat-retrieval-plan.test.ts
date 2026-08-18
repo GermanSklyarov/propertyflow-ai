@@ -191,6 +191,64 @@ describe("planAiChatRetrieval", () => {
     });
   });
 
+  it("keeps viewing requests on the listing selected by the assistant comparison answer", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Wongamat Sea View Residence" },
+              { propertyId: "property-3", title: "Jomtien Family Corner Condo" },
+              { propertyId: "property-4", title: "Pratumnak Investment One-Bed" }
+            ],
+            role: "assistant",
+            text: "Я нашла 3 подходящих варианта."
+          },
+          { role: "user", text: "какой из них ближе к пляжу?" },
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Wongamat Sea View Residence" },
+              { propertyId: "property-3", title: "Jomtien Family Corner Condo" },
+              { propertyId: "property-4", title: "Pratumnak Investment One-Bed" }
+            ],
+            role: "assistant",
+            text: "Из предложенных вариантов, Wongamat Sea View Residence находится ближе всего к пляжу, всего в 220 метрах."
+          }
+        ],
+        locale: "ru",
+        message: "отлично, мне подходит, можно посмотреть?"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-1",
+      reason: "follow-up-reference"
+    });
+  });
+
+  it("does not treat Russian посмотреть as a reference to the third listing", () => {
+    expect(
+      planAiChatRetrieval({
+        conversation: [
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Wongamat Sea View Residence" },
+              { propertyId: "property-2", title: "Jomtien Family Corner Condo" },
+              { propertyId: "property-3", title: "Pratumnak Investment One-Bed" }
+            ],
+            role: "assistant",
+            text: "Wongamat Sea View Residence is the closest to the beach."
+          }
+        ],
+        locale: "ru",
+        message: "можно посмотреть?"
+      })
+    ).toMatchObject({
+      mode: "property-detail",
+      propertyId: "property-1",
+      reason: "follow-up-reference"
+    });
+  });
+
   it("asks for clarification when the visitor references an unseen ordinal option", () => {
     expect(
       planAiChatRetrieval({

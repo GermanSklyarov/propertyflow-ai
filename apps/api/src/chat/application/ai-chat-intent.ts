@@ -11,8 +11,8 @@ const propertyFollowUpPattern =
 const viewingRequestPattern =
   /\b(?:see|view|visit|viewing|schedule|book|rent\s+on)\b|посмотр|просмотр|запис|นัดดู|ดูห้อง|ดูคอนโด|预约|預約|看房/i;
 
-const thirdListingPattern = /\b(?:third|3(?:rd)?\s+(?:option|listing|one))\b|трет|สาม|第三|第3|三/i;
-const secondListingPattern = /\b(?:second|2(?:nd)?\s+(?:option|listing|one))\b|втор|สอง|第二|第2|二/i;
+const thirdListingPattern = /\b(?:third|3(?:rd)?\s+(?:option|listing|one))\b|(?:^|\s)трет\w*|สาม|第三|第3|三/i;
+const secondListingPattern = /\b(?:second|2(?:nd)?\s+(?:option|listing|one))\b|(?:^|\s)втор\w*|สอง|第二|第2|二/i;
 
 const neighborhoodPattern =
   /(рядом|around|near|neighborhood|район|пляж|beach|кафе|cafe|школ|school|hospital|больниц)/i;
@@ -41,7 +41,7 @@ function resolveReferencedListingIndex(message: string): number | undefined {
     return 1;
   }
 
-  if (/\b(?:first|1(?:st)?\s+(?:option|listing|one))\b|перв|第一|第1|一/i.test(message)) {
+  if (/\b(?:first|1(?:st)?\s+(?:option|listing|one))\b|(?:^|\s)перв\w*|第一|第1|一/i.test(message)) {
     return 0;
   }
 
