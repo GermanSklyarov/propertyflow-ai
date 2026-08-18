@@ -6,7 +6,7 @@ export const demoDashboard: SuperAdminDashboardResponse = {
   cards: [
     { key: "activeAgencies", label: "Active agencies", today: 3, month: 3 },
     { key: "conciergeConversations", label: "Concierge conversations", today: 42, month: 428 },
-    { key: "aiMessagesRequests", label: "AI messages / requests", today: 131, month: 1281 },
+    { key: "aiMessagesRequests", label: "AI assistant messages", today: 131, month: 1281 },
     { key: "leadsGenerated", label: "Leads generated", today: 5, month: 37 },
     { key: "qualifiedLeads", label: "Qualified leads", today: 2, month: 14 },
     { key: "llmTokensUsed", label: "LLM tokens used", today: 184000, month: 2400000, unit: "tokens" },
@@ -35,6 +35,7 @@ export const demoDashboard: SuperAdminDashboardResponse = {
   maps: {
     geocodingRequests: 1842,
     placesRequests: 214,
+    locationEnrichmentRecords: 842,
     cacheHits: 1540,
     cacheMisses: 302,
     cacheHitRate: 83.6,

@@ -230,6 +230,7 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
               <div className="grid grid-cols-2 gap-3">
                 <MiniStat label="Geocoding" value={`${formatNumber(dashboard.maps.geocodingRequests)} / ${formatNumber(dashboard.maps.freeTierUsage.geocoding.limit)} free`} />
                 <MiniStat label="Places" value={formatNumber(dashboard.maps.placesRequests)} />
+                <MiniStat label="Location records" value={formatNumber(dashboard.maps.locationEnrichmentRecords)} />
                 <MiniStat label="Cache hits" value={formatNumber(dashboard.maps.cacheHits)} />
                 <MiniStat label="Cache misses" value={formatNumber(dashboard.maps.cacheMisses)} />
               </div>
@@ -245,9 +246,9 @@ export function SuperAdminDashboardPage({ dashboard, isDemo, loadError }: SuperA
             <Panel title="Location enrichment ops">
               <div className="grid grid-cols-2 gap-3">
                 <MiniStat label="Enrichment queue" value={dashboard.systemHealth.failedJobs > 0 ? "needs review" : "healthy"} />
+                <MiniStat label="Location records" value={formatNumber(dashboard.maps.locationEnrichmentRecords)} />
                 <MiniStat label="Maps API cost" value={formatAdminMoney(dashboard.maps.estimatedCostUsd)} />
                 <MiniStat label="Cache hit rate" value={`${dashboard.maps.cacheHitRate}%`} />
-                <MiniStat label="Cache misses" value={formatNumber(dashboard.maps.cacheMisses)} />
               </div>
               <div className="mt-4">
                 <ResponsiveTable

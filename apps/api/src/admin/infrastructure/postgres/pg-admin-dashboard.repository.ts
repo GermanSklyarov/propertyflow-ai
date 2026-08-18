@@ -65,6 +65,7 @@ interface OperationRow {
 interface MapsRow {
   geocoding_requests: string;
   places_requests: string;
+  location_enrichment_records: string;
   cache_hits: string;
   cache_misses: string;
   estimated_cost_usd: string;
@@ -286,15 +287,31 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
   ): Promise<SuperAdminMapsUsage> {
     const result = await this.pool.query<MapsRow>(
       `
+        with google_maps_usage as (
+          select
+            coalesce(sum(quantity) filter (where operation ilike '%geocod%'), 0) as geocoding_requests,
+            coalesce(sum(quantity) filter (where operation ilike '%place%'), 0) as places_requests,
+            coalesce(sum(quantity) filter (where operation ilike '%cache_hit%' or metadata ->> 'cacheResult' = 'hit'), 0) as cache_hits,
+            coalesce(sum(quantity) filter (where operation ilike '%cache_miss%' or metadata ->> 'cacheResult' = 'miss'), 0) as cache_misses,
+            coalesce(sum(estimated_cost_usd), 0) as estimated_cost_usd
+          from tenant_usage_events
+          where service = 'google_maps'
+            and created_at >= $1 and created_at < $2
+        ),
+        location_enrichment as (
+          select count(*)::int as location_enrichment_records
+          from listing_location_features
+          where updated_at >= $1 and updated_at < $2
+        )
         select
-          coalesce(sum(quantity) filter (where operation ilike '%geocod%'), 0) as geocoding_requests,
-          coalesce(sum(quantity) filter (where operation ilike '%place%'), 0) as places_requests,
-          coalesce(sum(quantity) filter (where operation ilike '%cache_hit%' or metadata ->> 'cacheResult' = 'hit'), 0) as cache_hits,
-          coalesce(sum(quantity) filter (where operation ilike '%cache_miss%' or metadata ->> 'cacheResult' = 'miss'), 0) as cache_misses,
-          coalesce(sum(estimated_cost_usd), 0) as estimated_cost_usd
-        from tenant_usage_events
-        where service = 'google_maps'
-          and created_at >= $1 and created_at < $2
+          google_maps_usage.geocoding_requests,
+          google_maps_usage.places_requests,
+          location_enrichment.location_enrichment_records,
+          google_maps_usage.cache_hits,
+          google_maps_usage.cache_misses,
+          google_maps_usage.estimated_cost_usd
+        from google_maps_usage
+        cross join location_enrichment
       `,
       [periodStart.toISOString(), periodEnd.toISOString()],
     );
@@ -307,6 +324,7 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
     return {
       geocodingRequests,
       placesRequests: toNumber(row?.places_requests),
+      locationEnrichmentRecords: toNumber(row?.location_enrichment_records),
       cacheHits,
       cacheMisses,
       cacheHitRate:
@@ -442,9 +460,9 @@ export class PgAdminDashboardRepository implements AdminDashboardRepository {
       ),
       this.card(
         "aiMessagesRequests",
-        "AI messages / requests",
-        sum(todayRows, "ai_messages") + sum(todayRows, "ai_requests"),
-        sum(monthRows, "ai_messages") + sum(monthRows, "ai_requests"),
+        "AI assistant messages",
+        sum(todayRows, "ai_messages"),
+        sum(monthRows, "ai_messages"),
       ),
       this.card(
         "leadsGenerated",

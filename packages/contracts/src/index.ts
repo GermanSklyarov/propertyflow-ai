@@ -513,6 +513,7 @@ export interface SuperAdminUsageByOperation {
 export interface SuperAdminMapsUsage {
   geocodingRequests: number;
   placesRequests: number;
+  locationEnrichmentRecords: number;
   cacheHits: number;
   cacheMisses: number;
   cacheHitRate: number;
