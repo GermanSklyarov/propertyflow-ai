@@ -104,7 +104,7 @@ export class PgKnowledgeDocumentRepository implements KnowledgeDocumentRepositor
   async search(tenantId: string, request: KnowledgeDocumentTagFilterRequest): Promise<KnowledgeDocumentSearchResult> {
     const clauses = ["tenant_id = $1"];
     const values: unknown[] = [tenantId];
-    const limit = Math.min(Math.max(request.limit ?? 20, 1), 200);
+    const limit = Math.min(Math.max(request.limit ?? 20, 1), 1000);
 
     const addValue = (value: unknown): string => {
       values.push(value);

@@ -103,7 +103,7 @@ export function LocationEnrichmentPanel({ initialJobs, initialStatus }: Location
         <div>
           <p className="section-kicker">Location enrichment</p>
           <h2>Listing location data</h2>
-          <span>Objects are available now. Location signals continue in the background.</span>
+          <span>Concierge inventory is available now. Location records continue syncing in the background.</span>
         </div>
         <span className={running ? styles.locationRunning : styles.locationReady}>
           {running ? "Enriching" : status.pendingListings > 0 ? "Needs enrichment" : "Ready"}
@@ -115,7 +115,7 @@ export function LocationEnrichmentPanel({ initialJobs, initialStatus }: Location
           <span style={{ width: `${progress}%` }} />
         </div>
         <strong>
-          {formatNumber(status.enrichedListings)} / {formatNumber(status.totalListings)} listings enriched
+          {formatNumber(status.enrichedListings)} / {formatNumber(status.totalListings)} location records enriched
         </strong>
       </div>
 

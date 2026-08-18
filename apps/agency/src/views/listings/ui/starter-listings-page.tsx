@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { DatabaseZap, FileText, ListChecks, SearchCheck } from "lucide-react";
+import { ChevronDown, DatabaseZap, FileText, ListChecks, SearchCheck } from "lucide-react";
 import { ListingBulkImportPanel } from "@features/listing-bulk-import/ui/listing-bulk-import-panel";
 import { LocationEnrichmentPanel } from "@features/listing-bulk-import/ui/location-enrichment-panel";
 import type {
@@ -20,6 +20,7 @@ interface StarterListingsPageProps {
   listingSources: ListingSourceSnapshot[];
   locationEnrichmentJobs: BackgroundJobMonitorItem[];
   locationEnrichmentStatus?: LocationEnrichmentStatusResponse;
+  showMoreHref?: string;
   totalListingDocuments: number;
 }
 
@@ -30,11 +31,13 @@ export function StarterListingsPage({
   listingSources,
   locationEnrichmentJobs,
   locationEnrichmentStatus,
+  showMoreHref,
   totalListingDocuments
 }: StarterListingsPageProps) {
   const activeSources = listingSources.filter((source) => source.status !== "disabled");
   const syncingSources = activeSources.filter((source) => source.status === "syncing").length;
   const failedSources = activeSources.filter((source) => source.status === "failed").length;
+  const visibleListingDocuments = listingDocuments.length;
 
   return (
     <main className={styles.page}>
@@ -47,11 +50,11 @@ export function StarterListingsPage({
               Listings available to the AI Concierge. CRM editing, project operations, and publication workflows unlock on Growth.
             </p>
           </div>
-          <span className={styles.totalBadge}>{totalListingDocuments} AI listings</span>
+          <span className={styles.totalBadge}>{formatInventoryCount(visibleListingDocuments, totalListingDocuments)}</span>
         </header>
 
         <section className={styles.starterKpiGrid} aria-label="AI listing inventory readiness">
-          <StarterKpi icon={<FileText size={18} />} label="AI listings" note="available to Concierge" value={totalListingDocuments} />
+          <StarterKpi icon={<FileText size={18} />} label="Total AI listings" note="available to Concierge" value={totalListingDocuments} />
           <StarterKpi icon={<DatabaseZap size={18} />} label="Feed sources" note="connected or draft" value={activeSources.length} />
           <StarterKpi icon={<SearchCheck size={18} />} label="Syncing" note="worker active" value={syncingSources} />
           <StarterKpi icon={<ListChecks size={18} />} label="Needs attention" note="failed sources" value={failedSources} />
@@ -65,9 +68,9 @@ export function StarterListingsPage({
           <div className={styles.starterPanelHeader}>
             <div>
               <p className="section-kicker">Concierge inventory</p>
-              <h2>Recently imported listings</h2>
+              <h2>Listings available to Concierge</h2>
             </div>
-            <span>{listingDocuments.length} visible</span>
+            <span>{formatInventoryCount(visibleListingDocuments, totalListingDocuments)}</span>
           </div>
 
           {listingDocuments.length ? (
@@ -82,6 +85,13 @@ export function StarterListingsPage({
               <span>Import a CSV or connect a feed so Concierge can search real inventory.</span>
             </div>
           )}
+
+          {showMoreHref ? (
+            <a className={styles.starterLoadMore} href={showMoreHref}>
+              <ChevronDown size={16} />
+              Load more listings
+            </a>
+          ) : null}
         </section>
       </div>
     </main>
@@ -140,6 +150,22 @@ function StarterListingCard({ document }: { document: KnowledgeDocumentSnapshot 
 function compactFact(label: string, value?: string) {
   const trimmed = value?.trim();
   return trimmed ? { label, value: trimmed } : undefined;
+}
+
+function formatInventoryCount(visible: number, total: number) {
+  if (total === 0) {
+    return "0 listings";
+  }
+
+  if (visible >= total) {
+    return `${formatNumber(total)} total`;
+  }
+
+  return `${formatNumber(visible)} of ${formatNumber(total)} shown`;
+}
+
+function formatNumber(value: number) {
+  return new Intl.NumberFormat("en-US").format(value);
 }
 
 function parseKnowledgeBodyFields(body: string) {

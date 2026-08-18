@@ -30,6 +30,6 @@ export class ListKnowledgeDocumentsDto implements KnowledgeDocumentSearchRequest
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(200)
+  @Max(1000)
   limit?: number;
 }

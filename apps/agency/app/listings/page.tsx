@@ -11,6 +11,8 @@ import { ListingsPage } from "@views/listings/ui/listings-page";
 import { StarterListingsPage } from "@views/listings/ui/starter-listings-page";
 
 const PAGE_SIZE = 8;
+const STARTER_LISTING_PAGE_SIZE = 24;
+const STARTER_LISTING_MAX_LIMIT = 1000;
 const listingSorts: PropertySearchSort[] = ["created-desc", "price-asc", "price-desc", "rent-asc", "yield-desc"];
 
 export default async function AgencyListingsPage({
@@ -19,6 +21,7 @@ export default async function AgencyListingsPage({
   searchParams: Promise<{
     importError?: "empty";
     importJob?: string;
+    listingLimit?: string;
     page?: string;
     projectId?: string;
     projectLink?: PropertySearchRequest["projectLink"];
@@ -59,12 +62,14 @@ export default async function AgencyListingsPage({
   const locationEnrichmentStatus = locationEnrichmentResult.status === "fulfilled" ? locationEnrichmentResult.value : undefined;
 
   if (!canAccessTenantPlan(tenant.subscriptionPlan, crmTenantPlans)) {
+    const listingLimit = resolveStarterListingLimit(query.listingLimit);
     const [listingDocumentsResult, listingSourcesResult] = await Promise.allSettled([
-      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ tag: "property-listing", limit: 24 }, tenantId)),
+      queryClient.ensureQueryData(knowledgeDocumentsQueryOptions({ tag: "property-listing", limit: listingLimit }, tenantId)),
       queryClient.ensureQueryData(listingSourcesQueryOptions(tenantId))
     ]);
     const listingDocuments = listingDocumentsResult.status === "fulfilled" ? listingDocumentsResult.value : { items: [], total: 0 };
     const listingSources = listingSourcesResult.status === "fulfilled" ? listingSourcesResult.value : { items: [] };
+    const nextListingLimit = Math.min(listingLimit + STARTER_LISTING_PAGE_SIZE, STARTER_LISTING_MAX_LIMIT, listingDocuments.total);
 
     return (
       <StarterListingsPage
@@ -74,6 +79,7 @@ export default async function AgencyListingsPage({
         listingSources={listingSources.items}
         locationEnrichmentJobs={locationEnrichmentJobs}
         locationEnrichmentStatus={locationEnrichmentStatus}
+        showMoreHref={nextListingLimit > listingDocuments.items.length ? buildStarterListingHref(query, nextListingLimit) : undefined}
         totalListingDocuments={listingDocuments.total}
       />
     );
@@ -104,4 +110,37 @@ export default async function AgencyListingsPage({
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Failed to load listings";
+}
+
+function resolveStarterListingLimit(value?: string) {
+  const parsed = Number.parseInt(value ?? "", 10);
+
+  if (!Number.isFinite(parsed)) {
+    return STARTER_LISTING_PAGE_SIZE;
+  }
+
+  return Math.min(Math.max(parsed, STARTER_LISTING_PAGE_SIZE), STARTER_LISTING_MAX_LIMIT);
+}
+
+function buildStarterListingHref(
+  query: {
+    importError?: "empty";
+    importJob?: string;
+    listingLimit?: string;
+  },
+  listingLimit: number
+) {
+  const params = new URLSearchParams();
+
+  if (query.importError) {
+    params.set("importError", query.importError);
+  }
+
+  if (query.importJob) {
+    params.set("importJob", query.importJob);
+  }
+
+  params.set("listingLimit", String(listingLimit));
+
+  return `/listings?${params.toString()}`;
 }
