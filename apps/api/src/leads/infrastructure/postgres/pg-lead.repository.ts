@@ -235,7 +235,6 @@ export class PgLeadRepository implements LeadRepository {
           $2,
           $3,
           $4,
-          'new',
           $5,
           $6,
           $7,
@@ -248,10 +247,11 @@ export class PgLeadRepository implements LeadRepository {
           $14,
           $15,
           $16,
+          $17,
           'medium',
           null,
-          $17,
-          $18
+          $18,
+          $19
         )
         returning *
       `,
@@ -260,6 +260,7 @@ export class PgLeadRepository implements LeadRepository {
         input.tenantId,
         input.propertyId ?? null,
         input.source,
+        input.status ?? "new",
         input.contactName,
         input.contactEmail ?? null,
         input.contactPhone ?? null,

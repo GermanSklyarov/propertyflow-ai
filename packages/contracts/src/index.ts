@@ -2284,6 +2284,7 @@ export type LeadListSort = "created-desc" | "created-asc" | "follow-up-asc" | "p
 export interface CreateLeadRequest {
   propertyId?: string;
   source: LeadSource;
+  status?: LeadStatus;
   contactName: string;
   contactEmail?: string;
   contactPhone?: string;

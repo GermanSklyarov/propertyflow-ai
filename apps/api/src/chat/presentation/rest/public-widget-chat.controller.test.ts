@@ -2747,7 +2747,8 @@ describe("PublicWidgetChatController", () => {
       message: "Widget handoff request.\n\nVisitor note: I want a viewing next week.\n\nLead qualification:\nViewing time: next week",
       preferredLocale: "ru",
       propertyId: undefined,
-      source: "ai-concierge"
+      source: "ai-concierge",
+      status: "new"
     });
   });
 
@@ -2794,7 +2795,8 @@ describe("PublicWidgetChatController", () => {
       message: "Widget handoff request.\n\nVisitor note: Please contact me.",
       preferredLocale: "en",
       propertyId: undefined,
-      source: "ai-concierge"
+      source: "ai-concierge",
+      status: "new"
     });
   });
 
@@ -2862,7 +2864,8 @@ describe("PublicWidgetChatController", () => {
       ].join("\n"),
       preferredLocale: "en",
       propertyId: "property-1",
-      source: "ai-concierge"
+      source: "ai-concierge",
+      status: "qualified"
     });
   });
 

@@ -8,6 +8,7 @@ import type {
   AiChatCitation,
   AiChatReferencedListing,
   AiChatTurn,
+  LeadStatus,
   TenantWidgetLanguage
 } from "@propertyflow/contracts";
 import type { PropertySnapshot } from "@propertyflow/domain";
@@ -350,6 +351,8 @@ export class PublicWidgetChatController {
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
     const contactEmail = normalizeOptional(payload.contactEmail);
     const contactPhone = normalizeOptional(payload.contactPhone);
+    const propertyId = resolveLeadPropertyId(payload);
+    const status = assessWidgetLeadStatus(payload, { contactEmail, contactPhone, propertyId });
 
     if (!contactEmail && !contactPhone) {
       throw new BadRequestException("Email or phone is required for widget handoff");
@@ -361,8 +364,9 @@ export class PublicWidgetChatController {
       contactPhone,
       message: buildQualifiedLeadMessage(payload),
       preferredLocale: locale,
-      propertyId: resolveLeadPropertyId(payload),
-      source: "ai-concierge"
+      propertyId,
+      source: "ai-concierge",
+      status
     });
 
     return {
@@ -1760,13 +1764,33 @@ function buildQualifiedLeadMessage(payload: PublicWidgetLeadDto): string | undef
   return lines.join("\n\n").slice(0, 3000);
 }
 
+function assessWidgetLeadStatus(
+  payload: PublicWidgetLeadDto,
+  context: { contactEmail?: string; contactPhone?: string; propertyId?: string }
+): LeadStatus {
+  if (!context.contactEmail && !context.contactPhone) {
+    return "new";
+  }
+
+  const source = buildLeadQualificationSource(payload);
+  const hasSelectedListing = Boolean(context.propertyId);
+  const hasIntent = Boolean(parseDealIntent(source));
+  const hasBudget = Boolean(parseBudget(source));
+  const hasPurpose = Boolean(parsePurpose(source));
+  const hasTimeline = Boolean(
+    parsePurchaseTiming(source) ||
+      parseMoveInDate(source) ||
+      parseContractLength(source) ||
+      parseViewingTime(source) ||
+      parsePreferredContactTime(source)
+  );
+  const signalCount = [hasSelectedListing, hasIntent, hasBudget, hasPurpose, hasTimeline].filter(Boolean).length;
+
+  return signalCount >= 3 ? "qualified" : "new";
+}
+
 function buildLeadQualificationSection(payload: PublicWidgetLeadDto): string | undefined {
-  const source = [
-    payload.message,
-    ...(payload.conversation ?? []).filter((turn: AiChatTurn) => turn.role === "user").map((turn: AiChatTurn) => turn.text)
-  ]
-    .filter(Boolean)
-    .join("\n");
+  const source = buildLeadQualificationSource(payload);
   const dealIntent = parseDealIntent(source);
   const budget = parseBudget(source);
   const purpose = parsePurpose(source);
@@ -1791,6 +1815,15 @@ function buildLeadQualificationSection(payload: PublicWidgetLeadDto): string | u
   ].filter(Boolean);
 
   return details.length ? ["Lead qualification:", ...details].join("\n") : undefined;
+}
+
+function buildLeadQualificationSource(payload: PublicWidgetLeadDto): string {
+  return [
+    payload.message,
+    ...(payload.conversation ?? []).filter((turn: AiChatTurn) => turn.role === "user").map((turn: AiChatTurn) => turn.text)
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function parseDealIntent(text: string): string | undefined {
