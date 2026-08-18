@@ -108,6 +108,7 @@ export class AiChatService {
       locale: request.locale,
       neighborhood,
       property,
+      conversation: request.conversation,
       requestMessage: request.message
     });
 

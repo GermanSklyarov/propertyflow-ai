@@ -63,6 +63,38 @@ describe("ai-chat-property-response", () => {
     expect(draft.deterministicDraft).toContain("Rental ask is 24000 THB/mo");
   });
 
+  it("keeps Russian purchase viewing handoffs out of rental prompts when the listing also has rent data", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      conversation: [
+        {
+          role: "user",
+          text: "хочу купить кондо в паттайе с бассейном для релокации, бюджет до 5млн"
+        },
+        {
+          role: "assistant",
+          text: "Wongamat Sea View Residence находится ближе всего к пляжу."
+        }
+      ],
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("отлично мне подходит, можно посмотреть?"),
+      knowledge: [],
+      locale: "ru",
+      property: propertyFactory({
+        listingType: "sale_or_rent",
+        rentalPriceMonthly: { amount: 28_000, currency: "THB" }
+      }),
+      requestMessage: "отлично мне подходит, можно посмотреть?"
+    });
+
+    expect(draft.deterministicDraft).toContain("Если планируете покупку");
+    expect(draft.deterministicDraft).not.toContain("Дата въезда");
+    expect(draft.deterministicDraft).not.toContain("срок контракта");
+    expect(draft.deterministicDraft).not.toContain("Арендная ставка");
+  });
+
   it("localizes viewing handoff drafts for Thai and Chinese", () => {
     const thaiDraft = buildAiChatPropertyResponseDraft({
       dueDiligence: {
