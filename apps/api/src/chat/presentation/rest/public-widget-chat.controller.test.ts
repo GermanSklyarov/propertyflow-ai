@@ -3094,6 +3094,76 @@ describe("PublicWidgetChatController", () => {
     }));
   });
 
+  it("resolves auto-captured lead listing from the assistant-selected comparison answer", async () => {
+    const tenant = tenantFactory({
+      subscriptionPlan: "starter"
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const leads = {
+      create: vi.fn().mockResolvedValue(leadFactory({ propertyId: "property-1", tenantId: tenant.id }))
+    } as unknown as LeadService;
+    const controller = new PublicWidgetChatController(
+      tenants,
+      { ask: vi.fn() } as unknown as AiChatService,
+      leads,
+      propertyRepository(),
+      rateLimitService()
+    );
+
+    await controller.createLead(
+      "demo-agency",
+      {
+        contactName: "Website visitor",
+        contactPhone: "Telegram @GermanSklyarov",
+        conversation: [
+          { role: "user", text: "хочу купить кондо в паттайе с бассейном для релокации, бюджет до 5млн" },
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Wongamat Sea View Residence" },
+              { propertyId: "property-3", title: "Jomtien Family Corner Condo" },
+              { propertyId: "property-4", title: "Pratumnak Investment One-Bed" }
+            ],
+            role: "assistant",
+            text: "Я нашла 3 подходящих варианта."
+          },
+          { role: "user", text: "какой из них ближе к пляжу?" },
+          {
+            recommendedListings: [
+              { propertyId: "property-1", title: "Wongamat Sea View Residence" },
+              { propertyId: "property-3", title: "Jomtien Family Corner Condo" },
+              { propertyId: "property-4", title: "Pratumnak Investment One-Bed" }
+            ],
+            role: "assistant",
+            text: "Из предложенных вариантов, ближе всего к пляжу находится Wongamat Sea View Residence, всего в 220 метрах."
+          },
+          { role: "user", text: "отлично, мне подходит, можно посмотреть?" },
+          {
+            recommendedListings: [{ propertyId: "property-1", title: "Wongamat Sea View Residence" }],
+            role: "assistant",
+            text: "Хороший выбор. Я помогу записаться на просмотр Wongamat Sea View Residence."
+          }
+        ],
+        locale: "ru",
+        message: "я бы хотел посмотреть в понедельник в 10 утра, мой ТГ @GermanSklyarov",
+        recommendedListings: [{ propertyId: "property-4", title: "Pratumnak Investment One-Bed" }]
+      },
+      "https://agency.example.com"
+    );
+
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("Viewing time: понедельник в 10"),
+      propertyId: "property-1",
+      status: "qualified"
+    }));
+    expect(leads.create).toHaveBeenCalledWith(tenant.id, expect.objectContaining({
+      message: expect.stringContaining("1. Wongamat Sea View Residence (property-1)")
+    }));
+  });
+
   it("extracts concrete viewing dates from widget leads", async () => {
     const tenant = tenantFactory({ subscriptionPlan: "starter" });
     const leads = {

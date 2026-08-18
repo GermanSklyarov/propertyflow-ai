@@ -190,6 +190,48 @@ describe("LeadNotificationService", () => {
     expect(requestBody.text).not.toContain("Siam Oriental");
   });
 
+  it("uses the lead property id instead of the first recommended listing in Telegram summaries", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LeadNotificationService(
+      tenantService(tenant({ leadTelegramBotToken: "telegram-test-token", leadTelegramChatIds: ["-100123"] }))
+    );
+
+    await service.notifyLeadCreated(
+      "tenant-demo",
+      lead({
+        contactName: "Website visitor",
+        contactPhone: "Telegram @GermanSklyarov",
+        message: [
+          "Widget handoff request.",
+          "",
+          "Visitor note: я бы хотел посмотреть в понедельник в 10 утра, мой ТГ @GermanSklyarov",
+          "",
+          "Lead qualification:",
+          "Intent: Buy",
+          "Budget: до 5млн",
+          "Purpose: Relocation",
+          "Viewing time: понедельник в 10",
+          "Contact channel: Telegram",
+          "",
+          "Recommended listings:",
+          "1. Wongamat Sea View Residence (property-1)",
+          "2. Pratumnak Investment One-Bed (property-4)",
+          "",
+          "Recent widget conversation:",
+          "user: хочу купить кондо в паттайе с бассейном для релокации, бюджет до 5млн"
+        ].join("\n"),
+        preferredLocale: "ru",
+        propertyId: "property-1"
+      })
+    );
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as { text: string };
+
+    expect(requestBody.text).toContain("🏠 Selected listing: Wongamat Sea View Residence (property-1)");
+    expect(requestBody.text).not.toContain("🏠 Selected listing: Pratumnak Investment One-Bed");
+  });
+
   it("sends LINE push messages with the tenant channel token", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);

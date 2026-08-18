@@ -17,6 +17,7 @@ import { PROPERTY_REPOSITORY, type PropertyRepository } from "../../../propertie
 import { TenantService } from "../../../tenants/application/tenant.service.js";
 import type { AiConciergePersona } from "../../application/ai-text-generator.js";
 import { AiChatService } from "../../application/ai-chat.service.js";
+import { planAiChatRetrieval } from "../../application/ai-chat-retrieval-plan.js";
 import { LocationIntelligenceService } from "../../application/location-intelligence.js";
 import { PublicWidgetRateLimitService } from "../../application/public-widget-rate-limit.service.js";
 import { PublicWidgetAskDto, PublicWidgetLeadDto } from "./public-widget-chat.dto.js";
@@ -362,7 +363,7 @@ export class PublicWidgetChatController {
       contactEmail,
       contactName: payload.contactName.trim(),
       contactPhone,
-      message: buildQualifiedLeadMessage(payload),
+      message: buildQualifiedLeadMessage(payload, propertyId),
       preferredLocale: locale,
       propertyId,
       source: "ai-concierge",
@@ -1711,13 +1712,23 @@ function normalizeOptional(value?: string): string | undefined {
 }
 
 function resolveLeadPropertyId(payload: PublicWidgetLeadDto): string | undefined {
+  const plan = planAiChatRetrieval({
+    conversation: payload.conversation,
+    locale: payload.locale,
+    message: payload.message ?? ""
+  });
+
+  if (plan.mode === "property-detail" && plan.propertyId) {
+    return plan.propertyId;
+  }
+
   return payload.recommendedListings?.find((listing: AiChatReferencedListing) => listing.propertyId.trim())?.propertyId.trim();
 }
 
-function buildQualifiedLeadMessage(payload: PublicWidgetLeadDto): string | undefined {
+function buildQualifiedLeadMessage(payload: PublicWidgetLeadDto, propertyId?: string): string | undefined {
   const lines = ["Widget handoff request."];
   const visitorNote = normalizeOptional(payload.message);
-  const recommendedListings: AiChatReferencedListing[] = (payload.recommendedListings ?? []).slice(0, 3);
+  const recommendedListings = resolveLeadRecommendedListings(payload, propertyId);
   const qualification = buildLeadQualificationSection(payload);
   const conversation = (payload.conversation ?? [])
     .filter((turn: AiChatTurn) => turn.text.trim())
@@ -1762,6 +1773,28 @@ function buildQualifiedLeadMessage(payload: PublicWidgetLeadDto): string | undef
   }
 
   return lines.join("\n\n").slice(0, 3000);
+}
+
+function resolveLeadRecommendedListings(payload: PublicWidgetLeadDto, propertyId?: string): AiChatReferencedListing[] {
+  const seen = new Set<string>();
+  const allListings = [
+    ...(payload.recommendedListings ?? []),
+    ...(payload.conversation ?? []).flatMap((turn: AiChatTurn) => turn.recommendedListings ?? [])
+  ].filter((listing: AiChatReferencedListing) => listing.propertyId.trim() && listing.title.trim());
+  const selectedListing = propertyId ? allListings.find((listing) => listing.propertyId === propertyId) : undefined;
+
+  return [selectedListing, ...allListings]
+    .filter((listing): listing is AiChatReferencedListing => Boolean(listing))
+    .filter((listing) => {
+      if (seen.has(listing.propertyId)) {
+        return false;
+      }
+
+      seen.add(listing.propertyId);
+
+      return true;
+    })
+    .slice(0, 3);
 }
 
 function assessWidgetLeadStatus(
