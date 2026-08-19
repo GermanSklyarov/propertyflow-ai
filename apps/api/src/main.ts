@@ -49,7 +49,7 @@ SwaggerModule.setup("docs", app, openApiDocument, {
   customSiteTitle: "PropertyFlow AI API"
 });
 
-await app.listen(config.apiPort);
+await app.listen(config.apiPort, "0.0.0.0");
 
 console.log(`PropertyFlow API listening on port ${config.apiPort}`);
 console.log(`Swagger docs available at /docs`);
