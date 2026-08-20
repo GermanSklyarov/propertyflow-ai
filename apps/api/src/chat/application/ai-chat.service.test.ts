@@ -11,11 +11,14 @@ describe("AiChatService", () => {
     delete process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK;
     delete process.env.AI_DEFAULT_PROVIDER;
     delete process.env.AI_CHAT_MODEL;
+    delete process.env.AI_CHAT_TIMEOUT_MS;
+    delete process.env.AI_CHAT_MAX_OUTPUT_TOKENS;
     delete process.env.GEMINI_API_KEY;
     delete process.env.GEMINI_CHAT_MODEL;
     delete process.env.GOOGLE_MAPS_API_KEY;
     delete process.env.MAPBOX_ACCESS_TOKEN;
     delete process.env.MAP_GEOCODING_PROVIDER;
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -1975,6 +1978,7 @@ describe("AiChatService", () => {
     process.env.AI_DEFAULT_PROVIDER = "gemini";
     process.env.GEMINI_API_KEY = "gemini-key";
     process.env.GEMINI_CHAT_MODEL = "gemini-test-model";
+    process.env.AI_CHAT_MAX_OUTPUT_TOKENS = "1800";
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -2021,7 +2025,7 @@ describe("AiChatService", () => {
       contents: Array<{ parts: Array<{ text: string }> }>;
       generationConfig: { maxOutputTokens: number };
     };
-    expect(body.generationConfig.maxOutputTokens).toBe(1400);
+    expect(body.generationConfig.maxOutputTokens).toBe(1800);
     const prompt = body.contents[0]?.parts[0]?.text ?? "";
     expect(prompt).toContain('Your public concierge name is "Anna".');
     expect(prompt).toContain("Use a friendly tone.");
@@ -2096,6 +2100,35 @@ describe("AiChatService", () => {
         message: "Which is closer to the beach?"
       })
     ).rejects.toThrow("truncated by max token limit");
+  });
+
+  it("times out slow LLM provider calls so localized deterministic fallback can answer quickly", async () => {
+    vi.useFakeTimers();
+    process.env.AI_DEFAULT_PROVIDER = "gemini";
+    process.env.GEMINI_API_KEY = "gemini-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-test-model";
+    process.env.AI_CHAT_TIMEOUT_MS = "1000";
+    vi.spyOn(globalThis, "fetch").mockImplementation(
+      (_url, init) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("The operation was aborted.", "AbortError"));
+          });
+        })
+    );
+    const generator = new OpenAiTextGenerator();
+
+    const result = generator.generate({
+      citations: [],
+      context: "Property context",
+      locale: "ru",
+      message: "Подбери кондо до 5 млн"
+    });
+    const assertion = expect(result).rejects.toThrow("timed out after 1000ms");
+
+    await vi.advanceTimersByTimeAsync(1_000);
+
+    await assertion;
   });
 });
 

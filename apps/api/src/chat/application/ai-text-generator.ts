@@ -8,7 +8,8 @@ import type {
 
 export const AI_TEXT_GENERATOR = Symbol("AI_TEXT_GENERATOR");
 
-const maxConciergeOutputTokens = 1400;
+const defaultConciergeOutputTokens = 1400;
+const defaultAiChatTimeoutMs = 8_000;
 
 export interface AiConciergePersona {
   leadQualificationFields?: TenantLeadQualificationField[];
@@ -79,35 +80,39 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       throw new ServiceUnavailableException("AI provider is not configured");
     }
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${apiKey}`,
-        "content-type": "application/json"
+    const response = await fetchWithTimeout(
+      "https://api.openai.com/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${apiKey}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          model,
+          max_tokens: maxConciergeOutputTokens(),
+          temperature: 0.2,
+          messages: [
+            {
+              role: "system",
+              content: this.buildSystemPrompt(request)
+            },
+            {
+              role: "user",
+              content: [
+                `Visitor question: ${request.message}`,
+                "",
+                "Tenant context:",
+                request.context,
+                "",
+                `Available citation labels: ${request.citations.map((citation) => citation.label).join(" | ")}`
+              ].join("\n")
+            }
+          ]
+        })
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxConciergeOutputTokens,
-        temperature: 0.2,
-        messages: [
-          {
-            role: "system",
-            content: this.buildSystemPrompt(request)
-          },
-          {
-            role: "user",
-            content: [
-              `Visitor question: ${request.message}`,
-              "",
-              "Tenant context:",
-              request.context,
-              "",
-              `Available citation labels: ${request.citations.map((citation) => citation.label).join(" | ")}`
-            ].join("\n")
-          }
-        ]
-      })
-    });
+      aiChatTimeoutMs()
+    );
 
     if (!response.ok) {
       throw new ServiceUnavailableException(`AI provider request failed: ${response.status}`);
@@ -140,7 +145,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       throw new ServiceUnavailableException("AI provider is not configured");
     }
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`,
       {
         method: "POST",
@@ -149,7 +154,7 @@ export class OpenAiTextGenerator implements AiTextGenerator {
         },
         body: JSON.stringify({
           generationConfig: {
-            maxOutputTokens: maxConciergeOutputTokens,
+            maxOutputTokens: maxConciergeOutputTokens(),
             temperature: 0.2
           },
           contents: [
@@ -172,7 +177,8 @@ export class OpenAiTextGenerator implements AiTextGenerator {
             }
           ]
         })
-      }
+      },
+      aiChatTimeoutMs()
     );
 
     if (!response.ok) {
@@ -277,6 +283,48 @@ export class OpenAiTextGenerator implements AiTextGenerator {
       undefined
     );
   }
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new ServiceUnavailableException(`AI provider request timed out after ${timeoutMs}ms`);
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function aiChatTimeoutMs(env: NodeJS.ProcessEnv = process.env): number {
+  return boundedInteger(env.AI_CHAT_TIMEOUT_MS, defaultAiChatTimeoutMs, 1_000, 30_000);
+}
+
+function maxConciergeOutputTokens(env: NodeJS.ProcessEnv = process.env): number {
+  return boundedInteger(env.AI_CHAT_MAX_OUTPUT_TOKENS, defaultConciergeOutputTokens, 512, 4_000);
+}
+
+function boundedInteger(value: string | undefined, fallback: number, min: number, max: number): number {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed)) {
+    return fallback;
+  }
+
+  return Math.min(Math.max(parsed, min), max);
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }
 
 const leadQualificationFieldLabels: Record<TenantLeadQualificationField, string> = {
