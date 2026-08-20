@@ -139,6 +139,56 @@ describe("LeadNotificationService", () => {
     expect(requestBody.text).not.toContain("deliberately long response");
   });
 
+  it("sends Telegram continuation viewing context with selected listing title", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
+    vi.stubGlobal("fetch", fetchMock);
+    const service = new LeadNotificationService(
+      tenantService(tenant({ leadTelegramBotToken: "telegram-test-token", leadTelegramChatIds: ["-100123"] }))
+    );
+
+    await service.notifyLeadCreated(
+      "tenant-demo",
+      lead({
+        contactEmail: undefined,
+        contactName: "GermanSklyarov",
+        contactPhone: "Telegram @GermanSklyarov",
+        message: [
+          "Widget handoff request.",
+          "",
+          "Visitor note: я бы хотел посмотреть в понедельник в 10 утра, мой ТГ @GermanSklyarov",
+          "",
+          "Lead qualification:",
+          "Intent: Buy",
+          "Purpose: Relocation",
+          "Timing: я бы хотел посмотреть в понедельник в 10 утра, мой ТГ @GermanSklyarov",
+          "Contact channel: Telegram",
+          "",
+          "Recommended listings:",
+          "1. Wongamat Sea View Residence (property-1)",
+          "",
+          "Recent widget conversation:",
+          "user: Хочу кондо в Паттайе с бассейном до 5 млн для релокации",
+          "user: мне подходит, можно посмотреть?",
+          "user: я бы хотел посмотреть в понедельник в 10 утра, мой ТГ @GermanSklyarov"
+        ].join("\n"),
+        preferredLocale: "ru",
+        propertyId: "property-1"
+      })
+    );
+
+    const requestBody = JSON.parse(fetchMock.mock.calls[0]?.[1]?.body as string) as { text: string };
+
+    expect(requestBody.text).toContain("👤 Contact: GermanSklyarov");
+    expect(requestBody.text).toContain("📞 Phone: Telegram @GermanSklyarov");
+    expect(requestBody.text).toContain("💬 Contact channel: Telegram");
+    expect(requestBody.text).toContain("🧭 Intent: Buy");
+    expect(requestBody.text).toContain("🎯 Purpose: Relocation");
+    expect(requestBody.text).toContain("🏠 Selected listing: Wongamat Sea View Residence (property-1)");
+    expect(requestBody.text).toContain("📝 Latest request: я бы хотел посмотреть в понедельник в 10 утра");
+    expect(requestBody.text).toContain("- мне подходит, можно посмотреть?");
+    expect(requestBody.text).not.toContain("🏠 Property ID: property-1");
+  });
+
   it("sends Russian rental qualification and selected listing details to Telegram", async () => {
     const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200 });
     vi.stubGlobal("fetch", fetchMock);

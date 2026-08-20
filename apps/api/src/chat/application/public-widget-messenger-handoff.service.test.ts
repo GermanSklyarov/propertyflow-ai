@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach } from "vitest";
 import type { TenantSnapshot } from "@propertyflow/contracts";
 import type { Pool } from "pg";
+import type { LeadService } from "../../leads/application/lead.service.js";
 import type { TenantService } from "../../tenants/application/tenant.service.js";
 import type { AiChatService } from "./ai-chat.service.js";
 import { PublicWidgetMessengerHandoffService } from "./public-widget-messenger-handoff.service.js";
@@ -156,6 +157,71 @@ describe("PublicWidgetMessengerHandoffService", () => {
     expect(query).not.toHaveBeenCalledWith(expect.stringContaining("leadTelegramChatIds"), expect.anything());
   });
 
+  it("creates a qualified viewing lead from a Telegram continuation message with contact details", async () => {
+    const pool = poolMock();
+    const query = pool.query as unknown as ReturnType<typeof vi.fn>;
+    query.mockResolvedValueOnce({
+      rows: [
+        {
+          conversation: [
+            { role: "user", text: "Хочу кондо в Паттайе с бассейном до 5 млн для релокации" },
+            {
+              recommendedListings: [{ propertyId: "property-1", title: "Wongamat Sea View Residence" }],
+              role: "assistant",
+              text: "Я нашла 3 подходящих варианта."
+            },
+            { role: "user", text: "мне подходит, можно посмотреть?" },
+            {
+              recommendedListings: [{ propertyId: "property-1", title: "property-1" }],
+              role: "assistant",
+              text: "Wongamat Sea View Residence ближе всего к пляжу."
+            }
+          ],
+          expires_at: new Date(Date.now() + 60_000),
+          id: "handoff-1",
+          locale: "ru",
+          recipient_id: "telegram-chat-1",
+          status: "linked",
+          tenant_id: "tenant-1"
+        }
+      ]
+    });
+    const chat = chatService();
+    const leads = leadService();
+    const service = new PublicWidgetMessengerHandoffService(pool, tenantService(), chat, leads);
+
+    const reply = await service.handleTelegramMessage(
+      "demo-agency",
+      "telegram-chat-1",
+      "я бы хотел посмотреть в понедельник в 10 утра, мой ТГ @GermanSklyarov"
+    );
+
+    expect(reply).toContain("отправила агентству вашу заявку");
+    expect(reply).toContain("Wongamat Sea View Residence");
+    expect(reply).not.toContain("lead-1");
+    expect(reply).not.toContain("property-1");
+    expect(chat.ask).not.toHaveBeenCalled();
+    expect(leads.create).toHaveBeenCalledWith(
+      "tenant-1",
+      expect.objectContaining({
+        contactName: "GermanSklyarov",
+        contactPhone: "Telegram @GermanSklyarov",
+        preferredLocale: "ru",
+        propertyId: "property-1",
+        source: "ai-concierge",
+        status: "qualified"
+      })
+    );
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).toContain("Widget handoff request.");
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).toContain("Visitor note: я бы хотел посмотреть в понедельник в 10 утра");
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).toContain("Viewing time: понедельник в 10 утра");
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).not.toContain("Viewing time: я бы хотел посмотреть");
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).toContain("Purpose: Relocation");
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).toContain("1. Wongamat Sea View Residence (property-1)");
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).not.toContain("1. property-1 (property-1)");
+    expect(vi.mocked(leads.create).mock.calls[0]?.[1].message).toContain("user: мне подходит, можно посмотреть?");
+  });
+
   it("accepts Telegram Web bot-qualified start commands", async () => {
     const pool = poolMock();
     const query = pool.query as unknown as ReturnType<typeof vi.fn>;
@@ -196,6 +262,16 @@ function chatService(): AiChatService {
       suggestedActions: []
     })
   } as unknown as AiChatService;
+}
+
+function leadService(): LeadService {
+  return {
+    create: vi.fn().mockResolvedValue({
+      id: "lead-1",
+      propertyId: "property-1",
+      status: "qualified"
+    })
+  } as unknown as LeadService;
 }
 
 function tenant(widget: Partial<TenantSnapshot["widget"]> = {}): TenantSnapshot {
