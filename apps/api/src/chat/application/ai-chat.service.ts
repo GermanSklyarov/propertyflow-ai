@@ -125,18 +125,29 @@ export class AiChatService {
     request: AiChatRequest,
     options: AiChatAskOptions
   ): Promise<AiChatResponse> {
+    const startedAt = Date.now();
     const effectiveRequest = {
       ...request,
       message: resolveEffectiveSearchMessage(request)
     };
+    const knowledgePromise = isMoreListingsRequest(request.message)
+      ? Promise.resolve([])
+      : this.retrieveKnowledge(tenantId, effectiveRequest);
     const search = await this.retrieveListingSearch(tenantId, effectiveRequest);
+    const searchMs = Date.now() - startedAt;
+    const fallbackStartedAt = Date.now();
     const fallbackItems = search.items.length
       ? []
       : await this.properties.search(tenantId, search.filters);
+    const fallbackMs = Date.now() - fallbackStartedAt;
     const items = search.items.length ? search.items : fallbackItems;
     const matches = items.slice(0, 3);
-    const knowledge = isMoreListingsRequest(request.message) ? [] : await this.retrieveKnowledge(tenantId, effectiveRequest);
+    const knowledgeStartedAt = Date.now();
+    const knowledge = await knowledgePromise;
+    const knowledgeWaitMs = Date.now() - knowledgeStartedAt;
+    const dueDiligenceStartedAt = Date.now();
     const dueDiligence = await this.retrieveDueDiligence(tenantId, matches);
+    const dueDiligenceMs = Date.now() - dueDiligenceStartedAt;
     const draft = buildAiChatSearchResponseDraft({
       dueDiligence,
       items,
@@ -145,12 +156,23 @@ export class AiChatService {
       requestMessage: effectiveRequest.message,
       search
     });
-
-    return this.buildResponse({
+    const responseStartedAt = Date.now();
+    const response = await this.buildResponse({
       ...draft,
       request,
       ...options
     });
+    const responseMs = Date.now() - responseStartedAt;
+
+    const totalMs = Date.now() - startedAt;
+
+    if (totalMs >= 1_000 || responseMs >= 1_000) {
+      this.logger.warn(
+        `Slow AI chat search tenant=${tenantId} generation=${response.generation?.mode ?? "unknown"} searchMs=${searchMs} fallbackMs=${fallbackMs} knowledgeWaitMs=${knowledgeWaitMs} dueDiligenceMs=${dueDiligenceMs} responseMs=${responseMs} totalMs=${totalMs}`
+      );
+    }
+
+    return response;
   }
 
   private async answerWithRecentListingComparison(
@@ -171,6 +193,7 @@ export class AiChatService {
       properties,
       request.message,
       planComparison(request),
+      request.locale,
       this.locationIntelligence
     );
     const citations = properties.map((property) => propertyCitation(property));
@@ -179,6 +202,7 @@ export class AiChatService {
       citations,
       context: buildAiChatContext([answer, ...buildListingEvidence(properties)], citations),
       deterministicDraft: answer,
+      forceDeterministic: true,
       insights: [],
       matchedPropertyIds: properties.map((property) => property.id),
       request,
@@ -341,10 +365,22 @@ export class AiChatService {
       suggestedActions: string[];
     }
   ): Promise<AiChatResponse> {
+    const startedAt = Date.now();
+
     return buildAiChatResponse({
       ...options,
       textGenerator: this.textGenerator,
       useDeterministicFallback: process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK === "true"
+    }).then((response) => {
+      const responseMs = Date.now() - startedAt;
+
+      if (responseMs >= 1_000) {
+        this.logger.warn(
+          `Slow AI chat response mode=${response.generation?.mode ?? "unknown"} suggestedActions=${options.suggestedActions.join(",")} matched=${options.matchedPropertyIds.length} responseMs=${responseMs}`
+        );
+      }
+
+      return response;
     });
   }
 }
@@ -357,13 +393,23 @@ async function buildRecentListingComparisonAnswer(
   properties: PropertySnapshot[],
   message: string,
   comparison: NonNullable<ReturnType<typeof planAiChatRetrieval>["comparison"]>,
+  locale: AiChatRequest["locale"],
   locationIntelligence: LocationIntelligenceService
 ): Promise<string> {
+  if (comparison === "beach-distance" || explicitlyAsksForBeachDistance(message)) {
+    return buildBeachDistanceComparisonAnswer(properties, locale);
+  }
+
   if (comparison === "poi-distance") {
     const target = await locationIntelligence.resolveComparisonTarget(message, properties[0]?.market);
 
     if (!target) {
-      return "I can compare only the options we just discussed, but I could not match that place to the current city map data yet. If the agency configures a map geocoding provider, I can estimate distances to more arbitrary landmarks.";
+      return localizedComparisonText(locale, {
+        en: "I can compare only the options we just discussed, but I could not match that place to the current city map data yet. If the agency configures a map geocoding provider, I can estimate distances to more arbitrary landmarks.",
+        ru: "Я могу сравнить только варианты, которые мы уже обсуждали, но пока не смогла сопоставить это место с городской картой. Если агентство подключит геокодинг, я смогу считать расстояния до произвольных ориентиров.",
+        th: "ฉันเปรียบเทียบได้เฉพาะตัวเลือกที่เราคุยกันอยู่ แต่ยังจับคู่สถานที่นี้กับข้อมูลแผนที่เมืองไม่ได้ หากเอเจนซี่ตั้งค่า geocoding ฉันจะคำนวณระยะถึงจุดอ้างอิงอื่นได้",
+        zh: "我可以比较刚才讨论过的选项，但暂时无法把这个地点匹配到当前城市地图。如果机构配置地图地理编码，我就可以估算到更多地标的距离。"
+      });
     }
 
     const distances = comparePropertiesToLocationTarget(properties, target);
@@ -378,26 +424,24 @@ async function buildRecentListingComparisonAnswer(
       .join(" ");
 
     return closest
-      ? `Among the options we just discussed, ${closest.property.title} is closest to ${targetLabel} at about ${formatDistance(
-          closest.distanceMeters
-        )}. ${comparisonLines}`
-      : `I can compare only the options we just discussed, but none of those listings has usable coordinates.`;
-  }
-
-  if (comparison === "beach-distance") {
-    const withKnownDistance = properties.filter((property) => property.beachDistanceMeters !== undefined);
-    const closest = [...withKnownDistance].sort((left, right) => left.beachDistanceMeters! - right.beachDistanceMeters!)[0];
-    const comparisonLines = properties.map((property) =>
-      property.beachDistanceMeters === undefined
-        ? `${property.title}: beach distance is not specified`
-        : `${property.title}: ${property.beachDistanceMeters}m from the beach`
-    );
-
-    return closest
-      ? `Among the options we just discussed, ${closest.title} is closest to the beach at ${closest.beachDistanceMeters}m. ${comparisonLines.join(
-          " "
-        )}`
-      : `I can compare only the options we just discussed, but none of those listings has beach distance specified. ${comparisonLines.join(" ")}`;
+      ? localizedComparisonText(locale, {
+          en: `Among the options we just discussed, ${closest.property.title} is closest to ${targetLabel} at about ${formatDistance(
+            closest.distanceMeters
+          )}. ${comparisonLines}`,
+          ru: `Из вариантов, которые мы обсуждали, ближе всего к ${targetLabel} находится ${closest.property.title}: примерно ${formatDistance(
+            closest.distanceMeters
+          )}. ${comparisonLines}`,
+          th: `จากตัวเลือกที่เราคุยกัน ${closest.property.title} อยู่ใกล้ ${targetLabel} ที่สุด ประมาณ ${formatDistance(
+            closest.distanceMeters
+          )}. ${comparisonLines}`,
+          zh: `在刚才讨论的选项中，${closest.property.title} 离 ${targetLabel} 最近，约 ${formatDistance(closest.distanceMeters)}。${comparisonLines}`
+        })
+      : localizedComparisonText(locale, {
+          en: "I can compare only the options we just discussed, but none of those listings has usable coordinates.",
+          ru: "Я могу сравнить только варианты, которые мы уже обсуждали, но у этих объектов нет координат для такого расчёта.",
+          th: "ฉันเปรียบเทียบได้เฉพาะตัวเลือกที่เราคุยกัน แต่รายการเหล่านี้ไม่มีพิกัดที่ใช้คำนวณได้",
+          zh: "我可以比较刚才讨论过的选项，但这些房源没有可用于计算的坐标。"
+        });
   }
 
   if (comparison === "ownership") {
@@ -420,6 +464,52 @@ async function buildRecentListingComparisonAnswer(
   return best
     ? `Among the options we just discussed, ${best.title} looks strongest for ${criteria} based on the available listing facts. ${facts}`
     : `I can compare only the options we just discussed for ${criteria}. ${facts}`;
+}
+
+function buildBeachDistanceComparisonAnswer(properties: PropertySnapshot[], locale: AiChatRequest["locale"]): string {
+  const withKnownDistance = properties.filter((property) => property.beachDistanceMeters !== undefined);
+  const closest = [...withKnownDistance].sort((left, right) => left.beachDistanceMeters! - right.beachDistanceMeters!)[0];
+  const comparisonLines = properties.map((property) =>
+    property.beachDistanceMeters === undefined
+      ? localizedComparisonText(locale, {
+          en: `${property.title}: beach distance is not specified`,
+          ru: `${property.title}: расстояние до пляжа не указано`,
+          th: `${property.title}: ยังไม่มีข้อมูลระยะถึงชายหาด`,
+          zh: `${property.title}: 未标明到海滩的距离`
+        })
+      : localizedComparisonText(locale, {
+          en: `${property.title}: ${property.beachDistanceMeters} m from the beach`,
+          ru: `${property.title}: ${property.beachDistanceMeters} м до пляжа`,
+          th: `${property.title}: ${property.beachDistanceMeters} ม. จากชายหาด`,
+          zh: `${property.title}: 距海滩 ${property.beachDistanceMeters} 米`
+        })
+  );
+
+  if (!closest) {
+    return localizedComparisonText(locale, {
+      en: `I can compare only the options we just discussed, but none of those listings has beach distance specified. ${comparisonLines.join(" ")}`,
+      ru: `Я могу сравнить только варианты, которые мы уже обсуждали, но ни у одного из них не указано расстояние до пляжа. ${comparisonLines.join(" ")}`,
+      th: `ฉันเปรียบเทียบได้เฉพาะตัวเลือกที่เราคุยกัน แต่ไม่มีรายการใดระบุระยะถึงชายหาด ${comparisonLines.join(" ")}`,
+      zh: `我可以比较刚才讨论过的选项，但这些房源都没有标明到海滩的距离。${comparisonLines.join(" ")}`
+    });
+  }
+
+  return localizedComparisonText(locale, {
+    en: `Among the options we just discussed, ${closest.title} is closest to the beach at ${closest.beachDistanceMeters} m. ${comparisonLines.join(
+      " "
+    )}`,
+    ru: `Из этих вариантов ближе всего к пляжу ${closest.title}: примерно ${closest.beachDistanceMeters} м. ${comparisonLines.join(" ")}`,
+    th: `จากตัวเลือกเหล่านี้ ${closest.title} ใกล้ชายหาดที่สุด ประมาณ ${closest.beachDistanceMeters} ม. ${comparisonLines.join(" ")}`,
+    zh: `在这些选项中，${closest.title} 离海滩最近，约 ${closest.beachDistanceMeters} 米。${comparisonLines.join(" ")}`
+  });
+}
+
+function explicitlyAsksForBeachDistance(message: string): boolean {
+  return /\b(?:beach|sea|shore|coast)\b|пляж|мор[еяю]|ชายหาด|ทะเล|海滩|海灘|海边|海邊/i.test(message);
+}
+
+function localizedComparisonText(locale: AiChatRequest["locale"], labels: Record<AiChatRequest["locale"], string>): string {
+  return labels[locale] ?? labels.en;
 }
 
 function scorePropertyForComparison(

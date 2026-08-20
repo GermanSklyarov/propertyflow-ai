@@ -39,6 +39,7 @@ export interface AiTextGenerator {
 
 interface OpenAiChatCompletionResponse {
   choices?: Array<{
+    finish_reason?: string;
     message?: {
       content?: string;
     };
@@ -52,6 +53,7 @@ interface GeminiGenerateContentResponse {
         text?: string;
       }>;
     };
+    finishReason?: string;
   }>;
 }
 
@@ -112,10 +114,15 @@ export class OpenAiTextGenerator implements AiTextGenerator {
     }
 
     const payload = (await response.json()) as OpenAiChatCompletionResponse;
-    const answer = payload.choices?.[0]?.message?.content?.trim();
+    const choice = payload.choices?.[0];
+    const answer = choice?.message?.content?.trim();
 
     if (!answer) {
       throw new ServiceUnavailableException("AI provider returned an empty answer");
+    }
+
+    if (choice?.finish_reason === "length") {
+      throw new ServiceUnavailableException("AI provider response was truncated by max token limit");
     }
 
     return {
@@ -173,10 +180,15 @@ export class OpenAiTextGenerator implements AiTextGenerator {
     }
 
     const payload = (await response.json()) as GeminiGenerateContentResponse;
-    const answer = payload.candidates?.[0]?.content?.parts?.map((part) => part.text).join("").trim();
+    const candidate = payload.candidates?.[0];
+    const answer = candidate?.content?.parts?.map((part) => part.text).join("").trim();
 
     if (!answer) {
       throw new ServiceUnavailableException("AI provider returned an empty answer");
+    }
+
+    if (candidate?.finishReason === "MAX_TOKENS") {
+      throw new ServiceUnavailableException("AI provider response was truncated by max token limit");
     }
 
     return {

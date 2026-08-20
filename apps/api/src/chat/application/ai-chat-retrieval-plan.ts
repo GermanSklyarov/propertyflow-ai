@@ -7,6 +7,7 @@ const recentSetReferencePattern =
 
 const beachDistanceComparisonPattern =
   /closer|closest|nearer|nearest|close to|distance|beach|пляж|мор|недалеко|близко|ใกล้|ที่สุด|ชายหาด|ทะเล|距离|距離|近|最近|海滩|海灘|海边|海邊/i;
+const explicitBeachDistanceComparisonPattern = /\b(?:beach|sea|shore|coast)\b|пляж|мор|ชายหาด|ทะเล|海滩|海灘|海边|海邊/i;
 const shortlistComparisonPattern =
   /\b(?:compare|which|what|better|best|pick|choose|rank|recommend|suggest)\b|сравн|како[йе]|лучш|выбр|рекоменд|посовет|哪个|哪個|比较|比較|ดีกว่า|ดีที่สุด|เปรียบเทียบ/i;
 const investmentComparisonPattern = /investment|invest|yield|roi|rent|rental|доход|инвест|аренд|收益|投资|投資|出租|租金|ลงทุน|ปล่อยเช่า/i;
@@ -343,6 +344,10 @@ function resolveRecentListingComparison(request: AiChatRequest): AiChatRetrieval
 
   if (ownershipQuestionPattern.test(message)) {
     return "ownership";
+  }
+
+  if (explicitBeachDistanceComparisonPattern.test(message)) {
+    return "beach-distance";
   }
 
   if (isLocationInfrastructureQuestion(message)) {

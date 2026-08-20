@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Headers, Inject, Param, Post, Req } from "@nestjs/common";
+import { BadRequestException, Body, Controller, Headers, Inject, Logger, Param, Post, Req } from "@nestjs/common";
 import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import type {
   PublicWidgetAskResponse,
@@ -222,6 +222,8 @@ const WIDGET_LOCATION_TARGETS: Partial<Record<PropertySnapshot["market"], Widget
 @Controller("public/v1/widget")
 @ApiTags("public-widget")
 export class PublicWidgetChatController {
+  private readonly logger = new Logger(PublicWidgetChatController.name);
+
   constructor(
     @Inject(TenantService) private readonly tenants: TenantService,
     @Inject(AiChatService) private readonly chat: AiChatService,
@@ -268,6 +270,7 @@ export class PublicWidgetChatController {
     @Headers("origin") origin?: string,
     @Headers("referer") referer?: string
   ): Promise<PublicWidgetAskResponse> {
+    const startedAt = Date.now();
     const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
     assertPublicWidgetAskPayloadBounds(payload);
     this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
@@ -276,8 +279,10 @@ export class PublicWidgetChatController {
       sessionId: payload.sessionId,
       tenantId: tenant.id
     });
+    const guardMs = Date.now() - startedAt;
 
     const locale = resolveWidgetLocale(tenant.widget.languages, payload.locale);
+    const chatStartedAt = Date.now();
     const response = await this.chat.ask(
       tenant.id,
       {
@@ -292,12 +297,16 @@ export class PublicWidgetChatController {
         persona: resolveWidgetPersona(tenant, locale)
       }
     );
+    const chatMs = Date.now() - chatStartedAt;
+    const recordStartedAt = Date.now();
     await this.tenants.recordPublicWidgetAsk(tenant, {
       locale,
       origin: origin ?? null,
       referer: referer ?? null,
       sessionId: payload.sessionId ?? null
     });
+    const recordMs = Date.now() - recordStartedAt;
+    const recommendationsStartedAt = Date.now();
     const recommendations = await this.buildRecommendedListings(
       tenant,
       response.matchedPropertyIds,
@@ -306,6 +315,14 @@ export class PublicWidgetChatController {
       locale,
       payload
     );
+    const recommendationsMs = Date.now() - recommendationsStartedAt;
+    const totalMs = Date.now() - startedAt;
+
+    if (totalMs >= 1_000) {
+      this.logger.warn(
+        `Slow public widget ask tenant=${tenant.id} mode=${response.generation?.mode ?? "unknown"} guardMs=${guardMs} chatMs=${chatMs} recordMs=${recordMs} recommendationsMs=${recommendationsMs} totalMs=${totalMs}`
+      );
+    }
 
     return {
       ...response,

@@ -849,9 +849,81 @@ describe("AiChatService", () => {
 
     expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
     expect(response.matchedPropertyIds).toEqual(["property-1", "property-2", "property-3"]);
-    expect(response.answer).toContain("Price Recommendation Target Condo is closest to the beach at 450m");
-    expect(response.answer).toContain("Price Comparable A: 500m from the beach");
+    expect(response.answer).toContain("Price Recommendation Target Condo is closest to the beach at 450 m");
+    expect(response.answer).toContain("Price Comparable A: 500 m from the beach");
     expect(response.answer).not.toContain("Wongamat Sea View Residence");
+  });
+
+  it("answers Russian beach-distance shortlist comparisons in Russian", async () => {
+    process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
+    const propertyById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          beachDistanceMeters: 220,
+          id: "property-1",
+          title: "Wongamat Sea View Residence"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          beachDistanceMeters: 520,
+          id: "property-2",
+          title: "Jomtien Family Corner Condo"
+        })
+      ],
+      [
+        "property-3",
+        propertyFactory({
+          beachDistanceMeters: 780,
+          id: "property-3",
+          title: "Pratumnak Investment One-Bed"
+        })
+      ]
+    ]);
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const textGenerator = {
+      isConfigured: vi.fn().mockReturnValue(true),
+      generate: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) => Promise.resolve(propertyById.get(propertyId) ?? null)),
+        search: vi.fn()
+      },
+      textGenerator
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [
+            { propertyId: "property-1", title: "Wongamat Sea View Residence" },
+            { propertyId: "property-2", title: "Jomtien Family Corner Condo" },
+            { propertyId: "property-3", title: "Pratumnak Investment One-Bed" }
+          ],
+          role: "assistant",
+          text: "Я нашла 3 подходящих вариантов."
+        }
+      ],
+      locale: "ru",
+      message: "какой из них ближе к пляжу?"
+    });
+
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(textGenerator.generate).not.toHaveBeenCalled();
+    expect(response.generation?.mode).toBe("deterministic-fallback");
+    expect(response.answer).toContain("Из этих вариантов ближе всего к пляжу Wongamat Sea View Residence");
+    expect(response.answer).toContain("Wongamat Sea View Residence: 220 м до пляжа");
+    expect(response.answer).toContain("Jomtien Family Corner Condo: 520 м до пляжа");
+    expect(response.answer).toContain("Pratumnak Investment One-Bed: 780 м до пляжа");
+    expect(response.answer).not.toContain("Pattaya City");
+    expect(response.answer).not.toContain("Among the options");
   });
 
   it("recommends value for money from the previous shortlist instead of searching again", async () => {
@@ -1963,6 +2035,67 @@ describe("AiChatService", () => {
     expect(prompt).toContain('never use masculine forms such as "я нашел" or "я подобрал"');
     expect(prompt).toContain("Do not print bracketed citation markers like [1], [2]");
     expect(prompt).toContain("If short-term rent, minimum stay, or contract term facts appear in context");
+  });
+
+  it("rejects truncated Gemini answers instead of showing cut-off prose", async () => {
+    process.env.AI_DEFAULT_PROVIDER = "gemini";
+    process.env.GEMINI_API_KEY = "gemini-key";
+    process.env.GEMINI_CHAT_MODEL = "gemini-test-model";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          candidates: [
+            {
+              content: {
+                parts: [{ text: "This answer stops in the middle of" }]
+              },
+              finishReason: "MAX_TOKENS"
+            }
+          ]
+        }),
+        { status: 200 }
+      )
+    );
+    const generator = new OpenAiTextGenerator();
+
+    await expect(
+      generator.generate({
+        citations: [],
+        context: "Property context",
+        locale: "en",
+        message: "Which is closer to the beach?"
+      })
+    ).rejects.toThrow("truncated by max token limit");
+  });
+
+  it("rejects truncated OpenAI answers instead of showing cut-off prose", async () => {
+    process.env.OPENAI_API_KEY = "openai-key";
+    process.env.AI_CHAT_MODEL = "gpt-test-model";
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              finish_reason: "length",
+              message: {
+                content: "This answer stops in the middle of"
+              }
+            }
+          ]
+        }),
+        { status: 200 }
+      )
+    );
+    const generator = new OpenAiTextGenerator();
+
+    await expect(
+      generator.generate({
+        citations: [],
+        context: "Property context",
+        locale: "en",
+        message: "Which is closer to the beach?"
+      })
+    ).rejects.toThrow("truncated by max token limit");
   });
 });
 
