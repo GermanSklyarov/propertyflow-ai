@@ -11,12 +11,18 @@ import {
   MinLength,
   ValidateNested
 } from "class-validator";
-import type { PublicWidgetAskRequest, PublicWidgetLeadRequest } from "@propertyflow/contracts";
+import type {
+  PublicWidgetAskRequest,
+  PublicWidgetLeadRequest,
+  PublicWidgetMessengerHandoffRequest,
+  PublicWidgetMessengerProvider
+} from "@propertyflow/contracts";
 import type { PropertyPurpose, ThailandMarket } from "@propertyflow/domain";
 
 const locales: PublicWidgetAskRequest["locale"][] = ["en", "ru", "th", "zh"];
 const purposes: PropertyPurpose[] = ["living", "investment", "relocation", "family"];
 const thailandMarkets: ThailandMarket[] = ["pattaya", "phuket", "bangkok", "hua-hin", "koh-samui"];
+const messengerProviders: PublicWidgetMessengerProvider[] = ["telegram", "line", "whatsapp"];
 
 class PublicWidgetConversationListingDto {
   @IsString()
@@ -119,4 +125,25 @@ export class PublicWidgetLeadDto implements PublicWidgetLeadRequest {
   @ValidateNested({ each: true })
   @Type(() => PublicWidgetConversationListingDto)
   recommendedListings?: PublicWidgetLeadRequest["recommendedListings"];
+}
+
+export class PublicWidgetMessengerHandoffDto implements PublicWidgetMessengerHandoffRequest {
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(12)
+  @ValidateNested({ each: true })
+  @Type(() => PublicWidgetConversationTurnDto)
+  conversation?: PublicWidgetMessengerHandoffRequest["conversation"];
+
+  @IsIn(locales)
+  locale!: PublicWidgetMessengerHandoffRequest["locale"];
+
+  @IsOptional()
+  @IsIn(messengerProviders)
+  provider?: PublicWidgetMessengerProvider;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  sessionId?: string;
 }

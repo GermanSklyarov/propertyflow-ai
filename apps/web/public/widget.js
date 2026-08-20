@@ -63,6 +63,7 @@
     },
     isHandoffOpen: false,
     isHandoffSending: false,
+    isMessengerHandoffSending: false,
     isOpen: false,
     isReady: false,
     isSending: false,
@@ -137,6 +138,9 @@
     var noteLabel = escapeText(getWidgetNote(state.locale));
     var launcherSubtitle = escapeText(getLauncherSubtitle(state.locale));
     var askColumn = escapeText(getAskColumnSize(state.locale));
+    var messengerHandoffLabel = escapeText(
+      state.isMessengerHandoffSending ? getMessengerHandoffSendingLabel(state.locale) : getMessengerHandoffLabel(state.locale)
+    );
     var messages = state.messages
       .map(function (message) {
         return (
@@ -202,6 +206,11 @@
           askLabel +
           "</button>" +
           "</form>" +
+          '<button class="pf-messenger-handoff" type="button"' +
+          (state.isReady && !state.isMessengerHandoffSending ? "" : " disabled") +
+          ">" +
+          messengerHandoffLabel +
+          "</button>" +
           (canCreateLead
             ? '<div class="pf-handoff">' +
               '<button class="pf-handoff-toggle" type="button" aria-expanded="' +
@@ -303,6 +312,13 @@
       handoffForm.addEventListener("submit", function (event) {
         event.preventDefault();
         submitHandoff(handoffForm);
+      });
+    }
+
+    var messengerHandoff = app.querySelector(".pf-messenger-handoff");
+    if (messengerHandoff) {
+      messengerHandoff.addEventListener("click", function () {
+        startMessengerHandoff("telegram");
       });
     }
 
@@ -775,6 +791,57 @@
       });
   }
 
+  function startMessengerHandoff(provider) {
+    if (state.isMessengerHandoffSending) {
+      return;
+    }
+
+    state.isMessengerHandoffSending = true;
+    render();
+
+    fetch(apiBase.replace(/\/$/, "") + "/public/v1/widget/handoff/" + encodeURIComponent(tenantSlug), {
+      body: JSON.stringify({
+        conversation: buildConversationHistory(""),
+        locale: state.locale,
+        provider: provider,
+        sessionId: state.sessionId
+      }),
+      headers: {
+        accept: "application/json",
+        "content-type": "application/json"
+      },
+      method: "POST"
+    })
+      .then(function (response) {
+        if (!response.ok) {
+          throwWidgetHttpError("Widget messenger handoff failed", response);
+        }
+
+        return response.json();
+      })
+      .then(function (response) {
+        var option = (response.options || []).find(function (item) {
+          return item && item.provider === provider;
+        });
+
+        if (!option || option.status !== "available" || !option.url) {
+          throw new Error(option && option.reason ? option.reason : "Messenger handoff is unavailable");
+        }
+
+        window.open(option.url, "_blank", "noopener,noreferrer");
+        state.messages.push(assistantMessage(getMessengerHandoffSuccessMessage(state.locale)));
+        persistMessages();
+      })
+      .catch(function () {
+        state.messages.push(assistantMessage(getMessengerHandoffFailureMessage(state.locale)));
+        persistMessages();
+      })
+      .finally(function () {
+        state.isMessengerHandoffSending = false;
+        render();
+      });
+  }
+
   function getRecentRecommendedListings() {
     return state.messages
       .slice()
@@ -1139,6 +1206,50 @@
     return labels[locale] || labels.en;
   }
 
+  function getMessengerHandoffLabel(locale) {
+    var labels = {
+      en: "Continue in Telegram",
+      ru: "Продолжить в Telegram",
+      th: "คุยต่อใน Telegram",
+      zh: "在 Telegram 继续"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getMessengerHandoffSendingLabel(locale) {
+    var labels = {
+      en: "Opening Telegram...",
+      ru: "Открываем Telegram...",
+      th: "กำลังเปิด Telegram...",
+      zh: "正在打开 Telegram..."
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getMessengerHandoffSuccessMessage(locale) {
+    var labels = {
+      en: "I opened Telegram with this conversation context. Send Start there and we can continue.",
+      ru: "Я открыла Telegram с контекстом этого диалога. Нажмите Start там, и мы продолжим.",
+      th: "ฉันเปิด Telegram พร้อมบริบทบทสนทนานี้แล้ว กด Start ที่นั่นแล้วคุยต่อได้เลย",
+      zh: "我已打开带有此对话上下文的 Telegram。请在那里点击 Start，然后继续聊天。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
+  function getMessengerHandoffFailureMessage(locale) {
+    var labels = {
+      en: "Telegram continuation is not available yet. Please ask the agency to connect a Telegram bot.",
+      ru: "Продолжение в Telegram пока недоступно. Попросите агентство подключить Telegram-бота.",
+      th: "ตอนนี้ยังคุยต่อใน Telegram ไม่ได้ กรุณาให้เอเจนซี่เชื่อมต่อบอท Telegram",
+      zh: "暂时无法继续到 Telegram。请让机构连接 Telegram 机器人。"
+    };
+
+    return labels[locale] || labels.en;
+  }
+
   function getViewListingLabel(locale) {
     var labels = {
       en: "View listing",
@@ -1299,6 +1410,9 @@
       ".pf-form textarea:focus{border-color:var(--pf-primary);outline:none}",
       ".pf-form button{min-width:0;border:0;background:var(--pf-primary);color:#fff;cursor:pointer;font:inherit;font-size:13px;font-weight:900;line-height:1.15;overflow-wrap:anywhere;padding:0 10px;text-transform:uppercase;white-space:normal}",
       ".pf-form button:disabled,.pf-form textarea:disabled{cursor:not-allowed;opacity:.6}",
+      ".pf-messenger-handoff{width:100%;border:1px solid color-mix(in srgb,var(--pf-primary),white 62%);background:#fff;color:#0b4f49;cursor:pointer;font:inherit;font-size:12px;font-weight:900;padding:10px;text-align:center;text-transform:uppercase}",
+      ".pf-messenger-handoff:hover{background:#edf8f4}",
+      ".pf-messenger-handoff:disabled{cursor:not-allowed;opacity:.6}",
       ".pf-note{display:block;color:#66736f;font-size:11px;font-weight:800;line-height:1.4}",
       ".pf-handoff{display:grid;gap:8px}",
       ".pf-handoff-toggle{width:100%;border:1px solid color-mix(in srgb,var(--pf-primary),white 62%);background:#edf8f4;color:#0b4f49;cursor:pointer;font:inherit;font-size:12px;font-weight:900;padding:10px;text-align:center;text-transform:uppercase}",

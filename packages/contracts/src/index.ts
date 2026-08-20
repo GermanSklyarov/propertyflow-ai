@@ -410,6 +410,32 @@ export interface PublicWidgetLeadResponse {
   tenantSlug: string;
 }
 
+export type PublicWidgetMessengerProvider = "telegram" | "line" | "whatsapp";
+
+export interface PublicWidgetMessengerHandoffRequest {
+  conversation?: AiChatTurn[];
+  locale: TenantWidgetLanguage;
+  provider?: PublicWidgetMessengerProvider;
+  sessionId?: string;
+}
+
+export type PublicWidgetMessengerHandoffStatus = "available" | "missing-credentials" | "unsupported" | "failed";
+
+export interface PublicWidgetMessengerHandoffOption {
+  expiresAt?: string;
+  provider: PublicWidgetMessengerProvider;
+  reason?: string;
+  status: PublicWidgetMessengerHandoffStatus;
+  url?: string;
+}
+
+export interface PublicWidgetMessengerHandoffResponse {
+  conciergeMode: TenantSnapshot["subscriptionPlan"];
+  locale: TenantWidgetLanguage;
+  options: PublicWidgetMessengerHandoffOption[];
+  tenantSlug: string;
+}
+
 export type TenantWidgetInstallCheckStatus =
   | "verified"
   | "missing-widget"

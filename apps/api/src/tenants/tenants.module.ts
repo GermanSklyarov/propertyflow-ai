@@ -15,13 +15,12 @@ import { PgAgencyRefreshTokenRepository } from "./infrastructure/postgres/pg-age
 import { PgNotificationConnectionTokenRepository } from "./infrastructure/postgres/pg-notification-connection-token.repository.js";
 import { PgTenantRepository } from "./infrastructure/postgres/pg-tenant.repository.js";
 import { CurrentTenantController } from "./presentation/rest/current-tenant.controller.js";
-import { NotificationProviderWebhookController } from "./presentation/rest/notification-provider-webhook.controller.js";
 import { PublicWidgetConfigController } from "./presentation/rest/public-widget-config.controller.js";
 import { TenantProvisioningController } from "./presentation/rest/tenant-provisioning.controller.js";
 
 @Module({
   imports: [forwardRef(() => AuditModule), AuthModule, DatabaseModule, UsersModule],
-  controllers: [CurrentTenantController, NotificationProviderWebhookController, PublicWidgetConfigController, TenantProvisioningController],
+  controllers: [CurrentTenantController, PublicWidgetConfigController, TenantProvisioningController],
   providers: [
     AgencyEmailTokenService,
     TenantService,

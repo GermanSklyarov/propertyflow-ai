@@ -2,11 +2,16 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { Body, Controller, ForbiddenException, Get, Headers, Inject, Param, Post, Query, Req } from "@nestjs/common";
 import type { TenantNotificationProviderCheckResponse, TenantSnapshot } from "@propertyflow/contracts";
 import type { FastifyRequest } from "fastify";
+import { PublicWidgetMessengerHandoffService } from "../../../chat/application/public-widget-messenger-handoff.service.js";
 import { TenantService } from "../../application/tenant.service.js";
 
 @Controller("public/v1/notifications")
 export class NotificationProviderWebhookController {
-  constructor(@Inject(TenantService) private readonly tenants: TenantService) {}
+  constructor(
+    @Inject(TenantService) private readonly tenants: TenantService,
+    @Inject(PublicWidgetMessengerHandoffService)
+    private readonly messengerHandoffs: PublicWidgetMessengerHandoffService = undefined as never
+  ) {}
 
   @Post("telegram/:tenantSlug")
   async handleTelegramWebhook(
@@ -24,6 +29,19 @@ export class NotificationProviderWebhookController {
     const code = extractConnectionCode(message?.text);
     const chatId = message?.chat?.id === undefined ? undefined : String(message.chat.id);
     const label = formatTelegramRecipientLabel(message?.chat, message?.from);
+    const conciergeReply =
+      code || !this.messengerHandoffs ? null : await this.messengerHandoffs.handleTelegramMessage(tenantSlug, chatId, message?.text);
+
+    if (conciergeReply) {
+      await this.replyToTelegramText(tenant, chatId, conciergeReply);
+
+      return {
+        checkedAt: new Date().toISOString(),
+        provider: "telegram",
+        status: "connected"
+      };
+    }
+
     const result = await this.confirmWebhookConnection("telegram", code, chatId, label);
     await this.replyToTelegram(tenant, chatId, result);
 
@@ -132,6 +150,20 @@ export class NotificationProviderWebhookController {
       chat_id: chatId,
       disable_web_page_preview: true,
       text: buildConnectionReply(result, tenant)
+    });
+  }
+
+  private async replyToTelegramText(tenant: TenantSnapshot | null, chatId: string | undefined, text: string): Promise<void> {
+    const token = tenant?.widget.leadTelegramBotToken;
+
+    if (!tenant || !token || !chatId) {
+      return;
+    }
+
+    await postJson(`https://api.telegram.org/bot${token}/sendMessage`, {
+      chat_id: chatId,
+      disable_web_page_preview: true,
+      text
     });
   }
 

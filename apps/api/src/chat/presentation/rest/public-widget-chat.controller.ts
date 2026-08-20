@@ -3,6 +3,7 @@ import { ApiOkResponse, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger"
 import type {
   PublicWidgetAskResponse,
   PublicWidgetLeadResponse,
+  PublicWidgetMessengerHandoffResponse,
   PublicWidgetRecommendedListing,
   TenantSnapshot,
   AiChatCitation,
@@ -19,8 +20,9 @@ import type { AiConciergePersona } from "../../application/ai-text-generator.js"
 import { AiChatService } from "../../application/ai-chat.service.js";
 import { planAiChatRetrieval } from "../../application/ai-chat-retrieval-plan.js";
 import { LocationIntelligenceService } from "../../application/location-intelligence.js";
+import { PublicWidgetMessengerHandoffService } from "../../application/public-widget-messenger-handoff.service.js";
 import { PublicWidgetRateLimitService } from "../../application/public-widget-rate-limit.service.js";
-import { PublicWidgetAskDto, PublicWidgetLeadDto } from "./public-widget-chat.dto.js";
+import { PublicWidgetAskDto, PublicWidgetLeadDto, PublicWidgetMessengerHandoffDto } from "./public-widget-chat.dto.js";
 
 interface PublicWidgetRequest {
   headers: Record<string, string | string[] | undefined>;
@@ -231,7 +233,9 @@ export class PublicWidgetChatController {
     @Inject(PROPERTY_REPOSITORY) private readonly properties: PropertyRepository,
     @Inject(PublicWidgetRateLimitService) private readonly rateLimits: PublicWidgetRateLimitService,
     @Inject(LocationIntelligenceService)
-    private readonly locationIntelligence: LocationIntelligenceService = new LocationIntelligenceService()
+    private readonly locationIntelligence: LocationIntelligenceService = new LocationIntelligenceService(),
+    @Inject(PublicWidgetMessengerHandoffService)
+    private readonly messengerHandoffs: PublicWidgetMessengerHandoffService = undefined as never
   ) {}
 
   @Post("ask/:tenantSlug")
@@ -395,6 +399,40 @@ export class PublicWidgetChatController {
       status: lead.status,
       tenantSlug: tenant.slug
     };
+  }
+
+  @Post("handoff/:tenantSlug")
+  @ApiOperation({ summary: "Create a messenger continuation link for the public AI Concierge widget" })
+  @ApiParam({ name: "tenantSlug", example: "demo-agency" })
+  @ApiOkResponse({
+    description: "Messenger deep links that preserve the current public widget conversation context",
+    schema: {
+      example: {
+        conciergeMode: "starter",
+        locale: "ru",
+        options: [
+          {
+            expiresAt: "2026-09-03T00:00:00.000Z",
+            provider: "telegram",
+            status: "available",
+            url: "https://t.me/demo_propertyflow_bot?start=pf_token"
+          }
+        ],
+        tenantSlug: "demo-agency"
+      }
+    }
+  })
+  async createMessengerHandoff(
+    @Param("tenantSlug") tenantSlug: string,
+    @Body() payload: PublicWidgetMessengerHandoffDto,
+    @Headers("origin") origin?: string,
+    @Headers("referer") referer?: string
+  ): Promise<PublicWidgetMessengerHandoffResponse> {
+    const tenant = await this.tenants.getActiveTenantBySlugOrThrow(tenantSlug, "Widget tenant not found");
+    assertPublicWidgetConversationBounds(payload.conversation);
+    this.tenants.assertPublicWidgetOriginAllowed(tenant, origin, referer);
+
+    return this.messengerHandoffs.createHandoff(tenant, payload);
   }
 
   private async buildRecommendedListings(
@@ -1693,11 +1731,15 @@ function assertPublicWidgetAskPayloadBounds(payload: PublicWidgetAskDto): void {
     throw new BadRequestException("Widget message must be 2,000 characters or fewer");
   }
 
-  if ((payload.conversation ?? []).length > 12) {
+  assertPublicWidgetConversationBounds(payload.conversation);
+}
+
+function assertPublicWidgetConversationBounds(conversation: AiChatTurn[] | undefined): void {
+  if ((conversation ?? []).length > 12) {
     throw new BadRequestException("Widget conversation history must include 12 turns or fewer");
   }
 
-  for (const turn of payload.conversation ?? []) {
+  for (const turn of conversation ?? []) {
     if (turn.text.length > 2_000) {
       throw new BadRequestException("Widget conversation turn text must be 2,000 characters or fewer");
     }
