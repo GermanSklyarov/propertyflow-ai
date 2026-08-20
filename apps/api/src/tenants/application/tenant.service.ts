@@ -667,9 +667,12 @@ export class TenantService {
         return failedProvider("telegram", checkedAt, "Telegram rejected this bot token.");
       }
 
-      if (normalizeSecretInput(request.telegramBotToken)) {
+      const botUsername = normalizeTelegramBotUsername(request.telegramBotUsername) ?? normalizeTelegramBotUsername(body.result.username);
+
+      if (normalizeSecretInput(request.telegramBotToken) || botUsername) {
         await this.updateNotificationCredentials(tenant, {
-          leadTelegramBotToken: token
+          leadTelegramBotToken: token,
+          ...(botUsername ? { leadTelegramBotUsername: botUsername } : {})
         });
       }
 
@@ -691,12 +694,14 @@ export class TenantService {
   ): Promise<TenantSnapshot> {
     const tokenFromRequest = typeof request === "string" ? undefined : normalizeSecretInput(request.telegramBotToken);
     const token = tokenFromRequest ?? tenant.widget.leadTelegramBotToken;
+    const usernameFromRequest = typeof request === "string" ? undefined : normalizeTelegramBotUsername(request.telegramBotUsername);
 
     if (!token) {
       throw new BadRequestException("Paste a Telegram bot token before connecting a recipient.");
     }
 
     const secret = createNotificationWebhookSecret();
+    const botUsername = usernameFromRequest ?? (await this.resolveTelegramBotUsername(token)) ?? tenant.widget.leadTelegramBotUsername;
     const response = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
       method: "POST",
       headers: {
@@ -717,8 +722,20 @@ export class TenantService {
 
     return this.updateNotificationCredentials(tenant, {
       leadTelegramBotToken: token,
+      ...(botUsername ? { leadTelegramBotUsername: botUsername } : {}),
       leadTelegramWebhookSecret: secret
     });
+  }
+
+  private async resolveTelegramBotUsername(token: string): Promise<string | undefined> {
+    try {
+      const response = await fetch(`https://api.telegram.org/bot${token}/getMe`);
+      const body = (await response.json().catch(() => null)) as TelegramGetMeResponse | null;
+
+      return response.ok && body?.ok ? normalizeTelegramBotUsername(body.result.username) : undefined;
+    } catch (_error) {
+      return undefined;
+    }
   }
 
   private async verifyLineProvider(
@@ -1591,6 +1608,12 @@ function normalizeSecretInput(value: string | undefined): string | undefined {
   const trimmed = value?.trim();
 
   return trimmed || undefined;
+}
+
+function normalizeTelegramBotUsername(value: string | undefined): string | undefined {
+  const username = value?.trim().replace(/^@/, "");
+
+  return username && /^[A-Za-z0-9_]{5,32}$/.test(username) ? username : undefined;
 }
 
 function normalizeGraphApiVersionInput(value: string | undefined): string {

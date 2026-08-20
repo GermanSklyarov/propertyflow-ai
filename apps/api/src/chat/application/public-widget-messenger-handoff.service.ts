@@ -73,8 +73,12 @@ export class PublicWidgetMessengerHandoffService {
     if (startToken) {
       const linked = await this.linkTelegramHandoff(tenant, startToken, chatId);
       return linked
-        ? buildMessengerLinkedReply(linked.locale, tenant)
+        ? buildMessengerLinkedReply(linked.locale, tenant, linked.conversation)
         : buildMessengerLinkExpiredReply(resolveMessengerLocale(tenant.widget.languages, "en"));
+    }
+
+    if (isTelegramStartCommand(text)) {
+      return buildMessengerMissingTokenReply(resolveMessengerLocale(tenant.widget.languages, "en"));
     }
 
     const handoff = await this.findLinkedTelegramHandoff(tenant.id, chatId);
@@ -136,12 +140,20 @@ export class PublicWidgetMessengerHandoffService {
       };
     }
 
-    const botUsername = await this.resolveTelegramBotUsername(token);
+    if (!tenant.widget.leadTelegramWebhookSecret?.trim()) {
+      return {
+        provider,
+        reason: "Telegram webhook is not connected. Register the bot webhook from tenant notification settings first.",
+        status: "missing-credentials"
+      };
+    }
+
+    const botUsername = normalizeTelegramBotUsername(tenant.widget.leadTelegramBotUsername) ?? (await this.resolveTelegramBotUsername(token));
 
     if (!botUsername) {
       return {
         provider,
-        reason: "Telegram bot username could not be resolved.",
+        reason: "Telegram bot username is not configured and could not be resolved from the token.",
         status: "failed"
       };
     }
@@ -188,9 +200,7 @@ export class PublicWidgetMessengerHandoffService {
       }
 
       const payload = (await response.json()) as { ok?: boolean; result?: { username?: string } };
-      const username = payload.ok === true ? payload.result?.username?.trim() : undefined;
-
-      return username && /^[A-Za-z0-9_]{5,32}$/.test(username) ? username : null;
+      return payload.ok === true ? normalizeTelegramBotUsername(payload.result?.username) ?? null : null;
     } catch (error) {
       this.logger.warn(`Telegram bot username lookup failed tenantBotConfigured=true error=${String(error)}`);
       return null;
@@ -201,7 +211,7 @@ export class PublicWidgetMessengerHandoffService {
     tenant: TenantSnapshot,
     rawToken: string,
     chatId: string
-  ): Promise<{ locale: TenantWidgetLanguage } | null> {
+  ): Promise<{ conversation: AiChatTurn[]; locale: TenantWidgetLanguage } | null> {
     const result = await this.pool.query<MessengerHandoffRow>(
       `
         update public_widget_conversation_handoffs
@@ -213,12 +223,12 @@ export class PublicWidgetMessengerHandoffService {
           and provider = 'telegram'
           and token_hash = $2
           and expires_at > $4
-        returning locale
+        returning conversation, locale
       `,
       [tenant.id, hashHandoffToken(rawToken), chatId, new Date()]
     );
 
-    return result.rows[0] ? { locale: result.rows[0].locale } : null;
+    return result.rows[0] ? { conversation: result.rows[0].conversation, locale: result.rows[0].locale } : null;
   }
 
   private async findLinkedTelegramHandoff(tenantId: string, chatId: string): Promise<MessengerHandoffRow | null> {
@@ -242,13 +252,23 @@ export class PublicWidgetMessengerHandoffService {
 }
 
 function extractTelegramStartToken(text: string): string | null {
-  const match = text.trim().match(/^\/start\s+pf_([A-Za-z0-9_-]{16,80})$/i);
+  const match = text.trim().match(/^\/start(?:@[A-Za-z0-9_]{5,32})?\s+pf_([A-Za-z0-9_-]{16,80})$/i);
 
   return match?.[1] ?? null;
 }
 
+function isTelegramStartCommand(text: string): boolean {
+  return /^\/start(?:@[A-Za-z0-9_]{5,32})?$/i.test(text.trim());
+}
+
 function hashHandoffToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function normalizeTelegramBotUsername(value: string | undefined): string | undefined {
+  const username = value?.trim().replace(/^@/, "");
+
+  return username && /^[A-Za-z0-9_]{5,32}$/.test(username) ? username : undefined;
 }
 
 function resolveMessengerLocale(enabledLanguages: TenantWidgetLanguage[], requestedLocale: TenantWidgetLanguage): TenantWidgetLanguage {
@@ -276,16 +296,85 @@ function trimConversation(conversation: AiChatTurn[]): AiChatTurn[] {
     }));
 }
 
-function buildMessengerLinkedReply(locale: TenantWidgetLanguage, tenant: TenantSnapshot): string {
+function buildMessengerLinkedReply(locale: TenantWidgetLanguage, tenant: TenantSnapshot, conversation: AiChatTurn[]): string {
   const agencyName = tenant.branding.displayName || tenant.name;
+  const summary = buildTransferredConversationSummary(locale, conversation);
   const replies: Record<TenantWidgetLanguage, string> = {
-    en: `Done. I brought your website conversation from ${agencyName} here, so we can continue in Telegram.`,
-    ru: `Готово. Я перенесла сюда ваш диалог с сайта ${agencyName}, можем продолжить в Telegram.`,
-    th: `เรียบร้อยค่ะ ฉันย้ายบทสนทนาจากเว็บไซต์ ${agencyName} มาที่นี่แล้ว คุยต่อใน Telegram ได้เลย`,
-    zh: `完成。我已把您在 ${agencyName} 网站上的对话带到这里，可以继续在 Telegram 聊。`
+    en: `Done. I brought your website conversation from ${agencyName} here, so we can continue in Telegram.${summary}`,
+    ru: `Готово. Я перенесла сюда ваш диалог с сайта ${agencyName}, можем продолжить в Telegram.${summary}`,
+    th: `เรียบร้อยค่ะ ฉันย้ายบทสนทนาจากเว็บไซต์ ${agencyName} มาที่นี่แล้ว คุยต่อใน Telegram ได้เลย${summary}`,
+    zh: `完成。我已把您在 ${agencyName} 网站上的对话带到这里，可以继续在 Telegram 聊。${summary}`
   };
 
   return replies[locale] || replies.en;
+}
+
+function buildTransferredConversationSummary(locale: TenantWidgetLanguage, conversation: AiChatTurn[]): string {
+  const turns = conversation ?? [];
+  const lastUserMessage = turns
+    .slice()
+    .reverse()
+    .find((turn) => turn.role === "user" && turn.text?.trim())?.text;
+  const listings = Array.from(
+    new Map(
+      turns
+        .flatMap((turn) => turn.recommendedListings ?? [])
+        .filter((listing) => listing.propertyId?.trim() && listing.title?.trim())
+        .map((listing) => [listing.propertyId, listing.title.trim()] as const)
+    ).values()
+  ).slice(0, 3);
+
+  if (!lastUserMessage && !listings.length) {
+    return "";
+  }
+
+  const copy: Record<TenantWidgetLanguage, { heading: string; listings: string; next: string; request: string }> = {
+    en: {
+      heading: "\n\nBrief context:",
+      listings: "Shortlist",
+      next: "You can ask me to compare them, check distance to the beach, or find more options.",
+      request: "Your request"
+    },
+    ru: {
+      heading: "\n\nКороткий контекст:",
+      listings: "Подобранные варианты",
+      next: "Можете попросить сравнить их, проверить расстояние до пляжа или найти еще варианты.",
+      request: "Ваш запрос"
+    },
+    th: {
+      heading: "\n\nสรุปสั้นๆ:",
+      listings: "ตัวเลือกที่คัดไว้",
+      next: "คุณถามให้ฉันเปรียบเทียบ เช็กระยะถึงชายหาด หรือหาตัวเลือกเพิ่มได้",
+      request: "คำขอของคุณ"
+    },
+    zh: {
+      heading: "\n\n简短上下文：",
+      listings: "已选房源",
+      next: "您可以让我比较它们、查看到海滩的距离，或继续找更多选择。",
+      request: "您的需求"
+    }
+  };
+  const labels = copy[locale] ?? copy.en;
+  const lines = [labels.heading];
+
+  if (lastUserMessage) {
+    lines.push(`${labels.request}: ${trimForTelegramSummary(lastUserMessage, 180)}`);
+  }
+
+  if (listings.length) {
+    lines.push(`${labels.listings}:`);
+    lines.push(...listings.map((title, index) => `${index + 1}. ${trimForTelegramSummary(title, 120)}`));
+  }
+
+  lines.push(labels.next);
+
+  return lines.join("\n");
+}
+
+function trimForTelegramSummary(text: string, limit = 220): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+
+  return normalized.length > limit ? `${normalized.slice(0, Math.max(limit - 3, 0))}...` : normalized;
 }
 
 function buildMessengerLinkExpiredReply(locale: TenantWidgetLanguage): string {
@@ -294,6 +383,17 @@ function buildMessengerLinkExpiredReply(locale: TenantWidgetLanguage): string {
     ru: "Эта ссылка переноса устарела или недействительна. Откройте консьержа на сайте и создайте новую ссылку Telegram.",
     th: "ลิงก์ย้ายบทสนทนานี้หมดอายุหรือไม่ถูกต้อง กรุณาเปิด Concierge บนเว็บไซต์และสร้างลิงก์ Telegram ใหม่",
     zh: "此转移链接无效或已过期。请在网站上打开礼宾助手并创建新的 Telegram 链接。"
+  };
+
+  return replies[locale] || replies.en;
+}
+
+function buildMessengerMissingTokenReply(locale: TenantWidgetLanguage): string {
+  const replies: Record<TenantWidgetLanguage, string> = {
+    en: "I opened, but Telegram did not pass the transfer token. Please go back to the website and tap Continue in Telegram again.",
+    ru: "Я открылась, но Telegram не передал токен переноса. Вернитесь на сайт и нажмите «Продолжить в Telegram» еще раз.",
+    th: "เปิดแชตแล้ว แต่ Telegram ไม่ได้ส่งโทเคนย้ายบทสนทนา กรุณากลับไปที่เว็บไซต์แล้วกดคุยต่อใน Telegram อีกครั้ง",
+    zh: "已打开聊天，但 Telegram 没有传递转移令牌。请返回网站并再次点击在 Telegram 继续。"
   };
 
   return replies[locale] || replies.en;

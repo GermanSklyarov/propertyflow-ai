@@ -39,6 +39,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
   const leadWebhookUrl = getOptionalString(formData, "leadWebhookUrl");
   const leadTelegramChatIds = getTextList(formData, "leadTelegramChatIds");
   const leadTelegramBotToken = getOptionalString(formData, "leadTelegramBotToken");
+  const leadTelegramBotUsername = getTelegramBotUsername(formData, "leadTelegramBotUsername");
   const leadLineRecipientIds = getTextList(formData, "leadLineRecipientIds");
   const leadLineChannelAccessToken = getOptionalString(formData, "leadLineChannelAccessToken");
   const leadLineChannelSecret = getOptionalString(formData, "leadLineChannelSecret");
@@ -76,6 +77,7 @@ export async function updateTenantSettingsAction(formData: FormData) {
         leadWebhookUrl: leadWebhookUrl ?? "",
         ...(leadTelegramChatIds ? { leadTelegramChatIds } : {}),
         ...(leadTelegramBotToken ? { leadTelegramBotToken } : {}),
+        ...(leadTelegramBotUsername ? { leadTelegramBotUsername } : {}),
         ...(leadLineRecipientIds ? { leadLineRecipientIds } : {}),
         ...(leadLineChannelAccessToken ? { leadLineChannelAccessToken } : {}),
         ...(leadLineChannelSecret ? { leadLineChannelSecret } : {}),
@@ -160,6 +162,7 @@ function getNotificationProviderPayload(provider: TenantNotificationProvider, fo
     lineRecipientIds: getTextList(formData, "leadLineRecipientIds"),
     provider,
     telegramBotToken: getOptionalString(formData, "leadTelegramBotToken"),
+    telegramBotUsername: getTelegramBotUsername(formData, "leadTelegramBotUsername"),
     telegramChatIds: getTextList(formData, "leadTelegramChatIds"),
     whatsappAccessToken: getOptionalString(formData, "leadWhatsappAccessToken"),
     whatsappAppSecret: getOptionalString(formData, "leadWhatsappAppSecret"),
@@ -215,6 +218,12 @@ function getPhoneList(formData: FormData, key: string): string[] | undefined {
   return getTextList(formData, key)
     ?.map((value) => value.replace(/[^\d+]/g, ""))
     .filter((value) => /^\+?[1-9]\d{7,14}$/.test(value));
+}
+
+function getTelegramBotUsername(formData: FormData, key: string): string | undefined {
+  const username = getOptionalString(formData, key)?.replace(/^@/, "");
+
+  return username && /^[A-Za-z0-9_]{5,32}$/.test(username) ? username : undefined;
 }
 
 function getEmailList(formData: FormData, key: string): string[] | undefined {

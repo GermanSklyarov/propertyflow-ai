@@ -919,7 +919,8 @@ describe("TenantService", () => {
     });
     expect(capturedRequest).toEqual({
       widget: {
-        leadTelegramBotToken: "telegram-token"
+        leadTelegramBotToken: "telegram-token",
+        leadTelegramBotUsername: "demo_bot"
       }
     });
   });

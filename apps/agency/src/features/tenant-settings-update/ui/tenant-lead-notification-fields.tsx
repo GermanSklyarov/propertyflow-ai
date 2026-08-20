@@ -73,12 +73,29 @@ export function TenantLeadNotificationFields({
 
         <ProviderPanel
           connected={Boolean(widgetSettings.leadTelegramChatIds?.length)}
-          description="Create a bot with BotFather, paste this agency bot token, then connect a recipient. PropertyFlowAI configures the webhook secret automatically."
+          description="Create an agency bot with BotFather and paste its token. PropertyFlowAI uses the same bot for lead notifications and for website visitors who continue Concierge chats in Telegram."
           docsUrl="https://t.me/BotFather"
           provider="telegram"
           result={result}
           title="Telegram"
         >
+          <div className={styles.providerCapabilities}>
+            <span
+              className={
+                widgetSettings.leadTelegramBotToken && widgetSettings.leadTelegramBotUsername && widgetSettings.leadTelegramWebhookSecret
+                  ? styles.capabilityReady
+                  : styles.capabilityMissing
+              }
+            >
+              Concierge continuation{" "}
+              {widgetSettings.leadTelegramBotToken && widgetSettings.leadTelegramBotUsername && widgetSettings.leadTelegramWebhookSecret
+                ? "ready"
+                : "needs token + username + webhook"}
+            </span>
+            <span className={widgetSettings.leadTelegramChatIds?.length ? styles.capabilityReady : styles.capabilityNeutral}>
+              Lead notifications {widgetSettings.leadTelegramChatIds?.length ? "connected" : "optional recipient"}
+            </span>
+          </div>
           <label className={styles.field}>
             <span>Bot token</span>
             <input
@@ -88,6 +105,21 @@ export function TenantLeadNotificationFields({
               spellCheck={false}
             />
           </label>
+          <label className={styles.field}>
+            <span>Bot username</span>
+            <input
+              autoComplete="off"
+              defaultValue={widgetSettings.leadTelegramBotUsername ? `@${widgetSettings.leadTelegramBotUsername}` : ""}
+              name="leadTelegramBotUsername"
+              pattern="^@?[A-Za-z0-9_]{5,32}$"
+              placeholder="@agency_property_bot"
+              spellCheck={false}
+            />
+          </label>
+          <p className={styles.providerDescription}>
+            Save the token and username, then click Connect recipient to register the webhook. After that, the public widget
+            button opens this bot and continues the saved Concierge conversation.
+          </p>
           <label className={styles.field}>
             <span>Recipients</span>
             <textarea

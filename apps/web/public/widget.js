@@ -796,6 +796,10 @@
       return;
     }
 
+    var popup = window.open("about:blank", "_blank");
+    if (popup) {
+      popup.opener = null;
+    }
     state.isMessengerHandoffSending = true;
     render();
 
@@ -828,12 +832,21 @@
           throw new Error(option && option.reason ? option.reason : "Messenger handoff is unavailable");
         }
 
-        window.open(option.url, "_blank", "noopener,noreferrer");
-        state.messages.push(assistantMessage(getMessengerHandoffSuccessMessage(state.locale)));
+        var handoffTarget = buildMessengerHandoffTarget(option.url);
+
+        if (popup) {
+          popup.location.replace(handoffTarget.url);
+        } else {
+          window.location.assign(handoffTarget.url);
+        }
+        state.messages.push(assistantMessage(getMessengerHandoffSuccessMessage(state.locale, handoffTarget.manualStartCommand)));
         persistMessages();
       })
-      .catch(function () {
-        state.messages.push(assistantMessage(getMessengerHandoffFailureMessage(state.locale)));
+      .catch(function (error) {
+        if (popup && !popup.closed) {
+          popup.close();
+        }
+        state.messages.push(assistantMessage(getMessengerHandoffFailureMessage(state.locale, error)));
         persistMessages();
       })
       .finally(function () {
@@ -861,6 +874,43 @@
           title: listing.title
         };
       });
+  }
+
+  function buildMessengerHandoffTarget(url) {
+    if (!isSafariBrowser()) {
+      return { url: url };
+    }
+
+    try {
+      var parsed = new URL(url);
+
+      if (parsed.hostname !== "t.me" && parsed.hostname !== "telegram.me") {
+        return { url: url };
+      }
+
+      var username = parsed.pathname.replace(/^\/+/, "").split("/")[0];
+      var start = parsed.searchParams.get("start");
+
+      if (!username || !start) {
+        return { url: url };
+      }
+
+      var manualStartCommand = "/start " + start;
+      var tgaddr = "tg://resolve?domain=" + encodeURIComponent(username) + "&text=" + encodeURIComponent(manualStartCommand);
+
+      return {
+        manualStartCommand: manualStartCommand,
+        url: "https://web.telegram.org/k/#?tgaddr=" + encodeURIComponent(tgaddr)
+      };
+    } catch (_error) {
+      return { url: url };
+    }
+  }
+
+  function isSafariBrowser() {
+    var ua = navigator.userAgent || "";
+
+    return /Safari/i.test(ua) && !/Chrome|Chromium|CriOS|FxiOS|Edg|OPR|Android/i.test(ua);
   }
 
   function getLatestRecommendedListings() {
@@ -1228,7 +1278,20 @@
     return labels[locale] || labels.en;
   }
 
-  function getMessengerHandoffSuccessMessage(locale) {
+  function getMessengerHandoffSuccessMessage(locale, manualStartCommand) {
+    if (manualStartCommand) {
+      var manualLabels = {
+        en: "I opened Telegram Web. Send the prefilled command there to bring this conversation over. If it is not prefilled, send: " + manualStartCommand,
+        ru: "Я открыла Telegram Web. Отправьте там подставленную команду, чтобы перенести этот диалог. Если команда не подставилась, отправьте: " + manualStartCommand,
+        th:
+          "ฉันเปิด Telegram Web แล้ว ส่งคำสั่งที่ระบบใส่ไว้เพื่อย้ายบทสนทนานี้ หากไม่มีคำสั่ง ให้ส่ง: " +
+          manualStartCommand,
+        zh: "我已打开 Telegram Web。请发送预填的命令以转移此对话。如果没有预填，请发送：" + manualStartCommand
+      };
+
+      return manualLabels[locale] || manualLabels.en;
+    }
+
     var labels = {
       en: "I opened Telegram with this conversation context. Send Start there and we can continue.",
       ru: "Я открыла Telegram с контекстом этого диалога. Нажмите Start там, и мы продолжим.",
@@ -1239,12 +1302,35 @@
     return labels[locale] || labels.en;
   }
 
-  function getMessengerHandoffFailureMessage(locale) {
+  function getMessengerHandoffFailureMessage(locale, error) {
+    if (error && /username/i.test(String(error.message || ""))) {
+      var usernameLabels = {
+        en: "Telegram continuation is not available yet. Ask the agency to add the Telegram bot username in Settings -> Lead notifications.",
+        ru: "Продолжение в Telegram пока недоступно. Попросите агентство добавить Telegram bot username в Settings -> Lead notifications.",
+        th: "ตอนนี้ยังคุยต่อใน Telegram ไม่ได้ กรุณาให้เอเจนซี่เพิ่ม Telegram bot username ใน Settings -> Lead notifications",
+        zh: "暂时无法继续到 Telegram。请让机构在 Settings -> Lead notifications 中添加 Telegram bot username。"
+      };
+
+      return usernameLabels[locale] || usernameLabels.en;
+    }
+
+    if (error && /webhook/i.test(String(error.message || ""))) {
+      var webhookLabels = {
+        en: "Telegram continuation is not available yet. Ask the agency to click Connect recipient in Settings -> Lead notifications to register the bot webhook.",
+        ru: "Продолжение в Telegram пока недоступно. Попросите агентство нажать Connect recipient в Settings -> Lead notifications, чтобы зарегистрировать webhook бота.",
+        th:
+          "ตอนนี้ยังคุยต่อใน Telegram ไม่ได้ กรุณาให้เอเจนซี่กด Connect recipient ใน Settings -> Lead notifications เพื่อลงทะเบียน webhook ของบอท",
+        zh: "暂时无法继续到 Telegram。请让机构在 Settings -> Lead notifications 中点击 Connect recipient 来注册机器人 webhook。"
+      };
+
+      return webhookLabels[locale] || webhookLabels.en;
+    }
+
     var labels = {
-      en: "Telegram continuation is not available yet. Please ask the agency to connect a Telegram bot.",
-      ru: "Продолжение в Telegram пока недоступно. Попросите агентство подключить Telegram-бота.",
-      th: "ตอนนี้ยังคุยต่อใน Telegram ไม่ได้ กรุณาให้เอเจนซี่เชื่อมต่อบอท Telegram",
-      zh: "暂时无法继续到 Telegram。请让机构连接 Telegram 机器人。"
+      en: "Telegram continuation is not available yet. Ask the agency to add a Telegram bot token in Settings -> Lead notifications.",
+      ru: "Продолжение в Telegram пока недоступно. Попросите агентство добавить Telegram bot token в Settings -> Lead notifications.",
+      th: "ตอนนี้ยังคุยต่อใน Telegram ไม่ได้ กรุณาให้เอเจนซี่เพิ่ม Telegram bot token ใน Settings -> Lead notifications",
+      zh: "暂时无法继续到 Telegram。请让机构在 Settings -> Lead notifications 中添加 Telegram bot token。"
     };
 
     return labels[locale] || labels.en;

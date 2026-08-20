@@ -113,6 +113,12 @@ export class UpdateTenantWidgetDto {
   @IsString()
   leadTelegramBotToken?: string;
 
+  @ApiProperty({ required: false, example: "agency_property_bot" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^@?[A-Za-z0-9_]{5,32}$/)
+  leadTelegramBotUsername?: string;
+
   @ApiProperty({ required: false, example: ["U4af4980629..."], type: [String] })
   @IsOptional()
   @IsArray()

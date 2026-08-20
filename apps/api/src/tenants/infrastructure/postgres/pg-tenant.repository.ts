@@ -46,6 +46,7 @@ interface TenantRow {
   widget_lead_line_channel_secret: string | null;
   widget_lead_line_recipient_ids: string[] | null;
   widget_lead_telegram_bot_token: string | null;
+  widget_lead_telegram_bot_username: string | null;
   widget_lead_telegram_webhook_secret: string | null;
   widget_lead_qualification_fields: string[] | null;
   widget_lead_telegram_chat_ids: string[] | null;
@@ -83,6 +84,7 @@ const defaultWidgetSettings: TenantSnapshot["widget"] = {
   leadLineChannelSecret: undefined,
   leadLineRecipientIds: [],
   leadTelegramBotToken: undefined,
+  leadTelegramBotUsername: undefined,
   leadTelegramChatIds: [],
   leadTelegramWebhookSecret: undefined,
   leadWhatsappAccessToken: undefined,
@@ -288,6 +290,7 @@ export class PgTenantRepository implements TenantRepository {
             widget_lead_webhook_url,
             widget_lead_telegram_chat_ids,
             widget_lead_telegram_bot_token,
+            widget_lead_telegram_bot_username,
             widget_lead_telegram_webhook_secret,
             widget_lead_line_recipient_ids,
             widget_lead_line_channel_access_token,
@@ -343,7 +346,8 @@ export class PgTenantRepository implements TenantRepository {
             $30,
             $31,
             $32,
-            $32
+            $33,
+            $33
           )
           returning *
         `,
@@ -365,6 +369,7 @@ export class PgTenantRepository implements TenantRepository {
           defaultWidgetSettings.leadWebhookUrl ?? null,
           defaultWidgetSettings.leadTelegramChatIds,
           defaultWidgetSettings.leadTelegramBotToken ?? null,
+          defaultWidgetSettings.leadTelegramBotUsername ?? null,
           defaultWidgetSettings.leadTelegramWebhookSecret ?? null,
           defaultWidgetSettings.leadLineRecipientIds,
           defaultWidgetSettings.leadLineChannelAccessToken ?? null,
@@ -447,21 +452,22 @@ export class PgTenantRepository implements TenantRepository {
           widget_lead_webhook_url = $16,
           widget_lead_telegram_chat_ids = $17,
           widget_lead_telegram_bot_token = $18,
-          widget_lead_telegram_webhook_secret = $19,
-          widget_lead_line_recipient_ids = $20,
-          widget_lead_line_channel_access_token = $21,
-          widget_lead_line_channel_secret = $22,
-          widget_lead_whatsapp_recipients = $23,
-          widget_lead_whatsapp_access_token = $24,
-          widget_lead_whatsapp_app_secret = $25,
-          widget_lead_whatsapp_phone_number_id = $26,
-          widget_lead_whatsapp_graph_api_version = $27,
-          widget_lead_whatsapp_webhook_verify_token = $28,
-          widget_lead_qualification_fields = $29,
-          widget_listing_url_template = $30,
-          widget_tone = $31,
-          widget_languages = $32,
-          updated_at = $33
+          widget_lead_telegram_bot_username = $19,
+          widget_lead_telegram_webhook_secret = $20,
+          widget_lead_line_recipient_ids = $21,
+          widget_lead_line_channel_access_token = $22,
+          widget_lead_line_channel_secret = $23,
+          widget_lead_whatsapp_recipients = $24,
+          widget_lead_whatsapp_access_token = $25,
+          widget_lead_whatsapp_app_secret = $26,
+          widget_lead_whatsapp_phone_number_id = $27,
+          widget_lead_whatsapp_graph_api_version = $28,
+          widget_lead_whatsapp_webhook_verify_token = $29,
+          widget_lead_qualification_fields = $30,
+          widget_listing_url_template = $31,
+          widget_tone = $32,
+          widget_languages = $33,
+          updated_at = $34
         where id = $1
         returning *
       `,
@@ -484,6 +490,7 @@ export class PgTenantRepository implements TenantRepository {
         request.widget?.leadWebhookUrl ?? current.widget.leadWebhookUrl ?? null,
         request.widget?.leadTelegramChatIds ?? current.widget.leadTelegramChatIds ?? [],
         request.widget?.leadTelegramBotToken || current.widget.leadTelegramBotToken || null,
+        normalizeTelegramBotUsername(request.widget?.leadTelegramBotUsername) ?? current.widget.leadTelegramBotUsername ?? null,
         request.widget?.leadTelegramWebhookSecret || current.widget.leadTelegramWebhookSecret || null,
         request.widget?.leadLineRecipientIds ?? current.widget.leadLineRecipientIds ?? [],
         request.widget?.leadLineChannelAccessToken || current.widget.leadLineChannelAccessToken || null,
@@ -536,6 +543,7 @@ export class PgTenantRepository implements TenantRepository {
         leadLineChannelSecret: normalizeSecret(row.widget_lead_line_channel_secret),
         leadLineRecipientIds: filterTextList(row.widget_lead_line_recipient_ids),
         leadTelegramBotToken: normalizeSecret(row.widget_lead_telegram_bot_token),
+        leadTelegramBotUsername: normalizeTelegramBotUsername(row.widget_lead_telegram_bot_username ?? undefined),
         leadTelegramChatIds: filterTextList(row.widget_lead_telegram_chat_ids),
         leadTelegramWebhookSecret: normalizeSecret(row.widget_lead_telegram_webhook_secret),
         leadWhatsappAccessToken: normalizeSecret(row.widget_lead_whatsapp_access_token),
@@ -611,6 +619,12 @@ function normalizeSecret(value: string | null | undefined): string | undefined {
   const secret = value?.trim();
 
   return secret || undefined;
+}
+
+function normalizeTelegramBotUsername(value: string | null | undefined): string | undefined {
+  const username = value?.trim().replace(/^@/, "");
+
+  return username && /^[A-Za-z0-9_]{5,32}$/.test(username) ? username : undefined;
 }
 
 function normalizeGraphApiVersion(value: string | null | undefined): string {

@@ -19,6 +19,12 @@ export class TenantNotificationProviderVerifyDto implements TenantNotificationPr
   @IsString()
   telegramBotToken?: string;
 
+  @ApiProperty({ required: false, example: "agency_property_bot" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^@?[A-Za-z0-9_]{5,32}$/)
+  telegramBotUsername?: string;
+
   @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
@@ -59,6 +65,12 @@ export class TenantNotificationProviderConnectDto implements TenantNotificationP
   @IsOptional()
   @IsString()
   telegramBotToken?: string;
+
+  @ApiProperty({ required: false, example: "agency_property_bot" })
+  @IsOptional()
+  @IsString()
+  @Matches(/^@?[A-Za-z0-9_]{5,32}$/)
+  telegramBotUsername?: string;
 
   @ApiProperty({ required: false })
   @IsOptional()

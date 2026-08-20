@@ -254,6 +254,7 @@ export interface TenantWidgetSettings {
   leadQualificationFields: TenantLeadQualificationField[];
   leadTelegramChatIds?: string[];
   leadTelegramBotToken?: string;
+  leadTelegramBotUsername?: string;
   leadTelegramWebhookSecret?: string;
   leadWhatsappRecipients?: string[];
   leadWhatsappAccessToken?: string;
@@ -287,6 +288,7 @@ export interface TenantNotificationProviderVerifyRequest {
   lineChannelAccessToken?: string;
   provider: TenantNotificationProvider;
   telegramBotToken?: string;
+  telegramBotUsername?: string;
   whatsappAccessToken?: string;
   whatsappGraphApiVersion?: string;
   whatsappPhoneNumberId?: string;
@@ -303,6 +305,7 @@ export interface TenantNotificationProviderConnectRequest {
   lineChannelSecret?: string;
   provider: TenantNotificationProvider;
   telegramBotToken?: string;
+  telegramBotUsername?: string;
   whatsappAccessToken?: string;
   whatsappAppSecret?: string;
   whatsappGraphApiVersion?: string;
