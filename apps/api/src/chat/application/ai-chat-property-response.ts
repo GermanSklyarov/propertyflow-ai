@@ -30,6 +30,7 @@ export function buildAiChatPropertyResponseDraft(options: {
   requestMessage?: string;
 }): AiChatResponseDraft {
   const citations: AiChatCitation[] = [propertyCitation(options.property)];
+  const amenityAnswer = buildAmenityAnswer(options.property, options.requestMessage, options.locale);
   const suitabilityAnswer = buildSuitabilityAnswer(options.property, options.requestMessage);
   const ownershipAnswer = buildOwnershipAnswer(options.property, options.requestMessage);
   const answerParts = [
@@ -39,7 +40,7 @@ export function buildAiChatPropertyResponseDraft(options: {
           locale: options.locale,
           requestMessage: options.requestMessage
         })
-      : ownershipAnswer ?? suitabilityAnswer ?? describeProperty(options.property)
+      : amenityAnswer ?? ownershipAnswer ?? suitabilityAnswer ?? describeProperty(options.property)
   ];
 
   if (options.intent.includeNeighborhood && options.neighborhood) {
@@ -82,6 +83,234 @@ export function buildAiChatPropertyResponseDraft(options: {
     matchedPropertyIds: [options.property.id],
     suggestedActions: ["compare-similar-properties", "open-investment-calculator", "create-lead"]
   };
+}
+
+function buildAmenityAnswer(
+  property: PropertySnapshot,
+  requestMessage?: string,
+  locale: TenantWidgetLanguage = "en"
+): string | undefined {
+  const requestedAmenities = detectRequestedAmenities(requestMessage);
+
+  if (!requestedAmenities.length) {
+    return undefined;
+  }
+
+  const normalizedAmenities = new Set(property.amenities.map(normalizeAmenity));
+  const requested = requestedAmenities[0];
+  const hasAmenity = requested.matches.some((match) => normalizedAmenities.has(match));
+  const availableAmenities = property.amenities.slice(0, 5).map((amenity) => formatAmenityLabel(amenity, locale));
+  const requestedLabel = formatAmenityLabel(requested.key, locale);
+  const fallbackAmenities = availableAmenities.length ? formatAvailableAmenities(availableAmenities, locale) : undefined;
+  const messages: Record<TenantWidgetLanguage, string> = {
+    en: hasAmenity
+      ? `Yes, ${property.title} has ${requestedLabel} listed in the property facts.`
+      : `${property.title} does not have ${requestedLabel} listed in the property facts.${fallbackAmenities ? ` Listed amenities include ${fallbackAmenities}.` : " Ask the agent to confirm if this amenity is available but missing from the feed."}`,
+    ru: hasAmenity
+      ? `Да, у ${property.title} в данных объекта есть ${requestedLabel}.`
+      : `У ${property.title} в данных объекта не указано: ${requestedLabel}.${fallbackAmenities ? ` Из удобств указаны: ${fallbackAmenities}.` : " Лучше уточнить у агента, вдруг это есть в здании, но не попало в фид."}`,
+    th: hasAmenity
+      ? `มีค่ะ ${property.title} ระบุ${requestedLabel}ไว้ในข้อมูลประกาศ`
+      : `${property.title} ยังไม่ได้ระบุ${requestedLabel}ในข้อมูลประกาศ${fallbackAmenities ? ` สิ่งอำนวยความสะดวกที่ระบุคือ ${fallbackAmenities}` : " ควรให้เอเจนต์ช่วยยืนยันอีกครั้ง"}`,
+    zh: hasAmenity
+      ? `有的，${property.title} 的房源资料里列出了${requestedLabel}。`
+      : `${property.title} 的房源资料里没有列出${requestedLabel}。${fallbackAmenities ? ` 已列出的配套包括：${fallbackAmenities}。` : " 建议让经纪人再确认一次。"}`
+  };
+
+  return messages[locale] ?? messages.en;
+}
+
+function detectRequestedAmenities(requestMessage?: string): Array<{ key: string; matches: string[] }> {
+  const normalized = normalizeAmenity(requestMessage ?? "");
+  const amenityRequests = [
+    {
+      key: "gym",
+      matches: ["gym", "fitness", "fitness center", "fitness centre", "fitness room"],
+      pattern: /\b(?:gym|fitness(?:\s+(?:center|centre|room))?)\b|спортзал|фитнес|тренажер|тренажёр|ฟิตเนส|健身/i
+    },
+    {
+      key: "pool",
+      matches: ["pool", "swimming pool", "communal pool"],
+      pattern: /\b(?:pool|swimming pool)\b|бассейн|สระว่ายน้ำ|泳池|游泳池/i
+    },
+    {
+      key: "parking",
+      matches: ["parking", "covered parking"],
+      pattern: /\bparking\b|парковк|ที่จอดรถ|停车|停車/i
+    },
+    {
+      key: "sauna",
+      matches: ["sauna"],
+      pattern: /\bsauna\b|саун|ซาวน่า|桑拿/i
+    },
+    {
+      key: "sea-view",
+      matches: ["sea-view", "sea view", "ocean view"],
+      pattern: /\b(?:sea[-\s]?view|ocean view)\b|вид на море|วิวทะเล|海景/i
+    },
+    {
+      key: "security",
+      matches: ["security", "24h security", "24/7 security", "guard", "cctv", "key card access"],
+      pattern: /\b(?:security|24h security|24\/7 security|guard|cctv|key card)\b|охран|безопасн|консьерж|กล้องวงจรปิด|รปภ|รักษาความปลอดภัย|安保|保安|门禁|門禁/i
+    },
+    {
+      key: "air-conditioning",
+      matches: ["air conditioning", "air-conditioning", "aircon", "air conditioner", "a/c", "ac"],
+      pattern: /\b(?:air[-\s]?conditioning|aircon|air conditioner|a\/c|ac)\b|кондиционер|แอร์|เครื่องปรับอากาศ|空调|空調/i
+    },
+    {
+      key: "washing-machine",
+      matches: ["washing machine", "washer", "laundry", "laundry room"],
+      pattern: /\b(?:washing machine|washer|laundry)\b|стиральн|стиралк|เครื่องซักผ้า|洗衣机|洗衣機/i
+    },
+    {
+      key: "balcony",
+      matches: ["balcony", "terrace"],
+      pattern: /\b(?:balcony|terrace)\b|балкон|террас|ระเบียง|阳台|陽台|露台/i
+    },
+    {
+      key: "elevator",
+      matches: ["elevator", "lift"],
+      pattern: /\b(?:elevator|lift)\b|лифт|ลิฟต์|电梯|電梯/i
+    },
+    {
+      key: "internet",
+      matches: ["internet", "wifi", "wi-fi", "fiber internet", "fiber-internet", "high-speed internet"],
+      pattern: /\b(?:internet|wifi|wi-fi|fiber|high[-\s]?speed internet)\b|интернет|вайфай|wi.?fi|ไฟเบอร์|อินเทอร์เน็ต|无线网|無線網|网络|網絡/i
+    },
+    {
+      key: "kitchen",
+      matches: ["kitchen", "european kitchen", "built-in kitchen"],
+      pattern: /\b(?:kitchen|european kitchen|built-in kitchen)\b|кухн|ครัว|厨房/i
+    },
+    {
+      key: "kids-room",
+      matches: ["kids room", "kids-room", "kids playground", "playground", "children playroom"],
+      pattern: /\b(?:kids room|kids-room|kids playground|playground|children'?s? playroom)\b|детск|площадк|ห้องเด็ก|สนามเด็กเล่น|儿童房|兒童房|游乐场|遊樂場/i
+    },
+    {
+      key: "garden",
+      matches: ["garden", "green area"],
+      pattern: /\b(?:garden|green area)\b|сад|зеленая зона|зелёная зона|สวน|花园|花園/i
+    },
+    {
+      key: "pet-friendly",
+      matches: ["pet-friendly", "pet friendly", "pets-allowed", "pets allowed"],
+      pattern: /\b(?:pet[-\s]?friendly|pets allowed|pet allowed)\b|с питом|с животн|можно с собак|เลี้ยงสัตว์|宠物友好|寵物友好|可养宠物|可養寵物/i
+    },
+    {
+      key: "coworking",
+      matches: ["coworking", "coworking lounge", "coworking-lounge", "workspace", "work space"],
+      pattern: /\b(?:coworking|co-working|workspace|work space)\b|коворкинг|рабочая зона|พื้นที่ทำงาน|联合办公|聯合辦公|办公区|辦公區/i
+    },
+    {
+      key: "shuttle",
+      matches: ["shuttle", "shuttle service"],
+      pattern: /\b(?:shuttle|shuttle service)\b|шаттл|трансфер|รถรับส่ง|班车|班車|接驳|接駁/i
+    }
+  ];
+
+  return amenityRequests.filter((amenity) => amenity.pattern.test(normalized));
+}
+
+function normalizeAmenity(value: string): string {
+  return value.toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function formatAmenityLabel(amenity: string, locale: TenantWidgetLanguage): string {
+  const normalized = normalizeAmenity(amenity);
+  const labels: Partial<Record<TenantWidgetLanguage, Record<string, string>>> = {
+    ru: {
+      "24/7 security": "охрана",
+      "24h security": "охрана",
+      "air conditioning": "кондиционер",
+      "air-conditioning": "кондиционер",
+      balcony: "балкон",
+      "communal pool": "бассейн",
+      coworking: "коворкинг",
+      "coworking-lounge": "коворкинг",
+      cctv: "видеонаблюдение",
+      elevator: "лифт",
+      garden: "сад",
+      gym: "спортзал",
+      internet: "интернет",
+      "key card access": "доступ по ключ-карте",
+      kitchen: "кухня",
+      "kids room": "детская комната",
+      "kids-room": "детская комната",
+      "kids playground": "детская площадка",
+      parking: "парковка",
+      "pet-friendly": "можно с питомцами",
+      pool: "бассейн",
+      sauna: "сауна",
+      security: "охрана",
+      "sea view": "вид на море",
+      "sea-view": "вид на море",
+      shuttle: "шаттл",
+      "shuttle service": "шаттл",
+      "washing machine": "стиральная машина",
+      "washing-machine": "стиральная машина",
+      wifi: "Wi-Fi"
+    },
+    th: {
+      "air conditioning": "แอร์",
+      "air-conditioning": "แอร์",
+      balcony: "ระเบียง",
+      coworking: "พื้นที่ทำงาน",
+      elevator: "ลิฟต์",
+      garden: "สวน",
+      gym: "ฟิตเนส",
+      internet: "อินเทอร์เน็ต",
+      kitchen: "ครัว",
+      "kids room": "ห้องเด็ก",
+      "kids-room": "ห้องเด็ก",
+      parking: "ที่จอดรถ",
+      "pet-friendly": "เลี้ยงสัตว์ได้",
+      pool: "สระว่ายน้ำ",
+      sauna: "ซาวน่า",
+      security: "ระบบรักษาความปลอดภัย",
+      "sea view": "วิวทะเล",
+      "sea-view": "วิวทะเล",
+      shuttle: "รถรับส่ง",
+      "washing machine": "เครื่องซักผ้า",
+      "washing-machine": "เครื่องซักผ้า",
+      wifi: "Wi-Fi"
+    },
+    zh: {
+      "air conditioning": "空调",
+      "air-conditioning": "空调",
+      balcony: "阳台",
+      coworking: "联合办公区",
+      elevator: "电梯",
+      garden: "花园",
+      gym: "健身房",
+      internet: "网络",
+      kitchen: "厨房",
+      "kids room": "儿童房",
+      "kids-room": "儿童房",
+      parking: "停车位",
+      "pet-friendly": "宠物友好",
+      pool: "泳池",
+      sauna: "桑拿",
+      security: "安保",
+      "sea view": "海景",
+      "sea-view": "海景",
+      shuttle: "班车",
+      "washing machine": "洗衣机",
+      "washing-machine": "洗衣机",
+      wifi: "Wi-Fi"
+    }
+  };
+
+  return labels[locale]?.[amenity] ?? labels[locale]?.[normalized] ?? amenity.replaceAll("-", " ");
+}
+
+function formatAvailableAmenities(amenities: string[], locale: TenantWidgetLanguage): string {
+  if (locale === "zh") {
+    return amenities.join("、");
+  }
+
+  return amenities.join(", ");
 }
 
 function buildSuitabilityAnswer(property: PropertySnapshot, requestMessage?: string): string | undefined {

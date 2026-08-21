@@ -166,6 +166,72 @@ describe("ai-chat-property-response", () => {
     expect(petDraft.deterministicDraft).not.toContain("Central Pattaya Rental Loft is a 1-bedroom condo");
   });
 
+  it("answers localized amenity follow-ups instead of repeating a dry listing summary", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("а у второго варианта есть спортзал?"),
+      knowledge: [],
+      locale: "ru",
+      property: propertyFactory({
+        amenities: ["pool", "kids room", "parking"],
+        bedrooms: 2,
+        title: "Jomtien Family Corner Condo"
+      }),
+      requestMessage: "а у второго варианта есть спортзал?"
+    });
+
+    expect(draft.deterministicDraft).toContain("У Jomtien Family Corner Condo в данных объекта не указано: спортзал");
+    expect(draft.deterministicDraft).toContain("Из удобств указаны: бассейн");
+    expect(draft.deterministicDraft).not.toContain("is a 2-bedroom condo");
+  });
+
+  it("recognizes popular Russian amenity synonyms in property follow-ups", () => {
+    const property = propertyFactory({
+      amenities: ["24h security", "air-conditioning", "washing machine", "fiber-internet"],
+      title: "Jomtien Family Corner Condo"
+    });
+    const securityDraft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("там есть охрана?"),
+      knowledge: [],
+      locale: "ru",
+      property,
+      requestMessage: "там есть охрана?"
+    });
+    const airconDraft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("а кондиционер есть?"),
+      knowledge: [],
+      locale: "ru",
+      property,
+      requestMessage: "а кондиционер есть?"
+    });
+    const washerDraft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("есть стиральная машина?"),
+      knowledge: [],
+      locale: "ru",
+      property,
+      requestMessage: "есть стиральная машина?"
+    });
+
+    expect(securityDraft.deterministicDraft).toContain("у Jomtien Family Corner Condo в данных объекта есть охрана");
+    expect(airconDraft.deterministicDraft).toContain("у Jomtien Family Corner Condo в данных объекта есть кондиционер");
+    expect(washerDraft.deterministicDraft).toContain("у Jomtien Family Corner Condo в данных объекта есть стиральная машина");
+  });
+
   it("adds neighborhood, advisor, and knowledge context only when requested and supplied", () => {
     const draft = buildAiChatPropertyResponseDraft({
       advisorSummary: advisorSummaryFactory(),
