@@ -15,6 +15,7 @@ import {
   getAgencyUpgradeCta,
   isAgencyNavigationItemActive
 } from "@shared/navigation/agency-navigation";
+import { PropertyFlowBrand } from "@shared/ui/propertyflow-brand";
 import { submitAgencyLogout } from "../api/session-actions";
 import styles from "./agency-shell.module.css";
 
@@ -44,7 +45,11 @@ export function AgencyShell({
       <div className={styles.layout}>
         <aside className={styles.sidebar} aria-label="Agency navigation">
           <div className={styles.brand}>
-            <span className={styles.brandMark}>PropertyFlow</span>
+            <PropertyFlowBrand
+              className={styles.brandLogo}
+              markClassName={styles.brandMark}
+              wordmarkClassName={styles.brandWordmark}
+            />
             <span className={styles.brandName}>Agency OS</span>
           </div>
 

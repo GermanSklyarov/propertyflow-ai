@@ -29,6 +29,18 @@
 }
 
 .brandMark {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+}
+
+.brandLogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandWordmark {
   color: #ff8067;
   font-size: 0.74rem;
   font-weight: 900;

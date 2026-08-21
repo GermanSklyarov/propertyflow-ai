@@ -31,6 +31,26 @@
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  color: #fff;
+  text-decoration: none;
+}
+
+.logoInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logoMark {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  filter: drop-shadow(0 12px 28px rgb(0 0 0 / 24%));
+}
+
+.logoWordmark {
   font-size: 0.95rem;
   font-weight: 900;
   letter-spacing: 0.14em;

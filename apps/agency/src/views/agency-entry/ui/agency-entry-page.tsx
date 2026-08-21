@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Bot, CheckCircle2, DatabaseZap, FileText, Globe2, KeyRound, Sparkles } from "lucide-react";
+import { PropertyFlowBrand } from "@shared/ui/propertyflow-brand";
 import { requestAgencySigninLink, submitAgencySignup } from "../api/signup-actions";
 import type { AgencySignupSummary } from "../model/agency-entry";
 import { buildAgencyEntryPlanCards } from "../model/agency-entry";
@@ -42,7 +43,11 @@ export function AgencyEntryPage() {
       <section className={styles.hero}>
         <nav className={styles.nav} aria-label="Agency entry navigation">
           <Link href="/" className={styles.logo}>
-            PropertyFlow AI
+            <PropertyFlowBrand
+              className={styles.logoInner}
+              markClassName={styles.logoMark}
+              wordmarkClassName={styles.logoWordmark}
+            />
           </Link>
           <div>
             <Link href="#pricing">Pricing</Link>
