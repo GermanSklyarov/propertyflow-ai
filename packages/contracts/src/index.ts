@@ -19,6 +19,7 @@ export interface TenantSnapshot {
   domainStatus?: "not-configured" | "pending-verification" | "verified";
   subscriptionPlan: TenantSubscriptionPlan;
   limits: {
+    aiListings: number;
     properties: number;
     agents: number;
     aiCreditsMonthly: number;
@@ -81,6 +82,7 @@ export const tenantPlanCatalog = {
     },
     limits: {
       agents: 1,
+      aiListings: 1_000,
       aiCreditsMonthly: 5_000,
       properties: 1_000,
       publicApiRequestsMonthly: 10_000
@@ -106,6 +108,7 @@ export const tenantPlanCatalog = {
     },
     limits: {
       agents: 15,
+      aiListings: 5_000,
       aiCreditsMonthly: 25_000,
       properties: 5_000,
       publicApiRequestsMonthly: 100_000
@@ -131,6 +134,7 @@ export const tenantPlanCatalog = {
     },
     limits: {
       agents: 100,
+      aiListings: 50_000,
       aiCreditsMonthly: 250_000,
       properties: 50_000,
       publicApiRequestsMonthly: 1_000_000
@@ -473,7 +477,7 @@ export interface TenantWidgetInstallCheckResponse {
   url: string;
 }
 
-export type TenantUsageMetricKey = "properties" | "agents" | "aiCreditsMonthly" | "publicApiRequestsMonthly";
+export type TenantUsageMetricKey = "aiListings" | "properties" | "agents" | "aiCreditsMonthly" | "publicApiRequestsMonthly";
 
 export interface TenantUsageMetric {
   key: TenantUsageMetricKey;

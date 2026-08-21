@@ -1266,6 +1266,7 @@ function repository(overrides: Partial<TenantRepository> = {}): TenantRepository
     findBySlug: async () => null,
     getUsage: async () => ({
       agents: 0,
+      aiListings: 0,
       aiCreditsMonthly: 0,
       properties: 0,
       publicApiRequestsMonthly: 0
@@ -1380,6 +1381,7 @@ function tenant(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot {
     id: "demo-agency",
     limits: {
       agents: 5,
+      aiListings: 1000,
       aiCreditsMonthly: 1000,
       properties: 100,
       publicApiRequestsMonthly: 10_000

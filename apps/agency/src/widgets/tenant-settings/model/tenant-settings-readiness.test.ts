@@ -19,7 +19,7 @@ describe("tenant settings readiness model", () => {
         leadTelegramChatIds: []
       }
     });
-    const usage = usageFactory({ propertiesUsed: 0 });
+    const usage = usageFactory({ aiListingsUsed: 0, propertiesUsed: 97 });
 
     const readiness = buildTenantSettingsReadinessItems(tenant, usage);
     const integrations = buildTenantSettingsIntegrationStatuses(tenant, usage);
@@ -59,7 +59,7 @@ describe("tenant settings readiness model", () => {
         leadTelegramChatIds: ["-100123"]
       }
     });
-    const usage = usageFactory({ propertiesUsed: 128, publicApiRemaining: 9200 });
+    const usage = usageFactory({ aiListingsUsed: 61, propertiesUsed: 97, publicApiRemaining: 9200 });
 
     expect(buildTenantSettingsReadinessItems(tenant, usage)).toContainEqual(
       expect.objectContaining({
@@ -86,6 +86,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
     id: "tenant-1",
     limits: {
       agents: 5,
+      aiListings: 1000,
       aiCreditsMonthly: 5000,
       properties: 500,
       publicApiRequestsMonthly: 10000
@@ -101,15 +102,18 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
 }
 
 function usageFactory({
+  aiListingsUsed = 12,
   propertiesUsed = 12,
   publicApiRemaining = 9900
 }: {
+  aiListingsUsed?: number;
   propertiesUsed?: number;
   publicApiRemaining?: number;
 } = {}): TenantUsageResponse {
   return {
     generatedAt: "2026-08-10T00:00:00.000Z",
     items: [
+      metric("aiListings", aiListingsUsed, 1000),
       metric("properties", propertiesUsed, 1000),
       metric("agents", 1, 1),
       metric("aiCreditsMonthly", 120, 5000),

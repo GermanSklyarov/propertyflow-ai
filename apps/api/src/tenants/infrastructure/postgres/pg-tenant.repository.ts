@@ -145,7 +145,10 @@ export class PgTenantRepository implements TenantRepository {
   }
 
   async getUsage(tenantId: string, periodStart: Date, periodEnd: Date): Promise<TenantUsageRawMetrics> {
-    const [properties, agents, aiCreditsMonthly, publicApiRequestsMonthly] = await Promise.all([
+    const [aiListings, properties, agents, aiCreditsMonthly, publicApiRequestsMonthly] = await Promise.all([
+      this.count("select count(*) from knowledge_documents where tenant_id = $1 and 'property-listing' = any(tags)", [
+        tenantId
+      ]),
       this.count("select count(*) from properties where tenant_id = $1", [tenantId]),
       this.count("select count(*) from tenant_users where tenant_id = $1 and status = 'active'", [tenantId]),
       this.count(
@@ -186,6 +189,7 @@ export class PgTenantRepository implements TenantRepository {
     ]);
 
     return {
+      aiListings,
       properties,
       agents,
       aiCreditsMonthly,
@@ -675,6 +679,7 @@ function resolveTenantLimits(
 
   return {
     agents: normalizeLimit(storedLimits?.agents, planLimits.agents),
+    aiListings: normalizeLimit(storedLimits?.aiListings, planLimits.aiListings),
     aiCreditsMonthly: normalizeLimit(storedLimits?.aiCreditsMonthly, planLimits.aiCreditsMonthly),
     properties: normalizeLimit(storedLimits?.properties, planLimits.properties),
     publicApiRequestsMonthly: normalizeLimit(

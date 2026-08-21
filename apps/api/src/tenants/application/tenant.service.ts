@@ -366,6 +366,7 @@ export class TenantService {
       periodStart: periodStart.toISOString(),
       periodEnd: periodEnd.toISOString(),
       items: [
+        this.toUsageMetric("aiListings", usage.aiListings, tenant.limits.aiListings),
         this.toUsageMetric("properties", usage.properties, tenant.limits.properties),
         this.toUsageMetric("agents", usage.agents, tenant.limits.agents),
         this.toUsageMetric("aiCreditsMonthly", usage.aiCreditsMonthly, tenant.limits.aiCreditsMonthly),

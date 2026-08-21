@@ -30,6 +30,7 @@ export interface ProvisionTenantRepositoryInput {
 }
 
 export interface TenantUsageRawMetrics {
+  aiListings: number;
   properties: number;
   agents: number;
   aiCreditsMonthly: number;

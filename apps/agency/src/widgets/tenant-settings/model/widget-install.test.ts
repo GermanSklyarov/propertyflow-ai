@@ -456,6 +456,7 @@ function tenantFactory(overrides: Partial<TenantSnapshot> = {}): TenantSnapshot 
     id: "tenant-1",
     limits: {
       agents: 5,
+      aiListings: 1000,
       aiCreditsMonthly: 5000,
       properties: 500,
       publicApiRequestsMonthly: 10000

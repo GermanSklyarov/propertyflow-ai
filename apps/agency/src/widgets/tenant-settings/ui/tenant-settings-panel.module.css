@@ -1428,6 +1428,18 @@
   color: var(--teal-dark);
 }
 
+.usageCard small {
+  display: grid;
+  gap: 4px;
+}
+
+.usageCard small em {
+  color: #6c7f7a;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .usageTrack {
   height: 8px;
   overflow: hidden;

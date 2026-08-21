@@ -17,6 +17,7 @@ const tenant = {
   id: "tenant-1",
   limits: {
     agents: 1,
+    aiListings: 1000,
     aiCreditsMonthly: 1000,
     properties: 100,
     publicApiRequestsMonthly: 10000

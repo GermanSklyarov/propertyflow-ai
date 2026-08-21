@@ -379,6 +379,7 @@ function tenant(widgetOverrides: Partial<TenantSnapshot["widget"]> = {}): Tenant
     id: "tenant-demo",
     limits: {
       agents: 1,
+      aiListings: 1000,
       aiCreditsMonthly: 5000,
       properties: 100,
       publicApiRequestsMonthly: 25000

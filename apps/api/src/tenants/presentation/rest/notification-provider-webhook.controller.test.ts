@@ -174,6 +174,7 @@ function tenant(): TenantSnapshot {
     id: "demo-agency",
     limits: {
       agents: 1,
+      aiListings: 1000,
       aiCreditsMonthly: 5000,
       properties: 100,
       publicApiRequestsMonthly: 25000

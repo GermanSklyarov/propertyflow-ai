@@ -25,7 +25,7 @@ export function buildTenantSettingsReadinessItems(
   usage: TenantUsageResponse
 ): TenantSettingsReadinessItem[] {
   const widget = getTenantWidgetSettings(tenant);
-  const propertyUsage = getUsageMetric(usage.items, "properties");
+  const listingUsage = getListingUsageMetric(tenant, usage);
   const agentUsage = getUsageMetric(usage.items, "agents");
   const apiUsage = getUsageMetric(usage.items, "publicApiRequestsMonthly");
 
@@ -47,10 +47,10 @@ export function buildTenantSettingsReadinessItems(
     {
       actionHref: "/knowledge#knowledge-sources",
       actionLabel: "Import listings",
-      done: Boolean(propertyUsage && propertyUsage.used > 0 && propertyUsage.utilizationRate < 90),
+      done: Boolean(listingUsage && listingUsage.used > 0 && listingUsage.utilizationRate < 90),
       label: "Searchable listings",
-      note: propertyUsage
-        ? `${formatNumber(propertyUsage.used)} of ${formatNumber(propertyUsage.limit)} listings available for Concierge.`
+      note: listingUsage
+        ? `${formatNumber(listingUsage.used)} of ${formatNumber(listingUsage.limit)} listings available for Concierge.`
         : "Listing usage is not available yet."
     },
     {
@@ -104,7 +104,7 @@ export function buildTenantSettingsIntegrationStatuses(
   usage: TenantUsageResponse
 ): TenantSettingsIntegrationStatus[] {
   const widget = getTenantWidgetSettings(tenant);
-  const propertyUsage = getUsageMetric(usage.items, "properties");
+  const listingUsage = getListingUsageMetric(tenant, usage);
   const apiUsage = getUsageMetric(usage.items, "publicApiRequestsMonthly");
   const notificationChannels = countLeadNotificationChannels(tenant);
 
@@ -121,7 +121,7 @@ export function buildTenantSettingsIntegrationStatuses(
     },
     {
       label: "Listing search",
-      status: propertyUsage && propertyUsage.used > 0 ? `${formatNumber(propertyUsage.used)} listings available` : "needs listing import"
+      status: listingUsage && listingUsage.used > 0 ? `${formatNumber(listingUsage.used)} listings available` : "needs listing import"
     },
     {
       label: "Qualified lead handoff",
@@ -154,4 +154,10 @@ function countLeadNotificationChannels(tenant: TenantSnapshot) {
 
 function getUsageMetric(items: TenantUsageMetric[], key: TenantUsageMetric["key"]) {
   return items.find((item) => item.key === key);
+}
+
+function getListingUsageMetric(tenant: TenantSnapshot, usage: TenantUsageResponse) {
+  return tenant.subscriptionPlan === "starter"
+    ? getUsageMetric(usage.items, "aiListings") ?? getUsageMetric(usage.items, "properties")
+    : getUsageMetric(usage.items, "properties");
 }

@@ -92,6 +92,7 @@ export function TenantSettingsPanel({
   const localizedWidgetSnippets = widgetInstall.localeOptions.filter((option) => option.value !== 'data-locale="auto"');
   const conciergeCheckLocale = widgetSettings.languages[0] ?? "en";
   const defaultWidgetPageUrl = tenant.customDomain ? `https://${tenant.customDomain}` : widgetSettings.allowedOrigins[0];
+  const planUsageItems = getPlanUsageItems(tenant.subscriptionPlan, usage.items);
   const leadQualificationLabels = leadQualificationFieldOptions
     .filter((field) => widgetSettings.leadQualificationFields.includes(field.value))
     .map((field) => field.label);
@@ -425,7 +426,7 @@ export function TenantSettingsPanel({
           <span className={styles.statusBadge}>Updated {formatDate(usage.generatedAt)}</span>
         </div>
         <div className={styles.usageGrid}>
-          {usage.items.map((item) => (
+          {planUsageItems.map((item) => (
             <UsageCard item={item} key={item.key} />
           ))}
         </div>
@@ -611,6 +612,8 @@ function formatPersonaGender(gender?: string) {
 }
 
 function UsageCard({ item }: { item: TenantUsageMetric }) {
+  const hint = formatUsageHint(item.key);
+
   return (
     <article className={styles.usageCard}>
       <div className={styles.usageTop}>
@@ -622,6 +625,7 @@ function UsageCard({ item }: { item: TenantUsageMetric }) {
       </div>
       <small>
         {formatNumber(item.used)} used / {formatNumber(item.limit)} limit
+        {hint ? <em>{hint}</em> : null}
       </small>
     </article>
   );
@@ -657,13 +661,35 @@ function formatUsage(item?: TenantUsageMetric) {
 
 function formatUsageKey(value: TenantUsageMetric["key"]) {
   const labels = {
+    aiListings: "AI listings",
     agents: "Agent seats",
     aiCreditsMonthly: "AI credits",
-    properties: "Properties",
+    properties: "CRM properties",
     publicApiRequestsMonthly: "Concierge API"
   } satisfies Record<TenantUsageMetric["key"], string>;
 
   return labels[value];
+}
+
+function formatUsageHint(value: TenantUsageMetric["key"]) {
+  const labels = {
+    aiListings: "Listings indexed for Concierge search and answers.",
+    agents: undefined,
+    aiCreditsMonthly: undefined,
+    properties: "CRM inventory records, separate from Concierge AI listings.",
+    publicApiRequestsMonthly: undefined
+  } satisfies Record<TenantUsageMetric["key"], string | undefined>;
+
+  return labels[value];
+}
+
+function getPlanUsageItems(plan: TenantSnapshot["subscriptionPlan"], items: TenantUsageMetric[]) {
+  const keys =
+    plan === "starter"
+      ? (["aiListings", "aiCreditsMonthly", "publicApiRequestsMonthly"] satisfies TenantUsageMetric["key"][])
+      : (["properties", "agents", "aiCreditsMonthly", "publicApiRequestsMonthly"] satisfies TenantUsageMetric["key"][]);
+
+  return keys.map((key) => getUsage(items, key)).filter((item): item is TenantUsageMetric => Boolean(item));
 }
 
 function formatDomainStatus(value: TenantSnapshot["domainStatus"]) {
