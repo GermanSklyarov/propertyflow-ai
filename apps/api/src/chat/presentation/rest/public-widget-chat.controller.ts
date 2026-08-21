@@ -727,6 +727,7 @@ function buildListingFitSummary(
   const locationSummary = locationTarget ? summarizeLocationTargetDistance(properties, locationTarget, locale) : "";
   const amenities = summarizeAmenities(properties, locale, requestMessage);
   const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
+  const investmentFit = summarizeInvestmentFit(properties, locale, requestMessage);
   const details = [priceRange, bedroomSummary, areaSummary, locationSummary, beachSummary, amenities].filter(Boolean);
   const clarificationPrompt = buildRecommendationClarificationPrompt(requestMessage, locale);
 
@@ -741,7 +742,9 @@ function buildListingFitSummary(
   };
   const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale, priceMode, locationTarget));
 
-  return [overviewLabels[locale] ?? overviewLabels.en, suitability, clarificationPrompt, ...cardDescriptions].filter(Boolean).join("\n");
+  return [overviewLabels[locale] ?? overviewLabels.en, suitability, investmentFit, clarificationPrompt, ...cardDescriptions]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function summarizeRequestSuitability(
@@ -1163,6 +1166,37 @@ function buildFamilySuitabilityNote(
   return labels[locale] ?? labels.en;
 }
 
+function summarizeInvestmentFit(
+  properties: PropertySnapshot[],
+  locale: TenantWidgetLanguage,
+  requestMessage: string
+): string | undefined {
+  if (!isInvestmentRequest(requestMessage) || !properties.length) {
+    return undefined;
+  }
+
+  const topProperty = [...properties].sort(compareInvestmentFit)[0];
+
+  if (!topProperty) {
+    return undefined;
+  }
+
+  const area = summarizeDominantArea(properties);
+  const yieldValue = calculateGrossYield(topProperty);
+  const yieldText = yieldValue !== undefined ? `${(yieldValue * 100).toFixed(1)}%` : undefined;
+  const beachCount = properties.filter((property) => (property.beachDistanceMeters ?? Number.POSITIVE_INFINITY) <= 500).length;
+  const rentEstimateCount = properties.filter((property) => property.monthlyRentEstimate || property.rentalPriceMonthly).length;
+
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `For rental return, I would start with ${area}: it gives investor-friendly beach access, smaller 1-bedroom entry prices, and visitor demand signals. ${topProperty.title} looks strongest from the current facts${yieldText ? ` with an estimated gross yield around ${yieldText}` : rentEstimateCount ? " because it has a rent signal for yield checks" : " but rental yield needs an agent-confirmed monthly rent estimate"}. ${beachCount}/${properties.length} shown options are within 500m of the beach, which can help short-stay demand.`,
+    ru: `Для арендной доходности я бы начал с района ${area}: здесь сочетаются близость к пляжу, более доступный вход для 1-bedroom и туристический спрос. По текущим данным сильнее выглядит ${topProperty.title}${yieldText ? `: ориентировочная gross yield около ${yieldText}` : rentEstimateCount ? ", потому что есть арендный сигнал для проверки доходности" : ", но доходность нужно подтвердить у агента по актуальной месячной ставке"}. ${beachCount}/${properties.length} показанных вариантов находятся в пределах 500 м от пляжа, это плюс для спроса.`,
+    th: `สำหรับผลตอบแทนค่าเช่า ฉันจะเริ่มจากโซน ${area}: มีระยะถึงชายหาดที่ดี ราคาเข้าเริ่มของ 1 ห้องนอนยังคุมได้ และมีสัญญาณดีมานด์จากนักท่องเที่ยว จากข้อมูลตอนนี้ ${topProperty.title} ดูเด่นที่สุด${yieldText ? ` โดย gross yield ประมาณ ${yieldText}` : rentEstimateCount ? " เพราะมีข้อมูลค่าเช่าสำหรับเช็ก yield" : " แต่ต้องให้เอเจนต์ยืนยันค่าเช่ารายเดือนล่าสุดก่อนคำนวณ yield"} ${beachCount}/${properties.length} รายการอยู่ในระยะ 500 ม. จากชายหาด`,
+    zh: `如果看租金回报，我会先从 ${area} 开始：这里有较好的海滩距离、1 房入场价较可控，也有游客需求信号。按当前资料，${topProperty.title} 最值得优先看${yieldText ? `，预估 gross yield 约 ${yieldText}` : rentEstimateCount ? "，因为有租金信号可用于收益核算" : "，但还需要经纪人确认最新月租后才能算收益"}。${beachCount}/${properties.length} 个展示房源在离海滩 500 米以内，对出租需求有帮助。`
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
 function buildRecommendationClarificationPrompt(message: string, locale: TenantWidgetLanguage): string | undefined {
   const intent = detectWidgetListingIntent(message);
   const missing: Array<"budget" | "intent" | "location" | "timing"> = [];
@@ -1332,11 +1366,91 @@ function detectWidgetListingIntent(message: string): WidgetPriceMode | undefined
 }
 
 function hasRentalIntent(message: string) {
+  if (isInvestmentRequest(message)) {
+    return false;
+  }
+
   return /\b(?:rent|rental|lease|monthly|per month)\b|аренд|снять|เช่า|รายเดือน|ต่อเดือน|租房|租公寓|月租|每月/i.test(message);
 }
 
 function hasSaleIntent(message: string) {
-  return /\b(?:buy|purchase|sale|ownership|freehold|invest|investment)\b|купить|покуп|продаж|собствен|инвест|ซื้อ|ขาย|买|買|购买|購買|投资|投資/i.test(message);
+  return (
+    isInvestmentRequest(message) ||
+    /\b(?:buy|purchase|sale|ownership|freehold)\b|купить|покуп|продаж|собствен|ซื้อ|ขาย|买|買|购买|購買/i.test(message)
+  );
+}
+
+function isInvestmentRequest(message: string) {
+  return /\b(?:invest|investment|yield|roi|rental return|rental income|rent out|buy-to-let)\b|инвест|доходн|сдач|арендн(?:ая|ой)?\s+доход|ลงทุน|ผลตอบแทน|ปล่อยเช่า|投资|投資|收益|回报|回報|出租收益/i.test(
+    message
+  );
+}
+
+function compareInvestmentFit(left: PropertySnapshot, right: PropertySnapshot) {
+  return investmentFitScore(right) - investmentFitScore(left);
+}
+
+function investmentFitScore(property: PropertySnapshot) {
+  const grossYield = calculateGrossYield(property) ?? 0;
+  const beachScore =
+    property.beachDistanceMeters !== undefined ? Math.max(0, 18 - property.beachDistanceMeters / 100) : 0;
+  const rentSignalScore = property.monthlyRentEstimate || property.rentalPriceMonthly ? 18 : 0;
+  const investorAmenityScore = countMatchingAmenities(property, [
+    "24h security",
+    "security",
+    "gym",
+    "pool",
+    "communal pool",
+    "balcony",
+    "washing machine",
+    "fiber-internet",
+    "high-speed internet",
+    "coworking space",
+    "parking"
+  ]);
+  const compactEntryScore = property.bedrooms <= 1 && property.areaSqm <= 45 ? 8 : 0;
+
+  return grossYield * 300 + beachScore + rentSignalScore + investorAmenityScore + compactEntryScore;
+}
+
+function calculateGrossYield(property: PropertySnapshot): number | undefined {
+  const monthlyRent = property.monthlyRentEstimate?.amount ?? property.rentalPriceMonthly?.amount;
+
+  if (!monthlyRent || property.price.amount <= 0) {
+    return undefined;
+  }
+
+  return (monthlyRent * 12) / property.price.amount;
+}
+
+function countMatchingAmenities(property: PropertySnapshot, amenities: string[]) {
+  return amenities.filter((amenity) => hasAnyAmenity(property, [amenity])).length;
+}
+
+function summarizeDominantArea(properties: PropertySnapshot[]) {
+  const buckets = new Map<string, number>();
+
+  for (const property of properties) {
+    const area = extractAreaLabel(property);
+    buckets.set(area, (buckets.get(area) ?? 0) + 1);
+  }
+
+  return [...buckets.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] ?? "Pattaya";
+}
+
+function extractAreaLabel(property: PropertySnapshot) {
+  const source = [property.address, property.project?.name, property.title].filter(Boolean).join(" ");
+  const areas = [
+    "Pratumnak",
+    "Jomtien",
+    "Wongamat",
+    "Naklua",
+    "Central Pattaya",
+    "East Pattaya",
+    "Na Jomtien"
+  ];
+
+  return areas.find((area) => new RegExp(area.replace(" ", "\\s+"), "i").test(source)) ?? formatMarketLabel(property.market);
 }
 
 function hasPurchaseBudgetSignal(message: string) {

@@ -1842,6 +1842,86 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("28k THB/mo");
   });
 
+  it("keeps investment purchase intent and explains area fit for rental return", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 2 matching listings.",
+          matchedPropertyIds: ["property-1", "property-2"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "property-1",
+        propertyFactory({
+          amenities: ["gym", "coworking space", "European kitchen"],
+          areaSqm: 31.6,
+          beachDistanceMeters: 281,
+          bedrooms: 1,
+          id: "property-1",
+          monthlyRentEstimate: { amount: 25_000, currency: "THB" },
+          price: { amount: 4_600_000, currency: "THB" },
+          title: "1BR Condo at City Garden Pratumnak - Pratumnak"
+        })
+      ],
+      [
+        "property-2",
+        propertyFactory({
+          amenities: ["balcony", "European kitchen", "24h security"],
+          areaSqm: 27.3,
+          beachDistanceMeters: 134,
+          bedrooms: 1,
+          id: "property-2",
+          monthlyRentEstimate: { amount: 22_000, currency: "THB" },
+          price: { amount: 4_700_000, currency: "THB" },
+          title: "1BR Condo at Siam Oriental Tropical Garden - Pratumnak"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message:
+          "I'm looking to buy a condo in Pattaya as an investment. My budget is around 5 million THB, but I'm not sure which area would give me the best rental return."
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.answer).toContain("For rental return, I would start with Pratumnak");
+    expect(response.answer).toContain("1BR Condo at City Garden Pratumnak - Pratumnak looks strongest");
+    expect(response.answer).toContain("estimated gross yield around 6.5%");
+    expect(response.answer).not.toContain("whether you want to rent or buy");
+    expect(response.answer).not.toContain("28k THB/mo");
+  });
+
   it("does not expose draft or incomplete listings as public widget recommendation cards", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",
