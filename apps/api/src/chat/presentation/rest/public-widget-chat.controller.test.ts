@@ -1035,6 +1035,165 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("2BR Condo at Grand Avenue Residence");
   });
 
+  it("does not substitute 1-bedroom public cards when the visitor asks for a studio", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 8 matching listings.",
+          matchedPropertyIds: ["siam-oriental-1br", "the-cliff-1br"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "siam-oriental-1br",
+        propertyFactory({
+          bedrooms: 1,
+          id: "siam-oriental-1br",
+          price: { amount: 4_700_000, currency: "THB" },
+          title: "1BR Condo at Siam Oriental Tropical Garden - Pratumnak"
+        })
+      ],
+      [
+        "the-cliff-1br",
+        propertyFactory({
+          bedrooms: 1,
+          id: "the-cliff-1br",
+          price: { amount: 4_600_000, currency: "THB" },
+          title: "1BR Condo at The Cliff - Pratumnak"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "Find me a cheap studio near the beach. I don't have a car, so I need somewhere convenient."
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings).toEqual([]);
+    expect(response.answer).toContain("I do not have public studio cards that match this exact search right now");
+    expect(response.answer).toContain("should not substitute 1-bedroom condos as studios");
+    expect(response.answer).not.toContain("1BR Condo at Siam Oriental Tropical Garden");
+  });
+
+  it("ranks and explains public cards with saved car-free convenience facts", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found matching studios.",
+          matchedPropertyIds: ["far-studio", "walkable-studio"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "far-studio",
+        propertyFactory({
+          beachDistanceMeters: 350,
+          bedrooms: 0,
+          id: "far-studio",
+          locationFeatures: {
+            nearestBahtBusRouteDistanceMeters: 1200,
+            nearestPublicTransportDistanceMeters: 1300,
+            nearestSupermarketDistanceMeters: 1400,
+            updatedAt: "2026-07-20T00:00:00.000Z",
+            walkabilityScore: 42
+          },
+          price: { amount: 2_100_000, currency: "THB" },
+          title: "Studio Condo Far from Transport"
+        })
+      ],
+      [
+        "walkable-studio",
+        propertyFactory({
+          beachDistanceMeters: 420,
+          bedrooms: 0,
+          id: "walkable-studio",
+          locationFeatures: {
+            nearestBahtBusRouteDistanceMeters: 280,
+            nearestPublicTransportDistanceMeters: 350,
+            nearestSupermarketDistanceMeters: 450,
+            updatedAt: "2026-07-20T00:00:00.000Z",
+            walkabilityScore: 82
+          },
+          price: { amount: 2_300_000, currency: "THB" },
+          title: "Studio Condo Near Baht Bus"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        locale: "en",
+        message: "Find me a cheap studio near the beach. I don't have a car, so I need somewhere convenient."
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
+      "Studio Condo Near Baht Bus",
+      "Studio Condo Far from Transport"
+    ]);
+    expect(response.answer).toContain("For living without a car");
+    expect(response.answer).toContain("have a baht bus signal");
+    expect(response.answer).toContain("have groceries within about 900m");
+  });
+
   it("keeps Russian Pratumnak context when the visitor refines rent, budget, and move-in timing", async () => {
     const controller = publicWidgetControllerForProperties(
       ["huai-yai", "the-cliff", "naklua", "pratumnak-studio"],
@@ -1110,8 +1269,8 @@ describe("PublicWidgetChatController", () => {
     );
 
     expect(response.recommendedListings.map((listing) => listing.title)).toEqual([
-      "1BR Condo at The Cliff - Pratumnak",
-      "Terminal 21 Walkable Studio - Pratumnak"
+      "Terminal 21 Walkable Studio - Pratumnak",
+      "1BR Condo at The Cliff - Pratumnak"
     ]);
     expect(response.answer).toContain("Pratumnak");
     expect(response.answer).toContain("район: Pratumnak");
@@ -2309,7 +2468,7 @@ describe("PublicWidgetChatController", () => {
       "demo-agency",
       {
         locale: "en",
-        message: "I'm looking for a spacious studio close to the beach and with sea view for rent under 30k/month"
+        message: "I'm looking for a spacious condo close to the beach and with sea view for rent under 30k/month"
       },
       requestFactory(),
       "https://agency.example.com"

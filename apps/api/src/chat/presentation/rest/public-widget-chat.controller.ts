@@ -637,6 +637,17 @@ function buildNoPublicListingCardsMessage(
     return labels[locale] ?? labels.en;
   }
 
+  if (isStrictStudioRequest(requestMessage)) {
+    const labels: Record<TenantWidgetLanguage, string> = {
+      en: "I do not have public studio cards that match this exact search right now. I should not substitute 1-bedroom condos as studios; you can loosen the layout to studio or 1-bedroom, set a budget, or ask an agent for off-market studios.",
+      ru: "Сейчас нет публичных карточек студий под этот точный поиск. Я не должна подменять студии 1-bedroom кондо; можно расширить планировку до studio or 1-bedroom, задать бюджет или попросить агента найти off-market студии.",
+      th: "ตอนนี้ยังไม่มีการ์ดสตูดิโอสาธารณะที่ตรงกับการค้นหานี้ ฉันไม่ควรแทนสตูดิโอด้วยห้อง 1 ห้องนอน คุณสามารถผ่อนเงื่อนไขเป็นสตูดิโอหรือ 1 ห้องนอน ระบุงบ หรือให้เอเจนต์หา off-market studio ได้",
+      zh: "目前没有符合这个精确搜索的公开 studio 卡片。我不应把一居室当作 studio 替代；你可以放宽为 studio 或一居室、设定预算，或让经纪人寻找 off-market studio。"
+    };
+
+    return labels[locale] ?? labels.en;
+  }
+
   const labels: Record<TenantWidgetLanguage, string> = {
     en: "I do not have public listing cards to show for this exact search right now. You can adjust the budget, area, radius, or requirements and I can look again.",
     ru: "Сейчас нет публичных карточек под этот точный поиск. Можно изменить бюджет, район, радиус или требования, и я поищу заново.",
@@ -727,6 +738,7 @@ function buildListingFitSummary(
   const locationSummary = locationTarget ? summarizeLocationTargetDistance(properties, locationTarget, locale) : "";
   const amenities = summarizeAmenities(properties, locale, requestMessage);
   const suitability = summarizeRequestSuitability(properties, locale, requestMessage);
+  const carFreeFit = summarizeCarFreeFit(properties, locale, requestMessage);
   const investmentFit = summarizeInvestmentFit(properties, locale, requestMessage);
   const details = [priceRange, bedroomSummary, areaSummary, locationSummary, beachSummary, amenities].filter(Boolean);
   const clarificationPrompt = buildRecommendationClarificationPrompt(requestMessage, locale);
@@ -742,9 +754,54 @@ function buildListingFitSummary(
   };
   const cardDescriptions = properties.map((property) => buildListingCardDescription(property, locale, priceMode, locationTarget));
 
-  return [overviewLabels[locale] ?? overviewLabels.en, suitability, investmentFit, clarificationPrompt, ...cardDescriptions]
+  return [overviewLabels[locale] ?? overviewLabels.en, suitability, carFreeFit, investmentFit, clarificationPrompt, ...cardDescriptions]
     .filter(Boolean)
     .join("\n");
+}
+
+function summarizeCarFreeFit(
+  properties: PropertySnapshot[],
+  locale: TenantWidgetLanguage,
+  requestMessage: string
+): string | undefined {
+  if (!isCarFreeRequest(requestMessage) || !properties.length) {
+    return undefined;
+  }
+
+  const withFacts = properties.filter((property) => property.locationFeatures);
+  const bahtBusCount = properties.filter((property) =>
+    (property.locationFeatures?.nearestBahtBusRouteDistanceMeters ?? Number.POSITIVE_INFINITY) <= 700
+  ).length;
+  const transportCount = properties.filter((property) =>
+    Math.min(
+      property.locationFeatures?.nearestBahtBusRouteDistanceMeters ?? Number.POSITIVE_INFINITY,
+      property.locationFeatures?.nearestPublicTransportDistanceMeters ?? Number.POSITIVE_INFINITY
+    ) <= 700
+  ).length;
+  const supermarketCount = properties.filter((property) =>
+    (property.locationFeatures?.nearestSupermarketDistanceMeters ?? Number.POSITIVE_INFINITY) <= 900
+  ).length;
+  const walkableCount = properties.filter((property) => (property.locationFeatures?.walkabilityScore ?? 0) >= 70).length;
+
+  if (!withFacts.length) {
+    const labels: Record<TenantWidgetLanguage, string> = {
+      en: "For living without a car, I do not have saved transport or walkability facts on these shown options yet, so the agent should verify baht bus access, groceries, and day-to-day routes before you rely on them.",
+      ru: "Для жизни без машины по этим вариантам пока нет сохранённых данных о транспорте и walkability, поэтому агенту стоит проверить baht bus, магазины и повседневные маршруты.",
+      th: "สำหรับการอยู่โดยไม่มีรถ ยังไม่มีข้อมูลขนส่งหรือ walkability ที่บันทึกไว้สำหรับตัวเลือกเหล่านี้ ควรให้เอเจนต์ตรวจสอบบาทบัส ร้านค้า และเส้นทางประจำวัน",
+      zh: "如果不打算开车，这些房源目前没有保存的交通或步行便利数据，建议让经纪人核实双条车、超市和日常路线。"
+    };
+
+    return labels[locale] ?? labels.en;
+  }
+
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `For living without a car, ${transportCount}/${properties.length} shown options have transport within about 700m, ${bahtBusCount}/${properties.length} have a baht bus signal, ${supermarketCount}/${properties.length} have groceries within about 900m, and ${walkableCount}/${properties.length} have walkability 70+/100 in saved facts.`,
+    ru: `Для жизни без машины: у ${transportCount}/${properties.length} вариантов транспорт примерно в пределах 700 м, у ${bahtBusCount}/${properties.length} есть baht bus signal, у ${supermarketCount}/${properties.length} магазины примерно в пределах 900 м, у ${walkableCount}/${properties.length} walkability 70+/100 в сохранённых данных.`,
+    th: `สำหรับการอยู่โดยไม่มีรถ ${transportCount}/${properties.length} รายการมีขนส่งในระยะประมาณ 700 ม., ${bahtBusCount}/${properties.length} รายการมีสัญญาณบาทบัส, ${supermarketCount}/${properties.length} รายการมีร้านของชำในระยะประมาณ 900 ม. และ ${walkableCount}/${properties.length} รายการมี walkability 70+/100`,
+    zh: `如果不打算开车，${transportCount}/${properties.length} 个展示房源约 700 米内有交通，${bahtBusCount}/${properties.length} 个有双条车信号，${supermarketCount}/${properties.length} 个约 900 米内有超市，${walkableCount}/${properties.length} 个保存的步行便利评分为 70+/100。`
+  };
+
+  return labels[locale] ?? labels.en;
 }
 
 function summarizeRequestSuitability(
@@ -824,6 +881,7 @@ function rankWidgetPropertiesForRequest(
   const preferLargerArea = isSpaciousRequest(requestMessage);
   const preferCloseBeach = hasSpecificLocationPreference(requestMessage) && /\b(?:beach|sea|near|close|walk)\b|пляж|море/i.test(requestMessage);
   const preferFamilyFit = isFamilyRequest(requestMessage) || isSchoolRequest(requestMessage);
+  const preferCarFreeFit = isCarFreeRequest(requestMessage) || isConvenienceRequest(requestMessage);
 
   if (
     !requestedAmenities.length &&
@@ -833,7 +891,8 @@ function rankWidgetPropertiesForRequest(
     !preferLargerArea &&
     !locationTarget &&
     !preferCloseBeach &&
-    !preferFamilyFit
+    !preferFamilyFit &&
+    !preferCarFreeFit
   ) {
     return properties;
   }
@@ -845,13 +904,6 @@ function rankWidgetPropertiesForRequest(
         countMatchedAmenities(right.property, requestedAmenities) - countMatchedAmenities(left.property, requestedAmenities);
       if (amenityDelta !== 0) {
         return amenityDelta;
-      }
-
-      if (preferBudgetPrice) {
-        const priceDelta = widgetComparablePrice(left.property) - widgetComparablePrice(right.property);
-        if (priceDelta !== 0) {
-          return priceDelta;
-        }
       }
 
       if (preferLuxuryFit) {
@@ -872,6 +924,20 @@ function rankWidgetPropertiesForRequest(
         const familyDelta = widgetFamilyFitScore(right.property) - widgetFamilyFitScore(left.property);
         if (familyDelta !== 0) {
           return familyDelta;
+        }
+      }
+
+      if (preferCarFreeFit) {
+        const carFreeDelta = widgetCarFreeFitScore(right.property) - widgetCarFreeFitScore(left.property);
+        if (carFreeDelta !== 0) {
+          return carFreeDelta;
+        }
+      }
+
+      if (preferBudgetPrice) {
+        const priceDelta = widgetComparablePrice(left.property) - widgetComparablePrice(right.property);
+        if (priceDelta !== 0) {
+          return priceDelta;
         }
       }
 
@@ -985,7 +1051,7 @@ function filterByWidgetLayoutRequirements(properties: PropertySnapshot[], reques
     return true;
   });
 
-  return filtered.length ? filtered : properties;
+  return filtered.length || isStrictStudioRequest(requestMessage) ? filtered : properties;
 }
 
 function detectWidgetBedroomRange(message: string): { minBedrooms?: number; maxBedrooms?: number } {
@@ -1022,6 +1088,10 @@ function detectWidgetBedroomRange(message: string): { minBedrooms?: number; maxB
   }
 
   if (new RegExp(studioPattern, "i").test(normalized)) {
+    if (isStrictStudioRequest(normalized)) {
+      return { minBedrooms: 0, maxBedrooms: 0 };
+    }
+
     const exactRequest = hasExactWidgetBedroomQualifier(normalized, "studio");
     return exactRequest ? { minBedrooms: 0, maxBedrooms: 0 } : { minBedrooms: 0 };
   }
@@ -1049,6 +1119,15 @@ function hasWidgetBedroomLowerBoundQualifier(query: string, layoutTerm: string):
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function isStrictStudioRequest(message: string): boolean {
+  const normalized = message.toLowerCase();
+
+  return /\b(?:studio)\b|студия|студию|สตูดิโอ|开间|開間|单间|單間/i.test(normalized) &&
+    !/\b(?:studio).{0,40}(?:or|\/).{0,40}(?:1|one)\s*(?:bedroom|bedrooms|br|bed|beds)\b|(?:1|one)\s*(?:bedroom|bedrooms|br|bed|beds).{0,40}(?:or|\/).{0,40}studio\b|или/i.test(
+      normalized
+    );
 }
 
 function detectRequestedWidgetAmenities(message: string): string[] {
@@ -1101,6 +1180,28 @@ function widgetFamilyFitScore(property: PropertySnapshot): number {
   const familyAmenities = countMatchedAmenities(property, ["kids playground", "playground", "school", "kindergarten", "family pool", "garden"]);
 
   return familyAmenities * 3 + Math.min(property.bedrooms, 3) * 1.5 + Math.min(property.areaSqm / 25, 4);
+}
+
+function widgetCarFreeFitScore(property: PropertySnapshot): number {
+  const features = property.locationFeatures;
+  const walkabilityScore = Math.min((features?.walkabilityScore ?? 0) / 10, 10);
+  const transportDistance = Math.min(
+    features?.nearestBahtBusRouteDistanceMeters ?? Number.POSITIVE_INFINITY,
+    features?.nearestPublicTransportDistanceMeters ?? Number.POSITIVE_INFINITY
+  );
+  const transportScore = widgetDistanceScore(Number.isFinite(transportDistance) ? transportDistance : undefined, 900) * 4;
+  const supermarketScore = widgetDistanceScore(features?.nearestSupermarketDistanceMeters, 900) * 3;
+  const mallScore = widgetDistanceScore(features?.nearestMallDistanceMeters, 2500);
+
+  return walkabilityScore * 0.35 + transportScore + supermarketScore + mallScore;
+}
+
+function widgetDistanceScore(distanceMeters: number | undefined, comfortableDistanceMeters: number): number {
+  if (distanceMeters === undefined) {
+    return 0;
+  }
+
+  return Math.max(0, 1 - distanceMeters / comfortableDistanceMeters);
 }
 
 function widgetComparablePrice(property: PropertySnapshot): number {
@@ -1337,6 +1438,14 @@ function isLuxuryRequest(message: string) {
 
 function isValueForMoneyRequest(message: string) {
   return /\b(?:best value|value for money|good deal|best deal|balanced|optimal|worth it)\b|цена.*качество|лучшее предложение|выгод|оптимальн|คุ้มค่า|性价比|性價比/i.test(message);
+}
+
+function isCarFreeRequest(message: string) {
+  return /\b(?:without a car|no car|don'?t have a car|do not have a car|don'?t drive|do not drive|walkability|walkable|public transport|baht bus|songthaew)\b|без машины|не вожу|нет машины|пешком|общественный транспорт|батбас|сонгтео|บาทบัส|รถสองแถว|ไม่ขับรถ|不用车|不用車|不开车|不開車|公共交通/i.test(message);
+}
+
+function isConvenienceRequest(message: string) {
+  return /\b(?:convenient|easy transport|shops|restaurants|grocery|supermarket|nearby)\b|удобн|магазин|ресторан|транспорт|ร้านอาหาร|ร้านค้า|สะดวก|便利|方便|餐厅|餐廳|商店|超市/i.test(message);
 }
 
 function hasAnyAmenity(property: PropertySnapshot, amenities: string[]) {
