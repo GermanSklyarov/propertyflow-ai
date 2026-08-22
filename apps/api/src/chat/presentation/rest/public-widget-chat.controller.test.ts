@@ -1105,6 +1105,80 @@ describe("PublicWidgetChatController", () => {
     expect(response.answer).not.toContain("1BR Condo at Siam Oriental Tropical Garden");
   });
 
+  it("does not ask for budget again when a strict studio follow-up already includes rent and budget", async () => {
+    const tenant = tenantFactory({
+      id: "tenant-rag",
+      widget: {
+        ...tenantFactory().widget,
+        allowedOrigins: ["https://agency.example.com"]
+      }
+    });
+    const tenants = {
+      assertPublicWidgetOriginAllowed: vi.fn(),
+      getActiveTenantBySlugOrThrow: vi.fn().mockResolvedValue(tenant),
+      recordPublicWidgetAsk: vi.fn()
+    } as unknown as TenantService;
+    const chat = {
+      ask: vi.fn().mockResolvedValue(
+        chatResponse({
+          answer: "I found 8 matching listings.",
+          matchedPropertyIds: ["the-cliff-1br"],
+          suggestedActions: ["compare-results", "open-map", "save-search"]
+        })
+      )
+    } as unknown as AiChatService;
+    const propertiesById = new Map([
+      [
+        "the-cliff-1br",
+        propertyFactory({
+          bedrooms: 1,
+          id: "the-cliff-1br",
+          listingType: "rent",
+          rentalPriceMonthly: { amount: 22_000, currency: "THB" },
+          title: "1BR Condo at The Cliff - Pratumnak"
+        })
+      ]
+    ]);
+    const controller = new PublicWidgetChatController(
+      tenants,
+      chat,
+      { create: vi.fn() } as unknown as LeadService,
+      propertyRepository({
+        findById: vi.fn().mockImplementation((_tenantId: string, propertyId: string) =>
+          Promise.resolve(propertiesById.get(propertyId) ?? null)
+        )
+      }),
+      rateLimitService()
+    );
+
+    const response = await controller.ask(
+      "demo-agency",
+      {
+        conversation: [
+          {
+            role: "user",
+            text: "Find me a cheap studio near the beach. I don't have a car, so I need somewhere convenient."
+          },
+          {
+            role: "assistant",
+            text: "I do not have public studio cards that match this exact search right now."
+          }
+        ],
+        locale: "en",
+        message: "i want to rent a cheap studio near beach, budget 20-25k"
+      },
+      requestFactory(),
+      "https://agency.example.com"
+    );
+
+    expect(response.recommendedListings).toEqual([]);
+    expect(response.answer).toContain("rent, budget, location/beach preference noted");
+    expect(response.answer).toContain("loosen one constraint");
+    expect(response.answer).toContain("allow studio or 1-bedroom");
+    expect(response.answer).not.toContain("set a budget");
+    expect(response.answer).not.toContain("share the budget");
+  });
+
   it("ranks and explains public cards with saved car-free convenience facts", async () => {
     const tenant = tenantFactory({
       id: "tenant-rag",

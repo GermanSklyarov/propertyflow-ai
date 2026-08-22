@@ -638,14 +638,7 @@ function buildNoPublicListingCardsMessage(
   }
 
   if (isStrictStudioRequest(requestMessage)) {
-    const labels: Record<TenantWidgetLanguage, string> = {
-      en: "I do not have public studio cards that match this exact search right now. I should not substitute 1-bedroom condos as studios; you can loosen the layout to studio or 1-bedroom, set a budget, or ask an agent for off-market studios.",
-      ru: "Сейчас нет публичных карточек студий под этот точный поиск. Я не должна подменять студии 1-bedroom кондо; можно расширить планировку до studio or 1-bedroom, задать бюджет или попросить агента найти off-market студии.",
-      th: "ตอนนี้ยังไม่มีการ์ดสตูดิโอสาธารณะที่ตรงกับการค้นหานี้ ฉันไม่ควรแทนสตูดิโอด้วยห้อง 1 ห้องนอน คุณสามารถผ่อนเงื่อนไขเป็นสตูดิโอหรือ 1 ห้องนอน ระบุงบ หรือให้เอเจนต์หา off-market studio ได้",
-      zh: "目前没有符合这个精确搜索的公开 studio 卡片。我不应把一居室当作 studio 替代；你可以放宽为 studio 或一居室、设定预算，或让经纪人寻找 off-market studio。"
-    };
-
-    return labels[locale] ?? labels.en;
+    return buildNoStrictStudioCardsMessage(locale, requestMessage);
   }
 
   const labels: Record<TenantWidgetLanguage, string> = {
@@ -653,6 +646,54 @@ function buildNoPublicListingCardsMessage(
     ru: "Сейчас нет публичных карточек под этот точный поиск. Можно изменить бюджет, район, радиус или требования, и я поищу заново.",
     th: "ตอนนี้ยังไม่มีการ์ดประกาศสาธารณะที่ตรงกับการค้นหานี้ ลองปรับงบ ทำเล รัศมี หรือเงื่อนไข แล้วฉันจะค้นหาให้อีกครั้ง",
     zh: "目前没有符合这个精确搜索的公开房源卡片。你可以调整预算、区域、半径或条件，我再帮你查找。"
+  };
+
+  return labels[locale] ?? labels.en;
+}
+
+function buildNoStrictStudioCardsMessage(locale: TenantWidgetLanguage, requestMessage: string): string {
+  const intent = detectWidgetListingIntent(requestMessage);
+  const hasBudget = hasBudgetSignal(requestMessage);
+  const hasLocation = hasSpecificLocationPreference(requestMessage);
+  const knownCriteria = [
+    intent === "rent" ? "rent" : intent === "sale" ? "purchase" : undefined,
+    hasBudget ? "budget" : undefined,
+    hasLocation ? "location/beach preference" : undefined
+  ].filter(Boolean);
+  const followUpEn = hasBudget && intent
+    ? "The useful next step is to loosen one constraint: allow studio or 1-bedroom, widen the beach distance/area, or ask an agent to check off-market studios in that budget."
+    : hasBudget
+      ? "I still need to know whether this is rent or purchase; otherwise you can loosen to studio or 1-bedroom or ask an agent for off-market studios."
+      : intent
+        ? "Please share the budget, or loosen to studio or 1-bedroom, so I can avoid showing random cards."
+        : "Please share whether you want to rent or buy and your budget, or loosen to studio or 1-bedroom.";
+  const followUpRu = hasBudget && intent
+    ? "Следующий полезный шаг - ослабить одно условие: разрешить studio or 1-bedroom, расширить расстояние до пляжа/район или попросить агента проверить off-market студии в этом бюджете."
+    : hasBudget
+      ? "Ещё нужно понять, аренда это или покупка; иначе можно расширить до studio or 1-bedroom или попросить агента найти off-market студии."
+      : intent
+        ? "Укажите бюджет или расширьте до studio or 1-bedroom, чтобы я не показывала случайные карточки."
+        : "Укажите, аренда это или покупка, и бюджет, либо расширьте планировку до studio or 1-bedroom.";
+  const followUpTh = hasBudget && intent
+    ? "ขั้นตอนถัดไปที่มีประโยชน์คือผ่อนเงื่อนไขหนึ่งข้อ: อนุญาตสตูดิโอหรือ 1 ห้องนอน ขยายระยะถึงชายหาด/โซน หรือให้เอเจนต์เช็ก off-market studio ในงบนี้"
+    : hasBudget
+      ? "ยังต้องทราบว่าต้องการเช่าหรือซื้อ หรือผ่อนเป็นสตูดิโอ/1 ห้องนอน หรือให้เอเจนต์หา off-market studio"
+      : intent
+        ? "โปรดระบุงบ หรือผ่อนเป็นสตูดิโอ/1 ห้องนอน เพื่อไม่ให้ฉันแสดงการ์ดแบบสุ่ม"
+        : "โปรดระบุว่าต้องการเช่าหรือซื้อและงบ หรือผ่อนเงื่อนไขเป็นสตูดิโอ/1 ห้องนอน";
+  const followUpZh = hasBudget && intent
+    ? "下一步最好放宽一个条件：允许 studio 或一居室、扩大海滩距离/区域，或让经纪人按这个预算查找 off-market studio。"
+    : hasBudget
+      ? "还需要确认是租还是买；也可以放宽为 studio 或一居室，或让经纪人查找 off-market studio。"
+      : intent
+        ? "请补充预算，或放宽为 studio 或一居室，这样我不会展示随机卡片。"
+        : "请补充是租还是买以及预算，或放宽为 studio 或一居室。";
+
+  const labels: Record<TenantWidgetLanguage, string> = {
+    en: `I do not have public studio cards that match this exact search right now${knownCriteria.length ? ` (${knownCriteria.join(", ")} noted)` : ""}. I should not substitute 1-bedroom condos as studios. ${followUpEn}`,
+    ru: `Сейчас нет публичных карточек студий под этот точный поиск${knownCriteria.length ? ` (${knownCriteria.join(", ")} уже учтено)` : ""}. Я не должна подменять студии 1-bedroom кондо. ${followUpRu}`,
+    th: `ตอนนี้ยังไม่มีการ์ดสตูดิโอสาธารณะที่ตรงกับการค้นหานี้${knownCriteria.length ? ` (รับข้อมูล ${knownCriteria.join(", ")} แล้ว)` : ""} ฉันไม่ควรแทนสตูดิโอด้วยห้อง 1 ห้องนอน ${followUpTh}`,
+    zh: `目前没有符合这个精确搜索的公开 studio 卡片${knownCriteria.length ? `（已记录 ${knownCriteria.join(", ")}）` : ""}。我不应把一居室当作 studio 替代。${followUpZh}`
   };
 
   return labels[locale] ?? labels.en;
