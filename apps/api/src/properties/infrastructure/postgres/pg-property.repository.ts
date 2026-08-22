@@ -42,6 +42,9 @@ interface PropertyRow {
   price_currency: Currency;
   rental_price_monthly_amount: string | null;
   rental_price_monthly_currency: Currency | null;
+  short_term_rental_price_monthly_amount: string | null;
+  short_term_rental_price_monthly_currency: Currency | null;
+  minimum_rental_months: number | null;
   latitude: number;
   longitude: number;
   address: string | null;
@@ -133,6 +136,9 @@ export class PgPropertyRepository implements PropertyRepository {
           price_currency,
           rental_price_monthly_amount,
           rental_price_monthly_currency,
+          short_term_rental_price_monthly_amount,
+          short_term_rental_price_monthly_currency,
+          minimum_rental_months,
           location,
           latitude,
           longitude,
@@ -163,12 +169,12 @@ export class PgPropertyRepository implements PropertyRepository {
           $11,
           $12,
           $13,
-          st_setsrid(st_makepoint($14, $15), 4326)::geography,
-          $15,
           $14,
+          $15,
           $16,
-          $17,
+          st_setsrid(st_makepoint($17, $18), 4326)::geography,
           $18,
+          $17,
           $19,
           $20,
           $21,
@@ -178,7 +184,10 @@ export class PgPropertyRepository implements PropertyRepository {
           $25,
           $26,
           $27,
-          $28
+          $28,
+          $29,
+          $30,
+          $31
         )
         returning id
       `,
@@ -196,6 +205,9 @@ export class PgPropertyRepository implements PropertyRepository {
         property.price.currency,
         property.rentalPriceMonthly?.amount ?? null,
         property.rentalPriceMonthly?.currency ?? null,
+        property.shortTermRentalPriceMonthly?.amount ?? null,
+        property.shortTermRentalPriceMonthly?.currency ?? null,
+        property.minimumRentalMonths ?? null,
         property.location.longitude,
         property.location.latitude,
         property.address ?? null,
@@ -417,14 +429,18 @@ export class PgPropertyRepository implements PropertyRepository {
     }
 
     if (filters.minMonthlyRentThb !== undefined) {
+      const rentAmountColumn = rentalAmountSql(filters);
+      const rentCurrencyColumn = rentalCurrencySql(filters);
       clauses.push(
-        `p.rental_price_monthly_currency = 'THB' and p.rental_price_monthly_amount >= ${addValue(filters.minMonthlyRentThb)}`
+        `${rentCurrencyColumn} = 'THB' and ${rentAmountColumn} >= ${addValue(filters.minMonthlyRentThb)}`
       );
     }
 
     if (filters.maxMonthlyRentThb !== undefined) {
+      const rentAmountColumn = rentalAmountSql(filters);
+      const rentCurrencyColumn = rentalCurrencySql(filters);
       clauses.push(
-        `p.rental_price_monthly_currency = 'THB' and p.rental_price_monthly_amount <= ${addValue(filters.maxMonthlyRentThb)}`
+        `${rentCurrencyColumn} = 'THB' and ${rentAmountColumn} <= ${addValue(filters.maxMonthlyRentThb)}`
       );
     }
 
@@ -1133,6 +1149,11 @@ export class PgPropertyRepository implements PropertyRepository {
         currency: row.price_currency
       },
       rentalPriceMonthly: this.optionalMoney(row.rental_price_monthly_amount, row.rental_price_monthly_currency),
+      shortTermRentalPriceMonthly: this.optionalMoney(
+        row.short_term_rental_price_monthly_amount,
+        row.short_term_rental_price_monthly_currency
+      ),
+      minimumRentalMonths: row.minimum_rental_months ?? undefined,
       location: {
         latitude: row.latitude,
         longitude: row.longitude
@@ -1304,4 +1325,20 @@ function normalizeProjectName(value: string) {
     .replace(/&/g, "and")
     .replace(/\b(?:the|condo|condominium|village|project|residence|residences)\b/gu, "")
     .replace(/[^\p{Letter}\p{Number}]+/gu, "");
+}
+
+function rentalAmountSql(filters: PropertySearchRequest): string {
+  return isShortTermRentalSearch(filters)
+    ? "p.short_term_rental_price_monthly_amount"
+    : "p.rental_price_monthly_amount";
+}
+
+function rentalCurrencySql(filters: PropertySearchRequest): string {
+  return isShortTermRentalSearch(filters)
+    ? "p.short_term_rental_price_monthly_currency"
+    : "p.rental_price_monthly_currency";
+}
+
+function isShortTermRentalSearch(filters: PropertySearchRequest): boolean {
+  return filters.rentalTermMonths !== undefined && filters.rentalTermMonths < 12;
 }

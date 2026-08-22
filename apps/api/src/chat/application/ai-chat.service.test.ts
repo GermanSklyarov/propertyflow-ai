@@ -545,6 +545,56 @@ describe("AiChatService", () => {
     expect(response.answer).not.toContain("I found 3 matching listings");
   });
 
+  it("forces deterministic availability answers instead of asking the LLM to guess", async () => {
+    const textGenerator: AiTextGenerator = {
+      isConfigured: vi.fn().mockReturnValue(true),
+      generate: vi.fn().mockResolvedValue({
+        answer: "The condo is definitely available next Monday.",
+        provider: "openai",
+        model: "configured-model"
+      })
+    };
+    const naturalLanguageSearch = {
+      interpret: vi.fn(),
+      search: vi.fn()
+    };
+    const service = serviceFactory({
+      naturalLanguageSearch,
+      properties: {
+        findById: vi.fn().mockResolvedValue(
+          propertyFactory({
+            id: "property-1",
+            listingType: "rent",
+            rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+            title: "Central Pattaya Rental Loft"
+          })
+        ),
+        search: vi.fn()
+      },
+      textGenerator
+    });
+
+    const response = await service.ask("tenant-1", {
+      conversation: [
+        {
+          recommendedListings: [{ propertyId: "property-1", title: "Central Pattaya Rental Loft" }],
+          role: "assistant",
+          text: "I found one option."
+        }
+      ],
+      locale: "en",
+      message: "Is this condo definitely available next Monday?"
+    });
+
+    expect(textGenerator.generate).not.toHaveBeenCalled();
+    expect(naturalLanguageSearch.search).not.toHaveBeenCalled();
+    expect(response.answer).toContain("I cannot confirm live availability");
+    expect(response.answer).not.toContain("definitely available next Monday");
+    expect(response.generation).toMatchObject({
+      mode: "deterministic-fallback"
+    });
+  });
+
   it("answers general foreign house ownership questions without running a listing search", async () => {
     process.env.AI_ALLOW_DETERMINISTIC_CHAT_FALLBACK = "true";
     const naturalLanguageSearch = {
@@ -2034,6 +2084,7 @@ describe("AiChatService", () => {
     expect(prompt).toContain("Lead qualification fields to collect naturally when relevant: budget, preferred area, financing or mortgage needs, WhatsApp.");
     expect(prompt).toContain("Ask at most one concise follow-up question at a time");
     expect(prompt).toContain("Do not repeat the tenant welcome message or reintroduce yourself after the first greeting");
+    expect(prompt).toContain("Never disclose private client data");
     expect(prompt).toContain("Use feminine first-person wording");
     expect(prompt).toContain('use first-person feminine forms such as "я нашла", "я подобрала", "я проверила"');
     expect(prompt).toContain('never use masculine forms such as "я нашел" or "я подобрал"');

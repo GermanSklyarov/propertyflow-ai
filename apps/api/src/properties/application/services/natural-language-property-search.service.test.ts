@@ -148,6 +148,58 @@ describe("NaturalLanguagePropertySearchService", () => {
     expect(interpretation.filters).not.toHaveProperty("maxPriceThb");
   });
 
+  it("uses short-term rental rates for explicit short rental terms", async () => {
+    const shortTermMatch = propertyFactory({
+      id: "short-term-match",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+      shortTermRentalPriceMonthly: { amount: 30_000, currency: "THB" },
+      title: "Short Term Pratumnak Condo"
+    });
+    const longTermOnly = propertyFactory({
+      id: "long-term-only",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+      title: "Long Term Only Condo"
+    });
+    const shortTermTooHigh = propertyFactory({
+      id: "short-term-too-high",
+      listingType: "rent",
+      rentalPriceMonthly: { amount: 20_000, currency: "THB" },
+      shortTermRentalPriceMonthly: { amount: 36_000, currency: "THB" },
+      title: "High Short Term Condo"
+    });
+    const service = searchServiceForItems([longTermOnly, shortTermTooHigh, shortTermMatch]);
+
+    const result = await service.search("demo-agency", {
+      locale: "en",
+      query: "I need a condo for 3 months. Budget is 30,000."
+    });
+
+    expect(result.filters).toMatchObject({
+      listingType: "rent",
+      maxMonthlyRentThb: 30_000,
+      rentalTermMonths: 3
+    });
+    expect(result.items.map((item) => item.id)).toEqual(["short-term-match"]);
+  });
+
+  it("uses stretch budget as a soft upper bound instead of cutting at the lower anchor", () => {
+    const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
+
+    const interpretation = service.interpret({
+      locale: "en",
+      query: "I want to rent something around 20k, but I can stretch to 25k if it's much better."
+    });
+
+    expect(interpretation.filters).toMatchObject({
+      maxMonthlyRentThb: 25_000
+    });
+    expect(interpretation.filters).not.toMatchObject({
+      maxMonthlyRentThb: 20_000
+    });
+  });
+
   it("treats pets and dogs as a strict pet-friendly amenity requirement", () => {
     const service = new NaturalLanguagePropertySearchService({} as never, {} as never, {} as never);
 

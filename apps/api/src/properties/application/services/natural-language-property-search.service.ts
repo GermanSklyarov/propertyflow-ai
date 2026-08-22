@@ -195,14 +195,20 @@ export class NaturalLanguagePropertySearchService {
       explanations.push(`market=${market}`);
     }
 
+    const rentalTermMonths = this.detectRentalTermMonths(normalized);
+    if (rentalTermMonths !== undefined) {
+      filters.rentalTermMonths = rentalTermMonths;
+      explanations.push(`rentalTermMonths=${rentalTermMonths}`);
+    }
+
     const budget = this.detectBudgetThb(normalized);
-    const listingType = this.detectListingType(normalized, budget);
+    const listingType = this.detectListingType(normalized, budget) ?? (rentalTermMonths !== undefined ? "rent" : undefined);
     if (listingType) {
       filters.listingType = listingType;
       explanations.push(`listingType=${listingType}`);
     }
 
-    if (budget && (listingType === "rent" || budget.cadence === "monthly")) {
+    if (budget && (listingType === "rent" || budget.cadence === "monthly" || rentalTermMonths !== undefined)) {
       filters.maxMonthlyRentThb = budget.amountThb;
       explanations.push(`maxMonthlyRentThb=${budget.amountThb}`);
     } else if (budget) {
@@ -320,8 +326,14 @@ export class NaturalLanguagePropertySearchService {
     const cadence = /(?:month|monthly|per month|месяц|мес|ต่อเดือน|รายเดือน|每月|月租)/.test(query)
       ? "monthly"
       : undefined;
+    const stretchBudget = detectStretchBudgetThb(query, cadence);
+
+    if (stretchBudget) {
+      return stretchBudget;
+    }
+
     const millionMatch = query.match(
-      /(?:до|under|below|max|maximum|budget|งบ|ไม่เกิน|ต่ำกว่า|预算|預算|不超过|不超過|低于|低於)?\s*(\d+(?:[.,]\d+)?)\s*(?:млн|million|m|ล้าน|百万|百萬)\s*(?:бат|baht|thb|บาท|泰铢|泰銖)?/
+      /(?:до|under|below|max|maximum|budget|งบ|ไม่เกิน|ต่ำกว่า|预算|預算|不超过|不超過|低于|低於)?\s*(\d+(?:[.,]\d+)?)\s*(?:млн|million|m\b|ล้าน|百万|百萬)\s*(?:бат|baht|thb|บาท|泰铢|泰銖)?/
     );
     if (millionMatch?.[1]) {
       return {
@@ -345,6 +357,12 @@ export class NaturalLanguagePropertySearchService {
     );
     if (thbMatch?.[1]) {
       const amount = Number(thbMatch[1].replace(/[^\d]/g, ""));
+      return Number.isFinite(amount) && amount > 0 ? { amountThb: amount, cadence } : undefined;
+    }
+
+    const bareBudgetMatch = query.match(/\b(?:budget|бюджет|งบ|预算|預算)\s*(?:is|=|:)?\s*(\d[\d\s,.]*)\b/i);
+    if (bareBudgetMatch?.[1]) {
+      const amount = Number(bareBudgetMatch[1].replace(/[^\d]/g, ""));
       return Number.isFinite(amount) && amount > 0 ? { amountThb: amount, cadence } : undefined;
     }
 
@@ -380,6 +398,24 @@ export class NaturalLanguagePropertySearchService {
 
     if (budget && budget.cadence !== "monthly" && budget.amountThb >= 1_000_000) {
       return "sale";
+    }
+
+    return undefined;
+  }
+
+  private detectRentalTermMonths(query: string): number | undefined {
+    const monthMatch = query.match(/\b(?:for\s+)?(\d{1,2})\s*(?:months?|mos?|mo|месяц|месяца|месяцев|мес|เดือน|个月|個月)\b/i);
+    if (monthMatch?.[1]) {
+      return Number(monthMatch[1]);
+    }
+
+    const yearMatch = query.match(/\b(?:for\s+)?(\d{1,2})\s*(?:years?|yrs?|год|года|лет|ปี|年)\b/i);
+    if (yearMatch?.[1]) {
+      return Number(yearMatch[1]) * 12;
+    }
+
+    if (/\b(?:a year|one year|12 months|annual|yearly|long[-\s]?term)\b|на\s+год|долгосроч|ระยะยาว|一年|長租|长租/i.test(query)) {
+      return 12;
     }
 
     return undefined;
@@ -651,7 +687,11 @@ function matchesStrictFilters(property: PropertySnapshot, filters: PropertySearc
     return false;
   }
 
-  if (filters.maxMonthlyRentThb !== undefined && (property.rentalPriceMonthly?.amount ?? Number.POSITIVE_INFINITY) > filters.maxMonthlyRentThb) {
+  if (filters.minMonthlyRentThb !== undefined && (rentalPriceForSearch(property, filters)?.amount ?? Number.NEGATIVE_INFINITY) < filters.minMonthlyRentThb) {
+    return false;
+  }
+
+  if (filters.maxMonthlyRentThb !== undefined && (rentalPriceForSearch(property, filters)?.amount ?? Number.POSITIVE_INFINITY) > filters.maxMonthlyRentThb) {
     return false;
   }
 
@@ -774,6 +814,23 @@ function detectRequestedRadiusMeters(query: string): number | undefined {
   }
 
   return undefined;
+}
+
+function detectStretchBudgetThb(query: string, cadence: BudgetSignal["cadence"]): BudgetSignal | undefined {
+  if (!/\b(?:stretch|up to|can go to|could go to|can increase|up\s+until)\b|растян|увелич|до\s+\d/i.test(query)) {
+    return undefined;
+  }
+
+  const compactBudgets = Array.from(query.matchAll(/(\d+(?:[.,]\d+)?)\s*(?:k|thousand|тыс)\b/gi))
+    .map((match) => Number(match[1]?.replace(",", ".")))
+    .filter((amount) => Number.isFinite(amount) && amount > 0)
+    .map((amount) => Math.round(amount * 1_000));
+  const thbBudgets = Array.from(query.matchAll(/(\d[\d\s,.]*)\s*(?:บาท|baht|thb|бат)\b/gi))
+    .map((match) => Number(match[1]?.replace(/[^\d]/g, "")))
+    .filter((amount) => Number.isFinite(amount) && amount > 0);
+  const budgets = [...compactBudgets, ...thbBudgets];
+
+  return budgets.length ? { amountThb: Math.max(...budgets), cadence } : undefined;
 }
 
 function defaultRadiusMetersForQuery(query: string): number {
@@ -961,7 +1018,13 @@ function describeRankingPreferences(preferences: RankingPreferences): string {
 }
 
 function comparablePrice(property: PropertySnapshot): number {
-  return property.rentalPriceMonthly?.amount ?? property.price.amount;
+  return property.rentalPriceMonthly?.amount ?? property.shortTermRentalPriceMonthly?.amount ?? property.price.amount;
+}
+
+function rentalPriceForSearch(property: PropertySnapshot, filters: PropertySearchRequest) {
+  return filters.rentalTermMonths !== undefined && filters.rentalTermMonths < 12
+    ? property.shortTermRentalPriceMonthly
+    : property.rentalPriceMonthly;
 }
 
 function valueForMoneyScore(property: PropertySnapshot): number {

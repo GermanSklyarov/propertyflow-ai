@@ -25,6 +25,9 @@ interface PropertyRow {
   price_currency: Currency;
   rental_price_monthly_amount: string | null;
   rental_price_monthly_currency: Currency | null;
+  short_term_rental_price_monthly_amount: string | null;
+  short_term_rental_price_monthly_currency: Currency | null;
+  minimum_rental_months: number | null;
   latitude: number;
   longitude: number;
   address: string | null;
@@ -67,6 +70,9 @@ export interface PropertySearchDocument {
   priceCurrency: Currency;
   rentalPriceMonthlyAmount?: number;
   rentalPriceMonthlyCurrency?: Currency;
+  shortTermRentalPriceMonthlyAmount?: number;
+  shortTermRentalPriceMonthlyCurrency?: Currency;
+  minimumRentalMonths?: number;
   location: {
     lat: number;
     lon: number;
@@ -250,6 +256,14 @@ export class PropertySearchIndexer {
               currency: row.rental_price_monthly_currency
             }
           : undefined,
+      shortTermRentalPriceMonthly:
+        row.short_term_rental_price_monthly_amount && row.short_term_rental_price_monthly_currency
+          ? {
+              amount: Number(row.short_term_rental_price_monthly_amount),
+              currency: row.short_term_rental_price_monthly_currency
+            }
+          : undefined,
+      minimumRentalMonths: row.minimum_rental_months ?? undefined,
       location: {
         latitude: Number(row.latitude),
         longitude: Number(row.longitude)
@@ -313,6 +327,9 @@ export class PropertySearchIndexer {
             priceCurrency: { type: "keyword" },
             rentalPriceMonthlyAmount: { type: "double" },
             rentalPriceMonthlyCurrency: { type: "keyword" },
+            shortTermRentalPriceMonthlyAmount: { type: "double" },
+            shortTermRentalPriceMonthlyCurrency: { type: "keyword" },
+            minimumRentalMonths: { type: "integer" },
             location: { type: "geo_point" },
             address: { type: "text" },
             bedrooms: { type: "integer" },
@@ -363,6 +380,9 @@ function toSearchDocument(property: PropertySnapshot): PropertySearchDocument {
     priceCurrency: property.price.currency,
     rentalPriceMonthlyAmount: property.rentalPriceMonthly?.amount,
     rentalPriceMonthlyCurrency: property.rentalPriceMonthly?.currency,
+    shortTermRentalPriceMonthlyAmount: property.shortTermRentalPriceMonthly?.amount,
+    shortTermRentalPriceMonthlyCurrency: property.shortTermRentalPriceMonthly?.currency,
+    minimumRentalMonths: property.minimumRentalMonths,
     location: {
       lat: property.location.latitude,
       lon: property.location.longitude
@@ -428,6 +448,8 @@ function buildPropertyEmbeddingText(document: PropertySearchDocument): string {
     document.locationFeatures?.walkabilityScore !== undefined ? `walkability score ${document.locationFeatures.walkabilityScore}` : undefined,
     document.priceAmount ? `${document.priceAmount} ${document.priceCurrency}` : undefined,
     document.rentalPriceMonthlyAmount ? `${document.rentalPriceMonthlyAmount} monthly rent` : undefined,
+    document.shortTermRentalPriceMonthlyAmount ? `${document.shortTermRentalPriceMonthlyAmount} short-term monthly rent` : undefined,
+    document.minimumRentalMonths ? `${document.minimumRentalMonths} month minimum rental term` : undefined,
     ...document.amenities
   ]
     .filter(Boolean)

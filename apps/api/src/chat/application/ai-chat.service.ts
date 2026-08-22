@@ -114,7 +114,7 @@ export class AiChatService {
 
     return this.buildResponse({
       ...draft,
-      forceDeterministic: intent.wantsViewing,
+      forceDeterministic: intent.wantsViewing || isLiveAvailabilityQuestion(request.message) || isRentalTermPricingQuestion(request.message),
       request,
       ...options
     });
@@ -809,4 +809,16 @@ function buildStructuredFallbackFilters(request: AiChatRequest): PropertySearchR
     market: request.market,
     query: request.message
   };
+}
+
+function isLiveAvailabilityQuestion(message: string): boolean {
+  if (/\b(?:available for purchase|available to buy|available for sale|purchase by|buy it|foreigner|foreign buyer|foreigners|foreign quota|foreign freehold)\b|иностран|фаранг|квот|ต่างชาติ|ชาวต่างชาติ|外国|外國|外籍/i.test(message)) {
+    return false;
+  }
+
+  return /\b(?:definitely available|available next|live availability|availability|free|vacant|move[ -]?in|next monday|next tuesday|next wednesday|next thursday|next friday|next saturday|next sunday)\b|доступ|свобод|заезд|въезд|ว่าง|入住/i.test(message);
+}
+
+function isRentalTermPricingQuestion(message: string): boolean {
+  return /\b(?:price for \d{1,2} months?|what'?s the price for \d{1,2} months?|3 months?|three months?|sign for a year|short[-\s]?term|long[-\s]?term)\b|на\s+\d{1,2}\s+мес|короткосроч|долгосроч|ระยะสั้น|ระยะยาว|短租|短期|長租|长租/i.test(message);
 }

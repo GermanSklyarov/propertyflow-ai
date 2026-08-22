@@ -783,6 +783,8 @@ export interface CreatePropertyRequest {
   market: ThailandMarket;
   price: Money;
   rentalPriceMonthly?: Money;
+  shortTermRentalPriceMonthly?: Money;
+  minimumRentalMonths?: number;
   location: GeoPoint;
   address?: string;
   bedrooms: number;
@@ -1041,6 +1043,7 @@ export interface PropertySearchRequest {
   maxPriceThb?: number;
   minMonthlyRentThb?: number;
   maxMonthlyRentThb?: number;
+  rentalTermMonths?: number;
   minBedrooms?: number;
   maxBedrooms?: number;
   minBathrooms?: number;
@@ -1095,6 +1098,8 @@ export interface IndexedPropertySearchHit {
   status: PropertySnapshot["status"];
   price: Money;
   rentalPriceMonthly?: Money;
+  shortTermRentalPriceMonthly?: Money;
+  minimumRentalMonths?: number;
   location: GeoPoint;
   address?: string;
   bedrooms: number;
@@ -1679,6 +1684,8 @@ export type ListingSourceCanonicalField =
   | "priceAmount"
   | "priceCurrency"
   | "rentalPriceMonthlyAmount"
+  | "shortTermRentalPriceMonthlyAmount"
+  | "minimumRentalMonths"
   | "bedrooms"
   | "bathrooms"
   | "areaSqm"

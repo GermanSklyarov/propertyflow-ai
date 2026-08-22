@@ -166,6 +166,117 @@ describe("ai-chat-property-response", () => {
     expect(petDraft.deterministicDraft).not.toContain("Central Pattaya Rental Loft is a 1-bedroom condo");
   });
 
+  it("does not guarantee live availability for a requested future date", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("Is this condo definitely available next Monday?"),
+      knowledge: [],
+      property: propertyFactory({
+        listingType: "rent",
+        rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+        title: "Central Pattaya Rental Loft"
+      }),
+      requestMessage: "Is this condo definitely available next Monday?"
+    });
+
+    expect(draft.deterministicDraft).toContain("I cannot confirm live availability");
+    expect(draft.deterministicDraft).toContain("Ask the agent to verify the exact date");
+    expect(draft.deterministicDraft).not.toContain("definitely available");
+  });
+
+  it("compares imported short-term and yearly rental rates when both are available", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("What's the price for 3 months? And what if I sign for a year?"),
+      knowledge: [],
+      property: propertyFactory({
+        listingType: "rent",
+        minimumRentalMonths: 1,
+        rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+        shortTermRentalPriceMonthly: { amount: 32_000, currency: "THB" },
+        title: "Central Pattaya Rental Loft"
+      }),
+      requestMessage: "What's the price for 3 months? And what if I sign for a year?"
+    });
+
+    expect(draft.deterministicDraft).toContain("short-term monthly ask is 32000 THB/mo");
+    expect(draft.deterministicDraft).toContain("For a year or long-term contract, the imported monthly ask is 24000 THB/mo");
+    expect(draft.deterministicDraft).toContain("Imported minimum rental term is 1 month");
+  });
+
+  it("does not reuse long-term rent as a short-term rate when short-term pricing is missing", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("What's the price for 3 months?"),
+      knowledge: [],
+      property: propertyFactory({
+        listingType: "rent",
+        rentalPriceMonthly: { amount: 24_000, currency: "THB" },
+        title: "Central Pattaya Rental Loft"
+      }),
+      requestMessage: "What's the price for 3 months?"
+    });
+
+    expect(draft.deterministicDraft).toContain("I do not have an imported short-term monthly rate");
+    expect(draft.deterministicDraft).toContain("I do have a long-term monthly ask of 24000 THB/mo");
+    expect(draft.deterministicDraft).toContain("I should not treat it as the price for a short stay");
+  });
+
+  it("does not turn pet-friendly signals into an owner guarantee", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("The owner will definitely accept my cat, right?"),
+      knowledge: [],
+      property: propertyFactory({
+        amenities: ["pet-friendly", "pool"],
+        title: "Pet Friendly Wongamat Condo"
+      }),
+      requestMessage: "The owner will definitely accept my cat, right?"
+    });
+
+    expect(draft.deterministicDraft).toContain("pet-friendly signal");
+    expect(draft.deterministicDraft).toContain("confirm the building's current pet rules");
+    expect(draft.deterministicDraft).not.toContain("will definitely accept");
+  });
+
+  it("answers location follow-ups from saved facts without inventing exact travel times", () => {
+    const draft = buildAiChatPropertyResponseDraft({
+      dueDiligence: {
+        contextLines: [],
+        insights: []
+      },
+      intent: classifyAiChatIntent("How far is this condo from Central Pattaya and Terminal 21?"),
+      knowledge: [],
+      property: propertyFactory({
+        locationFeatures: {
+          nearestBahtBusRouteDistanceMeters: 350,
+          nearestMallDistanceMeters: 1900,
+          nearestPublicTransportDistanceMeters: 500,
+          updatedAt: "2026-08-17T00:00:00.000Z",
+          walkabilityScore: 82
+        },
+        title: "Terminal 21 Walkable Studio"
+      }),
+      requestMessage: "How far is this condo from Central Pattaya and Terminal 21?"
+    });
+
+    expect(draft.deterministicDraft).toContain("saved location facts");
+    expect(draft.deterministicDraft).toContain("nearest tracked mall about 1900m away");
+    expect(draft.deterministicDraft).toContain("I cannot guarantee exact live travel time");
+  });
+
   it("answers localized amenity follow-ups instead of repeating a dry listing summary", () => {
     const draft = buildAiChatPropertyResponseDraft({
       dueDiligence: {

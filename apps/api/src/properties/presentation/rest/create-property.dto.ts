@@ -93,6 +93,16 @@ export class CreatePropertyDto implements CreatePropertyRequest {
   @Type(() => MoneyDto)
   rentalPriceMonthly?: MoneyDto;
 
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => MoneyDto)
+  shortTermRentalPriceMonthly?: MoneyDto;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  minimumRentalMonths?: number;
+
   @ValidateNested()
   @Type(() => GeoPointDto)
   location!: GeoPointDto;

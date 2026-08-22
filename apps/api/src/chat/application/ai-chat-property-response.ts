@@ -30,6 +30,9 @@ export function buildAiChatPropertyResponseDraft(options: {
   requestMessage?: string;
 }): AiChatResponseDraft {
   const citations: AiChatCitation[] = [propertyCitation(options.property)];
+  const rentalTermPriceAnswer = buildRentalTermPriceAnswer(options.property, options.requestMessage, options.locale);
+  const availabilityAnswer = buildAvailabilityAnswer(options.property, options.requestMessage, options.locale);
+  const locationAnswer = buildLocationAnswer(options.property, options.requestMessage, options.locale);
   const amenityAnswer = buildAmenityAnswer(options.property, options.requestMessage, options.locale);
   const suitabilityAnswer = buildSuitabilityAnswer(options.property, options.requestMessage);
   const ownershipAnswer = buildOwnershipAnswer(options.property, options.requestMessage);
@@ -40,7 +43,7 @@ export function buildAiChatPropertyResponseDraft(options: {
           locale: options.locale,
           requestMessage: options.requestMessage
         })
-      : amenityAnswer ?? ownershipAnswer ?? suitabilityAnswer ?? describeProperty(options.property)
+      : rentalTermPriceAnswer ?? availabilityAnswer ?? locationAnswer ?? amenityAnswer ?? ownershipAnswer ?? suitabilityAnswer ?? describeProperty(options.property)
   ];
 
   if (options.intent.includeNeighborhood && options.neighborhood) {
@@ -83,6 +86,143 @@ export function buildAiChatPropertyResponseDraft(options: {
     matchedPropertyIds: [options.property.id],
     suggestedActions: ["compare-similar-properties", "open-investment-calculator", "create-lead"]
   };
+}
+
+function buildRentalTermPriceAnswer(
+  property: PropertySnapshot,
+  requestMessage?: string,
+  locale: TenantWidgetLanguage = "en"
+): string | undefined {
+  const normalized = requestMessage?.toLowerCase() ?? "";
+  const asksShortTerm =
+    /\b(?:3 months?|three months?|short[-\s]?term|few months?|price for \d{1,2} months?|what'?s the price for \d{1,2} months?)\b|короткосроч|на\s+\d{1,2}\s+мес|ระยะสั้น|短租|短期/i.test(
+      normalized
+    );
+  const asksYear =
+    /\b(?:year|12 months?|annual|long[-\s]?term|sign for a year)\b|год|12\s+мес|ระยะยาว|一年|長租|长租/i.test(normalized);
+
+  if (!asksShortTerm && !asksYear) {
+    return undefined;
+  }
+
+  const longTerm = property.rentalPriceMonthly;
+  const shortTerm = property.shortTermRentalPriceMonthly;
+  const minimumTerm = property.minimumRentalMonths;
+
+  if (asksShortTerm && shortTerm) {
+    const longTermText = longTerm ? ` For a year or long-term contract, the imported monthly ask is ${formatMoney(longTerm)}.` : "";
+    const minimumText = minimumTerm ? ` Imported minimum rental term is ${minimumTerm} month${minimumTerm === 1 ? "" : "s"}.` : "";
+    const messages: Record<TenantWidgetLanguage, string> = {
+      en: `${property.title}: the imported short-term monthly ask is ${formatMoney(shortTerm)}.${longTermText}${minimumText} Ask the agent to confirm live availability, utilities, deposit, and whether that exact term is still accepted.`,
+      ru: `${property.title}: импортированная short-term ставка — ${formatMoney(shortTerm)} в месяц.${longTermText}${minimumText} Попросите агента подтвердить живую доступность, коммунальные, депозит и что такой срок всё еще принимается.`,
+      th: `${property.title}: ราคาต่อเดือนแบบ short-term ที่นำเข้าคือ ${formatMoney(shortTerm)}.${longTermText}${minimumText} ควรให้เอเจนต์ยืนยันห้องว่างจริง ค่าน้ำไฟ เงินมัดจำ และว่ายังรับสัญญาระยะนี้อยู่`,
+      zh: `${property.title}: 已导入的短租月价是 ${formatMoney(shortTerm)}。${longTermText}${minimumText} 请让经纪人确认实时空房、水电费、押金以及该租期是否仍可接受。`
+    };
+
+    return messages[locale] ?? messages.en;
+  }
+
+  if (asksShortTerm && !shortTerm) {
+    const longTermText = longTerm ? ` I do have a long-term monthly ask of ${formatMoney(longTerm)}, but I should not treat it as the price for a short stay.` : "";
+    const messages: Record<TenantWidgetLanguage, string> = {
+      en: `${property.title}: I do not have an imported short-term monthly rate for this listing.${longTermText} Ask the agent to confirm the 3-month price before relying on it.`,
+      ru: `${property.title}: short-term ставка для этого объекта не импортирована.${longTermText} Попросите агента подтвердить цену на 3 месяца, прежде чем на неё опираться.`,
+      th: `${property.title}: ยังไม่มีราคาต่อเดือนแบบ short-term ในข้อมูลที่นำเข้า.${longTermText} ควรให้เอเจนต์ยืนยันราคา 3 เดือนก่อนใช้ข้อมูลนี้`,
+      zh: `${property.title}: 这个房源没有导入短租月价。${longTermText} 请先让经纪人确认 3 个月价格后再依赖。`
+    };
+
+    return messages[locale] ?? messages.en;
+  }
+
+  if (asksYear && longTerm) {
+    return `${property.title}: for a year or long-term contract, the imported monthly ask is ${formatMoney(longTerm)}. Ask the agent to confirm live availability and whether the owner still accepts that term.`;
+  }
+
+  return undefined;
+}
+
+function buildAvailabilityAnswer(
+  property: PropertySnapshot,
+  requestMessage?: string,
+  locale: TenantWidgetLanguage = "en"
+): string | undefined {
+  const normalized = requestMessage?.toLowerCase() ?? "";
+
+  if (
+    /\b(?:available for purchase|available to buy|available for sale|purchase by|buy it|foreigner|foreign buyer|foreigners|foreign quota|foreign freehold)\b|иностран|фаранг|квот|ต่างชาติ|ชาวต่างชาติ|外国|外國|外籍/i.test(
+      normalized
+    ) ||
+    !/\b(?:definitely available|available next|live availability|availability|free|vacant|move[ -]?in|next monday|next tuesday|next wednesday|next thursday|next friday|next saturday|next sunday)\b|доступ|свобод|заезд|въезд|ว่าง|入住/i.test(
+      normalized
+    )
+  ) {
+    return undefined;
+  }
+
+  if (/\b(?:pet|pets|dog|dogs|cat|cats|owner)\b|питом|собак|кош|хозя|สัตว์เลี้ยง|หมา|แมว|เจ้าของ|宠物|寵物|狗|猫|貓|房东|屋主/i.test(normalized)) {
+    return undefined;
+  }
+
+  const messages: Record<TenantWidgetLanguage, string> = {
+    en: `${property.title} is marked ${property.status} in the listing workspace, but I cannot confirm live availability or the owner's calendar from here. Ask the agent to verify the exact date, contract term, and current rate before relying on it.`,
+    ru: `${property.title} сейчас отмечен в базе как ${property.status}, но я не могу подтвердить живую доступность или календарь собственника отсюда. Попросите агента проверить точную дату, срок контракта и актуальную ставку.`,
+    th: `${property.title} ถูกระบุในระบบว่า ${property.status} แต่ฉันยืนยันสถานะว่างจริงหรือปฏิทินเจ้าของจากตรงนี้ไม่ได้ ควรให้เอเจนต์ตรวจสอบวันที่ สัญญา และราคาปัจจุบันก่อนยืนยัน`,
+    zh: `${property.title} 在工作区中的状态是 ${property.status}，但我无法在这里确认实时空房或业主日程。请让经纪人核实具体日期、租期和当前价格后再确认。`
+  };
+
+  return messages[locale] ?? messages.en;
+}
+
+function buildLocationAnswer(
+  property: PropertySnapshot,
+  requestMessage?: string,
+  locale: TenantWidgetLanguage = "en"
+): string | undefined {
+  const normalized = requestMessage?.toLowerCase() ?? "";
+
+  if (
+    !/\b(?:how far|distance|baht bus|songthaew|terminal 21|central pattaya|central festival|public transport|transport)\b|далеко|расстоян|батбас|сонгтео|терминал 21|централ|ระยะ|บาทบัส|รถสองแถว|距离|距離|航站楼21|尚泰/i.test(
+      normalized
+    )
+  ) {
+    return undefined;
+  }
+
+  const features = property.locationFeatures;
+  const facts = [
+    features?.nearestBahtBusRouteDistanceMeters !== undefined
+      ? `baht bus route about ${features.nearestBahtBusRouteDistanceMeters}m away`
+      : undefined,
+    features?.nearestPublicTransportDistanceMeters !== undefined
+      ? `public transport about ${features.nearestPublicTransportDistanceMeters}m away`
+      : undefined,
+    features?.nearestMallDistanceMeters !== undefined ? `nearest tracked mall about ${features.nearestMallDistanceMeters}m away` : undefined,
+    features?.nearestSupermarketDistanceMeters !== undefined
+      ? `supermarket/convenience store about ${features.nearestSupermarketDistanceMeters}m away`
+      : undefined,
+    property.beachDistanceMeters !== undefined ? `beach about ${property.beachDistanceMeters}m away` : undefined
+  ].filter(Boolean);
+
+  if (!facts.length) {
+    const messages: Record<TenantWidgetLanguage, string> = {
+      en: `${property.title} has coordinates in the listing, but I do not have saved distance facts for those transport or city landmarks yet. Ask the agent to verify the exact route distance or enable map enrichment for this listing.`,
+      ru: `У ${property.title} есть координаты, но сохранённых расстояний до транспорта или городских ориентиров пока нет. Лучше попросить агента проверить точный маршрут или включить map enrichment для объекта.`,
+      th: `${property.title} มีพิกัดในประกาศ แต่ยังไม่มีข้อมูลระยะถึงขนส่งหรือจุดสำคัญที่บันทึกไว้ ควรให้เอเจนต์ตรวจสอบเส้นทางจริงหรือเปิด map enrichment`,
+      zh: `${property.title} 有房源坐标，但目前没有保存到交通或城市地标的距离数据。建议让经纪人核实实际路线距离，或为该房源启用地图补全。`
+    };
+
+    return messages[locale] ?? messages.en;
+  }
+
+  const factText = facts.join(", ");
+  const messages: Record<TenantWidgetLanguage, string> = {
+    en: `${property.title}: saved location facts show ${factText}. I cannot guarantee exact live travel time from here, so the agent should verify the current route if that distance is critical.`,
+    ru: `${property.title}: по сохранённым location facts — ${factText}. Я не могу гарантировать живое время в пути отсюда, поэтому если расстояние критично, агенту стоит проверить текущий маршрут.`,
+    th: `${property.title}: ข้อมูล location ที่บันทึกไว้ระบุว่า ${factText} ฉันยืนยันเวลาเดินทางจริงจากตรงนี้ไม่ได้ หากระยะสำคัญควรให้เอเจนต์ตรวจสอบเส้นทางล่าสุด`,
+    zh: `${property.title}: 已保存的位置资料显示 ${factText}。我无法在这里保证实时通勤时间，如果距离很关键，请让经纪人核实当前路线。`
+  };
+
+  return messages[locale] ?? messages.en;
 }
 
 function buildAmenityAnswer(
@@ -401,6 +541,10 @@ function summarizeLocation(property: PropertySnapshot): string {
   return property.beachDistanceMeters === undefined
     ? "beach distance is not specified"
     : `${property.beachDistanceMeters}m from the beach`;
+}
+
+function formatMoney(money: PropertySnapshot["price"]): string {
+  return `${money.amount} ${money.currency}/mo`;
 }
 
 function buildViewingHandoffAnswer(

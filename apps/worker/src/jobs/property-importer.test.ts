@@ -183,6 +183,53 @@ describe("property importer diagnostics", () => {
     });
     expect(pool.externalIds.get("refresh-1")).toBe("property-1");
   });
+
+  it("imports structured short-term rent and minimum rental term from partner mappings", async () => {
+    const pool = mockPool();
+    const importer = new PropertyImporter(pool as never);
+
+    await importer.import({
+      data: {
+        fieldMapping: {
+          canonical: {
+            ...partnerFieldMapping().canonical,
+            minimumRentalMonths: "minMonths",
+            shortTermRentalPriceMonthlyAmount: "shortRent"
+          }
+        },
+        importMode: "concierge_index_only",
+        objectUrl: [
+          "data:application/json,",
+          encodeURIComponent(JSON.stringify({
+            listings: [
+              {
+                id: "short-1",
+                name: "Short Stay Starter Condo",
+                deal: "rent",
+                city: "pattaya",
+                monthlyRent: 24000,
+                shortRent: 32000,
+                minMonths: 1,
+                size: 38,
+                beds: 1,
+                state: "available"
+              }
+            ]
+          }))
+        ].join(""),
+        source: "partner-api",
+        tenantId: "demo-agency"
+      },
+      updateProgress: async () => undefined
+    } as never);
+
+    const propertyInsert = pool.queries.find((query) => query.sql.includes("insert into properties"));
+
+    expect(propertyInsert?.sql).toContain("short_term_rental_price_monthly_amount");
+    expect(propertyInsert?.values?.[10]).toBe(24_000);
+    expect(propertyInsert?.values?.[11]).toBe(32_000);
+    expect(propertyInsert?.values?.[12]).toBe(1);
+  });
 });
 
 function mockPool() {

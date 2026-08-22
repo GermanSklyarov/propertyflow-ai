@@ -22,6 +22,9 @@ interface PropertySearchDocument {
   priceCurrency: Currency;
   rentalPriceMonthlyAmount?: number;
   rentalPriceMonthlyCurrency?: Currency;
+  shortTermRentalPriceMonthlyAmount?: number;
+  shortTermRentalPriceMonthlyCurrency?: Currency;
+  minimumRentalMonths?: number;
   location: {
     lat: number;
     lon: number;
@@ -160,10 +163,17 @@ export class IndexedPropertySearchService {
     }
 
     if (request.minMonthlyRentThb !== undefined || request.maxMonthlyRentThb !== undefined) {
-      filters.push({ term: { rentalPriceMonthlyCurrency: "THB" } });
+      const amountField = isShortTermRentalSearch(request)
+        ? "shortTermRentalPriceMonthlyAmount"
+        : "rentalPriceMonthlyAmount";
+      const currencyField = isShortTermRentalSearch(request)
+        ? "shortTermRentalPriceMonthlyCurrency"
+        : "rentalPriceMonthlyCurrency";
+
+      filters.push({ term: { [currencyField]: "THB" } });
       filters.push({
         range: {
-          rentalPriceMonthlyAmount: {
+          [amountField]: {
             gte: request.minMonthlyRentThb,
             lte: request.maxMonthlyRentThb
           }
@@ -276,6 +286,14 @@ function toSearchHit(hit: OpenSearchHit): IndexedPropertySearchHit {
             currency: source.rentalPriceMonthlyCurrency
           }
         : undefined,
+    shortTermRentalPriceMonthly:
+      source.shortTermRentalPriceMonthlyAmount && source.shortTermRentalPriceMonthlyCurrency
+        ? {
+            amount: source.shortTermRentalPriceMonthlyAmount,
+            currency: source.shortTermRentalPriceMonthlyCurrency
+          }
+        : undefined,
+    minimumRentalMonths: source.minimumRentalMonths,
     location: {
       latitude: source.location.lat,
       longitude: source.location.lon
@@ -288,6 +306,10 @@ function toSearchHit(hit: OpenSearchHit): IndexedPropertySearchHit {
     amenities: source.amenities,
     highlights: Object.values(hit.highlight ?? {}).flat()
   };
+}
+
+function isShortTermRentalSearch(request: IndexedPropertySearchRequest): boolean {
+  return request.rentalTermMonths !== undefined && request.rentalTermMonths < 12;
 }
 
 function readTotal(total: OpenSearchSearchBody["hits"]["total"]): number {

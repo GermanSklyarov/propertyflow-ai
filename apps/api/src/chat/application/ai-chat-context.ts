@@ -77,8 +77,12 @@ export function describeProperty(property: PropertySnapshot): string {
   const rentalPrice = property.rentalPriceMonthly
     ? ` Rental ask is ${property.rentalPriceMonthly.amount} ${property.rentalPriceMonthly.currency}/mo.`
     : "";
+  const shortTermRentalPrice = property.shortTermRentalPriceMonthly
+    ? ` Short-term rental ask is ${property.shortTermRentalPriceMonthly.amount} ${property.shortTermRentalPriceMonthly.currency}/mo.`
+    : "";
+  const minimumTerm = property.minimumRentalMonths ? ` Minimum rental term is ${property.minimumRentalMonths} months.` : "";
 
-  return `${property.title} is a ${property.bedrooms}-bedroom ${property.kind} in ${property.market}, ${beach}, listed for ${property.listingType}, priced at ${property.price.amount} ${property.price.currency}.${rentalPrice}`;
+  return `${property.title} is a ${property.bedrooms}-bedroom ${property.kind} in ${property.market}, ${beach}, listed for ${property.listingType}, priced at ${property.price.amount} ${property.price.currency}.${rentalPrice}${shortTermRentalPrice}${minimumTerm}`;
 }
 
 export function shortPropertyLine(property: PropertySnapshot): string {
@@ -88,8 +92,11 @@ export function shortPropertyLine(property: PropertySnapshot): string {
   const rent = property.monthlyRentEstimate
     ? `estimated rent ${property.monthlyRentEstimate.amount} ${property.monthlyRentEstimate.currency}/mo`
     : "rent estimate missing";
+  const shortTermRent = property.shortTermRentalPriceMonthly
+    ? `short-term ask ${property.shortTermRentalPriceMonthly.amount} ${property.shortTermRentalPriceMonthly.currency}/mo`
+    : undefined;
 
-  return `${property.title} (${property.market}, ${property.listingType}, ${property.price.amount} ${property.price.currency}, ${rentalAsk ?? rent}).`;
+  return `${property.title} (${property.market}, ${property.listingType}, ${property.price.amount} ${property.price.currency}, ${[rentalAsk, shortTermRent].filter(Boolean).join(", ") || rent}).`;
 }
 
 function propertyEvidenceLine(property: PropertySnapshot): string {
@@ -102,6 +109,8 @@ function propertyEvidenceLine(property: PropertySnapshot): string {
     `status=${property.status}`,
     `salePrice=${formatMoney(property.price)}`,
     property.rentalPriceMonthly ? `rentalAsk=${formatMoney(property.rentalPriceMonthly)}/mo` : undefined,
+    property.shortTermRentalPriceMonthly ? `shortTermRentalAsk=${formatMoney(property.shortTermRentalPriceMonthly)}/mo` : undefined,
+    property.minimumRentalMonths !== undefined ? `minimumRentalMonths=${property.minimumRentalMonths}` : undefined,
     property.monthlyRentEstimate ? `rentEstimate=${formatMoney(property.monthlyRentEstimate)}/mo` : undefined,
     property.maintenanceFeeMonthly ? `maintenanceFee=${formatMoney(property.maintenanceFeeMonthly)}/mo` : undefined,
     `area=${property.areaSqm}sqm`,

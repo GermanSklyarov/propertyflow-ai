@@ -63,6 +63,8 @@ export interface PropertySnapshot {
   status: PropertyStatus;
   price: Money;
   rentalPriceMonthly?: Money;
+  shortTermRentalPriceMonthly?: Money;
+  minimumRentalMonths?: number;
   location: GeoPoint;
   address?: string;
   bedrooms: number;

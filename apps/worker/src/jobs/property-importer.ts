@@ -63,6 +63,7 @@ interface ImportedPropertyDraft {
   projectStatus?: PropertyProjectStatus;
   rawPayload?: Record<string, unknown>;
   rentalPriceMonthlyThb?: number;
+  shortTermRentalPriceMonthlyThb?: number;
   status: PropertyStatus;
   title: string;
 }
@@ -242,6 +243,9 @@ export class PropertyImporter {
             price_currency,
             rental_price_monthly_amount,
             rental_price_monthly_currency,
+            short_term_rental_price_monthly_amount,
+            short_term_rental_price_monthly_currency,
+            minimum_rental_months,
             location,
             latitude,
             longitude,
@@ -268,27 +272,30 @@ export class PropertyImporter {
             $7,
             $8,
             $9,
-            $25,
+            $27,
             $10,
             'THB',
             $11,
             case when $11::numeric is null then null else 'THB' end,
-            st_setsrid(st_makepoint($12, $13), 4326)::geography,
-            $13,
             $12,
-            $14,
+            case when $12::numeric is null then null else 'THB' end,
+            $13,
+            st_setsrid(st_makepoint($14, $15), 4326)::geography,
             $15,
+            $14,
             $16,
             $17,
             $18,
             $19,
             $20,
-            case when $20::numeric is null then null else 'THB' end,
             $21,
-            case when $21::numeric is null then null else 'THB' end,
             $22,
+            case when $22::numeric is null then null else 'THB' end,
             $23,
-            $24
+            case when $23::numeric is null then null else 'THB' end,
+            $24,
+            $25,
+            $26
           )
           on conflict (tenant_id, external_id) where external_id is not null do update set
             project_id = excluded.project_id,
@@ -302,6 +309,9 @@ export class PropertyImporter {
             price_currency = excluded.price_currency,
             rental_price_monthly_amount = excluded.rental_price_monthly_amount,
             rental_price_monthly_currency = excluded.rental_price_monthly_currency,
+            short_term_rental_price_monthly_amount = excluded.short_term_rental_price_monthly_amount,
+            short_term_rental_price_monthly_currency = excluded.short_term_rental_price_monthly_currency,
+            minimum_rental_months = excluded.minimum_rental_months,
             location = excluded.location,
             latitude = excluded.latitude,
             longitude = excluded.longitude,
@@ -331,6 +341,8 @@ export class PropertyImporter {
           draft.market,
           draft.priceThb,
           draft.rentalPriceMonthlyThb ?? null,
+          draft.shortTermRentalPriceMonthlyThb ?? null,
+          draft.minimumRentalMonths ?? null,
           location.longitude,
           location.latitude,
           draft.address ?? null,
@@ -1013,6 +1025,7 @@ function canonicalFieldToImportKey(field: ListingSourceCanonicalField) {
     priceAmount: "price",
     priceCurrency: "price_currency",
     rentalPriceMonthlyAmount: "monthly_rent",
+    shortTermRentalPriceMonthlyAmount: "short_term_rent_thb_month",
     bedrooms: "bedrooms",
     bathrooms: "bathrooms",
     areaSqm: "area_sqm",
@@ -1123,6 +1136,16 @@ function toImportedPropertyDraft(row: ImportRow, options: ImportDraftOptions = {
     rawPayload: options.storeRawPayload ? sanitizeRawPayload(row.values) : getRawPayload(row.values.__rawPayload),
     rentalPriceMonthlyThb: getOptionalNumber(
       getAlias(row.values, ["rentalpricemonthlythb", "rental_price_monthly_thb", "monthly_rent", "rent_long_term_thb_month"])
+    ),
+    shortTermRentalPriceMonthlyThb: getOptionalNumber(
+      getAlias(row.values, [
+        "shorttermrentalpricemonthlythb",
+        "short_term_rental_price_monthly_thb",
+        "short_term_rent_thb_month",
+        "short_term_monthly_rent",
+        "monthly_rent_short_term",
+        "short_rent"
+      ])
     ),
     status: getEnumValue(normalizeStatus(getString(row.values.status)), supportedPropertyStatuses, "draft"),
     title
@@ -1476,7 +1499,8 @@ function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
     draft.projectDeveloper ? `Developer: ${draft.projectDeveloper}` : undefined,
     draft.projectStatus ? `Project status: ${draft.projectStatus}` : undefined,
     draft.priceThb > 0 ? `Price: ${draft.priceCurrency ?? "THB"} ${draft.priceThb}` : undefined,
-    draft.rentalPriceMonthlyThb ? `${hasShortTermRent(draft) ? "Long-term monthly rent" : "Monthly rent"}: THB ${draft.rentalPriceMonthlyThb}` : undefined,
+    draft.rentalPriceMonthlyThb ? `${draft.shortTermRentalPriceMonthlyThb ? "Long-term monthly rent" : "Monthly rent"}: THB ${draft.rentalPriceMonthlyThb}` : undefined,
+    draft.shortTermRentalPriceMonthlyThb ? `Short-term monthly rent: THB ${draft.shortTermRentalPriceMonthlyThb}` : undefined,
     draft.monthlyRentEstimateThb ? `Estimated monthly rent: THB ${draft.monthlyRentEstimateThb}` : undefined,
     draft.maintenanceFeeMonthlyThb ? `Maintenance fee: THB ${draft.maintenanceFeeMonthlyThb} per month` : undefined,
     draft.availableFrom ? `Available from: ${draft.availableFrom}` : undefined,
@@ -1495,10 +1519,6 @@ function buildListingKnowledgeBody(draft: ImportedPropertyDraft) {
   ]
     .filter(Boolean)
     .join("\n");
-}
-
-function hasShortTermRent(draft: ImportedPropertyDraft) {
-  return draft.customAttributes.some((attribute) => attribute.key === "short_term_rent_thb_month" && attribute.value);
 }
 
 function buildCustomAttributesKnowledgeBlock(attributes: ImportedCustomAttribute[]) {

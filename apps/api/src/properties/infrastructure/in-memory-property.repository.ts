@@ -197,11 +197,13 @@ export class InMemoryPropertyRepository implements PropertyRepository {
         return false;
       }
 
-      if (filters.minMonthlyRentThb && (!property.rentalPriceMonthly || property.rentalPriceMonthly.amount < filters.minMonthlyRentThb)) {
+      const rentalPrice = rentalPriceForSearch(property, filters);
+
+      if (filters.minMonthlyRentThb && (!rentalPrice || rentalPrice.amount < filters.minMonthlyRentThb)) {
         return false;
       }
 
-      if (filters.maxMonthlyRentThb && (!property.rentalPriceMonthly || property.rentalPriceMonthly.amount > filters.maxMonthlyRentThb)) {
+      if (filters.maxMonthlyRentThb && (!rentalPrice || rentalPrice.amount > filters.maxMonthlyRentThb)) {
         return false;
       }
 
@@ -685,4 +687,10 @@ function parseMoneyAmount(value: string, suffix?: string) {
   }
 
   return amount;
+}
+
+function rentalPriceForSearch(property: PropertySnapshot, filters: PropertySearchRequest): Money | undefined {
+  return filters.rentalTermMonths !== undefined && filters.rentalTermMonths < 12
+    ? property.shortTermRentalPriceMonthly
+    : property.rentalPriceMonthly;
 }
